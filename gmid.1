@@ -1,0 +1,95 @@
+.\" Copyright (c) 2020 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.Dd $Mdocdate: October 2 2020$
+.Dt GMIND 1
+.Os
+.Sh NAME
+.Nm gmid
+.Nd dead simple gemini server
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Fl h
+.Op Fl c Ar cert.pem
+.Op Fl d Ar docs
+.Op Fl k Ar key.pem
+.Ek
+.Sh DESCRIPTION
+.Nm
+is a very simple and minimal gemini server.
+It only supports serving static content, and strive to be as simple as
+possible.
+.Pp
+.Nm
+will strip any sequence of
+.Pa ../
+or trailing
+.Pa ..
+in the requests made by clients, so it's impossible to serve content
+outside the
+.Pa docs
+directory by mistake.
+Furthermore, on OpenBSD,
+.Xr pledge 3
+and
+.Xr unveil 3
+are used to ensure that
+.Nm
+dosen't do anything else than read files from the given directory and
+accept network connections.
+.Pp
+It should be noted that
+.Nm
+is very simple in its implementation, and so it may not be appropriate
+for serving site with lots of users.
+After all, the code is single threaded and use a single process.
+.Pp
+The options are as follows:
+.Bl -tag -width 12m
+.It Fl c Ar cert.pem
+The certificate to use, by default is
+.Pa cert.pem
+.It Fl d Ar docs
+The root directory to serve.
+.Nm
+won't serve any file that is outside that directory.
+.It Fl h
+Print the usage and exit
+.It Fl k Ar key.pem
+The key for the certificate, by default is
+.Pa key.pem
+.El
+.Sh EXAMPLES
+To quickly getting started
+.Bd -literal -indent
+$ # generate a cert and a key
+$ openssl req -x509 -newkey rsa:4096 -keyout key.pem \\
+        -out cert.pem -days 365 -nodes
+$ mkdir docs
+$ cat <<EOF > docs/index.gmi
+# Hello world
+test paragraph...
+EOF
+$ gmid -c cert.pem -k key.pem -d docs
+.El
+.Pp
+now you can visit gemini://localhost/ with your preferred gemini client.
+.Sh CAVEATS
+.Bl -bullet
+.It
+it doesn't support virtual host: the host part of the request URL is
+completely ignored.
+.It
+it doesn't fork in the background or anything like that.
+.El

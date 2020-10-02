@@ -1,0 +1,15 @@
+# Installing gmid
+
+## dependencies
+
+gmid depends on libtls and a C compiler.  It's reported to compile with gcc 4.2, so it should work pretty everywhere now.
+
+The compilation is as easy as
+
+```
+make
+```
+
+Note that there isn't an install target yet.
+
+If you're a packager, don't forget to install also the manpage gmid.1

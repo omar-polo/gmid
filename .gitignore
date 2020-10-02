@@ -1,0 +1,6 @@
+cert.pem
+key.pem
+TAGS
+gmid
+*.o
+docs
