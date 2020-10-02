@@ -13,7 +13,7 @@ TAGS: gmid.c
 	-etags gmid.c
 
 README.md: gmid.1
-	mandoc -Tmarkdown gmid.1 | sed -e '1d' -e '$d' > README.md
+	mandoc -Tmarkdown gmid.1 | sed -e '1d' -e '$$d' > README.md
 
 clean:
 	rm -f gmid.o gmid

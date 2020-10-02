@@ -88,4 +88,3 @@ now you can visit gemini://localhost/ with your preferred gemini client.
 
 *	it doesn't fork in the background or anything like that.
 
-OpenBSD 6.8 - October 2, 2020
