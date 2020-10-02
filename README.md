@@ -27,10 +27,11 @@ in the requests made by clients, so it's impossible to serve content
 outside the
 *docs*
 directory by mistake.
-Furthermore, on OpenBSD,
-pledge(3)
+Furthermore, on
+OpenBSD,
+pledge(2)
 and
-unveil(3)
+unveil(2)
 are used to ensure that
 **gmid**
 dosen't do anything else than read files from the given directory and
@@ -78,7 +79,7 @@ To quickly getting started
 	EOF
 	$ gmid -c cert.pem -k key.pem -d docs
 
-	now you can visit gemini://localhost/ with your preferred gemini client.
+now you can visit gemini://localhost/ with your preferred gemini client.
 
 # CAVEATS
 

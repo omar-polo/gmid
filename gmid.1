@@ -40,10 +40,11 @@ in the requests made by clients, so it's impossible to serve content
 outside the
 .Pa docs
 directory by mistake.
-Furthermore, on OpenBSD,
-.Xr pledge 3
+Furthermore, on
+.Ox ,
+.Xr pledge 2
 and
-.Xr unveil 3
+.Xr unveil 2
 are used to ensure that
 .Nm
 dosen't do anything else than read files from the given directory and
@@ -72,7 +73,7 @@ The key for the certificate, by default is
 .El
 .Sh EXAMPLES
 To quickly getting started
-.Bd -literal -indent
+.Bd -literal -offset indent
 $ # generate a cert and a key
 $ openssl req -x509 -newkey rsa:4096 -keyout key.pem \\
         -out cert.pem -days 365 -nodes
@@ -82,7 +83,7 @@ $ cat <<EOF > docs/index.gmi
 test paragraph...
 EOF
 $ gmid -c cert.pem -k key.pem -d docs
-.El
+.Ed
 .Pp
 now you can visit gemini://localhost/ with your preferred gemini client.
 .Sh CAVEATS
