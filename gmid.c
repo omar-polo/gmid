@@ -124,7 +124,7 @@ adjust_path(char *path)
 	while (1) {
 		if ((s = strstr(path, "../")) == NULL)
 			return;
-		memmove(s - 3, s, strlen(s)+1);	/* copy also the \0 */
+		memmove(s, s+3, strlen(s)+1);	/* copy also the \0 */
 	}
 }
 
