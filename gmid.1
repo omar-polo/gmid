@@ -16,7 +16,7 @@
 .Os
 .Sh NAME
 .Nm gmid
-.Nd dead simple gemini server
+.Nd dead simple zero configuration gemini server
 .Sh SYNOPSIS
 .Nm
 .Bk -words
@@ -39,7 +39,7 @@ or trailing
 in the requests made by clients, so it's impossible to serve content
 outside the
 .Pa docs
-directory by mistake.
+directory by mistake, and will also refuse to follow symlink.
 Furthermore, on
 .Ox ,
 .Xr pledge 2
@@ -56,20 +56,27 @@ is very simple in its implementation, and so it may not be appropriate
 for serving site with lots of users.
 After all, the code is single threaded and use a single process.
 .Pp
+If a user request path is a directory,
+.Nm
+will try to serve a
+.Pa index.gmi
+file inside that directory.
+If not found, it will return an error 51 (not found) to the user.
+.Pp
 The options are as follows:
 .Bl -tag -width 12m
 .It Fl c Ar cert.pem
 The certificate to use, by default is
-.Pa cert.pem
+.Pa cert.pem .
 .It Fl d Ar docs
 The root directory to serve.
 .Nm
 won't serve any file that is outside that directory.
 .It Fl h
-Print the usage and exit
+Print the usage and exit.
 .It Fl k Ar key.pem
 The key for the certificate, by default is
-.Pa key.pem
+.Pa key.pem .
 .El
 .Sh EXAMPLES
 To quickly getting started
@@ -89,7 +96,7 @@ now you can visit gemini://localhost/ with your preferred gemini client.
 .Sh CAVEATS
 .Bl -bullet
 .It
-it doesn't support virtual host: the host part of the request URL is
+it doesn't support virtual hosts: the host part of the request URL is
 completely ignored.
 .It
 it doesn't fork in the background or anything like that.

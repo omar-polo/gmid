@@ -1,7 +1,7 @@
 
 # NAME
 
-**gmid** - dead simple gemini server
+**gmid** - dead simple zero configuration gemini server
 
 # SYNOPSIS
 
@@ -26,7 +26,7 @@ or trailing
 in the requests made by clients, so it's impossible to serve content
 outside the
 *docs*
-directory by mistake.
+directory by mistake, and will also refuse to follow symlink.
 Furthermore, on
 OpenBSD,
 pledge(2)
@@ -43,12 +43,19 @@ is very simple in its implementation, and so it may not be appropriate
 for serving site with lots of users.
 After all, the code is single threaded and use a single process.
 
+If a user request path is a directory,
+**gmid**
+will try to serve a
+*index.gmi*
+file inside that directory.
+If not found, it will return an error 51 (not found) to the user.
+
 The options are as follows:
 
 **-c** *cert.pem*
 
 > The certificate to use, by default is
-> *cert.pem*
+> *cert.pem*.
 
 **-d** *docs*
 
@@ -58,12 +65,12 @@ The options are as follows:
 
 **-h**
 
-> Print the usage and exit
+> Print the usage and exit.
 
 **-k** *key.pem*
 
 > The key for the certificate, by default is
-> *key.pem*
+> *key.pem*.
 
 # EXAMPLES
 
@@ -83,7 +90,7 @@ now you can visit gemini://localhost/ with your preferred gemini client.
 
 # CAVEATS
 
-*	it doesn't support virtual host: the host part of the request URL is
+*	it doesn't support virtual hosts: the host part of the request URL is
 	completely ignored.
 
 *	it doesn't fork in the background or anything like that.
