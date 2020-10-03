@@ -391,6 +391,10 @@ main(int argc, char **argv)
 	if ((conf = tls_config_new()) == NULL)
 		err(1, "tls_config_new");
 
+	if (tls_config_set_protocols(conf,
+	    TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3) == -1)
+		err(1, "tls_config_set_protocols");
+
 	if ((m = tls_load_file(cert, &mlen, NULL)) == NULL)
 		err(1, "tls_load_file: %s", cert);
 	if (tls_config_set_cert_mem(conf, m, mlen) == -1)
