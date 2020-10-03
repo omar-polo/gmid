@@ -35,7 +35,7 @@
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
-/* large enough to hold a copy of a gemini URL and still have room */
+/* large enough to hold a copy of a gemini URL and still have extra room */
 #define PATHBUF (2048)
 
 #define FILEBUF 1024
@@ -93,7 +93,7 @@ url_trim(char *url)
 	s[1] = '\0';
 
 	if (s[2] != '\0') {
-		fprintf(stderr, "last byte of request isn't NULL\n");
+		fprintf(stderr, "the request was longer than 1024 bytes\n");
 		return 0;
 	}
 
@@ -131,18 +131,9 @@ adjust_path(char *path)
 int
 path_isdir(char *path)
 {
-	size_t len;
-
 	if (*path == '\0')
 		return 1;
-
-	len = strlen(path);
-
-	/* len >= 1 */
-	if (path[len-1] == '/')
-		return 1;
-
-	return 0;
+	return path[strlen(path)-1] == '/';
 }
 
 void
@@ -163,7 +154,7 @@ isdir(int fd)
 
 	if (fstat(fd, &sb) == -1) {
 		warn("fstat");
-		return 1; 	/* we'll fail later on anyway */
+		return 1; 	/* we'll probably fail later on anyway */
 	}
 
 	return S_ISDIR(sb.st_mode);
@@ -183,7 +174,7 @@ send_file(char *path, struct tls *ctx)
 	bzero(fpath, sizeof(fpath));
 
 	if (*path != '.')
-		strlcpy(fpath, ".", PATHBUF);
+		fpath[0] = '.';
 	
 	strlcat(fpath, path, PATHBUF);
 
@@ -266,8 +257,10 @@ handle(char *url, struct tls *ctx)
 		return;
 	}
 
-	if ((path = url_start_of_request(url)) == NULL)
+	if ((path = url_start_of_request(url)) == NULL) {
+		start_reply(ctx, BAD_REQUEST, "bad request");
 		return;
+	}
 
 	adjust_path(path);
 
@@ -318,7 +311,6 @@ loop(struct tls *ctx, int sock)
 	socklen_t len;
 	struct tls *clientctx;
 	char buf[GEMINI_URL_LEN];
-	ssize_t r;
 
 	for (;;) {
 		len = sizeof(client);
@@ -331,14 +323,14 @@ loop(struct tls *ctx, int sock)
 		}
 
 		bzero(buf, GEMINI_URL_LEN);
-		if ((r = tls_read(clientctx, buf, sizeof(buf)-1)) == -1) {
+		if (tls_read(clientctx, buf, sizeof(buf)-1) == -1) {
 			warnx("tls_read: %s", tls_error(clientctx));
-			goto clienterr;
+			goto clientend;
 		}
 
 		handle(buf, clientctx);
 
-	clienterr:
+	clientend:
 		if (tls_close(clientctx) == -1)
 			warn("tls_close: client");
 		tls_free(clientctx);
@@ -360,8 +352,6 @@ main(int argc, char **argv)
 	const char *cert = "cert.pem", *key = "key.pem", *dir = "docs";
 	struct tls *ctx = NULL;
 	struct tls_config *conf;
-	void *m;
-	size_t mlen;
 	int sock, ch;
 
 	while ((ch = getopt(argc, argv, "c:d:hk:")) != -1) {
@@ -395,15 +385,11 @@ main(int argc, char **argv)
 	    TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3) == -1)
 		err(1, "tls_config_set_protocols");
 
-	if ((m = tls_load_file(cert, &mlen, NULL)) == NULL)
-		err(1, "tls_load_file: %s", cert);
-	if (tls_config_set_cert_mem(conf, m, mlen) == -1)
-		err(1, "tls_config_set_cert_mem: server certificate");
+	if (tls_config_set_cert_file(conf, cert) == -1)
+		err(1, "tls_config_set_cert_file: %s", cert);
 
-	if ((m = tls_load_file(key, &mlen, NULL)) == NULL)
-		err(1, "tls_load_file: %s", key);
-	if (tls_config_set_key_mem(conf, m, mlen) == -1)
-		err(1, "tls_config_set_cert_mem: server key");
+	if (tls_config_set_key_file(conf, key) == -1)
+		err(1, "tls_config_set_key_file: %s", key);
 
 	if ((ctx = tls_server()) == NULL)
 		err(1, "tls_server");
@@ -423,11 +409,6 @@ main(int argc, char **argv)
 		err(1, "pledge");
 
 	loop(ctx, sock);
-
-	if (1) {
-		printf("why im I here?\n");
-		abort();
-	}
 
 	close(sock);
 	tls_free(ctx);
