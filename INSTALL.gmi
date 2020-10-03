@@ -1,6 +1,6 @@
 # Installing gmid
 
-## dependencies
+## Dependencies
 
 gmid depends on libtls and a C compiler.  It's reported to compile with gcc 4.2, so it should work pretty everywhere now.
 
@@ -13,3 +13,31 @@ make
 Note that there isn't an install target yet.
 
 If you're a packager, don't forget to install also the manpage gmid.1
+
+### etags
+
+during the build process, etags(1) is invoked to generate a TAGS file.  This is done to aid the development.  Anyway, etags(1) is NOT NEEDED as dependency.  So, if you get something like
+
+```
+$ make
+...
+etags gmid.c
+make: exec(etags) failed (No such file or directory)
+*** Error code 1 (ignored)
+```
+
+you don't need to worry, it is OK.
+
+## Notes for specific OSes
+
+### OpenBSD
+
+Everything you need is in base, just run make.
+
+### FreeBSD
+
+You need to install security/libressl and then
+
+```
+make CFLAGS=-I/usr/local/include LDFLAGS='-L/usr/local/lib -ltls'
+```
