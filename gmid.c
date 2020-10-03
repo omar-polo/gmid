@@ -169,10 +169,10 @@ isdir(int fd)
 	return S_ISDIR(sb.st_mode);
 }
 
-void		 senddir(char*, struct tls*);
+void		 send_dir(char*, struct tls*);
 
 void
-sendfile(char *path, struct tls *ctx)
+send_file(char *path, struct tls *ctx)
 {
 	int fd;
 	char fpath[PATHBUF];
@@ -196,7 +196,7 @@ sendfile(char *path, struct tls *ctx)
 	if (isdir(fd)) {
 		warnx("%s is a directory, trying %s/index.gmi", fpath, fpath);
 		close(fd);
-		senddir(fpath, ctx);
+		send_dir(fpath, ctx);
 		return;
 	}
 
@@ -232,7 +232,7 @@ exit:
 }
 
 void
-senddir(char *path, struct tls *ctx)
+send_dir(char *path, struct tls *ctx)
 {
 	char fpath[PATHBUF];
 	size_t len;
@@ -253,7 +253,7 @@ senddir(char *path, struct tls *ctx)
 
 	strlcat(fpath, "index.gmi", sizeof(fpath));
 
-	sendfile(fpath, ctx);
+	send_file(fpath, ctx);
 }
 
 void
@@ -274,9 +274,9 @@ handle(char *url, struct tls *ctx)
 	fprintf(stderr, "requested path: %s\n", path);
 
 	if (path_isdir(path))
-		senddir(path, ctx);
+		send_dir(path, ctx);
 	else
-		sendfile(path, ctx);
+		send_file(path, ctx);
 }
 
 int
