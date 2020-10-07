@@ -10,7 +10,7 @@ gmid: gmid.o
 	${CC} gmid.o -o gmid ${LDFLAGS}
 
 TAGS: gmid.c
-	-etags gmid.c
+	-etags gmid.c || true
 
 README.md: gmid.1
 	mandoc -Tmarkdown gmid.1 | sed -e '1d' -e '$$d' > README.md
