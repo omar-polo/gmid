@@ -21,7 +21,9 @@
 
 #include <assert.h>
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -32,6 +34,10 @@
 # define pledge(a, b) 0
 # define unveil(a, b) 0
 #endif /* __OpenBSD__ */
+
+#ifndef INFTIM
+# define INFTIM -1
+#endif /* INFTIM */
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
@@ -44,7 +50,46 @@
 #define NOT_FOUND	51
 #define BAD_REQUEST	59
 
+#ifndef MAX_USERS
+#define MAX_USERS	64
+#endif
+
+enum {
+	S_OPEN,
+	S_INITIALIZING,
+	S_SENDING,
+	S_CLOSING,
+};
+
+struct client {
+	struct tls	*ctx;
+	int		state;
+	int		code;
+	const char	*meta;
+	int		fd;
+};
+
 int dirfd;
+
+char		*url_after_proto(char*);
+char		*url_start_of_request(char*);
+int		 url_trim(char*);
+void		 adjust_path(char*);
+int		 path_isdir(char*);
+
+int		 start_reply(struct pollfd*, struct client*, int, const char*);
+int		 isdir(int);
+void		 send_file(char*, struct pollfd*, struct client*);
+void		 send_dir(char*, struct pollfd*, struct client*);
+void		 handle(struct pollfd*, struct client*);
+
+void		 mark_nonblock(int);
+int		 make_soket(int);
+void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
+void		 goodbye(struct pollfd*, struct client*);
+void		 loop(struct tls*, int);
+
+void		 usage(const char*);
 
 char *
 url_after_proto(char *url)
@@ -136,15 +181,31 @@ path_isdir(char *path)
 	return path[strlen(path)-1] == '/';
 }
 
-void
-start_reply(struct tls *ctx, int code, const char *reason)
+int
+start_reply(struct pollfd *pfd, struct client *client, int code, const char *reason)
 {
 	char buf[1030] = {0}; 	/* status + ' ' + max reply len + \r\n\0 */
 	int len;
+	int ret;
+
+	client->code = code;
+	client->meta = reason;
+	client->state = S_INITIALIZING;
 
 	len = snprintf(buf, sizeof(buf), "%d %s\r\n", code, reason);
 	assert(len < (int)sizeof(buf));
-	tls_write(ctx, buf, len);
+	ret = tls_write(client->ctx, buf, len);
+	if (ret == TLS_WANT_POLLIN) {
+		pfd->events = POLLIN;
+		return 0;
+	}
+
+	if (ret == TLS_WANT_POLLOUT) {
+		pfd->events = POLLOUT;
+		return 0;
+	}
+
+	return 1;
 }
 
 int
@@ -160,70 +221,82 @@ isdir(int fd)
 	return S_ISDIR(sb.st_mode);
 }
 
-void		 send_dir(char*, struct tls*);
-
 void
-send_file(char *path, struct tls *ctx)
+send_file(char *path, struct pollfd *fds, struct client *client)
 {
-	int fd;
 	char fpath[PATHBUF];
 	char buf[FILEBUF];
 	size_t i;
 	ssize_t t, w;
 
-	bzero(fpath, sizeof(fpath));
+	if (client->fd == -1) {
+		assert(path != NULL);
 
-	if (*path != '.')
-		fpath[0] = '.';
-	
-	strlcat(fpath, path, PATHBUF);
+		bzero(fpath, sizeof(fpath));
 
-	if ((fd = openat(dirfd, fpath, O_RDONLY | O_NOFOLLOW)) == -1) {
-		warn("open: %s", fpath);
-		start_reply(ctx, NOT_FOUND, "not found");
-		return;
-	}
+		if (*path != '.')
+			fpath[0] = '.';
+		strlcat(fpath, path, PATHBUF);
 
-	if (isdir(fd)) {
-		warnx("%s is a directory, trying %s/index.gmi", fpath, fpath);
-		close(fd);
-		send_dir(fpath, ctx);
-		return;
-	}
-
-	/* assume it's a text/gemini file */
-	start_reply(ctx, SUCCESS, "text/gemini");
-
-        while (1) {
-		if ((w = read(fd, buf, sizeof(buf))) == -1) {
-			warn("read: %s", fpath);
-			goto exit;
+		if ((client->fd = openat(dirfd, fpath, O_RDONLY | O_NOFOLLOW)) == -1) {
+			warn("open: %s", fpath);
+			if (!start_reply(fds, client, NOT_FOUND, "not found"))
+				return;
+			goodbye(fds, client);
+			return;
 		}
 
-		if (w == 0)
-			break;
+		if (isdir(client->fd)) {
+			warnx("%s is a directory, trying %s/index.gmi", fpath, fpath);
+			close(client->fd);
+			client->fd = -1;
+			send_dir(fpath, fds, client);
+			return;
+		}
+
+		/* assume it's a text/gemini file */
+		if (!start_reply(fds, client, SUCCESS, "text/gemini"))
+			return;
+	}
+
+	while (1) {
+		w = read(client->fd, buf, sizeof(buf));
+		if (w == -1)
+			warn("read");
+		if (w == 0 || w == -1) {
+			goodbye(fds, client);
+			return;
+		}
 
 		t = w;
 		i = 0;
 
 		while (w > 0) {
-			if ((t = tls_write(ctx, buf + i, w)) == -1) {
-				warnx("tls_write (path=%s) : %s",
-				    fpath,
-				    tls_error(ctx));
-				goto exit;
+			t = tls_write(client->ctx, buf+i, w);
+			switch (t) {
+			case -1:
+				warnx("tls_write: %s", tls_error(client->ctx));
+				goodbye(fds, client);
+				return;
+
+			case TLS_WANT_POLLIN:
+			case TLS_WANT_POLLOUT:
+				fds->events = (t == TLS_WANT_POLLIN)
+					? POLLIN
+					: POLLOUT;
+				return;
+
+			default:
+				w -= t;
+				i += t;
+				break;
 			}
-			w -= t;
-			i += t;
 		}
 	}
-
-exit:
-	close(fd);
 }
 
 void
-send_dir(char *path, struct tls *ctx)
+send_dir(char *path, struct pollfd *fds, struct client *client)
 {
 	char fpath[PATHBUF];
 	size_t len;
@@ -244,32 +317,93 @@ send_dir(char *path, struct tls *ctx)
 
 	strlcat(fpath, "index.gmi", sizeof(fpath));
 
-	send_file(fpath, ctx);
+	send_file(fpath, fds, client);
 }
 
 void
-handle(char *url, struct tls *ctx)
+handle(struct pollfd *fds, struct client *client)
 {
+	char buf[GEMINI_URL_LEN];
 	char *path;
 
-	if (!url_trim(url)) {
-		start_reply(ctx, BAD_REQUEST, "bad request");
-		return;
+	switch (client->state) {
+	case S_OPEN:
+		bzero(buf, GEMINI_URL_LEN);
+		switch (tls_read(client->ctx, buf, sizeof(buf)-1)) {
+		case -1:
+			warnx("tls_read: %s", tls_error(client->ctx));
+			goodbye(fds, client);
+			return;
+
+		case TLS_WANT_POLLIN:
+			fds->events = POLLIN;
+			return;
+
+		case TLS_WANT_POLLOUT:
+			fds->events = POLLOUT;
+			return;
+		}
+
+		if (!url_trim(buf)) {
+			if (!start_reply(fds, client, BAD_REQUEST, "bad request"))
+				return;
+			goodbye(fds, client);
+			return;
+		}
+
+		if ((path = url_start_of_request(buf)) == NULL) {
+			if (!start_reply(fds, client, BAD_REQUEST, "bad request"))
+				return;
+			goodbye(fds, client);
+			return;
+		}
+
+		adjust_path(path);
+		fprintf(stderr, "requested path: %s\n", path);
+
+		if (path_isdir(path))
+			send_dir(path, fds, client);
+		else
+			send_file(path, fds, client);
+		break;
+
+	case S_INITIALIZING:
+		if (!start_reply(fds, client, client->code, client->meta))
+			return;
+
+		if (client->code != SUCCESS) {
+			/* we don't need a body */
+			goodbye(fds, client);
+			return;
+		}
+
+		client->state = S_SENDING;
+
+		/* fallthrough */
+
+	case S_SENDING:
+		send_file(NULL, fds, client);
+		break;
+
+	case S_CLOSING:
+		goodbye(fds, client);
+		break;
+
+	default:
+		/* unreachable */
+		abort();
 	}
+}
 
-	if ((path = url_start_of_request(url)) == NULL) {
-		start_reply(ctx, BAD_REQUEST, "bad request");
-		return;
-	}
+void
+mark_nonblock(int fd)
+{
+	int flags;
 
-	adjust_path(path);
-
-	fprintf(stderr, "requested path: %s\n", path);
-
-	if (path_isdir(path))
-		send_dir(path, ctx);
-	else
-		send_file(path, ctx);
+	if ((flags = fcntl(fd, F_GETFL)) == -1)
+		err(1, "fcntl(F_GETFL)");
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		err(1, "fcntl(F_SETFL)");
 }
 
 int
@@ -289,6 +423,8 @@ make_socket(int port)
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &v, sizeof(v)) == -1)
 		err(1, "setsockopt(SO_REUSEPORT)");
 
+	mark_nonblock(sock);
+
 	bzero(&addr, sizeof(addr));
 	addr.sin_family = AF_INET;
 	addr.sin_port = htons(port);
@@ -304,37 +440,111 @@ make_socket(int port)
 }
 
 void
+do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
+{
+	int i, fd;
+	struct sockaddr_in addr;
+	socklen_t len;
+
+	len = sizeof(addr);
+	if ((fd = accept(sock, (struct sockaddr*)&addr, &len)) == -1) {
+		if (errno == EWOULDBLOCK)
+			return;
+		err(1, "accept");
+	}
+
+	mark_nonblock(fd);
+
+	for (i = 0; i < MAX_USERS; ++i) {
+		if (fds[i].fd == -1) {
+			bzero(&clients[i], sizeof(struct client));
+			if (tls_accept_socket(ctx, &clients[i].ctx, fd) == -1)
+				break; /* goodbye fd! */
+
+			fds[i].fd = fd;
+			fds[i].events = POLLIN;
+
+			clients[i].state = S_OPEN;
+			clients[i].fd = -1;
+
+			return;
+		}
+	}
+
+	printf("too much clients. goodbye bro!\n");
+	close(fd);
+}
+
+void
+goodbye(struct pollfd *pfd, struct client *c)
+{
+	ssize_t ret;
+
+	c->state = S_CLOSING;
+
+	ret = tls_close(c->ctx);
+	if (ret == TLS_WANT_POLLIN) {
+		pfd->events = POLLIN;
+		return;
+	}
+	if (ret == TLS_WANT_POLLOUT) {
+		pfd->events = POLLOUT;
+		return;
+	}
+
+	tls_free(c->ctx);
+	c->ctx = NULL;
+
+	if (c->fd != -1)
+		close(c->fd);
+
+	close(pfd->fd);
+	pfd->fd = -1;
+}
+
+void
 loop(struct tls *ctx, int sock)
 {
-	int fd;
-	struct sockaddr_in client;
-	socklen_t len;
-	struct tls *clientctx;
-	char buf[GEMINI_URL_LEN];
+	int i, todo;
+	struct client clients[MAX_USERS];
+	struct pollfd fds[MAX_USERS];
+
+	for (i = 0; i < MAX_USERS; ++i) {
+		fds[i].fd = -1;
+		fds[i].events = POLLIN;
+		bzero(&clients[i], sizeof(struct client));
+	}
+
+	fds[0].fd = sock;
 
 	for (;;) {
-		len = sizeof(client);
-		if ((fd = accept(sock, (struct sockaddr*)&client, &len)) == -1)
-                        err(1, "accept");
+                if ((todo = poll(fds, MAX_USERS, INFTIM)) == -1)
+			err(1, "poll");
 
-		if (tls_accept_socket(ctx, &clientctx, fd) == -1) {
-			warnx("tls_accept_socket: %s", tls_error(ctx));
-			continue;
+		for (i = 0; i < MAX_USERS; i++) {
+			assert(i < MAX_USERS);
+
+			if (fds[i].revents == 0)
+				continue;
+
+			if (fds[i].revents & (POLLERR|POLLNVAL))
+				err(1, "bad fd %d", fds[i].fd);
+
+			if (fds[i].revents & POLLHUP) {
+				goodbye(&fds[i], &clients[i]);
+				continue;
+			}
+
+			todo--;
+
+			if (i == 0) { /* new client */
+				do_accept(sock, ctx, fds, clients);
+				continue;
+			}
+
+			handle(&fds[i], &clients[i]);
+
 		}
-
-		bzero(buf, GEMINI_URL_LEN);
-		if (tls_read(clientctx, buf, sizeof(buf)-1) == -1) {
-			warnx("tls_read: %s", tls_error(clientctx));
-			goto clientend;
-		}
-
-		handle(buf, clientctx);
-
-	clientend:
-		if (tls_close(clientctx) == -1)
-			warn("tls_close: client");
-		tls_free(clientctx);
-		close(fd);
 	}
 }
 
