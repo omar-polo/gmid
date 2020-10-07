@@ -69,6 +69,27 @@ struct client {
 	int		fd;
 };
 
+struct etm {			/* file extension to mime */
+	const char	*mime;
+	const char	*ext;
+} filetypes[] = {
+	{"application/pdf",	"pdf"},
+
+	{"image/gif",		"gif"},
+	{"image/jpeg",		"jpg"},
+	{"image/jpeg",		"jpeg"},
+	{"image/png",		"png"},
+	{"image/svg+xml",	"svg"},
+
+	{"text/gemini",		"gemini"},
+	{"text/gemini",		"gmi"},
+	{"text/markdown",	"markdown"},
+	{"text/markdown",	"md"},
+	{"text/plain",		"txt"},
+
+	{NULL, NULL}
+};
+
 int dirfd;
 
 char		*url_after_proto(char*);
@@ -79,6 +100,8 @@ int		 path_isdir(char*);
 
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
 int		 isdir(int);
+const char	*path_ext(const char*);
+const char	*mime(const char*);
 void		 send_file(char*, struct pollfd*, struct client*);
 void		 send_dir(char*, struct pollfd*, struct client*);
 void		 handle(struct pollfd*, struct client*);
@@ -221,6 +244,38 @@ isdir(int fd)
 	return S_ISDIR(sb.st_mode);
 }
 
+const char *
+path_ext(const char *path)
+{
+	const char *end;
+
+	end = path + strlen(path)-1; /* the last byte before the NUL */
+	for (; end != path; --end) {
+		if (*end == '.')
+			return end+1;
+		if (*end == '/')
+			break;
+	}
+
+	return NULL;
+}
+
+const char *
+mime(const char *path)
+{
+	const char *ext, *def = "application/octet-stream";
+	struct etm *t;
+
+	if ((ext = path_ext(path)) == NULL)
+		return def;
+
+	for (t = filetypes; t->mime != NULL; ++t)
+		if (!strcmp(ext, t->ext))
+			return t->mime;
+
+	return def;
+}
+
 void
 send_file(char *path, struct pollfd *fds, struct client *client)
 {
@@ -254,8 +309,7 @@ send_file(char *path, struct pollfd *fds, struct client *client)
 			return;
 		}
 
-		/* assume it's a text/gemini file */
-		if (!start_reply(fds, client, SUCCESS, "text/gemini"))
+		if (!start_reply(fds, client, SUCCESS, mime(fpath)))
 			return;
 	}
 
