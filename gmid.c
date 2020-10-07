@@ -281,8 +281,8 @@ send_file(char *path, struct pollfd *fds, struct client *client)
 {
 	char fpath[PATHBUF];
 	char buf[FILEBUF];
-	size_t i;
-	ssize_t t, w;
+	size_t off;
+	ssize_t ret, len;
 
 	if (client->fd == -1) {
 		assert(path != NULL);
@@ -314,20 +314,18 @@ send_file(char *path, struct pollfd *fds, struct client *client)
 	}
 
 	while (1) {
-		w = read(client->fd, buf, sizeof(buf));
-		if (w == -1)
+		len = read(client->fd, buf, sizeof(buf));
+		if (len == -1)
 			warn("read");
-		if (w == 0 || w == -1) {
+		if (len == 0 || len == -1) {
 			goodbye(fds, client);
 			return;
 		}
 
-		t = w;
-		i = 0;
-
-		while (w > 0) {
-			t = tls_write(client->ctx, buf+i, w);
-			switch (t) {
+		off = 0;
+		while (len > 0) {
+			ret = tls_write(client->ctx, buf+off, len);
+			switch (ret) {
 			case -1:
 				warnx("tls_write: %s", tls_error(client->ctx));
 				goodbye(fds, client);
@@ -335,14 +333,16 @@ send_file(char *path, struct pollfd *fds, struct client *client)
 
 			case TLS_WANT_POLLIN:
 			case TLS_WANT_POLLOUT:
-				fds->events = (t == TLS_WANT_POLLIN)
-					? POLLIN
-					: POLLOUT;
+				fds->events = ret == TLS_WANT_POLLIN ? POLLIN : POLLOUT;
+				if (lseek(client->fd, -1 * len, SEEK_CUR) == -1) {
+					warnx("lseek");
+					goodbye(fds, client);
+				}
 				return;
 
 			default:
-				w -= t;
-				i += t;
+				off += ret;
+				len -= ret;
 				break;
 			}
 		}
