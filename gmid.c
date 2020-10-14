@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/mman.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 
@@ -44,8 +45,6 @@
 /* large enough to hold a copy of a gemini URL and still have extra room */
 #define PATHBUF		2048
 
-#define FILEBUF		1024
-
 #define SUCCESS		20
 #define NOT_FOUND	51
 #define BAD_REQUEST	59
@@ -63,10 +62,12 @@ enum {
 
 struct client {
 	struct tls	*ctx;
-	int		state;
-	int		code;
+	int		 state;
+	int		 code;
 	const char	*meta;
-	int		fd;
+	int		 fd;
+	void		*buf, *i;
+	ssize_t		 len, off;
 };
 
 struct etm {			/* file extension to mime */
@@ -97,11 +98,13 @@ char		*url_start_of_request(char*);
 int		 url_trim(char*);
 void		 adjust_path(char*);
 int		 path_isdir(char*);
+ssize_t		 filesize(int);
 
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
 int		 isdir(int);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
+int		 open_file(char*, struct pollfd*, struct client*);
 void		 send_file(char*, struct pollfd*, struct client*);
 void		 send_dir(char*, struct pollfd*, struct client*);
 void		 handle(struct pollfd*, struct client*);
@@ -174,7 +177,7 @@ adjust_path(char *path)
 	char *s;
 	size_t len;
 
-        /* /.. -> / */
+	/* /.. -> / */
 	len = strlen(path);
 	if (len >= 3) {
 		if (!strcmp(&path[len-3], "/..")) {
@@ -244,6 +247,18 @@ isdir(int fd)
 	return S_ISDIR(sb.st_mode);
 }
 
+ssize_t
+filesize(int fd)
+{
+	ssize_t len;
+
+	if ((len = lseek(fd, 0, SEEK_END)) == -1)
+		return -1;
+	if (lseek(fd, 0, SEEK_SET) == -1)
+		return -1;
+	return len;
+}
+
 const char *
 path_ext(const char *path)
 {
@@ -276,77 +291,88 @@ mime(const char *path)
 	return def;
 }
 
-void
-send_file(char *path, struct pollfd *fds, struct client *client)
+int
+open_file(char *path, struct pollfd *fds, struct client *c)
 {
 	char fpath[PATHBUF];
-	char buf[FILEBUF];
-	size_t off;
+
+	assert(path != NULL);
+
+	bzero(fpath, sizeof(fpath));
+
+	if (*path != '.')
+		fpath[0] = '.';
+	strlcat(fpath, path, PATHBUF);
+
+	if ((c->fd = openat(dirfd, fpath, O_RDONLY | O_NOFOLLOW)) == -1) {
+		warn("open: %s", fpath);
+		if (!start_reply(fds, c, NOT_FOUND, "not found"))
+			return 0;
+		goodbye(fds, c);
+		return 0;
+	}
+
+	if (isdir(c->fd)) {
+		warnx("%s is a directory, trying %s/index.gmi", fpath, fpath);
+		close(c->fd);
+		c->fd = -1;
+		send_dir(fpath, fds, c);
+		return 0;
+	}
+
+	if ((c->len = filesize(c->fd)) == -1) {
+		warn("filesize: %s", fpath);
+		goodbye(fds, c);
+		return 0;
+	}
+
+	if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
+		    c->fd, 0)) == MAP_FAILED) {
+		warn("mmap: %s", fpath);
+		goodbye(fds, c);
+		return 0;
+	}
+	c->i = c->buf;
+
+	return start_reply(fds, c, SUCCESS, mime(fpath));
+}
+
+void
+send_file(char *path, struct pollfd *fds, struct client *c)
+{
 	ssize_t ret, len;
 
-	if (client->fd == -1) {
-		assert(path != NULL);
-
-		bzero(fpath, sizeof(fpath));
-
-		if (*path != '.')
-			fpath[0] = '.';
-		strlcat(fpath, path, PATHBUF);
-
-		if ((client->fd = openat(dirfd, fpath, O_RDONLY | O_NOFOLLOW)) == -1) {
-			warn("open: %s", fpath);
-			if (!start_reply(fds, client, NOT_FOUND, "not found"))
-				return;
-			goodbye(fds, client);
+	if (c->fd == -1) {
+		if (!open_file(path, fds, c))
 			return;
-		}
-
-		if (isdir(client->fd)) {
-			warnx("%s is a directory, trying %s/index.gmi", fpath, fpath);
-			close(client->fd);
-			client->fd = -1;
-			send_dir(fpath, fds, client);
-			return;
-		}
-
-		if (!start_reply(fds, client, SUCCESS, mime(fpath)))
-			return;
+		c->state = S_SENDING;
 	}
 
-	while (1) {
-		len = read(client->fd, buf, sizeof(buf));
-		if (len == -1)
-			warn("read");
-		if (len == 0 || len == -1) {
-			goodbye(fds, client);
+	len = (c->buf + c->len) - c->i;
+
+	while (len > 0) {
+		switch (ret = tls_write(c->ctx, c->i, len)) {
+		case -1:
+			warnx("tls_write: %s", tls_error(c->ctx));
+			goodbye(fds, c);
 			return;
-		}
 
-		off = 0;
-		while (len > 0) {
-			ret = tls_write(client->ctx, buf+off, len);
-			switch (ret) {
-			case -1:
-				warnx("tls_write: %s", tls_error(client->ctx));
-				goodbye(fds, client);
-				return;
+		case TLS_WANT_POLLIN:
+			fds->events = POLLIN;
+			return;
 
-			case TLS_WANT_POLLIN:
-			case TLS_WANT_POLLOUT:
-				fds->events = ret == TLS_WANT_POLLIN ? POLLIN : POLLOUT;
-				if (lseek(client->fd, -1 * len, SEEK_CUR) == -1) {
-					warnx("lseek");
-					goodbye(fds, client);
-				}
-				return;
+		case TLS_WANT_POLLOUT:
+			fds->events = POLLOUT;
+			return;
 
-			default:
-				off += ret;
-				len -= ret;
-				break;
-			}
+		default:
+			c->i += ret;
+			len -= ret;
+			break;
 		}
 	}
+
+	goodbye(fds, c);
 }
 
 void
@@ -467,7 +493,7 @@ make_socket(int port)
 	struct sockaddr_in addr;
 
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
-                err(1, "socket");
+		err(1, "socket");
 
 	v = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v)) == -1)
@@ -485,10 +511,10 @@ make_socket(int port)
 	addr.sin_addr.s_addr = INADDR_ANY;
 
 	if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
-                err(1, "bind");
+		err(1, "bind");
 
 	if (listen(sock, 16) == -1)
-                err(1, "listen");
+		err(1, "listen");
 
 	return sock;
 }
@@ -520,6 +546,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 
 			clients[i].state = S_OPEN;
 			clients[i].fd = -1;
+			clients[i].buf = MAP_FAILED;
 
 			return;
 		}
@@ -548,6 +575,9 @@ goodbye(struct pollfd *pfd, struct client *c)
 	tls_free(c->ctx);
 	c->ctx = NULL;
 
+	if (c->buf != MAP_FAILED)
+		munmap(c->buf, c->len);
+
 	if (c->fd != -1)
 		close(c->fd);
 
@@ -571,7 +601,7 @@ loop(struct tls *ctx, int sock)
 	fds[0].fd = sock;
 
 	for (;;) {
-                if ((todo = poll(fds, MAX_USERS, INFTIM)) == -1)
+		if ((todo = poll(fds, MAX_USERS, INFTIM)) == -1)
 			err(1, "poll");
 
 		for (i = 0; i < MAX_USERS; i++) {
