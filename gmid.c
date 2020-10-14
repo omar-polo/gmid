@@ -357,7 +357,7 @@ send_dir(char *path, struct pollfd *fds, struct client *client)
 
 	bzero(fpath, PATHBUF);
 
-	if (*path != '.')
+	if (path[0] != '.')
 		fpath[0] = '.';
 
 	/* this cannot fail since sizeof(fpath) > maxlen of path */
@@ -525,7 +525,6 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 		}
 	}
 
-	printf("too much clients. goodbye bro!\n");
 	close(fd);
 }
 
@@ -597,7 +596,6 @@ loop(struct tls *ctx, int sock)
 			}
 
 			handle(&fds[i], &clients[i]);
-
 		}
 	}
 }
