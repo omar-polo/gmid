@@ -1,6 +1,7 @@
 2020-10-14  Omar Polo  <op@omarpolo.com>
 
 	* switching to mmap() based file handling
+	* 1.1 tagged
 
 2020-10-07  Omar Polo  <op@omarpolo.com>
 
