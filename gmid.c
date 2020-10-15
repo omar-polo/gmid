@@ -487,12 +487,39 @@ mark_nonblock(int fd)
 }
 
 int
-make_socket(int port)
+make_socket(int port, int family)
 {
 	int sock, v;
-	struct sockaddr_in addr;
+	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
+	struct sockaddr *addr;
+	socklen_t len;
 
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+        switch (family) {
+	case AF_INET:
+		bzero(&addr4, sizeof(addr4));
+		addr4.sin_family = family;
+		addr4.sin_port = htons(port);
+		addr4.sin_addr.s_addr = INADDR_ANY;
+		addr = (struct sockaddr*)&addr4;
+		len = sizeof(addr4);
+		break;
+
+	case AF_INET6:
+		bzero(&addr6, sizeof(addr6));
+		addr6.sin6_family = AF_INET6;
+		addr6.sin6_port = htons(port);
+		addr6.sin6_addr = in6addr_any;
+		addr = (struct sockaddr*)&addr6;
+		len = sizeof(addr6);
+		break;
+
+	default:
+		/* unreachable */
+		abort();
+	}
+
+	if ((sock = socket(family, SOCK_STREAM, 0)) == -1)
 		err(1, "socket");
 
 	v = 1;
@@ -505,12 +532,7 @@ make_socket(int port)
 
 	mark_nonblock(sock);
 
-	bzero(&addr, sizeof(addr));
-	addr.sin_family = AF_INET;
-	addr.sin_port = htons(port);
-	addr.sin_addr.s_addr = INADDR_ANY;
-
-	if (bind(sock, (struct sockaddr*)&addr, sizeof(addr)) == -1)
+	if (bind(sock, addr, len) == -1)
 		err(1, "bind");
 
 	if (listen(sock, 16) == -1)
@@ -689,7 +711,7 @@ main(int argc, char **argv)
 	if (tls_configure(ctx, conf) == -1)
 		errx(1, "tls_configure: %s", tls_error(ctx));
 
-	sock = make_socket(1965);
+	sock = make_socket(1965, AF_INET);
 
 	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
 		err(1, "open: %s", dir);
