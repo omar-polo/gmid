@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -667,6 +668,8 @@ main(int argc, char **argv)
 	struct tls *ctx = NULL;
 	struct tls_config *conf;
 	int sock, ch;
+
+	signal(SIGPIPE, SIG_IGN);
 
 	while ((ch = getopt(argc, argv, "c:d:hk:")) != -1) {
 		switch (ch) {
