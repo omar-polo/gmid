@@ -88,6 +88,7 @@ struct etm {			/* file extension to mime */
 	{"text/markdown",	"markdown"},
 	{"text/markdown",	"md"},
 	{"text/plain",		"txt"},
+	{"text/xml",		"xml"}
 
 	{NULL, NULL}
 };
