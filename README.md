@@ -41,7 +41,8 @@ It should be noted that
 **gmid**
 is very simple in its implementation, and so it may not be appropriate
 for serving site with lots of users.
-After all, the code is single threaded and use a single process.
+After all, the code is single threaded and use a single process
+(multiple requests are handled concurrently thanks to async I/O.)
 
 If a user request path is a directory,
 **gmid**
