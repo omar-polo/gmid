@@ -68,10 +68,11 @@ struct client {
 	int		 state;
 	int		 code;
 	const char	*meta;
-	int		 fd;
+	int		 fd, waiting_on_child;
 	pid_t		 child;
-	void		*buf, *i;
-	ssize_t		 len, off;
+	char		 sbuf[1024];	  /* static buffer */
+	void		*buf, *i;	  /* mmap buffer */
+	ssize_t		 len, off;	  /* mmap/static buffer  */
 	int		 af;
 	struct in_addr	 addr;
 };
@@ -122,6 +123,8 @@ const char	*path_ext(const char*);
 const char	*mime(const char*);
 int		 open_file(char*, char*, struct pollfd*, struct client*);
 void		 start_cgi(const char*, const char*, struct pollfd*, struct client*);
+void		 cgi_setpoll_on_child(struct pollfd*, struct client*);
+void		 cgi_setpoll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
 void		 send_file(char*, char*, struct pollfd*, struct client*);
 void		 send_dir(char*, struct pollfd*, struct client*);
@@ -417,6 +420,8 @@ start_cgi(const char *path, const char *query,
 		close(c->fd);
 		c->fd = p[0];
 		c->child = pid;
+		mark_nonblock(c->fd);
+		c->state = S_SENDING;
 		handle_cgi(fds, c);
 		return;
 	}
@@ -430,32 +435,81 @@ err:
 childerr:
 	dprintf(p[1], "%d internal server error\r\n", TEMP_FAILURE);
 	close(p[1]);
+
+	/* don't call atexit stuff */
         _exit(1);
+}
+
+void
+cgi_setpoll_on_child(struct pollfd *fds, struct client *c)
+{
+	int fd;
+
+	if (c->waiting_on_child)
+		return;
+	c->waiting_on_child = 1;
+
+	fds->events = POLLIN;
+
+	fd = fds->fd;
+	fds->fd = c->fd;
+	c->fd = fd;
+}
+
+void
+cgi_setpoll_on_client(struct pollfd *fds, struct client *c)
+{
+	int fd;
+
+	if (!c->waiting_on_child)
+		return;
+	c->waiting_on_child = 0;
+
+	fd = fds->fd;
+	fds->fd = c->fd;
+	c->fd = fd;
 }
 
 void
 handle_cgi(struct pollfd *fds, struct client *c)
 {
-	char buf[1024];
-	ssize_t r, todo;
+	ssize_t r;
+
+	/* ensure c->fd is the child and fds->fd the client */
+	cgi_setpoll_on_client(fds, c);
 
 	while (1) {
-		r = read(c->fd, buf, sizeof(buf));
-		if (r == -1 || r == 0)
-			break;
-		todo = r;
-		while (todo > 0) {
-			switch (r = tls_write(c->ctx, buf, todo)) {
+		if (c->len == 0) {
+			if ((r = read(c->fd, c->sbuf, sizeof(c->sbuf))) == 0)
+				goto end;
+			if (r == -1) {
+				if (errno == EAGAIN || errno == EWOULDBLOCK) {
+					cgi_setpoll_on_child(fds, c);
+					return;
+				}
+                                goto end;
+			}
+			c->len = r;
+			c->off = 0;
+		}
+
+		while (c->len > 0) {
+			switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
 			case -1:
 				goto end;
 
 			case TLS_WANT_POLLOUT:
+				fds->events = POLLOUT;
+				return;
+
 			case TLS_WANT_POLLIN:
-				/* evil! */
-				continue;
+				fds->events = POLLIN;
+				return;
 
 			default:
-				todo -= r;
+                                c->off += r;
+				c->len -= r;
+				break;
 			}
 		}
 	}
@@ -592,7 +646,10 @@ handle(struct pollfd *fds, struct client *client)
 		/* fallthrough */
 
 	case S_SENDING:
-		send_file(NULL, NULL, fds, client);
+		if (client->child != -1)
+			handle_cgi(fds, client);
+		else
+			send_file(NULL, NULL, fds, client);
 		break;
 
 	case S_CLOSING:
@@ -769,8 +826,12 @@ loop(struct tls *ctx, int sock)
 				err(1, "bad fd %d", fds[i].fd);
 
 			if (fds[i].revents & POLLHUP) {
-				goodbye(&fds[i], &clients[i]);
-				continue;
+				/* fds[i] may be the fd of the stdin
+				 * of a cgi script that has exited. */
+				if (!clients[i].waiting_on_child) {
+					goodbye(&fds[i], &clients[i]);
+					continue;
+				}
 			}
 
 			todo--;
