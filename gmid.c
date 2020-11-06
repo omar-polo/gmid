@@ -381,24 +381,9 @@ start_cgi(const char *path, const char *query,
                 char *expath;
 		char addr[INET_ADDRSTRLEN];
 		char *argv[] = { NULL, NULL, NULL };
-		char *envp[] = {
-			/* inherited */
-			"PATH=",
 
-			/* CGI */
-			"SERVER_SOFTWARE=gmid",
-			/* "SERVER_NAME=example.com", */
-			/* "GATEWAY_INTERFACE=CGI/version" */
-			"SERVER_PROTOCOL=gemini",
-			"SERVER_PORT=1965",
-			/* "PATH_INFO=" */
-			/* "PATH_TRANSLATED=" */
-			/* "SCRIPT_NAME=" */
-			/* "QUERY_STRING=" */
-                        "REMOTE_ADDR=",
-			NULL,
-		};
-		size_t i;
+		/* skip the initial ./ */
+		path += 2;
 
 		close(p[0]);	/* close the read end */
 		if (dup2(p[1], 1) == -1)
@@ -408,21 +393,22 @@ start_cgi(const char *path, const char *query,
                         goto childerr;
 
 		/* skip the ./ at the start of path*/
-		if (asprintf(&expath, "%s%s", dir, path+2) == -1)
+		if (asprintf(&expath, "%s%s", dir, path) == -1)
 			goto childerr;
 		argv[0] = argv[1] = expath;
 
-		/* fix the envp */
-		for (i = 0; envp[i] != NULL; ++i) {
-			if (!strcmp(envp[i], "PATH="))
-				envp[i] = getenv("PATH");
-			else if (!strcmp(envp[i], "REMOTE_ADDR="))
-				envp[i] = addr;
-			/* else if (!strcmp(envp[i], "PATH_INFO")) */
-			/* ... */
-		}
+		/* fix the env */
+		setenv("SERVER_SOFTWARE", "gmid", 1);
+		/* setenv("SERVER_NAME", "", 1); */
+		/* setenv("GATEWAY_INTERFACE", "CGI/version", 1); */
+		setenv("SERVER_PROTOCOL", "gemini", 1);
+		setenv("SERVER_PORT", "1965", 1);
+		setenv("PATH_INFO", path, 1);
+		setenv("PATH_TRANSLATED", expath, 1);
+		setenv("QUERY_STRING", query ? query : "", 1);
+		setenv("REMOTE_ADDR", addr, 1);
 
-		execvpe(expath, argv, envp);
+		execvp(expath, argv);
 		goto childerr;
 	}
 
