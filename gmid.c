@@ -113,7 +113,7 @@ int cgi;
 char		*url_after_proto(char*);
 char		*url_start_of_request(char*);
 int		 url_trim(struct client*, char*);
-void		 adjust_path(char*);
+char		*adjust_path(char*);
 int		 path_isdir(char*);
 ssize_t		 filesize(int);
 
@@ -190,11 +190,16 @@ url_trim(struct client *c, char *url)
 	return 1;
 }
 
-void
+char *
 adjust_path(char *path)
 {
-	char *s;
+	char *s, *query;
 	size_t len;
+
+	if ((query = strchr(path, '?')) != NULL) {
+		*query = '\0';
+		query++;
+	}
 
 	/* /.. -> / */
 	len = strlen(path);
@@ -207,13 +212,13 @@ adjust_path(char *path)
 	/* if the path is only `..` trim out and exit */
 	if (!strcmp(path, "..")) {
 		path[0] = '\0';
-		return;
+		return query;
 	}
 
 	/* remove every ../ in the path */
 	while (1) {
 		if ((s = strstr(path, "../")) == NULL)
-			return;
+			return query;
 		memmove(s, s+3, strlen(s)+1);	/* copy also the \0 */
 	}
 }
@@ -540,6 +545,7 @@ handle(struct pollfd *fds, struct client *client)
 {
 	char buf[GEMINI_URL_LEN];
 	char *path;
+	char *query;
 
 	switch (client->state) {
 	case S_OPEN:
@@ -573,8 +579,10 @@ handle(struct pollfd *fds, struct client *client)
 			return;
 		}
 
-		adjust_path(path);
-		LOG(client, "get %s", path);
+		query = adjust_path(path);
+		LOG(client, "get %s%s%s", path,
+		    query ? "?" : "",
+		    query ? query : "");
 
 		if (path_isdir(path))
 			send_dir(path, fds, client);
