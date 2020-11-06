@@ -1,3 +1,8 @@
+2020-11-06  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (url_after_proto): ensure that the requested protocol is
+	“gemini” and not something else that’s long 6 bytes.
+
 2020-11-06  Omar Polo  <op@venera>
 
 	* gmid.1: added option to log to a file

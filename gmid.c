@@ -141,17 +141,18 @@ url_after_proto(char *url)
 	char *s;
 	const char *proto = "gemini";
 	const char *marker = "://";
+	size_t i;
 
+	/* a relative URL */
 	if ((s = strstr(url, marker)) == NULL)
 		return url;
 
-	/* not a gemini:// URL */
-
-	if (s - strlen(proto) < url)
+	if (s - strlen(proto) != url)
 		return NULL;
-	/* TODO: */
-	/* if (strcmp(s - strlen(proto), proto)) */
-	/* 	return NULL; */
+
+	for (i = 0; proto[i] != '\0'; ++i)
+		if (url[i] != proto[i])
+			return NULL;
 
 	/* a valid gemini:// URL */
 	return s + strlen(marker);
