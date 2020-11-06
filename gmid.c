@@ -120,10 +120,10 @@ ssize_t		 filesize(int);
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
-int		 open_file(char*, struct pollfd*, struct client*);
-void		 start_cgi(const char*, struct pollfd*, struct client*);
+int		 open_file(char*, char*, struct pollfd*, struct client*);
+void		 start_cgi(const char*, const char*, struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
-void		 send_file(char*, struct pollfd*, struct client*);
+void		 send_file(char*, char*, struct pollfd*, struct client*);
 void		 send_dir(char*, struct pollfd*, struct client*);
 void		 handle(struct pollfd*, struct client*);
 
@@ -303,7 +303,7 @@ mime(const char *path)
 }
 
 int
-open_file(char *path, struct pollfd *fds, struct client *c)
+open_file(char *path, char *query, struct pollfd *fds, struct client *c)
 {
 	char fpath[PATHBUF];
 	struct stat sb;
@@ -342,7 +342,7 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 	}
 
 	if (cgi && (sb.st_mode & S_IXUSR)) {
-		start_cgi(fpath, fds, c);
+		start_cgi(fpath, query, fds, c);
 		return 0;
 	}
 
@@ -364,7 +364,8 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 }
 
 void
-start_cgi(const char *path, struct pollfd *fds, struct client *c)
+start_cgi(const char *path, const char *query,
+    struct pollfd *fds, struct client *c)
 {
 	pid_t pid;
 	int p[2];
@@ -478,12 +479,12 @@ end:
 }
 
 void
-send_file(char *path, struct pollfd *fds, struct client *c)
+send_file(char *path, char *query, struct pollfd *fds, struct client *c)
 {
 	ssize_t ret, len;
 
 	if (c->fd == -1) {
-		if (!open_file(path, fds, c))
+		if (!open_file(path, query, fds, c))
 			return;
 		c->state = S_SENDING;
 	}
@@ -537,7 +538,7 @@ send_dir(char *path, struct pollfd *fds, struct client *client)
 
 	strlcat(fpath, "index.gmi", sizeof(fpath));
 
-	send_file(fpath, fds, client);
+	send_file(fpath, NULL, fds, client);
 }
 
 void
@@ -587,7 +588,7 @@ handle(struct pollfd *fds, struct client *client)
 		if (path_isdir(path))
 			send_dir(path, fds, client);
 		else
-			send_file(path, fds, client);
+			send_file(path, query, fds, client);
 		break;
 
 	case S_INITIALIZING:
@@ -605,7 +606,7 @@ handle(struct pollfd *fds, struct client *client)
 		/* fallthrough */
 
 	case S_SENDING:
-		send_file(NULL, fds, client);
+		send_file(NULL, NULL, fds, client);
 		break;
 
 	case S_CLOSING:
