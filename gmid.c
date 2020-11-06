@@ -417,7 +417,8 @@ start_cgi(const char *path, const char *query,
 		setenv("SERVER_PORT", "1965", 1);
 		setenv("PATH_INFO", path, 1);
 		setenv("PATH_TRANSLATED", expath, 1);
-		setenv("QUERY_STRING", query ? query : "", 1);
+		if (query != NULL)
+			setenv("QUERY_STRING", query, 1);
 		setenv("REMOTE_ADDR", addr, 1);
 
 		execvp(expath, argv);
