@@ -310,7 +310,8 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 		fpath[0] = '.';
 	strlcat(fpath, path, PATHBUF);
 
-	if ((c->fd = openat(dirfd, fpath, O_RDONLY | O_NOFOLLOW)) == -1) {
+	if ((c->fd = openat(dirfd, fpath,
+		    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
 		LOG(c, "open failed: %s", fpath);
 		if (!start_reply(fds, c, NOT_FOUND, "not found"))
 			return 0;
@@ -831,7 +832,7 @@ main(int argc, char **argv)
 
 		case 'l':
 			/* open log file or create it with 644 */
-			if ((logfd = open(optarg, O_WRONLY | O_CREAT,
+			if ((logfd = open(optarg, O_WRONLY | O_CREAT | O_CLOEXEC,
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IWOTH)) == -1)
 				err(1, "%s", optarg);
 			break;
