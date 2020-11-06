@@ -10,6 +10,7 @@
 \[**-c**&nbsp;*cert.pem*]
 \[**-d**&nbsp;*docs*]
 \[**-k**&nbsp;*key.pem*]
+\[**-l**&nbsp;*access.log*]
 
 # DESCRIPTION
 
@@ -72,6 +73,10 @@ The options are as follows:
 
 > The key for the certificate, by default is
 > *key.pem*.
+
+**-l** *access.log*
+
+> log to the given file instead of the standard error.
 
 # EXAMPLES
 

@@ -18,6 +18,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 
+#include <arpa/inet.h>
 #include <netinet/in.h>
 
 #include <assert.h>
@@ -69,6 +70,8 @@ struct client {
 	int		 fd;
 	void		*buf, *i;
 	ssize_t		 len, off;
+	int		 af;
+	struct in_addr	 addr;
 };
 
 struct etm {			/* file extension to mime */
@@ -93,11 +96,19 @@ struct etm {			/* file extension to mime */
 	{NULL, NULL}
 };
 
-int dirfd;
+#define LOG(c, fmt, ...)						\
+	do {								\
+		char buf[INET_ADDRSTRLEN];				\
+		if (inet_ntop((c)->af, &(c)->addr, buf, sizeof(buf)) == NULL) \
+			err(1, "inet_ntop");				\
+		dprintf(logfd, "[%s] " fmt "\n", buf, __VA_ARGS__);	\
+	} while (0)
+
+int dirfd, logfd;
 
 char		*url_after_proto(char*);
 char		*url_start_of_request(char*);
-int		 url_trim(char*);
+int		 url_trim(struct client*, char*);
 void		 adjust_path(char*);
 int		 path_isdir(char*);
 ssize_t		 filesize(int);
@@ -155,7 +166,7 @@ url_start_of_request(char *url)
 }
 
 int
-url_trim(char *url)
+url_trim(struct client *c, char *url)
 {
 	const char *e = "\r\n";
 	char *s;
@@ -166,7 +177,7 @@ url_trim(char *url)
 	s[1] = '\0';
 
 	if (s[2] != '\0') {
-		fprintf(stderr, "the request was longer than 1024 bytes\n");
+		LOG(c, "%s", "request longer than 1024 bytes\n");
 		return 0;
 	}
 
@@ -307,7 +318,7 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 	strlcat(fpath, path, PATHBUF);
 
 	if ((c->fd = openat(dirfd, fpath, O_RDONLY | O_NOFOLLOW)) == -1) {
-		warn("open: %s", fpath);
+		LOG(c, "open failed: %s", fpath);
 		if (!start_reply(fds, c, NOT_FOUND, "not found"))
 			return 0;
 		goodbye(fds, c);
@@ -315,7 +326,7 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 	}
 
 	if (isdir(c->fd)) {
-		warnx("%s is a directory, trying %s/index.gmi", fpath, fpath);
+		LOG(c, "%s is a directory, trying %s/index.gmi", fpath, fpath);
 		close(c->fd);
 		c->fd = -1;
 		send_dir(fpath, fds, c);
@@ -323,7 +334,7 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 	}
 
 	if ((c->len = filesize(c->fd)) == -1) {
-		warn("filesize: %s", fpath);
+		LOG(c, "failed to get file size for %s", fpath);
 		goodbye(fds, c);
 		return 0;
 	}
@@ -355,7 +366,7 @@ send_file(char *path, struct pollfd *fds, struct client *c)
 	while (len > 0) {
 		switch (ret = tls_write(c->ctx, c->i, len)) {
 		case -1:
-			warnx("tls_write: %s", tls_error(c->ctx));
+			LOG(c, "tls_write: %s", tls_error(c->ctx));
 			goodbye(fds, c);
 			return;
 
@@ -413,7 +424,7 @@ handle(struct pollfd *fds, struct client *client)
 		bzero(buf, GEMINI_URL_LEN);
 		switch (tls_read(client->ctx, buf, sizeof(buf)-1)) {
 		case -1:
-			warnx("tls_read: %s", tls_error(client->ctx));
+			LOG(client, "tls_read: %s", tls_error(client->ctx));
 			goodbye(fds, client);
 			return;
 
@@ -426,7 +437,7 @@ handle(struct pollfd *fds, struct client *client)
 			return;
 		}
 
-		if (!url_trim(buf)) {
+		if (!url_trim(client, buf)) {
 			if (!start_reply(fds, client, BAD_REQUEST, "bad request"))
 				return;
 			goodbye(fds, client);
@@ -441,7 +452,7 @@ handle(struct pollfd *fds, struct client *client)
 		}
 
 		adjust_path(path);
-		fprintf(stderr, "requested path: %s\n", path);
+		LOG(client, "get %s", path);
 
 		if (path_isdir(path))
 			send_dir(path, fds, client);
@@ -571,6 +582,8 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 			clients[i].state = S_OPEN;
 			clients[i].fd = -1;
 			clients[i].buf = MAP_FAILED;
+			clients[i].af = AF_INET;
+			clients[i].addr = addr.sin_addr;
 
 			return;
 		}
@@ -672,7 +685,9 @@ main(int argc, char **argv)
 
 	signal(SIGPIPE, SIG_IGN);
 
-	while ((ch = getopt(argc, argv, "c:d:hk:")) != -1) {
+	logfd = 2;		/* stderr */
+
+	while ((ch = getopt(argc, argv, "c:d:hk:l:")) != -1) {
 		switch (ch) {
 		case 'c':
 			cert = optarg;
@@ -688,6 +703,13 @@ main(int argc, char **argv)
 
 		case 'k':
 			key = optarg;
+			break;
+
+		case 'l':
+			/* open log file or create it with 644 */
+			if ((logfd = open(optarg, O_WRONLY | O_CREAT,
+					S_IRUSR | S_IWUSR | S_IRGRP | S_IWOTH)) == -1)
+				err(1, "%s", optarg);
 			break;
 
 		default:

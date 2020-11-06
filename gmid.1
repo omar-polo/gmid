@@ -24,6 +24,7 @@
 .Op Fl c Ar cert.pem
 .Op Fl d Ar docs
 .Op Fl k Ar key.pem
+.Op Fl l Ar access.log
 .Ek
 .Sh DESCRIPTION
 .Nm
@@ -78,6 +79,8 @@ Print the usage and exit.
 .It Fl k Ar key.pem
 The key for the certificate, by default is
 .Pa key.pem .
+.It Fl l Ar access.log
+log to the given file instead of the standard error.
 .El
 .Sh EXAMPLES
 To quickly getting started
