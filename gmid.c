@@ -110,6 +110,9 @@ struct etm {			/* file extension to mime */
 const char *dir;
 int dirfd, logfd;
 int cgi;
+int connected_clients;
+
+void		 siginfo_handler(int);
 
 char		*url_after_proto(char*);
 char		*url_start_of_request(char*);
@@ -137,6 +140,12 @@ void		 goodbye(struct pollfd*, struct client*);
 void		 loop(struct tls*, int);
 
 void		 usage(const char*);
+
+void
+siginfo_handler(int sig)
+{
+	(void)sig;
+}
 
 char *
 url_after_proto(char *url)
@@ -760,6 +769,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 			clients[i].af = AF_INET;
 			clients[i].addr = addr.sin_addr;
 
+			connected_clients++;
 			return;
 		}
 	}
@@ -783,6 +793,8 @@ goodbye(struct pollfd *pfd, struct client *c)
 		pfd->events = POLLOUT;
 		return;
 	}
+
+	connected_clients--;
 
 	tls_free(c->ctx);
 	c->ctx = NULL;
@@ -813,8 +825,13 @@ loop(struct tls *ctx, int sock)
 	fds[0].fd = sock;
 
 	for (;;) {
-		if ((todo = poll(fds, MAX_USERS, INFTIM)) == -1)
+		if ((todo = poll(fds, MAX_USERS, INFTIM)) == -1) {
+			if (errno == EINTR) {
+                                warnx("connected clients: %d", connected_clients);
+				continue;
+			}
 			err(1, "poll");
+		}
 
 		for (i = 0; i < MAX_USERS; i++) {
 			assert(i < MAX_USERS);
@@ -864,6 +881,13 @@ main(int argc, char **argv)
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
+
+#ifdef SIGINFO
+	signal(SIGINFO, siginfo_handler);
+#endif
+	signal(SIGUSR2, siginfo_handler);
+
+	connected_clients = 0;
 
 	dir = "docs/";
 	logfd = 2;		/* stderr */
