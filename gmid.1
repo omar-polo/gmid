@@ -20,7 +20,7 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl h
+.Op Fl hx
 .Op Fl c Ar cert.pem
 .Op Fl d Ar docs
 .Op Fl k Ar key.pem
@@ -81,7 +81,16 @@ The key for the certificate, by default is
 .Pa key.pem .
 .It Fl l Ar access.log
 log to the given file instead of the standard error.
+.It Fl x
+Enable CGI scripts.
 .El
+.Sh CGI
+If CGI scripts are enabled, when a file requested by a client is
+marked as executable it is executed and its output fed to the client.
+.Pp
+Note that since this give the chance to anybody to execute possibly
+.Sy any file
+in the served directory, this option is disabled by default.
 .Sh EXAMPLES
 To quickly getting started
 .Bd -literal -offset indent

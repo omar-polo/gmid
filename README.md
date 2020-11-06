@@ -6,7 +6,7 @@
 # SYNOPSIS
 
 **gmid**
-\[**-h**]
+\[**-hx**]
 \[**-c**&nbsp;*cert.pem*]
 \[**-d**&nbsp;*docs*]
 \[**-k**&nbsp;*key.pem*]
@@ -77,6 +77,19 @@ The options are as follows:
 **-l** *access.log*
 
 > log to the given file instead of the standard error.
+
+**-x**
+
+> Enable CGI scripts.
+
+# CGI
+
+If CGI scripts are enabled, when a file requested by a client is
+marked as executable it is executed and its output fed to the client.
+
+Note that since this give the chance to anybody to execute possibly
+**any file**
+in the served directory, this option is disabled by default.
 
 # EXAMPLES
 

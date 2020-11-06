@@ -48,6 +48,7 @@
 #define PATHBUF		2048
 
 #define SUCCESS		20
+#define TEMP_FAILURE	40
 #define NOT_FOUND	51
 #define BAD_REQUEST	59
 
@@ -68,6 +69,7 @@ struct client {
 	int		 code;
 	const char	*meta;
 	int		 fd;
+	pid_t		 child;
 	void		*buf, *i;
 	ssize_t		 len, off;
 	int		 af;
@@ -104,7 +106,9 @@ struct etm {			/* file extension to mime */
 		dprintf(logfd, "[%s] " fmt "\n", buf, __VA_ARGS__);	\
 	} while (0)
 
+const char *dir;
 int dirfd, logfd;
+int cgi;
 
 char		*url_after_proto(char*);
 char		*url_start_of_request(char*);
@@ -114,10 +118,11 @@ int		 path_isdir(char*);
 ssize_t		 filesize(int);
 
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
-int		 isdir(int);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
 int		 open_file(char*, struct pollfd*, struct client*);
+void		 start_cgi(const char*, struct pollfd*, struct client*);
+void		 handle_cgi(struct pollfd*, struct client*);
 void		 send_file(char*, struct pollfd*, struct client*);
 void		 send_dir(char*, struct pollfd*, struct client*);
 void		 handle(struct pollfd*, struct client*);
@@ -247,19 +252,6 @@ start_reply(struct pollfd *pfd, struct client *client, int code, const char *rea
 	return 1;
 }
 
-int
-isdir(int fd)
-{
-	struct stat sb;
-
-	if (fstat(fd, &sb) == -1) {
-		warn("fstat");
-		return 1; 	/* we'll probably fail later on anyway */
-	}
-
-	return S_ISDIR(sb.st_mode);
-}
-
 ssize_t
 filesize(int fd)
 {
@@ -308,6 +300,7 @@ int
 open_file(char *path, struct pollfd *fds, struct client *c)
 {
 	char fpath[PATHBUF];
+	struct stat sb;
 
 	assert(path != NULL);
 
@@ -325,11 +318,24 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 		return 0;
 	}
 
-	if (isdir(c->fd)) {
+	if (fstat(c->fd, &sb) == -1) {
+		LOG(c, "fstat failed for %s", fpath);
+		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
+			return 0;
+		goodbye(fds, c);
+		return 0;
+	}
+
+	if (S_ISDIR(sb.st_mode)) {
 		LOG(c, "%s is a directory, trying %s/index.gmi", fpath, fpath);
 		close(c->fd);
 		c->fd = -1;
 		send_dir(fpath, fds, c);
+		return 0;
+	}
+
+	if (cgi && (sb.st_mode & S_IXUSR)) {
+		start_cgi(fpath, fds, c);
 		return 0;
 	}
 
@@ -348,6 +354,120 @@ open_file(char *path, struct pollfd *fds, struct client *c)
 	c->i = c->buf;
 
 	return start_reply(fds, c, SUCCESS, mime(fpath));
+}
+
+void
+start_cgi(const char *path, struct pollfd *fds, struct client *c)
+{
+	pid_t pid;
+	int p[2];
+
+	if (pipe(p) == -1)
+		goto err;
+
+	switch (pid = fork()) {
+	case -1:
+		goto err;
+
+	case 0: {		/* child */
+                char *expath;
+		char addr[INET_ADDRSTRLEN];
+		char *argv[] = { NULL, NULL, NULL };
+		char *envp[] = {
+			/* inherited */
+			"PATH=",
+
+			/* CGI */
+			"SERVER_SOFTWARE=gmid",
+			/* "SERVER_NAME=example.com", */
+			/* "GATEWAY_INTERFACE=CGI/version" */
+			"SERVER_PROTOCOL=gemini",
+			"SERVER_PORT=1965",
+			/* "PATH_INFO=" */
+			/* "PATH_TRANSLATED=" */
+			/* "SCRIPT_NAME=" */
+			/* "QUERY_STRING=" */
+                        "REMOTE_ADDR=",
+			NULL,
+		};
+		size_t i;
+
+		close(p[0]);	/* close the read end */
+		if (dup2(p[1], 1) == -1)
+			goto childerr;
+
+		if (inet_ntop(c->af, &c->addr, addr, sizeof(addr)) == NULL)
+                        goto childerr;
+
+		/* skip the ./ at the start of path*/
+		if (asprintf(&expath, "%s%s", dir, path+2) == -1)
+			goto childerr;
+		argv[0] = argv[1] = expath;
+
+		/* fix the envp */
+		for (i = 0; envp[i] != NULL; ++i) {
+			if (!strcmp(envp[i], "PATH="))
+				envp[i] = getenv("PATH");
+			else if (!strcmp(envp[i], "REMOTE_ADDR="))
+				envp[i] = addr;
+			/* else if (!strcmp(envp[i], "PATH_INFO")) */
+			/* ... */
+		}
+
+		execvpe(expath, argv, envp);
+		goto childerr;
+	}
+
+	default:		/* parent */
+		close(p[1]);	/* close the write end */
+		close(c->fd);
+		c->fd = p[0];
+		c->child = pid;
+		handle_cgi(fds, c);
+		return;
+	}
+
+err:
+	if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
+		return;
+	goodbye(fds, c);
+	return;
+
+childerr:
+	dprintf(p[1], "%d internal server error\r\n", TEMP_FAILURE);
+	close(p[1]);
+        _exit(1);
+}
+
+void
+handle_cgi(struct pollfd *fds, struct client *c)
+{
+	char buf[1024];
+	ssize_t r, todo;
+
+	while (1) {
+		r = read(c->fd, buf, sizeof(buf));
+		if (r == -1 || r == 0)
+			break;
+		todo = r;
+		while (todo > 0) {
+			switch (r = tls_write(c->ctx, buf, todo)) {
+			case -1:
+				goto end;
+
+			case TLS_WANT_POLLOUT:
+			case TLS_WANT_POLLIN:
+				/* evil! */
+				continue;
+
+			default:
+				todo -= r;
+			}
+		}
+	}
+
+end:
+	goodbye(fds, c);
 }
 
 void
@@ -581,6 +701,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 
 			clients[i].state = S_OPEN;
 			clients[i].fd = -1;
+			clients[i].child = -1;
 			clients[i].buf = MAP_FAILED;
 			clients[i].af = AF_INET;
 			clients[i].addr = addr.sin_addr;
@@ -678,16 +799,19 @@ usage(const char *me)
 int
 main(int argc, char **argv)
 {
-	const char *cert = "cert.pem", *key = "key.pem", *dir = "docs";
+	const char *cert = "cert.pem", *key = "key.pem";
 	struct tls *ctx = NULL;
 	struct tls_config *conf;
 	int sock, ch;
 
 	signal(SIGPIPE, SIG_IGN);
+	signal(SIGCHLD, SIG_IGN);
 
+	dir = "docs/";
 	logfd = 2;		/* stderr */
+	cgi = 0;
 
-	while ((ch = getopt(argc, argv, "c:d:hk:l:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:d:hk:l:x")) != -1) {
 		switch (ch) {
 		case 'c':
 			cert = optarg;
@@ -710,6 +834,10 @@ main(int argc, char **argv)
 			if ((logfd = open(optarg, O_WRONLY | O_CREAT,
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IWOTH)) == -1)
 				err(1, "%s", optarg);
+			break;
+
+		case 'x':
+			cgi = 1;
 			break;
 
 		default:
@@ -742,10 +870,10 @@ main(int argc, char **argv)
 	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
 		err(1, "open: %s", dir);
 
-	if (unveil(dir, "r") == -1)
+	if (unveil(dir, cgi ? "rx" : "r") == -1)
 		err(1, "unveil");
 
-	if (pledge("stdio rpath inet", "") == -1)
+	if (pledge(cgi ? "stdio rpath inet proc exec" : "stdio rpath inet", NULL) == -1)
 		err(1, "pledge");
 
 	loop(ctx, sock);
