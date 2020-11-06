@@ -20,17 +20,17 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl hx
+.Op Fl h
 .Op Fl c Ar cert.pem
 .Op Fl d Ar docs
 .Op Fl k Ar key.pem
-.Op Fl l Ar access.log
+.Op Fl l Ar logfile
+.Op Fl x Ar cgi-bin
 .Ek
 .Sh DESCRIPTION
 .Nm
-is a very simple and minimal gemini server.
-It only supports serving static content, and strive to be as simple as
-possible.
+is a very simple and minimal gemini server that can serve static files
+and execute CGI scripts.
 .Pp
 .Nm
 will strip any sequence of
@@ -40,7 +40,7 @@ or trailing
 in the requests made by clients, so it's impossible to serve content
 outside the
 .Pa docs
-directory by mistake, and will also refuse to follow symlink.
+directory by mistake, and will also refuse to follow symlinks.
 Furthermore, on
 .Ox ,
 .Xr pledge 2
@@ -48,15 +48,15 @@ and
 .Xr unveil 2
 are used to ensure that
 .Nm
-dosen't do anything else than read files from the given directory and
-accept network connections.
+dosen't do anything else than read files from the given directory,
+accept network connections and, optionally, execute CGI scripts.
 .Pp
 It should be noted that
 .Nm
 is very simple in its implementation, and so it may not be appropriate
-for serving site with lots of users.
-After all, the code is single threaded and use a single process
-(multiple requests are handled concurrently thanks to async I/O.)
+for serving sites with lots of users.
+After all, the code is single threaded and use a single process,
+although it can handle multiple requests concurrently.
 .Pp
 If a user request path is a directory,
 .Nm
@@ -73,24 +73,44 @@ The certificate to use, by default is
 .It Fl d Ar docs
 The root directory to serve.
 .Nm
-won't serve any file that is outside that directory.
+won't serve any file that is outside that directory, by default
+.Pa docs .
 .It Fl h
 Print the usage and exit.
 .It Fl k Ar key.pem
 The key for the certificate, by default is
 .Pa key.pem .
-.It Fl l Ar access.log
+.It Fl l Ar logfile
 log to the given file instead of the standard error.
-.It Fl x
-Enable CGI scripts.
+.It Fl x Ar dir
+Enable execution of CGI scripts inside the given directory (relative
+to the document root.)  Cannot be provided more than once.
 .El
 .Sh CGI
-If CGI scripts are enabled, when a file requested by a client is
-marked as executable it is executed and its output fed to the client.
+When CGI scripts are enabled for a directory, a request for an
+executable file will execute it and fed its output to the client.
 .Pp
-Note that since this give the chance to anybody to execute possibly
-.Sy any file
-in the served directory, this option is disabled by default.
+The CGI scripts will inherit the environment from
+.Nm
+with these additional variables set:
+.Bl -tag -width 15m
+.It Ev SERVER_SOFTWARE
+"gmid"
+.It Ev SERVER_PROTOCOL
+"gemini"
+.It Ev SERVER_PORT
+"1965"
+.It Ev PATH_INFO
+the request path
+.It Ev PATH_TRANSLATED
+the full path: the concatenation of the document root and the request
+path
+.It Ev QUERY_STRING
+the query string if present in the request URL, otherwise it
+won't be set.
+.It Ev REMOTE_ADDR
+the IP address of the client in dot notation
+.El
 .Sh EXAMPLES
 To quickly getting started
 .Bd -literal -offset indent
@@ -105,7 +125,28 @@ EOF
 $ gmid -c cert.pem -k key.pem -d docs
 .Ed
 .Pp
-now you can visit gemini://localhost/ with your preferred gemini client.
+Now you can visit gemini://localhost/ with your preferred gemini
+client.
+.Pp
+To add some CGI scripts, assuming a setup similar to the previous
+example, you can
+.Bd -literal -offset indent
+$ mkdir docs/cgi-bin
+$ cat <<EOF > docs/cgi-bin/hello-world
+#!/bin/sh
+printf "20 text/plain\\r\\n"
+echo "hello world!"
+EOF
+$ gmid -x cgi-bin
+.Ed
+.Pp
+Note that the argument to the
+.Fl x
+option is
+.Pa cgi-bin
+and not
+.Pa docs/cgi-bin ,
+since it’s relative to the document root.
 .Sh CAVEATS
 .Bl -bullet
 .It

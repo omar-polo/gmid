@@ -78,18 +78,15 @@ The options are as follows:
 
 > log to the given file instead of the standard error.
 
-**-x**
+**-x** *dir*
 
-> Enable CGI scripts.
+> Enable execution of CGI scripts inside the given directory (relative
+> to the document root.)  Cannot be provided more than once.
 
 # CGI
 
-If CGI scripts are enabled, when a file requested by a client is
-marked as executable it is executed and its output fed to the client.
-
-Note that since this give the chance to anybody to execute possibly
-**any file**
-in the served directory, this option is disabled by default.
+When CGI scripts are enabled for a directory, a request for an
+executable file will execute it and fed its output to the client.
 
 # EXAMPLES
 
@@ -105,7 +102,27 @@ To quickly getting started
 	EOF
 	$ gmid -c cert.pem -k key.pem -d docs
 
-now you can visit gemini://localhost/ with your preferred gemini client.
+now you can visit gemini://localhost/ with your preferred gemini
+client.
+
+To add some CGI scripts, assuming a setup similar to the previous
+example, one can
+
+	$ mkdir docs/cgi-bin
+	$ cat <<EOF > docs/cgi-bin/hello-world
+	#!/bin/sh
+	printf "20 text/plain0
+	echo "hello world!"
+	EOF
+	$ gmid -d docs -x cgi-bin
+
+note that the argument to the
+**-x**
+option is
+*cgi-bin*
+and not
+*docs/cgi-bin*,
+since it&#8217;s relative to the document root.
 
 # CAVEATS
 
