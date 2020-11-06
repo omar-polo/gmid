@@ -107,12 +107,12 @@ struct etm {			/* file extension to mime */
 		dprintf(logfd, "[%s] " fmt "\n", buf, __VA_ARGS__);	\
 	} while (0)
 
-const char *dir;
+const char *dir, *cgi;
 int dirfd, logfd;
-int cgi;
 int connected_clients;
 
 void		 siginfo_handler(int);
+int		 starts_with(const char*, const char*);
 
 char		*url_after_proto(char*);
 char		*url_start_of_request(char*);
@@ -147,13 +147,23 @@ siginfo_handler(int sig)
 	(void)sig;
 }
 
+int
+starts_with(const char *str, const char *prefix)
+{
+	size_t i;
+
+	for (i = 0; prefix[i] != '\0'; ++i)
+		if (str[i] != prefix[i])
+			return 0;
+	return 1;
+}
+
 char *
 url_after_proto(char *url)
 {
 	char *s;
 	const char *proto = "gemini";
 	const char *marker = "://";
-	size_t i;
 
 	/* a relative URL */
 	if ((s = strstr(url, marker)) == NULL)
@@ -162,9 +172,8 @@ url_after_proto(char *url)
 	if (s - strlen(proto) != url)
 		return NULL;
 
-	for (i = 0; proto[i] != '\0'; ++i)
-		if (url[i] != proto[i])
-			return NULL;
+	if (!starts_with(url, proto))
+		return NULL;
 
 	/* a valid gemini:// URL */
 	return s + strlen(marker);
@@ -353,7 +362,8 @@ open_file(char *path, char *query, struct pollfd *fds, struct client *c)
 		return 0;
 	}
 
-	if (cgi && (sb.st_mode & S_IXUSR)) {
+	/* +2 to skip the ./ */
+	if ((sb.st_mode & S_IXUSR) && cgi != NULL && starts_with(fpath+2, cgi)) {
 		start_cgi(fpath, query, fds, c);
 		return 0;
 	}
@@ -868,7 +878,8 @@ void
 usage(const char *me)
 {
 	fprintf(stderr,
-	    "USAGE: %s [-h] [-c cert.pem] [-d docs] [-k key.pem]\n",
+	    "USAGE: %s [-h] [-c cert.pem] [-d docs] [-k key.pem] "
+	    "[-l logfile] [-x cgi-bin]\n",
 	    me);
 }
 
@@ -892,9 +903,9 @@ main(int argc, char **argv)
 
 	dir = "docs/";
 	logfd = 2;		/* stderr */
-	cgi = 0;
+	cgi = NULL;
 
-	while ((ch = getopt(argc, argv, "c:d:hk:l:x")) != -1) {
+	while ((ch = getopt(argc, argv, "c:d:hk:l:x:")) != -1) {
 		switch (ch) {
 		case 'c':
 			cert = optarg;
@@ -920,7 +931,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'x':
-			cgi = 1;
+			cgi = optarg;
 			break;
 
 		default:
@@ -953,11 +964,17 @@ main(int argc, char **argv)
 	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
 		err(1, "open: %s", dir);
 
-	if (unveil(dir, cgi ? "rx" : "r") == -1)
-		err(1, "unveil");
-
-	if (pledge(cgi ? "stdio rpath inet proc exec" : "stdio rpath inet", NULL) == -1)
-		err(1, "pledge");
+	if (cgi != NULL) {
+		if (unveil(dir, "rx") == -1)
+			err(1, "unveil");
+		if (pledge("stdio rpath inet proc exec", NULL) == -1)
+			err(1, "pledge");
+	} else {
+		if (unveil(dir, "r") == -1)
+			err(1, "unveil");
+		if (pledge("stdio rpath inet", NULL) == -1)
+			err(1, "pledge");
+	}
 
 	loop(ctx, sock);
 
