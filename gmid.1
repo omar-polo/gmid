@@ -37,10 +37,7 @@ will strip any sequence of
 .Pa ../
 or trailing
 .Pa ..
-in the requests made by clients, so it's impossible to serve content
-outside the
-.Pa docs
-directory by mistake, and will also refuse to follow symlinks.
+in the requests made by clients and will refuse to follow symlinks.
 Furthermore, on
 .Ox ,
 .Xr pledge 2
@@ -63,7 +60,6 @@ If a user request path is a directory,
 will try to serve a
 .Pa index.gmi
 file inside that directory.
-If not found, it will return an error 51 (not found) to the user.
 .Pp
 The options are as follows:
 .Bl -tag -width 12m
@@ -73,7 +69,8 @@ The certificate to use, by default is
 .It Fl d Ar docs
 The root directory to serve.
 .Nm
-won't serve any file that is outside that directory, by default
+won't serve any file that is outside that directory.
+By default is
 .Pa docs .
 .It Fl h
 Print the usage and exit.
@@ -93,24 +90,50 @@ executable file will execute it and fed its output to the client.
 The CGI scripts will inherit the environment from
 .Nm
 with these additional variables set:
-.Bl -tag -width 15m
+.Bl -tag -width 18m
 .It Ev SERVER_SOFTWARE
 "gmid"
-.It Ev SERVER_PROTOCOL
-"gemini"
 .It Ev SERVER_PORT
 "1965"
-.It Ev PATH_INFO
-the request path
-.It Ev PATH_TRANSLATED
-the full path: the concatenation of the document root and the request
-path
+.It Ev SCRIPT_NAME
+The (public) path to the script.
+.It Ev SCRIPT_EXECUTABLE
+The full path to the executable.
+.It Ev REQUEST_URI
+The user request (without the query parameters.)
+.It Ev REQUEST_RELATIVE
+The request relative to the script.
 .It Ev QUERY_STRING
-the query string if present in the request URL, otherwise it
-won't be set.
-.It Ev REMOTE_ADDR
-the IP address of the client in dot notation
+The query parameters.
+.It Ev REMOTE_HOST
+The remote IP address.
+.It Ev DOCUMENT_ROOT
+The root directory being served, the one provided with the
+.Ar d
+parameter to
+.Nm
 .El
+.Pp
+Let's say you have a script in
+.Pa /cgi-bin/script
+and the user request is
+.Pa /cgi-bin/script/foo/bar?quux .
+Then
+.Ev SCRIPT_NAME
+will be
+.Pa /cgi-bin/script ,
+.Ev SCRIPT_EXECUTABLE
+will be
+.Pa $DOCUMENT_ROOT/cgi-bin/script ,
+.Ev REQUEST_URI
+will be
+.Pa /cgi-bin/script/foo/bar ,
+.Ev REQUEST_RELATIVE
+will be
+.Pa foo/bar and
+.Ev QUERY_STRING
+will be
+.Ar quux .
 .Sh EXAMPLES
 To quickly getting started
 .Bd -literal -offset indent
@@ -146,7 +169,7 @@ option is
 .Pa cgi-bin
 and not
 .Pa docs/cgi-bin ,
-since it’s relative to the document root.
+since it's relative to the document root.
 .Sh CAVEATS
 .Bl -bullet
 .It

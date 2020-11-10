@@ -77,6 +77,13 @@ struct client {
 	struct in_addr	 addr;
 };
 
+enum {
+	FILE_EXISTS,
+	FILE_EXECUTABLE,
+	FILE_DIRECTORY,
+	FILE_MISSING,
+};
+
 struct etm {			/* file extension to mime */
 	const char	*mime;
 	const char	*ext;
@@ -118,14 +125,15 @@ char		*url_after_proto(char*);
 char		*url_start_of_request(char*);
 int		 url_trim(struct client*, char*);
 char		*adjust_path(char*);
-int		 path_isdir(char*);
 ssize_t		 filesize(int);
 
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
+int		 check_path(const char*, int*);
+int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
 int		 open_file(char*, char*, struct pollfd*, struct client*);
-void		 start_cgi(const char*, const char*, struct pollfd*, struct client*);
+int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
 void		 cgi_setpoll_on_child(struct pollfd*, struct client*);
 void		 cgi_setpoll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
@@ -245,14 +253,6 @@ adjust_path(char *path)
 }
 
 int
-path_isdir(char *path)
-{
-	if (*path == '\0')
-		return 1;
-	return path[strlen(path)-1] == '/';
-}
-
-int
 start_reply(struct pollfd *pfd, struct client *client, int code, const char *reason)
 {
 	char buf[1030] = {0}; 	/* status + ' ' + max reply len + \r\n\0 */
@@ -324,12 +324,78 @@ mime(const char *path)
 }
 
 int
-open_file(char *path, char *query, struct pollfd *fds, struct client *c)
+check_path(const char *path, int *fd)
 {
-	char fpath[PATHBUF];
 	struct stat sb;
 
 	assert(path != NULL);
+	if ((*fd = openat(dirfd, path,
+		    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
+		return FILE_MISSING;
+	}
+
+	if (fstat(*fd, &sb) == -1) {
+		dprintf(logfd, "failed stat for %s\n", path);
+		return FILE_MISSING;
+	}
+
+	if (S_ISDIR(sb.st_mode))
+		return FILE_DIRECTORY;
+
+	if (sb.st_mode & S_IXUSR)
+		return FILE_EXECUTABLE;
+
+	return FILE_EXISTS;
+}
+
+/*
+ * the inverse of this algorithm, i.e. starting from the start of the
+ * path + strlen(cgi), and checking if each component, should be
+ * faster.  But it's tedious to write.  This does the opposite: starts
+ * from the end and strip one component at a time, until either an
+ * executable is found or we emptied the path.
+ */
+int
+check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
+{
+	char *end;
+	end = strchr(path, '\0');
+
+	/* NB: assume CGI is enabled and path matches cgi */
+
+	while (end > path) {
+		/* go up one level.  UNIX paths are simple and POSIX
+		 * dirname, with its ambiguities on if the given path
+		 * is changed or not, gives me headaches. */
+		while (*end != '/')
+			end--;
+		*end = '\0';
+
+		switch (check_path(path, &c->fd)) {
+		case FILE_EXECUTABLE:
+			return start_cgi(path, end+1, query, fds,c);
+		case FILE_MISSING:
+			break;
+		default:
+			goto err;
+		}
+
+		*end = '/';
+		end--;
+	}
+
+err:
+	if (!start_reply(fds, c, NOT_FOUND, "not found"))
+		return 0;
+	goodbye(fds, c);
+	return 0;
+}
+
+
+int
+open_file(char *path, char *query, struct pollfd *fds, struct client *c)
+{
+	char fpath[PATHBUF];
 
 	bzero(fpath, sizeof(fpath));
 
@@ -337,60 +403,58 @@ open_file(char *path, char *query, struct pollfd *fds, struct client *c)
 		fpath[0] = '.';
 	strlcat(fpath, path, PATHBUF);
 
-	if ((c->fd = openat(dirfd, fpath,
-		    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
-		LOG(c, "open failed: %s", fpath);
-		if (!start_reply(fds, c, NOT_FOUND, "not found"))
-			return 0;
-		goodbye(fds, c);
-		return 0;
-	}
+	switch (check_path(fpath, &c->fd)) {
+	case FILE_EXECUTABLE:
+		/* +2 to skip the ./ */
+		if (cgi != NULL && starts_with(fpath+2, cgi))
+			return start_cgi(fpath, "", query, fds, c);
 
-	if (fstat(c->fd, &sb) == -1) {
-		LOG(c, "fstat failed for %s", fpath);
-		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
-			return 0;
-		goodbye(fds, c);
-		return 0;
-	}
+		/* fallthrough */
 
-	if (S_ISDIR(sb.st_mode)) {
+	case FILE_EXISTS:
+		if ((c->len = filesize(c->fd)) == -1) {
+			LOG(c, "failed to get file size for %s", fpath);
+			goodbye(fds, c);
+			return 0;
+		}
+
+		if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
+			    c->fd, 0)) == MAP_FAILED) {
+			warn("mmap: %s", fpath);
+			goodbye(fds, c);
+			return 0;
+		}
+		c->i = c->buf;
+		return start_reply(fds, c, SUCCESS, mime(fpath));
+
+	case FILE_DIRECTORY:
 		LOG(c, "%s is a directory, trying %s/index.gmi", fpath, fpath);
 		close(c->fd);
 		c->fd = -1;
 		send_dir(fpath, fds, c);
 		return 0;
-	}
 
-	/* +2 to skip the ./ */
-	if ((sb.st_mode & S_IXUSR) && cgi != NULL && starts_with(fpath+2, cgi)) {
-		start_cgi(fpath, query, fds, c);
-		return 0;
-	}
+	case FILE_MISSING:
+		if (cgi != NULL && starts_with(fpath+2, cgi))
+			return check_for_cgi(fpath, query, fds, c);
 
-	if ((c->len = filesize(c->fd)) == -1) {
-		LOG(c, "failed to get file size for %s", fpath);
+		if (!start_reply(fds, c, NOT_FOUND, "not found"))
+			return 0;
 		goodbye(fds, c);
 		return 0;
-	}
 
-	if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
-		    c->fd, 0)) == MAP_FAILED) {
-		warn("mmap: %s", fpath);
-		goodbye(fds, c);
-		return 0;
+	default:
+		/* unreachable */
+		abort();
 	}
-	c->i = c->buf;
-
-	return start_reply(fds, c, SUCCESS, mime(fpath));
 }
 
-void
-start_cgi(const char *path, const char *query,
+int
+start_cgi(const char *spath, const char *relpath, const char *query,
     struct pollfd *fds, struct client *c)
 {
 	pid_t pid;
-	int p[2];
+	int p[2]; 		/* read end, write end */
 
 	if (pipe(p) == -1)
 		goto err;
@@ -399,65 +463,68 @@ start_cgi(const char *path, const char *query,
 	case -1:
 		goto err;
 
-	case 0: {		/* child */
-                char *expath;
+	case 0: { 		/* child */
+		char *ex, *requri;
 		char addr[INET_ADDRSTRLEN];
 		char *argv[] = { NULL, NULL, NULL };
 
-		/* skip the initial ./ */
-		path += 2;
+		spath++;
 
-		close(p[0]);	/* close the read end */
+		close(p[0]);
 		if (dup2(p[1], 1) == -1)
 			goto childerr;
 
 		if (inet_ntop(c->af, &c->addr, addr, sizeof(addr)) == NULL)
-                        goto childerr;
-
-		/* skip the ./ at the start of path*/
-		if (asprintf(&expath, "%s%s", dir, path) == -1)
 			goto childerr;
-		argv[0] = argv[1] = expath;
+
+		if (asprintf(&ex, "%s%s", dir, spath+1) == -1)
+			goto childerr;
+
+		if (asprintf(&requri, "%s%s%s", spath,
+		    *relpath == '\0' ? "" : "/",
+		    relpath) == -1)
+			goto childerr;
+
+		argv[0] = argv[1] = ex;
 
 		/* fix the env */
 		setenv("SERVER_SOFTWARE", "gmid", 1);
-		/* setenv("SERVER_NAME", "", 1); */
-		/* setenv("GATEWAY_INTERFACE", "CGI/version", 1); */
-		setenv("SERVER_PROTOCOL", "gemini", 1);
 		setenv("SERVER_PORT", "1965", 1);
-		setenv("PATH_INFO", path, 1);
-		setenv("PATH_TRANSLATED", expath, 1);
+		/* setenv("SERVER_NAME", "", 1); */
+		setenv("SCRIPT_NAME", spath, 1);
+		setenv("SCRIPT_EXECUTABLE", ex, 1);
+		setenv("REQUEST_URI", requri, 1);
+		setenv("REQUEST_RELATIVE", relpath, 1);
 		if (query != NULL)
 			setenv("QUERY_STRING", query, 1);
-		setenv("REMOTE_ADDR", addr, 1);
+		setenv("REMOTE_HOST", addr, 1);
+		setenv("DOCUMENT_ROOT", dir, 1);
 
-		execvp(expath, argv);
+		execvp(ex, argv);
 		goto childerr;
 	}
 
 	default:		/* parent */
-		close(p[1]);	/* close the write end */
+		close(p[1]);
 		close(c->fd);
 		c->fd = p[0];
 		c->child = pid;
 		mark_nonblock(c->fd);
 		c->state = S_SENDING;
 		handle_cgi(fds, c);
-		return;
+		return 0;
 	}
 
 err:
 	if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
-		return;
+		return 0;
 	goodbye(fds, c);
-	return;
+	return 0;
 
 childerr:
 	dprintf(p[1], "%d internal server error\r\n", TEMP_FAILURE);
 	close(p[1]);
-
-	/* don't call atexit stuff */
-        _exit(1);
+	_exit(1);
 }
 
 void
@@ -645,10 +712,7 @@ handle(struct pollfd *fds, struct client *client)
 		    query ? "?" : "",
 		    query ? query : "");
 
-		if (path_isdir(path))
-			send_dir(path, fds, client);
-		else
-			send_file(path, query, fds, client);
+		send_file(path, query, fds, client);
 		break;
 
 	case S_INITIALIZING:

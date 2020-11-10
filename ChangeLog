@@ -1,3 +1,8 @@
+2020-11-10  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (open_file): added support for path parameters for CGI
+	scripts
+
 2020-11-06  Omar Polo  <op@omarpolo.com>
 
 	* gmid.1: great improvements to the documentation

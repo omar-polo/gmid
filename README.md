@@ -24,10 +24,7 @@ will strip any sequence of
 *../*
 or trailing
 *..*
-in the requests made by clients, so it's impossible to serve content
-outside the
-*docs*
-directory by mistake, and will also refuse to follow symlinks.
+in the requests made by clients and will refuse to follow symlinks.
 Furthermore, on
 OpenBSD,
 pledge(2)
@@ -50,7 +47,6 @@ If a user request path is a directory,
 will try to serve a
 *index.gmi*
 file inside that directory.
-If not found, it will return an error 51 (not found) to the user.
 
 The options are as follows:
 
@@ -63,7 +59,8 @@ The options are as follows:
 
 > The root directory to serve.
 > **gmid**
-> won't serve any file that is outside that directory, by default
+> won't serve any file that is outside that directory.
+> By default is
 > *docs*.
 
 **-h**
@@ -97,31 +94,61 @@ with these additional variables set:
 
 > "gmid"
 
-`SERVER_PROTOCOL`
-
-> "gemini"
-
 `SERVER_PORT`
 
 > "1965"
 
-`PATH_INFO`
+`SCRIPT_NAME`
 
-> the request path
+> The (public) path to the script.
 
-`PATH_TRANSLATED`
+`SCRIPT_EXECUTABLE`
 
-> the full path: the concatenation of the document root and the request
-> path
+> The full path to the executable.
+
+`REQUEST_URI`
+
+> The user request (without the query parameters.)
+
+`REQUEST_RELATIVE`
+
+> The request relative to the script.
 
 `QUERY_STRING`
 
-> the query string if present in the request URL, otherwise it
-> won't be set.
+> The query parameters.
 
-`REMOTE_ADDR`
+`REMOTE_HOST`
 
-> the IP address of the client in dot notation
+> The remote IP address.
+
+`DOCUMENT_ROOT`
+
+> The root directory being served, the one provided with the
+> *d*
+> parameter to
+> **gmid**
+
+Let's say you have a script in
+*/cgi-bin/script*
+and the user request is
+*/cgi-bin/script/foo/bar?quux*.
+Then
+`SCRIPT_NAME`
+will be
+*/cgi-bin/script*,
+`SCRIPT_EXECUTABLE`
+will be
+*$DOCUMENT\_ROOT/cgi-bin/script*,
+`REQUEST_URI`
+will be
+*/cgi-bin/script/foo/bar*,
+`REQUEST_RELATIVE`
+will be
+*foo/bar and*
+`QUERY_STRING`
+will be
+*quux*.
 
 # EXAMPLES
 
@@ -157,7 +184,7 @@ option is
 *cgi-bin*
 and not
 *docs/cgi-bin*,
-since it&#8217;s relative to the document root.
+since it's relative to the document root.
 
 # CAVEATS
 
