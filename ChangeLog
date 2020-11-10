@@ -1,5 +1,7 @@
 2020-11-10  Omar Polo  <op@omarpolo.com>
 
+	* ChangeLog: 1.3 tagged, fixed ChangeLog format
+
 	* gmid.c (open_file): added support for path parameters for CGI
 	scripts
 
@@ -23,13 +25,15 @@
 
 2020-11-03  Omar Polo  <op@omarpolo.com>
 
-	* gmid.c (main): ignore SIGPIPE
 	* 1.2 tagged
+
+	* gmid.c (main): ignore SIGPIPE
 
 2020-10-14  Omar Polo  <op@omarpolo.com>
 
-	* switching to mmap() based file handling
 	* 1.1 tagged
+
+	* switching to mmap() based file handling
 
 2020-10-07  Omar Polo  <op@omarpolo.com>
 
