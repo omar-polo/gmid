@@ -171,7 +171,7 @@ char *
 url_after_proto(char *url)
 {
 	char *s;
-	const char *proto = "gemini";
+	const char *proto = "gemini:";
 	const char *marker = "//";
 
 	/* a relative URL */

@@ -1,5 +1,10 @@
 2020-11-18  Omar Polo  <op@omarpolo.com>
 
+	* 1.3.2 tagged
+
+	* gmid.c (url_after_proto): fix bug introduced in last version
+	regarding full URLs with explicit gemini protocol.
+
 	* 1.3.1 tagged
 
 	* gmid.c (url_after_proto): correct url parsing: accept URLs
