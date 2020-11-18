@@ -202,6 +202,10 @@ url_start_of_request(char *url)
 	if ((s = url_after_proto(url)) == NULL)
 		return NULL;
 
+	/* non-absolute URL */
+	if (s == url)
+		return s;
+
 	if ((t = strstr(s, "/")) == NULL)
 		return s + strlen(s);
 	return t;
