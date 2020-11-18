@@ -172,11 +172,18 @@ url_after_proto(char *url)
 {
 	char *s;
 	const char *proto = "gemini";
-	const char *marker = "://";
+	const char *marker = "//";
 
 	/* a relative URL */
 	if ((s = strstr(url, marker)) == NULL)
 		return url;
+
+	/*
+	 * if a protocol is not specified, gemini should be implied:
+	 * this handles the case of //example.com
+	 */
+	if (s == url)
+		return s + strlen(marker);
 
 	if (s - strlen(proto) != url)
 		return NULL;
@@ -184,7 +191,6 @@ url_after_proto(char *url)
 	if (!starts_with(url, proto))
 		return NULL;
 
-	/* a valid gemini:// URL */
 	return s + strlen(marker);
 }
 

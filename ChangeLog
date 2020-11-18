@@ -1,3 +1,8 @@
+2020-11-18  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (url_after_proto): correct url parsing: accept URLs
+	without explicit protocol
+
 2020-11-17  Omar Polo  <op@omarpolo.com>
 
 	* gmid.c (main): add flag -p to change the port
