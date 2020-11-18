@@ -11,6 +11,7 @@
 \[**-d**&nbsp;*docs*]
 \[**-k**&nbsp;*key.pem*]
 \[**-l**&nbsp;*logfile*]
+\[**-p**&nbsp;*port*]
 \[**-x**&nbsp;*cgi-bin*]
 
 # DESCRIPTION
@@ -75,6 +76,10 @@ The options are as follows:
 **-l** *logfile*
 
 > log to the given file instead of the standard error.
+
+**-p** *port*
+
+> The port to bind to, by default 1965.
 
 **-x** *dir*
 

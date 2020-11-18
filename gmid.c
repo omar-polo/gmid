@@ -116,6 +116,7 @@ struct etm {			/* file extension to mime */
 
 const char *dir, *cgi;
 int dirfd, logfd;
+int port;
 int connected_clients;
 
 void		 siginfo_handler(int);
@@ -464,7 +465,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		goto err;
 
 	case 0: { 		/* child */
-		char *ex, *requri;
+		char *ex, *requri, *portno;
 		char addr[INET_ADDRSTRLEN];
 		char *argv[] = { NULL, NULL, NULL };
 
@@ -475,6 +476,9 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 			goto childerr;
 
 		if (inet_ntop(c->af, &c->addr, addr, sizeof(addr)) == NULL)
+			goto childerr;
+
+		if (asprintf(&portno, "%d", port) == -1)
 			goto childerr;
 
 		if (asprintf(&ex, "%s%s", dir, spath+1) == -1)
@@ -489,7 +493,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 
 		/* fix the env */
 		setenv("SERVER_SOFTWARE", "gmid", 1);
-		setenv("SERVER_PORT", "1965", 1);
+		setenv("SERVER_PORT", portno, 1);
 		/* setenv("SERVER_NAME", "", 1); */
 		setenv("SCRIPT_NAME", spath, 1);
 		setenv("SCRIPT_EXECUTABLE", ex, 1);
@@ -943,7 +947,7 @@ usage(const char *me)
 {
 	fprintf(stderr,
 	    "USAGE: %s [-h] [-c cert.pem] [-d docs] [-k key.pem] "
-	    "[-l logfile] [-x cgi-bin]\n",
+	    "[-l logfile] [-p port] [-x cgi-bin]\n",
 	    me);
 }
 
@@ -968,8 +972,9 @@ main(int argc, char **argv)
 	dir = "docs/";
 	logfd = 2;		/* stderr */
 	cgi = NULL;
+	port = 1965;
 
-	while ((ch = getopt(argc, argv, "c:d:hk:l:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:d:hk:l:p:x:")) != -1) {
 		switch (ch) {
 		case 'c':
 			cert = optarg;
@@ -993,6 +998,20 @@ main(int argc, char **argv)
 					S_IRUSR | S_IWUSR | S_IRGRP | S_IWOTH)) == -1)
 				err(1, "%s", optarg);
 			break;
+
+		case 'p': {
+			char *ep;
+			long lval;
+
+			errno = 0;
+			lval = strtol(optarg, &ep, 10);
+			if (optarg[0] == '\0' || *ep != '\0')
+				err(1, "not a number: %s", optarg);
+			if (lval < 0 || lval > UINT16_MAX)
+				err(1, "port number out of range: %s", optarg);
+			port = lval;
+			break;
+		}
 
 		case 'x':
 			cgi = optarg;
@@ -1023,7 +1042,7 @@ main(int argc, char **argv)
 	if (tls_configure(ctx, conf) == -1)
 		errx(1, "tls_configure: %s", tls_error(ctx));
 
-	sock = make_socket(1965, AF_INET);
+	sock = make_socket(port, AF_INET);
 
 	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
 		err(1, "open: %s", dir);

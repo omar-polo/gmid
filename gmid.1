@@ -25,6 +25,7 @@
 .Op Fl d Ar docs
 .Op Fl k Ar key.pem
 .Op Fl l Ar logfile
+.Op Fl p Ar port
 .Op Fl x Ar cgi-bin
 .Ek
 .Sh DESCRIPTION
@@ -79,6 +80,8 @@ The key for the certificate, by default is
 .Pa key.pem .
 .It Fl l Ar logfile
 log to the given file instead of the standard error.
+.It Fl p Ar port
+The port to bind to, by default 1965.
 .It Fl x Ar dir
 Enable execution of CGI scripts inside the given directory (relative
 to the document root.)  Cannot be provided more than once.
