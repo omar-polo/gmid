@@ -20,11 +20,10 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl h
+.Op Fl fh
 .Op Fl c Ar cert.pem
 .Op Fl d Ar docs
 .Op Fl k Ar key.pem
-.Op Fl l Ar logfile
 .Op Fl p Ar port
 .Op Fl x Ar cgi-bin
 .Ek
@@ -73,13 +72,13 @@ The root directory to serve.
 won't serve any file that is outside that directory.
 By default is
 .Pa docs .
+.It Fl f
+stays and log in the foreground, do not daemonize the process.
 .It Fl h
 Print the usage and exit.
 .It Fl k Ar key.pem
 The key for the certificate, by default is
 .Pa key.pem .
-.It Fl l Ar logfile
-log to the given file instead of the standard error.
 .It Fl p Ar port
 The port to bind to, by default 1965.
 .It Fl x Ar dir
@@ -189,6 +188,4 @@ since it's relative to the document root.
 .It
 it doesn't support virtual hosts: the host part of the request URL is
 completely ignored.
-.It
-it doesn't fork in the background or anything like that.
 .El

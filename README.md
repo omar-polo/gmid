@@ -6,11 +6,10 @@
 # SYNOPSIS
 
 **gmid**
-\[**-h**]
+\[**-fh**]
 \[**-c**&nbsp;*cert.pem*]
 \[**-d**&nbsp;*docs*]
 \[**-k**&nbsp;*key.pem*]
-\[**-l**&nbsp;*logfile*]
 \[**-p**&nbsp;*port*]
 \[**-x**&nbsp;*cgi-bin*]
 
@@ -64,6 +63,10 @@ The options are as follows:
 > By default is
 > *docs*.
 
+**-f**
+
+> stays and log in the foreground, do not daemonize the process.
+
 **-h**
 
 > Print the usage and exit.
@@ -72,10 +75,6 @@ The options are as follows:
 
 > The key for the certificate, by default is
 > *key.pem*.
-
-**-l** *logfile*
-
-> log to the given file instead of the standard error.
 
 **-p** *port*
 
@@ -216,6 +215,4 @@ since it's relative to the document root.
 
 *	it doesn't support virtual hosts: the host part of the request URL is
 	completely ignored.
-
-*	it doesn't fork in the background or anything like that.
 

@@ -1,3 +1,8 @@
+2020-12-02  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c: logging reworked and daemonize.  The -l option was
+	removed: now it logs on syslog if -f (foreground) is not passed.
+
 2020-11-18  Omar Polo  <op@omarpolo.com>
 
 	* 1.3.2 tagged

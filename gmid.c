@@ -30,6 +30,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 #include <tls.h>
 #include <unistd.h>
 
@@ -113,17 +114,39 @@ struct etm {			/* file extension to mime */
 	{NULL, NULL}
 };
 
-#define LOG(c, fmt, ...)						\
+#define LOG(priority, c, fmt, ...)					\
 	do {								\
 		char buf[INET_ADDRSTRLEN];				\
-		if (inet_ntop((c)->af, &(c)->addr, buf, sizeof(buf)) == NULL) \
-			err(1, "inet_ntop");				\
-		dprintf(logfd, "[%s] " fmt "\n", buf, __VA_ARGS__);	\
+		if (inet_ntop((c)->af, &(c)->addr,			\
+		    buf, sizeof(buf)) == NULL)				\
+			FATAL("inet_ntop: %s", strerror(errno));	\
+		if (foreground)						\
+			fprintf(stderr,					\
+			    "%s " fmt "\n", buf, __VA_ARGS__);		\
+		else							\
+			syslog((priority) | LOG_DAEMON,			\
+			    "%s " fmt, buf, __VA_ARGS__);		\
+	} while (0)
+
+#define LOGE(c, fmt, ...) LOG(LOG_ERR,    c, fmt, __VA_ARGS__)
+#define LOGN(c, fmt, ...) LOG(LOG_NOTICE, c, fmt, __VA_ARGS__)
+#define LOGI(c, fmt, ...) LOG(LOG_INFO,   c, fmt, __VA_ARGS__)
+#define LOGD(c, fmt, ...) LOG(LOG_DEBUG,  c, fmt, __VA_ARGS__)
+
+#define FATAL(fmt, ...)							\
+	do {								\
+		if (foreground)						\
+			fprintf(stderr, fmt "\n", __VA_ARGS__);		\
+		else							\
+			syslog(LOG_DAEMON | LOG_CRIT,			\
+			    fmt, __VA_ARGS__);				\
+		exit(1);						\
 	} while (0)
 
 const char *dir, *cgi;
-int dirfd, logfd;
+int dirfd;
 int port;
+int foreground;
 int connected_clients;
 
 void		 siginfo_handler(int);
@@ -138,7 +161,7 @@ ssize_t		 filesize(int);
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
-int		 check_path(const char*, int*);
+int		 check_path(struct client*, const char*, int*);
 int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
 int		 open_file(char*, char*, struct pollfd*, struct client*);
 int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
@@ -230,7 +253,7 @@ url_trim(struct client *c, char *url)
 	s[1] = '\0';
 
 	if (s[2] != '\0') {
-		LOG(c, "%s", "request longer than 1024 bytes\n");
+		LOGE(c, "%s", "request longer than 1024 bytes");
 		return 0;
 	}
 
@@ -342,7 +365,7 @@ mime(const char *path)
 }
 
 int
-check_path(const char *path, int *fd)
+check_path(struct client *c, const char *path, int *fd)
 {
 	struct stat sb;
 
@@ -353,7 +376,7 @@ check_path(const char *path, int *fd)
 	}
 
 	if (fstat(*fd, &sb) == -1) {
-		dprintf(logfd, "failed stat for %s\n", path);
+		LOGN(c, "failed stat for %s: %s", path, strerror(errno));
 		return FILE_MISSING;
 	}
 
@@ -389,7 +412,7 @@ check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 			end--;
 		*end = '\0';
 
-		switch (check_path(path, &c->fd)) {
+		switch (check_path(c, path, &c->fd)) {
 		case FILE_EXECUTABLE:
 			return start_cgi(path, end+1, query, fds,c);
 		case FILE_MISSING:
@@ -421,7 +444,7 @@ open_file(char *path, char *query, struct pollfd *fds, struct client *c)
 		fpath[0] = '.';
 	strlcat(fpath, path, PATHBUF);
 
-	switch (check_path(fpath, &c->fd)) {
+	switch (check_path(c, fpath, &c->fd)) {
 	case FILE_EXECUTABLE:
 		/* +2 to skip the ./ */
 		if (cgi != NULL && starts_with(fpath+2, cgi))
@@ -431,7 +454,7 @@ open_file(char *path, char *query, struct pollfd *fds, struct client *c)
 
 	case FILE_EXISTS:
 		if ((c->len = filesize(c->fd)) == -1) {
-			LOG(c, "failed to get file size for %s", fpath);
+			LOGE(c, "failed to get file size for %s", fpath);
 			goodbye(fds, c);
 			return 0;
 		}
@@ -446,7 +469,7 @@ open_file(char *path, char *query, struct pollfd *fds, struct client *c)
 		return start_reply(fds, c, SUCCESS, mime(fpath));
 
 	case FILE_DIRECTORY:
-		LOG(c, "%s is a directory, trying %s/index.gmi", fpath, fpath);
+		LOGD(c, "%s is a directory, trying %s/index.gmi", fpath, fpath);
 		close(c->fd);
 		c->fd = -1;
 		send_dir(fpath, fds, c);
@@ -650,7 +673,7 @@ send_file(char *path, char *query, struct pollfd *fds, struct client *c)
 	while (len > 0) {
 		switch (ret = tls_write(c->ctx, c->i, len)) {
 		case -1:
-			LOG(c, "tls_write: %s", tls_error(c->ctx));
+			LOGE(c, "tls_write: %s", tls_error(c->ctx));
 			goodbye(fds, c);
 			return;
 
@@ -709,7 +732,7 @@ handle(struct pollfd *fds, struct client *client)
 		bzero(buf, GEMINI_URL_LEN);
 		switch (tls_read(client->ctx, buf, sizeof(buf)-1)) {
 		case -1:
-			LOG(client, "tls_read: %s", tls_error(client->ctx));
+			LOGE(client, "tls_read: %s", tls_error(client->ctx));
 			goodbye(fds, client);
 			return;
 
@@ -737,7 +760,7 @@ handle(struct pollfd *fds, struct client *client)
 		}
 
 		query = adjust_path(path);
-		LOG(client, "get %s%s%s", path,
+		LOGI(client, "GET %s%s%s", path,
 		    query ? "?" : "",
 		    query ? query : "");
 
@@ -781,9 +804,9 @@ mark_nonblock(int fd)
 	int flags;
 
 	if ((flags = fcntl(fd, F_GETFL)) == -1)
-		err(1, "fcntl(F_GETFL)");
+		FATAL("fcntl(F_GETFL): %s", strerror(errno));
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-		err(1, "fcntl(F_SETFL)");
+		FATAL("fcntl(F_SETFL): %s", strerror(errno));
 }
 
 int
@@ -820,23 +843,23 @@ make_socket(int port, int family)
 	}
 
 	if ((sock = socket(family, SOCK_STREAM, 0)) == -1)
-		err(1, "socket");
+		FATAL("socket: %s", strerror(errno));
 
 	v = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v)) == -1)
-		err(1, "setsockopt(SO_REUSEADDR)");
+		FATAL("setsockopt(SO_REUSEADDR): %s", strerror(errno));
 
 	v = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &v, sizeof(v)) == -1)
-		err(1, "setsockopt(SO_REUSEPORT)");
+		FATAL("setsockopt(SO_REUSEPORT): %s", strerror(errno));
 
 	mark_nonblock(sock);
 
 	if (bind(sock, addr, len) == -1)
-		err(1, "bind");
+		FATAL("bind: %s", strerror(errno));
 
 	if (listen(sock, 16) == -1)
-		err(1, "listen");
+		FATAL("listen: %s", strerror(errno));
 
 	return sock;
 }
@@ -852,7 +875,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 	if ((fd = accept(sock, (struct sockaddr*)&addr, &len)) == -1) {
 		if (errno == EWOULDBLOCK)
 			return;
-		err(1, "accept");
+		FATAL("accept: %s", strerror(errno));
 	}
 
 	mark_nonblock(fd);
@@ -931,10 +954,11 @@ loop(struct tls *ctx, int sock)
 	for (;;) {
 		if ((todo = poll(fds, MAX_USERS, INFTIM)) == -1) {
 			if (errno == EINTR) {
-                                warnx("connected clients: %d", connected_clients);
+                                warnx("connected clients: %d",
+				    connected_clients);
 				continue;
 			}
-			err(1, "poll");
+			FATAL("poll: %s", strerror(errno));
 		}
 
 		for (i = 0; i < MAX_USERS; i++) {
@@ -944,7 +968,8 @@ loop(struct tls *ctx, int sock)
 				continue;
 
 			if (fds[i].revents & (POLLERR|POLLNVAL))
-				err(1, "bad fd %d", fds[i].fd);
+				FATAL("bad fd %d: %s", fds[i].fd,
+				    strerror(errno));
 
 			if (fds[i].revents & POLLHUP) {
 				/* fds[i] may be the fd of the stdin
@@ -995,11 +1020,11 @@ main(int argc, char **argv)
 	connected_clients = 0;
 
 	dir = "docs/";
-	logfd = 2;		/* stderr */
 	cgi = NULL;
 	port = 1965;
+	foreground = 0;
 
-	while ((ch = getopt(argc, argv, "c:d:hk:l:p:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "c:d:fhk:p:x:")) != -1) {
 		switch (ch) {
 		case 'c':
 			cert = optarg;
@@ -1009,19 +1034,16 @@ main(int argc, char **argv)
 			dir = optarg;
 			break;
 
+		case 'f':
+			foreground = 1;
+			break;
+
 		case 'h':
 			usage(*argv);
 			return 0;
 
 		case 'k':
 			key = optarg;
-			break;
-
-		case 'l':
-			/* open log file or create it with 644 */
-			if ((logfd = open(optarg, O_WRONLY | O_CREAT | O_CLOEXEC,
-					S_IRUSR | S_IWUSR | S_IRGRP | S_IWOTH)) == -1)
-				err(1, "%s", optarg);
 			break;
 
 		case 'p': {
@@ -1075,6 +1097,9 @@ main(int argc, char **argv)
 
 	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
 		err(1, "open: %s", dir);
+
+	if (!foreground && daemon(0, 1) == -1)
+		exit(1);
 
 	if (cgi != NULL) {
 		if (unveil(dir, "rx") == -1)
