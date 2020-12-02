@@ -56,6 +56,13 @@
 #define MAX_USERS	64
 #endif
 
+#define SAFE_SETENV(var, val) do {		\
+		const char *_tmp = (val);	\
+		if (_tmp == NULL)		\
+			_tmp = "";		\
+		setenv((var), _tmp, 1);		\
+	} while(0)
+
 enum {
 	S_OPEN,
 	S_INITIALIZING,
@@ -502,17 +509,25 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		argv[0] = argv[1] = ex;
 
 		/* fix the env */
-		setenv("SERVER_SOFTWARE", "gmid", 1);
-		setenv("SERVER_PORT", portno, 1);
+		SAFE_SETENV("GATEWAY_INTERFACE", "CGI/1.1");
+		SAFE_SETENV("SERVER_SOFTWARE", "gmid");
+		SAFE_SETENV("SERVER_PORT", portno);
 		/* setenv("SERVER_NAME", "", 1); */
-		setenv("SCRIPT_NAME", spath, 1);
-		setenv("SCRIPT_EXECUTABLE", ex, 1);
-		setenv("REQUEST_URI", requri, 1);
-		setenv("REQUEST_RELATIVE", relpath, 1);
-		if (query != NULL)
-			setenv("QUERY_STRING", query, 1);
-		setenv("REMOTE_HOST", addr, 1);
-		setenv("DOCUMENT_ROOT", dir, 1);
+		SAFE_SETENV("SCRIPT_NAME", spath);
+		SAFE_SETENV("SCRIPT_EXECUTABLE", ex);
+		SAFE_SETENV("REQUEST_URI", requri);
+		SAFE_SETENV("REQUEST_RELATIVE", relpath);
+		SAFE_SETENV("QUERY_STRING", query);
+		SAFE_SETENV("REMOTE_HOST", addr);
+		SAFE_SETENV("REMOTE_ADDR", addr);
+		SAFE_SETENV("DOCUMENT_ROOT", dir);
+
+		if (tls_peer_cert_provided(c->ctx)) {
+			SAFE_SETENV("AUTH_TYPE", "Certificate");
+			SAFE_SETENV("REMOTE_USER", tls_peer_cert_subject(c->ctx));
+			SAFE_SETENV("TLS_CLIENT_ISSUER", tls_peer_cert_issuer(c->ctx));
+			SAFE_SETENV("TLS_CLIENT_HASH", tls_peer_cert_hash(c->ctx));
+		}
 
 		execvp(ex, argv);
 		goto childerr;
@@ -1035,6 +1050,10 @@ main(int argc, char **argv)
 
 	if ((conf = tls_config_new()) == NULL)
 		err(1, "tls_config_new");
+
+	/* optionally accept client certs, but don't try to verify them */
+	tls_config_verify_client_optional(conf);
+	tls_config_insecure_noverifycert(conf);
 
 	if (tls_config_set_protocols(conf,
 	    TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3) == -1)

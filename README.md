@@ -127,12 +127,33 @@ with these additional variables set:
 
 > The remote IP address.
 
+`REMOTE_ADDR`
+
+> The remote IP address.
+
 `DOCUMENT_ROOT`
 
 > The root directory being served, the one provided with the
 > *d*
 > parameter to
 > **gmid**
+
+`AUTH_TYPE`
+
+> The string "Certificate" if the client used a certificate, otherwise unset.
+
+`REMOTE_USER`
+
+> The subject of the client certificate if provided, otherwise unset.
+
+`TLS_CLIENT_ISSUER`
+
+> The is the issuer of the client certificate if provided, otherwise unset.
+
+`TLS_CLIENT_HASH`
+
+> The hash of the client certificate if provided, otherwise unset.
+> The format is "ALGO:HASH".
 
 Let's say you have a script in
 */cgi-bin/script*

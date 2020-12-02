@@ -110,11 +110,22 @@ The request relative to the script.
 The query parameters.
 .It Ev REMOTE_HOST
 The remote IP address.
+.It Ev REMOTE_ADDR
+The remote IP address.
 .It Ev DOCUMENT_ROOT
 The root directory being served, the one provided with the
 .Ar d
 parameter to
 .Nm
+.It Ev AUTH_TYPE
+The string "Certificate" if the client used a certificate, otherwise unset.
+.It Ev REMOTE_USER
+The subject of the client certificate if provided, otherwise unset.
+.It Ev TLS_CLIENT_ISSUER
+The is the issuer of the client certificate if provided, otherwise unset.
+.It Ev TLS_CLIENT_HASH
+The hash of the client certificate if provided, otherwise unset.
+The format is "ALGO:HASH".
 .El
 .Pp
 Let's say you have a script in
