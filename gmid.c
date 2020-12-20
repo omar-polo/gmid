@@ -37,11 +37,11 @@
 #ifndef __OpenBSD__
 # define pledge(a, b) 0
 # define unveil(a, b) 0
-#endif /* __OpenBSD__ */
+#endif
 
 #ifndef INFTIM
 # define INFTIM -1
-#endif /* INFTIM */
+#endif
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
@@ -63,6 +63,35 @@
 			_tmp = "";		\
 		setenv((var), _tmp, 1);		\
 	} while(0)
+
+#define LOG(priority, c, fmt, ...)					\
+	do {								\
+		char buf[INET_ADDRSTRLEN];				\
+		if (inet_ntop((c)->af, &(c)->addr,			\
+		    buf, sizeof(buf)) == NULL)				\
+			FATAL("inet_ntop: %s", strerror(errno));	\
+		if (foreground)						\
+			fprintf(stderr,					\
+			    "%s " fmt "\n", buf, __VA_ARGS__);		\
+		else							\
+			syslog((priority) | LOG_DAEMON,			\
+			    "%s " fmt, buf, __VA_ARGS__);		\
+	} while (0)
+
+#define LOGE(c, fmt, ...) LOG(LOG_ERR,    c, fmt, __VA_ARGS__)
+#define LOGN(c, fmt, ...) LOG(LOG_NOTICE, c, fmt, __VA_ARGS__)
+#define LOGI(c, fmt, ...) LOG(LOG_INFO,   c, fmt, __VA_ARGS__)
+#define LOGD(c, fmt, ...) LOG(LOG_DEBUG,  c, fmt, __VA_ARGS__)
+
+#define FATAL(fmt, ...)							\
+	do {								\
+		if (foreground)						\
+			fprintf(stderr, fmt "\n", __VA_ARGS__);		\
+		else							\
+			syslog(LOG_DAEMON | LOG_CRIT,			\
+			    fmt, __VA_ARGS__);				\
+		exit(1);						\
+	} while (0)
 
 enum {
 	S_OPEN,
@@ -113,35 +142,6 @@ struct etm {			/* file extension to mime */
 
 	{NULL, NULL}
 };
-
-#define LOG(priority, c, fmt, ...)					\
-	do {								\
-		char buf[INET_ADDRSTRLEN];				\
-		if (inet_ntop((c)->af, &(c)->addr,			\
-		    buf, sizeof(buf)) == NULL)				\
-			FATAL("inet_ntop: %s", strerror(errno));	\
-		if (foreground)						\
-			fprintf(stderr,					\
-			    "%s " fmt "\n", buf, __VA_ARGS__);		\
-		else							\
-			syslog((priority) | LOG_DAEMON,			\
-			    "%s " fmt, buf, __VA_ARGS__);		\
-	} while (0)
-
-#define LOGE(c, fmt, ...) LOG(LOG_ERR,    c, fmt, __VA_ARGS__)
-#define LOGN(c, fmt, ...) LOG(LOG_NOTICE, c, fmt, __VA_ARGS__)
-#define LOGI(c, fmt, ...) LOG(LOG_INFO,   c, fmt, __VA_ARGS__)
-#define LOGD(c, fmt, ...) LOG(LOG_DEBUG,  c, fmt, __VA_ARGS__)
-
-#define FATAL(fmt, ...)							\
-	do {								\
-		if (foreground)						\
-			fprintf(stderr, fmt "\n", __VA_ARGS__);		\
-		else							\
-			syslog(LOG_DAEMON | LOG_CRIT,			\
-			    fmt, __VA_ARGS__);				\
-		exit(1);						\
-	} while (0)
 
 const char *dir, *cgi;
 int dirfd;
