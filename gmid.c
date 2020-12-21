@@ -1035,7 +1035,9 @@ main(int argc, char **argv)
 
 	connected_clients = 0;
 
-	dir = absolutify_path("docs");
+	if ((dir = absolutify_path("docs")) == NULL)
+		err(1, "absolutify_path");
+
 	cgi = NULL;
 	port = 1965;
 	foreground = 0;
