@@ -25,6 +25,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <poll.h>
 #include <signal.h>
 #include <stdio.h>
@@ -992,6 +993,21 @@ loop(struct tls *ctx, int sock)
 	}
 }
 
+char *
+absolutify_path(const char *path)
+{
+	char *wd, *r;
+
+	if (*path == '/')
+		return strdup(path);
+
+	wd = getwd(NULL);
+	if (asprintf(&r, "%s/%s", wd, path) == -1)
+		err(1, "asprintf");
+	free(wd);
+	return r;
+}
+
 void
 usage(const char *me)
 {
@@ -1019,7 +1035,7 @@ main(int argc, char **argv)
 
 	connected_clients = 0;
 
-	dir = "docs/";
+	dir = absolutify_path("docs");
 	cgi = NULL;
 	port = 1965;
 	foreground = 0;
@@ -1031,7 +1047,9 @@ main(int argc, char **argv)
 			break;
 
 		case 'd':
-			dir = optarg;
+			free((char*)dir);
+			if ((dir = absolutify_path(optarg)) == NULL)
+				err(1, "absolutify_path");
 			break;
 
 		case 'f':
