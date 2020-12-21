@@ -1,3 +1,7 @@
+2020-12-21  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): -d supports relative paths
+
 2020-12-02  Omar Polo  <op@omarpolo.com>
 
 	* gmid.c: logging reworked and daemonize.  The -l option was
