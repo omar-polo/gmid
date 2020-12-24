@@ -1,0 +1,154 @@
+#ifndef GMID_H
+#define GMID_H
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
+#include <poll.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <syslog.h>
+#include <tls.h>
+#include <unistd.h>
+
+#ifndef __OpenBSD__
+# define pledge(a, b) 0
+# define unveil(a, b) 0
+#endif
+
+#ifndef INFTIM
+# define INFTIM -1
+#endif
+
+#define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
+
+/* large enough to hold a copy of a gemini URL and still have extra room */
+#define PATHBUF		2048
+
+#define SUCCESS		20
+#define TEMP_FAILURE	40
+#define NOT_FOUND	51
+#define BAD_REQUEST	59
+
+#ifndef MAX_USERS
+#define MAX_USERS	64
+#endif
+
+#define SAFE_SETENV(var, val) do {		\
+		const char *_tmp = (val);	\
+		if (_tmp == NULL)		\
+			_tmp = "";		\
+		setenv((var), _tmp, 1);		\
+	} while(0)
+
+#define LOG(priority, c, fmt, ...)					\
+	do {								\
+		char buf[INET_ADDRSTRLEN];				\
+		if (inet_ntop((c)->af, &(c)->addr,			\
+		    buf, sizeof(buf)) == NULL)				\
+			FATAL("inet_ntop: %s", strerror(errno));	\
+		if (foreground)						\
+			fprintf(stderr,					\
+			    "%s " fmt "\n", buf, __VA_ARGS__);		\
+		else							\
+			syslog((priority) | LOG_DAEMON,			\
+			    "%s " fmt, buf, __VA_ARGS__);		\
+	} while (0)
+
+#define LOGE(c, fmt, ...) LOG(LOG_ERR,    c, fmt, __VA_ARGS__)
+#define LOGN(c, fmt, ...) LOG(LOG_NOTICE, c, fmt, __VA_ARGS__)
+#define LOGI(c, fmt, ...) LOG(LOG_INFO,   c, fmt, __VA_ARGS__)
+#define LOGD(c, fmt, ...) LOG(LOG_DEBUG,  c, fmt, __VA_ARGS__)
+
+#define FATAL(fmt, ...)							\
+	do {								\
+		if (foreground)						\
+			fprintf(stderr, fmt "\n", __VA_ARGS__);		\
+		else							\
+			syslog(LOG_DAEMON | LOG_CRIT,			\
+			    fmt, __VA_ARGS__);				\
+		exit(1);						\
+	} while (0)
+
+enum {
+	S_OPEN,
+	S_INITIALIZING,
+	S_SENDING,
+	S_CLOSING,
+};
+
+struct client {
+	struct tls	*ctx;
+	int		 state;
+	int		 code;
+	const char	*meta;
+	int		 fd, waiting_on_child;
+	pid_t		 child;
+	char		 sbuf[1024];	  /* static buffer */
+	void		*buf, *i;	  /* mmap buffer */
+	ssize_t		 len, off;	  /* mmap/static buffer  */
+	int		 af;
+	struct in_addr	 addr;
+};
+
+enum {
+	FILE_EXISTS,
+	FILE_EXECUTABLE,
+	FILE_DIRECTORY,
+	FILE_MISSING,
+};
+
+struct etm {			/* file extension to mime */
+	const char	*mime;
+	const char	*ext;
+} filetypes[] = {
+	{"application/pdf",	"pdf"},
+
+	{"image/gif",		"gif"},
+	{"image/jpeg",		"jpg"},
+	{"image/jpeg",		"jpeg"},
+	{"image/png",		"png"},
+	{"image/svg+xml",	"svg"},
+
+	{"text/gemini",		"gemini"},
+	{"text/gemini",		"gmi"},
+	{"text/markdown",	"markdown"},
+	{"text/markdown",	"md"},
+	{"text/plain",		"txt"},
+	{"text/xml",		"xml"},
+
+	{NULL, NULL}
+};
+
+void		 siginfo_handler(int);
+int		 starts_with(const char*, const char*);
+
+char		*url_after_proto(char*);
+char		*url_start_of_request(char*);
+int		 url_trim(struct client*, char*);
+char		*adjust_path(char*);
+ssize_t		 filesize(int);
+
+int		 start_reply(struct pollfd*, struct client*, int, const char*);
+const char	*path_ext(const char*);
+const char	*mime(const char*);
+int		 check_path(struct client*, const char*, int*);
+int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
+int		 open_file(char*, char*, struct pollfd*, struct client*);
+int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
+void		 cgi_setpoll_on_child(struct pollfd*, struct client*);
+void		 cgi_setpoll_on_client(struct pollfd*, struct client*);
+void		 handle_cgi(struct pollfd*, struct client*);
+void		 send_file(char*, char*, struct pollfd*, struct client*);
+void		 send_dir(char*, struct pollfd*, struct client*);
+void		 handle(struct pollfd*, struct client*);
+
+void		 mark_nonblock(int);
+int		 make_soket(int);
+void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
+void		 goodbye(struct pollfd*, struct client*);
+void		 loop(struct tls*, int);
+
+void		 usage(const char*);
+
+#endif
