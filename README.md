@@ -216,3 +216,6 @@ since it's relative to the document root.
 *	it doesn't support virtual hosts: the host part of the request URL is
 	completely ignored.
 
+*	a %2F sequence in the path part is indistinguishable from a literal
+	slash: this is not RFC3986-compliant.
+
