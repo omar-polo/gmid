@@ -87,6 +87,12 @@ main(void)
 {
 	struct uri empty = {"", "", "", PASS, "", "", ""};
 
+	TEST("foo://bar.com/foo%00?baz",
+	    FAIL,
+	    empty,
+	    "rejects %00");
+	return 0;
+
 	TEST("http://omarpolo.com",
 	    PASS,
 	    URI("http", "omarpolo.com", "", "", "", ""),
@@ -153,6 +159,10 @@ main(void)
 	    FAIL,
             empty,
 	    "reject paths that would escape the root");
+	TEST("gemini://omarpolo.com/foo/../foo/../././/bar/baz/.././.././/",
+	    PASS,
+            URI("gemini", "omarpolo.com", "", "", "", ""),
+	    "parse path with lots of cleaning available");
 
 	/* query */
 	TEST("foo://example.com/foo/?gne",
@@ -179,6 +189,44 @@ main(void)
 	    PASS,
 	    URI("foo", "bar.com", "", "cafè.gmi", "", ""),
 	    "can decode");
+	TEST("foo://bar.com/caff%C3%A8%20macchiato.gmi",
+	    PASS,
+	    URI("foo", "bar.com", "", "caffè macchiato.gmi", "", ""),
+	    "can decode");
+	TEST("foo://bar.com/caff%C3%A8+macchiato.gmi",
+	    PASS,
+	    URI("foo", "bar.com", "", "caffè+macchiato.gmi", "", ""),
+	    "can decode");
+	TEST("foo://bar.com/foo%2F..%2F..",
+	    FAIL,
+	    empty,
+	    "conversion and checking are done in the correct order");
+	TEST("foo://bar.com/foo%00?baz",
+	    FAIL,
+	    empty,
+	    "rejects %00");
+
+	/* IRI */
+        TEST("foo://bar.com/cafè.gmi",
+	    PASS,
+	    URI("foo", "bar.com", "", "cafè.gmi", "" , ""),
+	    "decode IRI (with a 2-byte utf8 seq)");
+	TEST("foo://bar.com/世界.gmi",
+	    PASS,
+	    URI("foo", "bar.com", "", "世界.gmi", "" , ""),
+	    "decode IRI");
+	TEST("foo://bar.com/😼.gmi",
+	    PASS,
+	    URI("foo", "bar.com", "", "😼.gmi", "" , ""),
+	    "decode IRI (with a 3-byte utf8 seq)");
+	TEST("foo://bar.com/😼/𤭢.gmi",
+	    PASS,
+	    URI("foo", "bar.com", "", "😼/𤭢.gmi", "" , ""),
+	    "decode IRI (with a 3-byte and a 4-byte utf8 seq)");
+	TEST("foo://bar.com/世界/\xC0\x80",
+	    FAIL,
+	    empty,
+	    "reject invalid sequence (overlong NUL)");
 
 	return 0;
 }

@@ -33,11 +33,8 @@ is a very simple and minimal gemini server that can serve static files
 and execute CGI scripts.
 .Pp
 .Nm
-will strip any sequence of
-.Pa ../
-or trailing
-.Pa ..
-in the requests made by clients and will refuse to follow symlinks.
+won't serve files outside the given directory and won't follow
+symlinks.
 Furthermore, on
 .Ox ,
 .Xr pledge 2
@@ -47,6 +44,10 @@ are used to ensure that
 .Nm
 dosen't do anything else than read files from the given directory,
 accept network connections and, optionally, execute CGI scripts.
+.Pp
+.Nm
+fully supports IRIs (Internationalized Resource Identifiers, see
+RFC3987).
 .Pp
 It should be noted that
 .Nm

@@ -20,11 +20,8 @@ is a very simple and minimal gemini server that can serve static files
 and execute CGI scripts.
 
 **gmid**
-will strip any sequence of
-*../*
-or trailing
-*..*
-in the requests made by clients and will refuse to follow symlinks.
+won't serve files outside the given directory and won't follow
+symlinks.
 Furthermore, on
 OpenBSD,
 pledge(2)
@@ -34,6 +31,10 @@ are used to ensure that
 **gmid**
 dosen't do anything else than read files from the given directory,
 accept network connections and, optionally, execute CGI scripts.
+
+**gmid**
+fully supports IRIs (Internationalized Resource Identifiers, see
+RFC3987).
 
 It should be noted that
 **gmid**
