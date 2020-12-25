@@ -220,3 +220,6 @@ since it's relative to the document root.
 *	a %2F sequence in the path part is indistinguishable from a literal
 	slash: this is not RFC3986-compliant.
 
+*	a %00 sequence either in the path or in the query part is treated as
+	invalid character and thus rejected.
+

@@ -172,6 +172,10 @@ parse_pct_encoded(struct parser *p)
 
 	sscanf(p->uri+1, "%2hhx", p->uri);
 	memmove(p->uri+1, p->uri+3, strlen(p->uri+3)+1);
+	if (*p->uri == '\0') {
+		p->err = "illegal percent-encoding";
+		return 0;
+	}
 
 	return 1;
 }
@@ -251,6 +255,9 @@ parse_authority(struct parser *p)
 	    || SUB_DELIMITERS(*p->uri)
 	    || parse_pct_encoded(p))
 		p->uri++;
+
+	if (p->err != NULL)
+		return 0;
 
 	if (*p->uri == ':') {
 		*p->uri = '\0';
@@ -356,6 +363,9 @@ parse_query(struct parser *p)
 	    || valid_multibyte_utf8(p))
 		p->uri++;
 
+	if (p->err != NULL)
+		return 0;
+
 	if (*p->uri != '\0' && *p->uri != '#') {
 		p->err = "illegal character in query";
 		return 0;
@@ -396,6 +406,9 @@ parse_path(struct parser *p)
 	    || parse_pct_encoded(p)
 	    || valid_multibyte_utf8(p))
 		p->uri++;
+
+	if (p->err != NULL)
+		return 0;
 
 	if (*p->uri != '\0' && *p->uri != '?' && *p->uri != '#') {
 		p->err = "illegal character in path";
