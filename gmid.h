@@ -107,6 +107,17 @@ struct client {
 	struct in_addr	 addr;
 };
 
+
+struct uri {
+	char		*schema;
+	char		*host;
+	char		*port;
+	uint16_t	 port_no;
+	char		*path;
+	char		*query;
+	char		*fragment;
+};
+
 enum {
 	FILE_EXISTS,
 	FILE_EXECUTABLE,
@@ -114,35 +125,10 @@ enum {
 	FILE_MISSING,
 };
 
-struct etm {			/* file extension to mime */
-	const char	*mime;
-	const char	*ext;
-} filetypes[] = {
-	{"application/pdf",	"pdf"},
-
-	{"image/gif",		"gif"},
-	{"image/jpeg",		"jpg"},
-	{"image/jpeg",		"jpeg"},
-	{"image/png",		"png"},
-	{"image/svg+xml",	"svg"},
-
-	{"text/gemini",		"gemini"},
-	{"text/gemini",		"gmi"},
-	{"text/markdown",	"markdown"},
-	{"text/markdown",	"md"},
-	{"text/plain",		"txt"},
-	{"text/xml",		"xml"},
-
-	{NULL, NULL}
-};
-
+/* gmid.c */
 void		 siginfo_handler(int);
 int		 starts_with(const char*, const char*);
 
-char		*url_after_proto(char*);
-char		*url_start_of_request(char*);
-int		 url_trim(struct client*, char*);
-char		*adjust_path(char*);
 ssize_t		 filesize(int);
 
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
@@ -166,5 +152,9 @@ void		 goodbye(struct pollfd*, struct client*);
 void		 loop(struct tls*, int);
 
 void		 usage(const char*);
+
+/* uri.c */
+int		 parse_uri(char*, struct uri*, const char**);
+int		 trim_req_uri(char*);
 
 #endif

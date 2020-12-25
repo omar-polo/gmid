@@ -34,6 +34,28 @@ int port;
 int foreground;
 int connected_clients;
 
+struct etm {			/* file extension to mime */
+	const char	*mime;
+	const char	*ext;
+} filetypes[] = {
+	{"application/pdf",	"pdf"},
+
+	{"image/gif",		"gif"},
+	{"image/jpeg",		"jpg"},
+	{"image/jpeg",		"jpeg"},
+	{"image/png",		"png"},
+	{"image/svg+xml",	"svg"},
+
+	{"text/gemini",		"gemini"},
+	{"text/gemini",		"gmi"},
+	{"text/markdown",	"markdown"},
+	{"text/markdown",	"md"},
+	{"text/plain",		"txt"},
+	{"text/xml",		"xml"},
+
+	{NULL, NULL}
+};
+
 void
 siginfo_handler(int sig)
 {
@@ -49,102 +71,6 @@ starts_with(const char *str, const char *prefix)
 		if (str[i] != prefix[i])
 			return 0;
 	return 1;
-}
-
-char *
-url_after_proto(char *url)
-{
-	char *s;
-	const char *proto = "gemini:";
-	const char *marker = "//";
-
-	/* a relative URL */
-	if ((s = strstr(url, marker)) == NULL)
-		return url;
-
-	/*
-	 * if a protocol is not specified, gemini should be implied:
-	 * this handles the case of //example.com
-	 */
-	if (s == url)
-		return s + strlen(marker);
-
-	if (s - strlen(proto) != url)
-		return NULL;
-
-	if (!starts_with(url, proto))
-		return NULL;
-
-	return s + strlen(marker);
-}
-
-char *
-url_start_of_request(char *url)
-{
-	char *s, *t;
-
-	if ((s = url_after_proto(url)) == NULL)
-		return NULL;
-
-	/* non-absolute URL */
-	if (s == url)
-		return s;
-
-	if ((t = strstr(s, "/")) == NULL)
-		return s + strlen(s);
-	return t;
-}
-
-int
-url_trim(struct client *c, char *url)
-{
-	const char *e = "\r\n";
-	char *s;
-
-	if ((s = strstr(url, e)) == NULL)
-		return 0;
-	s[0] = '\0';
-	s[1] = '\0';
-
-	if (s[2] != '\0') {
-		LOGE(c, "%s", "request longer than 1024 bytes");
-		return 0;
-	}
-
-	return 1;
-}
-
-char *
-adjust_path(char *path)
-{
-	char *s, *query;
-	size_t len;
-
-	if ((query = strchr(path, '?')) != NULL) {
-		*query = '\0';
-		query++;
-	}
-
-	/* /.. -> / */
-	len = strlen(path);
-	if (len >= 3) {
-		if (!strcmp(&path[len-3], "/..")) {
-			path[len-2] = '\0';
-		}
-	}
-
-	/* if the path is only `..` trim out and exit */
-	if (!strcmp(path, "..")) {
-		path[0] = '\0';
-		return query;
-	}
-
-	/* remove every ../ in the path */
-	while (1) {
-		if ((s = strstr(path, "../")) == NULL)
-			return query;
-		memmove(s, s+3, strlen(s)+1);	/* copy also the \0 */
-	}
 }
 
 int
@@ -224,7 +150,7 @@ check_path(struct client *c, const char *path, int *fd)
 	struct stat sb;
 
 	assert(path != NULL);
-	if ((*fd = openat(dirfd, path,
+	if ((*fd = openat(dirfd, *path ? path : ".",
 		    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
 		return FILE_MISSING;
 	}
@@ -288,16 +214,8 @@ err:
 
 
 int
-open_file(char *path, char *query, struct pollfd *fds, struct client *c)
+open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 {
-	char fpath[PATHBUF];
-
-	bzero(fpath, sizeof(fpath));
-
-	if (*path != '.')
-		fpath[0] = '.';
-	strlcat(fpath, path, PATHBUF);
-
 	switch (check_path(c, fpath, &c->fd)) {
 	case FILE_EXECUTABLE:
 		/* +2 to skip the ./ */
@@ -578,8 +496,8 @@ void
 handle(struct pollfd *fds, struct client *client)
 {
 	char buf[GEMINI_URL_LEN];
-	char *path;
-	char *query;
+	const char *parse_err;
+	struct uri uri;
 
 	switch (client->state) {
 	case S_OPEN:
@@ -599,26 +517,19 @@ handle(struct pollfd *fds, struct client *client)
 			return;
 		}
 
-		if (!url_trim(client, buf)) {
-			if (!start_reply(fds, client, BAD_REQUEST, "bad request"))
+		if (!trim_req_uri(buf) || !parse_uri(buf, &uri, &parse_err)) {
+			if (!start_reply(fds, client, BAD_REQUEST, parse_err))
 				return;
 			goodbye(fds, client);
 			return;
 		}
 
-		if ((path = url_start_of_request(buf)) == NULL) {
-			if (!start_reply(fds, client, BAD_REQUEST, "bad request"))
-				return;
-			goodbye(fds, client);
-			return;
-		}
+		LOGI(client, "GET %s%s%s",
+		    *uri.path ? uri.path : "/",
+		    *uri.query ? "?" : "",
+		    *uri.query ? uri.query : "");
 
-		query = adjust_path(path);
-		LOGI(client, "GET %s%s%s", path,
-		    query ? "?" : "",
-		    query ? query : "");
-
-		send_file(path, query, fds, client);
+		send_file(uri.path, uri.query, fds, client);
 		break;
 
 	case S_INITIALIZING:
