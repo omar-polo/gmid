@@ -117,7 +117,7 @@ struct parser {
 	    || p == ';'				\
 	    || p == '=')
 
-/* NOTE: the increment are one less what it should be, because the
+/* NOTE: the increments are one less what they should be, because the
  * caller will add one byte after we return. */
 static int
 valid_multibyte_utf8(struct parser *p)
