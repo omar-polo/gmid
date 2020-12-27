@@ -107,7 +107,6 @@ struct client {
 	struct in_addr	 addr;
 };
 
-
 struct uri {
 	char		*schema;
 	char		*host;
