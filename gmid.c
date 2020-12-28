@@ -514,6 +514,7 @@ handle(struct pollfd *fds, struct client *client)
 			return;
 		}
 
+		parse_err = "invalid request";
 		if (!trim_req_uri(buf) || !parse_uri(buf, &uri, &parse_err)) {
 			if (!start_reply(fds, client, BAD_REQUEST, parse_err))
 				return;
