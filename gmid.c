@@ -349,7 +349,7 @@ childerr:
 }
 
 void
-cgi_setpoll_on_child(struct pollfd *fds, struct client *c)
+cgi_poll_on_child(struct pollfd *fds, struct client *c)
 {
 	int fd;
 
@@ -365,7 +365,7 @@ cgi_setpoll_on_child(struct pollfd *fds, struct client *c)
 }
 
 void
-cgi_setpoll_on_client(struct pollfd *fds, struct client *c)
+cgi_poll_on_client(struct pollfd *fds, struct client *c)
 {
 	int fd;
 
@@ -384,7 +384,7 @@ handle_cgi(struct pollfd *fds, struct client *c)
 	ssize_t r;
 
 	/* ensure c->fd is the child and fds->fd the client */
-	cgi_setpoll_on_client(fds, c);
+	cgi_poll_on_client(fds, c);
 
 	while (1) {
 		if (c->len == 0) {
@@ -392,7 +392,7 @@ handle_cgi(struct pollfd *fds, struct client *c)
 				goto end;
 			if (r == -1) {
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
-					cgi_setpoll_on_child(fds, c);
+					cgi_poll_on_child(fds, c);
 					return;
 				}
                                 goto end;
