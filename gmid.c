@@ -218,8 +218,7 @@ open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 {
 	switch (check_path(c, fpath, &c->fd)) {
 	case FILE_EXECUTABLE:
-		/* +2 to skip the ./ */
-		if (cgi != NULL && starts_with(fpath+2, cgi))
+		if (cgi != NULL && starts_with(fpath, cgi))
 			return start_cgi(fpath, "", query, fds, c);
 
 		/* fallthrough */
@@ -248,7 +247,7 @@ open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 		return 0;
 
 	case FILE_MISSING:
-		if (cgi != NULL && starts_with(fpath+2, cgi))
+		if (cgi != NULL && starts_with(fpath, cgi))
 			return check_for_cgi(fpath, query, fds, c);
 
 		if (!start_reply(fds, c, NOT_FOUND, "not found"))
@@ -281,8 +280,6 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		char addr[INET_ADDRSTRLEN];
 		char *argv[] = { NULL, NULL, NULL };
 
-		spath++;
-
 		close(p[0]);
 		if (dup2(p[1], 1) == -1)
 			goto childerr;
@@ -293,7 +290,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		if (asprintf(&portno, "%d", port) == -1)
 			goto childerr;
 
-		if (asprintf(&ex, "%s%s", dir, spath+1) == -1)
+		if (asprintf(&ex, "%s/%s", dir, spath) == -1)
 			goto childerr;
 
 		if (asprintf(&requri, "%s%s%s", spath,
