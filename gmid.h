@@ -128,9 +128,8 @@ enum {
 void		 sig_handler(int);
 int		 starts_with(const char*, const char*);
 
-ssize_t		 filesize(int);
-
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
+ssize_t		 filesize(int);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
 int		 check_path(struct client*, const char*, int*);
