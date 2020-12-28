@@ -57,7 +57,7 @@ struct etm {			/* file extension to mime */
 };
 
 void
-siginfo_handler(int sig)
+sig_handler(int sig)
 {
 	(void)sig;
 }
@@ -785,15 +785,6 @@ main(int argc, char **argv)
 	struct tls *ctx = NULL;
 	struct tls_config *conf;
 	int sock, ch;
-
-	signal(SIGPIPE, SIG_IGN);
-	signal(SIGCHLD, SIG_IGN);
-
-#ifdef SIGINFO
-	signal(SIGINFO, siginfo_handler);
-#endif
-	signal(SIGUSR2, siginfo_handler);
-
 	connected_clients = 0;
 
 	if ((dir = absolutify_path("docs")) == NULL)
@@ -850,6 +841,17 @@ main(int argc, char **argv)
 			return 1;
 		}
 	}
+
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGCHLD, SIG_IGN);
+
+#ifdef SIGINFO
+	signal(SIGINFO, sig_handler);
+#endif
+	signal(SIGUSR2, sig_handler);
+
+	if (!foreground)
+		signal(SIGHUP, SIG_IGN);
 
 	if ((conf = tls_config_new()) == NULL)
 		err(1, "tls_config_new");

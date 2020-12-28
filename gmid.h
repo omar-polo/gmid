@@ -125,7 +125,7 @@ enum {
 };
 
 /* gmid.c */
-void		 siginfo_handler(int);
+void		 sig_handler(int);
 int		 starts_with(const char*, const char*);
 
 ssize_t		 filesize(int);
