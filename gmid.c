@@ -885,17 +885,15 @@ main(int argc, char **argv)
 	if (!foreground && daemon(0, 1) == -1)
 		exit(1);
 
-	if (cgi != NULL) {
-		if (unveil(dir, "rx") == -1)
-			err(1, "unveil");
-		if (pledge("stdio rpath inet proc exec", NULL) == -1)
-			err(1, "pledge");
-	} else {
-		if (unveil(dir, "r") == -1)
-			err(1, "unveil");
-		if (pledge("stdio rpath inet", NULL) == -1)
-			err(1, "pledge");
-	}
+	if (unveil(dir, "rx") == -1)
+		err(1, "unveil");
+
+	if (pledge("stdio rpath inet proc exec", NULL) == -1)
+		err(1, "pledge");
+
+	/* drop proc and exec if cgi isn't enabled */
+	if (cgi == NULL && pledge("stdio rpath inet", NULL) == -1)
+		err(1, "pledge");
 
 	loop(ctx, sock);
 
