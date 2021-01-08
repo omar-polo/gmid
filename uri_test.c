@@ -87,12 +87,6 @@ main(void)
 {
 	struct uri empty = {"", "", "", PASS, "", "", ""};
 
-	TEST("foo://bar.com/foo%00?baz",
-	    FAIL,
-	    empty,
-	    "rejects %00");
-	return 0;
-
 	TEST("http://omarpolo.com",
 	    PASS,
 	    URI("http", "omarpolo.com", "", "", "", ""),
