@@ -702,7 +702,7 @@ goodbye(struct pollfd *pfd, struct client *c)
 void
 loop(struct tls *ctx, int sock)
 {
-	int i, todo;
+	int i;
 	struct client clients[MAX_USERS];
 	struct pollfd fds[MAX_USERS];
 
@@ -715,7 +715,7 @@ loop(struct tls *ctx, int sock)
 	fds[0].fd = sock;
 
 	for (;;) {
-		if ((todo = poll(fds, MAX_USERS, INFTIM)) == -1) {
+		if (poll(fds, MAX_USERS, INFTIM) == -1) {
 			if (errno == EINTR) {
                                 warnx("connected clients: %d",
 				    connected_clients);
@@ -725,8 +725,6 @@ loop(struct tls *ctx, int sock)
 		}
 
 		for (i = 0; i < MAX_USERS; i++) {
-			assert(i < MAX_USERS);
-
 			if (fds[i].revents == 0)
 				continue;
 
@@ -742,8 +740,6 @@ loop(struct tls *ctx, int sock)
 					continue;
 				}
 			}
-
-			todo--;
 
 			if (i == 0) { /* new client */
 				do_accept(sock, ctx, fds, clients);
