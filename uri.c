@@ -87,27 +87,31 @@
  *
  */
 
-/* XXX: these macros will expand multiple times their argument */
+static inline int
+unreserved(int p)
+{
+	return isalnum(p)
+		|| p == '-'
+		|| p == '.'
+		|| p == '_'
+		|| p == '~';
+}
 
-#define UNRESERVED(p)				\
-	(isalnum(p)				\
-	    || p == '-'				\
-	    || p == '.'				\
-	    || p == '_'				\
-	    || p == '~')
-
-#define SUB_DELIMITERS(p)			\
-	(p == '!'				\
-	    || p == '$'				\
-	    || p == '&'				\
-	    || p == '\''			\
-	    || p == '('				\
-	    || p == ')'				\
-	    || p == '*'				\
-	    || p == '+'				\
-	    || p == ','				\
-	    || p == ';'				\
-	    || p == '=')
+static inline int
+sub_delimiters(int p)
+{
+	return p == '!'
+		|| p == '$'
+		|| p == '&'
+		|| p == '\''
+		|| p == '('
+		|| p == ')'
+		|| p == '*'
+		|| p == '+'
+		|| p == ','
+		|| p == ';'
+		|| p == '=';
+}
 
 static int
 parse_pct_encoded(struct parser *p)
@@ -201,8 +205,8 @@ parse_authority(struct parser *p)
 {
 	p->parsed->host = p->uri;
 
-	while (UNRESERVED(*p->uri)
-	    || SUB_DELIMITERS(*p->uri)
+	while (unreserved(*p->uri)
+	    || sub_delimiters(*p->uri)
 	    || parse_pct_encoded(p))
 		p->uri++;
 
@@ -305,8 +309,8 @@ parse_query(struct parser *p)
 	if (*p->uri == '\0')
 		return 1;
 
-	while (UNRESERVED(*p->uri)
-	    || SUB_DELIMITERS(*p->uri)
+	while (unreserved(*p->uri)
+	    || sub_delimiters(*p->uri)
 	    || *p->uri == '/'
 	    || *p->uri == '?'
 	    || parse_pct_encoded(p)
@@ -350,8 +354,8 @@ parse_path(struct parser *p)
 		return 1;
 	}
 
-	while (UNRESERVED(*p->uri)
-	    || SUB_DELIMITERS(*p->uri)
+	while (unreserved(*p->uri)
+	    || sub_delimiters(*p->uri)
 	    || *p->uri == '/'
 	    || parse_pct_encoded(p)
 	    || valid_multibyte_utf8(p))
