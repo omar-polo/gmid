@@ -117,6 +117,12 @@ struct uri {
 	char		*fragment;
 };
 
+struct parser {
+	char		*uri;
+	struct uri	*parsed;
+	const char	*err;
+};
+
 enum {
 	FILE_EXISTS,
 	FILE_EXECUTABLE,
@@ -150,6 +156,9 @@ void		 goodbye(struct pollfd*, struct client*);
 void		 loop(struct tls*, int);
 
 void		 usage(const char*);
+
+/* utf8.c */
+int		 valid_multibyte_utf8(struct parser*);
 
 /* uri.c */
 int		 parse_uri(char*, struct uri*, const char**);

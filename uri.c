@@ -87,14 +87,6 @@
  *
  */
 
-struct parser {
-	char		*uri;
-	struct uri	*parsed;
-	const char	*err;
-};
-
-#define CONT_BYTE(b) ((b & 0xC0) == 0x80)
-
 /* XXX: these macros will expand multiple times their argument */
 
 #define UNRESERVED(p)				\
@@ -116,48 +108,6 @@ struct parser {
 	    || p == ','				\
 	    || p == ';'				\
 	    || p == '=')
-
-/* NOTE: the increments are one less what they should be, because the
- * caller will add one byte after we return. */
-static int
-valid_multibyte_utf8(struct parser *p)
-{
-	uint32_t c;
-	uint8_t s;
-
-	c = 0;
-	s = *p->uri;
-
-	if ((s & 0xE0) == 0xC0) {
-		if (!CONT_BYTE(*(p->uri+1)))
-			return 0;
-		c = ((s & 0x1F) << 6) | (*(p->uri+1) & 0x3F);
-		p->uri += 1;
-	} else if ((s & 0xF0) == 0xE0) {
-		if (!CONT_BYTE(*(p->uri+1)) ||
-		    !CONT_BYTE(*(p->uri+2)))
-			return 0;
-		c = (s & 0x0F) << 12
-			| ((*(p->uri+1) & 0x3F) << 6)
-			| ((*(p->uri+2) & 0x3F));
-		p->uri += 2;
-	} else if ((s & 0xF8) == 0xF0) {
-		if (!CONT_BYTE(*(p->uri+1)) ||
-		    !CONT_BYTE(*(p->uri+2)) ||
-		    !CONT_BYTE(*(p->uri+3)))
-			return 0;
-		c = (s & 0x07) << 18
-			| ((*(p->uri+1) & 0x3F) << 12)
-			| ((*(p->uri+2) & 0x3F) << 6)
-			| ((*(p->uri+3) & 0x3F));
-		p->uri += 3;
-	} else
-		return 0;
-
-	return (((0x080 <= c) && (c <= 0x7FF))
-	    || (((0x800 <= c) && (c <= 0xFFFF)))
-	    || (((0x10000 <= c) && (c <= 0x10FFFF))));
-}
 
 static int
 parse_pct_encoded(struct parser *p)

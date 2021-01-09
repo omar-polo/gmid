@@ -212,6 +212,12 @@ and not
 *docs/cgi-bin*,
 since it's relative to the document root.
 
+# ACKNOWLEDGEMENTS
+
+**gmid**
+uses the "Flexible and Economical" UTF-8 decoder written by
+Bjoern Hoehrmann.
+
 # CAVEATS
 
 *	it doesn't support virtual hosts: the host part of the request URL is
