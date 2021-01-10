@@ -115,7 +115,7 @@ void		 mark_nonblock(int);
 int		 make_soket(int);
 void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
 void		 goodbye(struct pollfd*, struct client*);
-void		 loop(struct tls*, int);
+void		 loop(struct tls*, int, int);
 
 void		 usage(const char*);
 

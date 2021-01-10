@@ -771,7 +771,7 @@ goodbye(struct pollfd *pfd, struct client *c)
 }
 
 void
-loop(struct tls *ctx, int sock)
+loop(struct tls *ctx, int sock4, int sock6)
 {
 	int i;
 	struct client clients[MAX_USERS];
@@ -783,7 +783,8 @@ loop(struct tls *ctx, int sock)
 		bzero(&clients[i], sizeof(struct client));
 	}
 
-	fds[0].fd = sock;
+	fds[0].fd = sock4;
+	fds[1].fd = sock6;
 
 	for (;;) {
 		if (poll(fds, MAX_USERS, INFTIM) == -1) {
@@ -812,12 +813,12 @@ loop(struct tls *ctx, int sock)
 				}
 			}
 
-			if (i == 0) { /* new client */
-				do_accept(sock, ctx, fds, clients);
-				continue;
-			}
-
-			handle(&fds[i], &clients[i]);
+			if (fds[i].fd == sock4)
+				do_accept(sock4, ctx, fds, clients);
+			else if (fds[i].fd == sock6)
+				do_accept(sock6, ctx, fds, clients);
+			else
+				handle(&fds[i], &clients[i]);
 		}
 	}
 }
@@ -852,7 +853,7 @@ main(int argc, char **argv)
 	const char *cert = "cert.pem", *key = "key.pem";
 	struct tls *ctx = NULL;
 	struct tls_config *conf;
-	int sock, ch;
+	int sock4, sock6, ch;
 	connected_clients = 0;
 
 	if ((dir = absolutify_path("docs")) == NULL)
@@ -944,7 +945,8 @@ main(int argc, char **argv)
 	if (tls_configure(ctx, conf) == -1)
 		errx(1, "tls_configure: %s", tls_error(ctx));
 
-	sock = make_socket(port, AF_INET);
+	sock4 = make_socket(port, AF_INET);
+	sock6 = make_socket(port, AF_INET6);
 
 	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
 		err(1, "open: %s", dir);
@@ -962,9 +964,10 @@ main(int argc, char **argv)
 	if (cgi == NULL && pledge("stdio rpath inet", NULL) == -1)
 		err(1, "pledge");
 
-	loop(ctx, sock);
+	loop(ctx, sock4, sock6);
 
-	close(sock);
+	close(sock4);
+	close(sock6);
 	tls_free(ctx);
 	tls_config_free(conf);
 }
