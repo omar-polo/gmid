@@ -28,6 +28,35 @@
 
 #include "gmid.h"
 
+#define LOG(priority, c, fmt, ...)					\
+	do {								\
+		char buf[INET_ADDRSTRLEN];				\
+		if (inet_ntop((c)->af, &(c)->addr,			\
+		    buf, sizeof(buf)) == NULL)				\
+			FATAL("inet_ntop: %s", strerror(errno));	\
+		if (foreground)						\
+			fprintf(stderr,					\
+			    "%s " fmt "\n", buf, __VA_ARGS__);		\
+		else							\
+			syslog((priority) | LOG_DAEMON,			\
+			    "%s " fmt, buf, __VA_ARGS__);		\
+	} while (0)
+
+#define LOGE(c, fmt, ...) LOG(LOG_ERR,    c, fmt, __VA_ARGS__)
+#define LOGN(c, fmt, ...) LOG(LOG_NOTICE, c, fmt, __VA_ARGS__)
+#define LOGI(c, fmt, ...) LOG(LOG_INFO,   c, fmt, __VA_ARGS__)
+#define LOGD(c, fmt, ...) LOG(LOG_DEBUG,  c, fmt, __VA_ARGS__)
+
+#define FATAL(fmt, ...)							\
+	do {								\
+		if (foreground)						\
+			fprintf(stderr, fmt "\n", __VA_ARGS__);		\
+		else							\
+			syslog(LOG_DAEMON | LOG_CRIT,			\
+			    fmt, __VA_ARGS__);				\
+		exit(1);						\
+	} while (0)
+
 const char *dir, *cgi;
 int dirfd;
 int port;
@@ -55,6 +84,14 @@ struct etm {			/* file extension to mime */
 
 	{NULL, NULL}
 };
+
+static inline void
+safe_setenv(const char *name, const char *val)
+{
+	if (val == NULL)
+		val = "";
+	setenv(name, val, 1);
+}
 
 void
 sig_handler(int sig)
@@ -301,24 +338,24 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		argv[0] = argv[1] = ex;
 
 		/* fix the env */
-		SAFE_SETENV("GATEWAY_INTERFACE", "CGI/1.1");
-		SAFE_SETENV("SERVER_SOFTWARE", "gmid");
-		SAFE_SETENV("SERVER_PORT", portno);
+		safe_setenv("GATEWAY_INTERFACE", "CGI/1.1");
+		safe_setenv("SERVER_SOFTWARE", "gmid");
+		safe_setenv("SERVER_PORT", portno);
 		/* setenv("SERVER_NAME", "", 1); */
-		SAFE_SETENV("SCRIPT_NAME", spath);
-		SAFE_SETENV("SCRIPT_EXECUTABLE", ex);
-		SAFE_SETENV("REQUEST_URI", requri);
-		SAFE_SETENV("REQUEST_RELATIVE", relpath);
-		SAFE_SETENV("QUERY_STRING", query);
-		SAFE_SETENV("REMOTE_HOST", addr);
-		SAFE_SETENV("REMOTE_ADDR", addr);
-		SAFE_SETENV("DOCUMENT_ROOT", dir);
+		safe_setenv("SCRIPT_NAME", spath);
+		safe_setenv("SCRIPT_EXECUTABLE", ex);
+		safe_setenv("REQUEST_URI", requri);
+		safe_setenv("REQUEST_RELATIVE", relpath);
+		safe_setenv("QUERY_STRING", query);
+		safe_setenv("REMOTE_HOST", addr);
+		safe_setenv("REMOTE_ADDR", addr);
+		safe_setenv("DOCUMENT_ROOT", dir);
 
 		if (tls_peer_cert_provided(c->ctx)) {
-			SAFE_SETENV("AUTH_TYPE", "Certificate");
-			SAFE_SETENV("REMOTE_USER", tls_peer_cert_subject(c->ctx));
-			SAFE_SETENV("TLS_CLIENT_ISSUER", tls_peer_cert_issuer(c->ctx));
-			SAFE_SETENV("TLS_CLIENT_HASH", tls_peer_cert_hash(c->ctx));
+			safe_setenv("AUTH_TYPE", "Certificate");
+			safe_setenv("REMOTE_USER", tls_peer_cert_subject(c->ctx));
+			safe_setenv("TLS_CLIENT_ISSUER", tls_peer_cert_issuer(c->ctx));
+			safe_setenv("TLS_CLIENT_HASH", tls_peer_cert_hash(c->ctx));
 		}
 
 		execvp(ex, argv);

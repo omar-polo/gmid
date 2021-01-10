@@ -46,45 +46,7 @@
 #define NOT_FOUND	51
 #define BAD_REQUEST	59
 
-#ifndef MAX_USERS
 #define MAX_USERS	64
-#endif
-
-#define SAFE_SETENV(var, val) do {		\
-		const char *_tmp = (val);	\
-		if (_tmp == NULL)		\
-			_tmp = "";		\
-		setenv((var), _tmp, 1);		\
-	} while(0)
-
-#define LOG(priority, c, fmt, ...)					\
-	do {								\
-		char buf[INET_ADDRSTRLEN];				\
-		if (inet_ntop((c)->af, &(c)->addr,			\
-		    buf, sizeof(buf)) == NULL)				\
-			FATAL("inet_ntop: %s", strerror(errno));	\
-		if (foreground)						\
-			fprintf(stderr,					\
-			    "%s " fmt "\n", buf, __VA_ARGS__);		\
-		else							\
-			syslog((priority) | LOG_DAEMON,			\
-			    "%s " fmt, buf, __VA_ARGS__);		\
-	} while (0)
-
-#define LOGE(c, fmt, ...) LOG(LOG_ERR,    c, fmt, __VA_ARGS__)
-#define LOGN(c, fmt, ...) LOG(LOG_NOTICE, c, fmt, __VA_ARGS__)
-#define LOGI(c, fmt, ...) LOG(LOG_INFO,   c, fmt, __VA_ARGS__)
-#define LOGD(c, fmt, ...) LOG(LOG_DEBUG,  c, fmt, __VA_ARGS__)
-
-#define FATAL(fmt, ...)							\
-	do {								\
-		if (foreground)						\
-			fprintf(stderr, fmt "\n", __VA_ARGS__);		\
-		else							\
-			syslog(LOG_DAEMON | LOG_CRIT,			\
-			    fmt, __VA_ARGS__);				\
-		exit(1);						\
-	} while (0)
 
 enum {
 	S_OPEN,
