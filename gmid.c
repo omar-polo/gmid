@@ -24,38 +24,15 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "gmid.h"
 
-#define LOG(priority, c, fmt, ...)					\
-	do {								\
-		char buf[INET_ADDRSTRLEN];				\
-		if (inet_ntop((c)->af, &(c)->addr,			\
-		    buf, sizeof(buf)) == NULL)				\
-			FATAL("inet_ntop: %s", strerror(errno));	\
-		if (foreground)						\
-			fprintf(stderr,					\
-			    "%s " fmt "\n", buf, __VA_ARGS__);		\
-		else							\
-			syslog((priority) | LOG_DAEMON,			\
-			    "%s " fmt, buf, __VA_ARGS__);		\
-	} while (0)
-
-#define LOGE(c, fmt, ...) LOG(LOG_ERR,    c, fmt, __VA_ARGS__)
-#define LOGN(c, fmt, ...) LOG(LOG_NOTICE, c, fmt, __VA_ARGS__)
-#define LOGI(c, fmt, ...) LOG(LOG_INFO,   c, fmt, __VA_ARGS__)
-#define LOGD(c, fmt, ...) LOG(LOG_DEBUG,  c, fmt, __VA_ARGS__)
-
-#define FATAL(fmt, ...)							\
-	do {								\
-		if (foreground)						\
-			fprintf(stderr, fmt "\n", __VA_ARGS__);		\
-		else							\
-			syslog(LOG_DAEMON | LOG_CRIT,			\
-			    fmt, __VA_ARGS__);				\
-		exit(1);						\
-	} while (0)
+#define LOGE(c, fmt, ...) logs(LOG_ERR,    c, fmt, __VA_ARGS__)
+#define LOGN(c, fmt, ...) logs(LOG_NOTICE, c, fmt, __VA_ARGS__)
+#define LOGI(c, fmt, ...) logs(LOG_INFO,   c, fmt, __VA_ARGS__)
+#define LOGD(c, fmt, ...) logs(LOG_DEBUG,  c, fmt, __VA_ARGS__)
 
 const char *dir, *cgi;
 int dirfd;
@@ -91,6 +68,46 @@ safe_setenv(const char *name, const char *val)
 	if (val == NULL)
 		val = "";
 	setenv(name, val, 1);
+}
+
+__attribute__ ((format (printf, 1, 2)))
+static inline void __dead
+fatal(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+
+	if (foreground) {
+		vfprintf(stderr, fmt, ap);
+		fprintf(stderr, "\n");
+	} else
+		vsyslog(LOG_DAEMON | LOG_CRIT, fmt, ap);
+
+	va_end(ap);
+	exit(1);
+}
+
+__attribute__ ((format (printf, 3, 4)))
+static inline void
+logs(int priority, struct client *c, const char *fmt, ...)
+{
+	char buf[INET_ADDRSTRLEN];
+	va_list ap;
+
+	va_start(ap, fmt);
+	priority |= LOG_DAEMON;
+
+	if (inet_ntop(c->af, &c->addr, buf, sizeof(buf)) == NULL)
+		fatal("inet_ntop: %s", strerror(errno));
+
+	if (foreground) {
+		vfprintf(stderr, fmt, ap);
+		fprintf(stderr, "\n");
+	} else
+		vsyslog(priority, fmt, ap);
+
+	va_end(ap);
 }
 
 void
@@ -604,9 +621,9 @@ mark_nonblock(int fd)
 	int flags;
 
 	if ((flags = fcntl(fd, F_GETFL)) == -1)
-		FATAL("fcntl(F_GETFL): %s", strerror(errno));
+		fatal("fcntl(F_GETFL): %s", strerror(errno));
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-		FATAL("fcntl(F_SETFL): %s", strerror(errno));
+		fatal("fcntl(F_SETFL): %s", strerror(errno));
 }
 
 int
@@ -643,23 +660,23 @@ make_socket(int port, int family)
 	}
 
 	if ((sock = socket(family, SOCK_STREAM, 0)) == -1)
-		FATAL("socket: %s", strerror(errno));
+		fatal("socket: %s", strerror(errno));
 
 	v = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v)) == -1)
-		FATAL("setsockopt(SO_REUSEADDR): %s", strerror(errno));
+		fatal("setsockopt(SO_REUSEADDR): %s", strerror(errno));
 
 	v = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &v, sizeof(v)) == -1)
-		FATAL("setsockopt(SO_REUSEPORT): %s", strerror(errno));
+		fatal("setsockopt(SO_REUSEPORT): %s", strerror(errno));
 
 	mark_nonblock(sock);
 
 	if (bind(sock, addr, len) == -1)
-		FATAL("bind: %s", strerror(errno));
+		fatal("bind: %s", strerror(errno));
 
 	if (listen(sock, 16) == -1)
-		FATAL("listen: %s", strerror(errno));
+		fatal("listen: %s", strerror(errno));
 
 	return sock;
 }
@@ -675,7 +692,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 	if ((fd = accept(sock, (struct sockaddr*)&addr, &len)) == -1) {
 		if (errno == EWOULDBLOCK)
 			return;
-		FATAL("accept: %s", strerror(errno));
+		fatal("accept: %s", strerror(errno));
 	}
 
 	mark_nonblock(fd);
@@ -758,7 +775,7 @@ loop(struct tls *ctx, int sock)
 				    connected_clients);
 				continue;
 			}
-			FATAL("poll: %s", strerror(errno));
+			fatal("poll: %s", strerror(errno));
 		}
 
 		for (i = 0; i < MAX_USERS; i++) {
@@ -766,7 +783,7 @@ loop(struct tls *ctx, int sock)
 				continue;
 
 			if (fds[i].revents & (POLLERR|POLLNVAL))
-				FATAL("bad fd %d: %s", fds[i].fd,
+				fatal("bad fd %d: %s", fds[i].fd,
 				    strerror(errno));
 
 			if (fds[i].revents & POLLHUP) {
