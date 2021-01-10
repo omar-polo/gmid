@@ -1,3 +1,7 @@
+2021-01-10  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (logs): log also the port of the client
+
 2020-12-26  Omar Polo  <op@omarpolo.com>
 
 	* uri.c (parse_uri): IRI support

@@ -66,7 +66,7 @@ struct client {
 	void		*buf, *i;	  /* mmap buffer */
 	ssize_t		 len, off;	  /* mmap/static buffer  */
 	int		 af;
-	struct in_addr	 addr;
+	struct sockaddr_storage	 addr;
 };
 
 struct uri {

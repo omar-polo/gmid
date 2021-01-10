@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <netdb.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <string.h>
@@ -90,22 +91,38 @@ fatal(const char *fmt, ...)
 
 __attribute__ ((format (printf, 3, 4)))
 static inline void
-logs(int priority, struct client *c, const char *fmt, ...)
+logs(int priority, struct client *c,
+    const char *fmt, ...)
 {
-	char buf[INET_ADDRSTRLEN];
+	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+	char *fmted, *s;
+	size_t len;
+	int ec;
 	va_list ap;
 
 	va_start(ap, fmt);
-	priority |= LOG_DAEMON;
 
-	if (inet_ntop(c->af, &c->addr, buf, sizeof(buf)) == NULL)
-		fatal("inet_ntop: %s", strerror(errno));
+	len = sizeof(c->addr);
+	ec = getnameinfo((struct sockaddr*)&c->addr, len,
+	    hbuf, sizeof(hbuf),
+	    sbuf, sizeof(sbuf),
+	    NI_NUMERICHOST | NI_NUMERICSERV);
+	if (ec != 0)
+		fatal("getnameinfo: %s", gai_strerror(ec));
 
-	if (foreground) {
-		vfprintf(stderr, fmt, ap);
-		fprintf(stderr, "\n");
-	} else
-		vsyslog(priority, fmt, ap);
+	if (vasprintf(&fmted, fmt, ap) == -1)
+		fatal("vasprintf: %s", strerror(errno));
+
+	if (foreground)
+		fprintf(stderr, "%s:%s %s\n", hbuf, sbuf, fmted);
+	else {
+		if (asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted) == -1)
+			fatal("asprintf: %s", strerror(errno));
+		syslog(priority | LOG_DAEMON, "%s", s);
+		free(s);
+	}
+
+	free(fmted);
 
 	va_end(ap);
 }
@@ -685,7 +702,7 @@ void
 do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 {
 	int i, fd;
-	struct sockaddr_in addr;
+	struct sockaddr_storage addr;
 	socklen_t len;
 
 	len = sizeof(addr);
@@ -711,7 +728,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 			clients[i].child = -1;
 			clients[i].buf = MAP_FAILED;
 			clients[i].af = AF_INET;
-			clients[i].addr = addr.sin_addr;
+			clients[i].addr = addr;
 
 			connected_clients++;
 			return;
