@@ -70,7 +70,7 @@ struct client {
 	struct sockaddr_storage	 addr;
 };
 
-struct uri {
+struct iri {
 	char		*schema;
 	char		*host;
 	char		*port;
@@ -81,8 +81,8 @@ struct uri {
 };
 
 struct parser {
-	char		*uri;
-	struct uri	*parsed;
+	char		*iri;
+	struct iri	*parsed;
 	const char	*err;
 };
 
@@ -123,8 +123,8 @@ void		 usage(const char*);
 /* utf8.c */
 int		 valid_multibyte_utf8(struct parser*);
 
-/* uri.c */
-int		 parse_uri(char*, struct uri*, const char**);
-int		 trim_req_uri(char*);
+/* iri.c */
+int		 parse_iri(char*, struct iri*, const char**);
+int		 trim_req_iri(char*);
 
 #endif

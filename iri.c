@@ -19,74 +19,6 @@
 
 #include "gmid.h"
 
-/*
- * Notes from RFC3986
- *
- * => gemini://tanso.net/rfc/rfc3986.txt
- *
- *
- * ABNF
- * ====
- *
- * pct-encoded	"%" HEXDIG HEXDIG
- *
- * reserved	= gen-delims / sub-delimis
- * gen-delims	= ":" / "/" / "?" / "#" / "[" / "]" / "@"
- * sub-delims	= "!" / "$" / "&" / "'" / "(" / ")"
- * 		/ "*" / "+" / "," / ";" / "="
- *
- * unreserved	= ALPHA / DIGIT / "-" / "." / "_" / "~"
- *
- * URI		= scheme ":" hier-part [ "?" query ] [ "#" fragment ]
- *
- * hier-part	= "//" authority path-abempty
- * 		/ path-absolute
- * 		/ path-rootless
- * 		/ path-empty
- *
- * scheme	= ALPHA *( ALPHA / DIGIT / "+" / "-" / "." )
- *
- * authority	= [ userinfo "@" ] host [ ":" port ]
- *
- * (note that userinfo isn't used for Gemini URL)
- *
- * host		= IP-literal / IPv4address / reg-name
- * reg-name	= *( unreserved / pct-encoded / sub-delims )
- *
- * port		= *DIGIT
- *
- * path		= path-abemty	; begins with "/" or is empty
- * 		/ path-absolute	; begins with "/" but not "//"
- * 		/ path-noscheme	; begins with a non-colon segment
- * 		/ path-rootless ; begins with a segment
- * 		/ path-empty	; zero characters
- *
- * path-abemty		= *( "/" segment )
- * path-absolute	= "/" [ segment-nz *( "/" segment ) ]
- * path-noscheme	= ; not used
- * path-rootless	= ; not used
- * path-empty		= ; not used
- *
- * segment		= *pchar
- * segment-nz	= 1*pchar
- * segment-nz-nc	= 1*( unreserved / pct-encoded / sub-delims / "@" )
- * pchar		= unreserved / pct-encoded / sub-delims / ":" / "@"
- *
- * query		= *( pchar / "/" / "?" )
- *
- * fragment		= *( pchar / "/" / "?" )
- *
- *
- * EXAMPLE
- * =======
- *
- *    foo://example.com:8042/over/there?name=ferret#nose
- *    \_/   \______________/\_________/ \_________/ \__/
- *     |           |            |            |        |
- *  scheme     authority       path        query   fragment
- *
- */
-
 static inline int
 unreserved(int p)
 {
@@ -116,17 +48,17 @@ sub_delimiters(int p)
 static int
 parse_pct_encoded(struct parser *p)
 {
-	if (*p->uri != '%')
+	if (*p->iri != '%')
 		return 0;
 
-	if (!isxdigit(*(p->uri+1)) || !isxdigit(*(p->uri+2))) {
+	if (!isxdigit(*(p->iri+1)) || !isxdigit(*(p->iri+2))) {
 		p->err = "illegal percent-encoding";
 		return 0;
 	}
 
-	sscanf(p->uri+1, "%2hhx", p->uri);
-	memmove(p->uri+1, p->uri+3, strlen(p->uri+3)+1);
-	if (*p->uri == '\0') {
+	sscanf(p->iri+1, "%2hhx", p->iri);
+	memmove(p->iri+1, p->iri+3, strlen(p->iri+3)+1);
+	if (*p->iri == '\0') {
 		p->err = "illegal percent-encoding";
 		return 0;
 	}
@@ -138,32 +70,32 @@ parse_pct_encoded(struct parser *p)
 static int
 parse_scheme(struct parser *p)
 {
-	p->parsed->schema = p->uri;
+	p->parsed->schema = p->iri;
 
-	if (!isalpha(*p->uri)) {
+	if (!isalpha(*p->iri)) {
 		p->err = "illegal character in scheme";
 		return 0;
 	}
 
-	p->uri++;
-	while (isalnum(*p->uri)
-	    || *p->uri == '+'
-	    || *p->uri == '-'
-	    || *p->uri == '.')
-		p->uri++;
+	p->iri++;
+	while (isalnum(*p->iri)
+	    || *p->iri == '+'
+	    || *p->iri == '-'
+	    || *p->iri == '.')
+		p->iri++;
 
-	if (*p->uri != ':') {
+	if (*p->iri != ':') {
 		p->err = "illegal character in scheme";
 		return 0;
 	}
 
-	*p->uri = '\0';
-	if (*(++p->uri) != '/' || *(++p->uri) != '/') {
+	*p->iri = '\0';
+	if (*(++p->iri) != '/' || *(++p->iri) != '/') {
 		p->err = "invalid marker after scheme";
 		return 0;
 	}
 
-	p->uri++;
+	p->iri++;
 	return 1;
 }
 
@@ -173,26 +105,26 @@ parse_port(struct parser *p)
 {
 	uint32_t i = 0;
 
-	p->parsed->port = p->uri;
+	p->parsed->port = p->iri;
 
-	for (; isdigit(*p->uri); p->uri++) {
-		i = i * 10 + *p->uri - '0';
+	for (; isdigit(*p->iri); p->iri++) {
+		i = i * 10 + *p->iri - '0';
 		if (i > UINT16_MAX) {
 			p->err = "port number too large";
 			return 0;
 		}
 	}
 
-	if (*p->uri != '/' && *p->uri != '\0') {
+	if (*p->iri != '/' && *p->iri != '\0') {
 		p->err = "illegal character in port number";
 		return 0;
 	}
 
 	p->parsed->port_no = i;
 
-	if (*p->uri != '\0') {
-		*p->uri = '\0';
-		p->uri++;
+	if (*p->iri != '\0') {
+		*p->iri = '\0';
+		p->iri++;
 	}
 
 	return 1;
@@ -203,29 +135,29 @@ parse_port(struct parser *p)
 static int
 parse_authority(struct parser *p)
 {
-	p->parsed->host = p->uri;
+	p->parsed->host = p->iri;
 
-	while (unreserved(*p->uri)
-	    || sub_delimiters(*p->uri)
+	while (unreserved(*p->iri)
+	    || sub_delimiters(*p->iri)
 	    || parse_pct_encoded(p))
-		p->uri++;
+		p->iri++;
 
 	if (p->err != NULL)
 		return 0;
 
-	if (*p->uri == ':') {
-		*p->uri = '\0';
-		p->uri++;
+	if (*p->iri == ':') {
+		*p->iri = '\0';
+		p->iri++;
 		return parse_port(p);
 	}
 
-	if (*p->uri == '/') {
-		*p->uri = '\0';
-		p->uri++;
+	if (*p->iri == '/') {
+		*p->iri = '\0';
+		p->iri++;
 		return 1;
 	}
 
-	if (*p->uri == '\0')
+	if (*p->iri == '\0')
 		return 1;
 
 	p->err = "illegal character in authority section";
@@ -305,29 +237,29 @@ path_clean(char *path)
 static int
 parse_query(struct parser *p)
 {
-	p->parsed->query = p->uri;
-	if (*p->uri == '\0')
+	p->parsed->query = p->iri;
+	if (*p->iri == '\0')
 		return 1;
 
-	while (unreserved(*p->uri)
-	    || sub_delimiters(*p->uri)
-	    || *p->uri == '/'
-	    || *p->uri == '?'
+	while (unreserved(*p->iri)
+	    || sub_delimiters(*p->iri)
+	    || *p->iri == '/'
+	    || *p->iri == '?'
 	    || parse_pct_encoded(p)
 	    || valid_multibyte_utf8(p))
-		p->uri++;
+		p->iri++;
 
 	if (p->err != NULL)
 		return 0;
 
-	if (*p->uri != '\0' && *p->uri != '#') {
+	if (*p->iri != '\0' && *p->iri != '#') {
 		p->err = "illegal character in query";
 		return 0;
 	}
 
-	if (*p->uri != '\0') {
-		*p->uri = '\0';
-		p->uri++;
+	if (*p->iri != '\0') {
+		*p->iri = '\0';
+		p->iri++;
 	}
 
 	return 1;
@@ -337,7 +269,7 @@ parse_query(struct parser *p)
 static int
 parse_fragment(struct parser *p)
 {
-	p->parsed->fragment = p->uri;
+	p->parsed->fragment = p->iri;
 	return 1;
 }
 
@@ -348,31 +280,31 @@ parse_path(struct parser *p)
 {
 	char c;
 
-	p->parsed->path = p->uri;
-	if (*p->uri == '\0') {
-		p->parsed->query = p->parsed->fragment = p->uri;
+	p->parsed->path = p->iri;
+	if (*p->iri == '\0') {
+		p->parsed->query = p->parsed->fragment = p->iri;
 		return 1;
 	}
 
-	while (unreserved(*p->uri)
-	    || sub_delimiters(*p->uri)
-	    || *p->uri == '/'
+	while (unreserved(*p->iri)
+	    || sub_delimiters(*p->iri)
+	    || *p->iri == '/'
 	    || parse_pct_encoded(p)
 	    || valid_multibyte_utf8(p))
-		p->uri++;
+		p->iri++;
 
 	if (p->err != NULL)
 		return 0;
 
-	if (*p->uri != '\0' && *p->uri != '?' && *p->uri != '#') {
+	if (*p->iri != '\0' && *p->iri != '?' && *p->iri != '#') {
 		p->err = "illegal character in path";
 		return 0;
 	}
 
-	if (*p->uri != '\0') {
-		c = *p->uri;
-		*p->uri = '\0';
-		p->uri++;
+	if (*p->iri != '\0') {
+		c = *p->iri;
+		*p->iri = '\0';
+		p->iri++;
 
 		if (c == '#') {
 			if (!parse_fragment(p))
@@ -391,15 +323,15 @@ parse_path(struct parser *p)
 }
 
 int
-parse_uri(char *uri, struct uri *ret, const char **err_ret)
+parse_iri(char *iri, struct iri *ret, const char **err_ret)
 {
 	char *end;
-	struct parser p = {uri, ret, NULL};
+	struct parser p = {iri, ret, NULL};
 
 	bzero(ret, sizeof(*ret));
 
 	/* initialize optional stuff to the empty string */
-	end = uri + strlen(uri);
+	end = iri + strlen(iri);
 	p.parsed->port = end;
 	p.parsed->path = end;
 	p.parsed->query = end;
@@ -415,11 +347,11 @@ parse_uri(char *uri, struct uri *ret, const char **err_ret)
 }
 
 int
-trim_req_uri(char *uri)
+trim_req_iri(char *iri)
 {
 	char *i;
 
-	if ((i = strstr(uri, "\r\n")) == NULL)
+	if ((i = strstr(iri, "\r\n")) == NULL)
 		return 0;
 	*i = '\0';
 	return 1;

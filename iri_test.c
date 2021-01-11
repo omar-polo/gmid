@@ -20,15 +20,15 @@
 
 #include "gmid.h"
 
-#define TEST(uri, fail, exp, descr)				\
-	if (!run_test(uri, fail, exp)) {			\
+#define TEST(iri, fail, exp, descr)				\
+	if (!run_test(iri, fail, exp)) {			\
 		fprintf(stderr, "%s:%d: error: %s\n",		\
 		    __FILE__, __LINE__, descr);			\
 		exit(1);					\
 	}
 
-#define URI(schema, host, port, path, query, frag)		\
-	((struct uri){schema, host, port, 0, path, query, frag})
+#define IRI(schema, host, port, path, query, frag)		\
+	((struct iri){schema, host, port, 0, path, query, frag})
 
 #define DIFF(wanted, got, field)					\
 	if (wanted->field == NULL || got->field == NULL ||		\
@@ -42,7 +42,7 @@
 #define FAIL 1
 
 int
-diff_uri(struct uri *p, struct uri *exp)
+diff_iri(struct iri *p, struct iri *exp)
 {
         DIFF(p, exp, schema);
         DIFF(p, exp, host);
@@ -54,18 +54,18 @@ diff_uri(struct uri *p, struct uri *exp)
 }
 
 int
-run_test(const char *uri, int should_fail, struct uri expected)
+run_test(const char *iri, int should_fail, struct iri expected)
 {
 	int failed, ok = 1;
-	char *uri_copy;
-	struct uri parsed;
+	char *iri_copy;
+	struct iri parsed;
 	const char *error;
 
-	if ((uri_copy = strdup(uri)) == NULL)
+	if ((iri_copy = strdup(iri)) == NULL)
 		err(1, "strdup");
 
-	fprintf(stderr, "=> %s\n", uri);
-	failed = !parse_uri(uri_copy, &parsed, &error);
+	fprintf(stderr, "=> %s\n", iri);
+	failed = !parse_iri(iri_copy, &parsed, &error);
 
 	if (failed && should_fail)
 		goto done;
@@ -75,22 +75,22 @@ run_test(const char *uri, int should_fail, struct uri expected)
 
 	ok = !failed && !should_fail;
 	if (ok)
-		ok = diff_uri(&expected, &parsed);
+		ok = diff_iri(&expected, &parsed);
 
 done:
-	free(uri_copy);
+	free(iri_copy);
 	return ok;
 }
 
 int
 main(void)
 {
-	struct uri empty = {"", "", "", PASS, "", "", ""};
+	struct iri empty = {"", "", "", PASS, "", "", ""};
 
 	TEST("http://omarpolo.com",
 	    PASS,
-	    URI("http", "omarpolo.com", "", "", "", ""),
-	    "can parse uri with empty path");
+	    IRI("http", "omarpolo.com", "", "", "", ""),
+	    "can parse iri with empty path");
 
 	/* schema */
 	TEST("omarpolo.com", FAIL, empty, "FAIL when the schema is missing");
@@ -101,19 +101,19 @@ main(void)
 	/* authority */
 	TEST("gemini://omarpolo.com",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "", "", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "can parse authority with empty path");
 	TEST("gemini://omarpolo.com/",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "", "", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "can parse authority with empty path (alt)")
 	TEST("gemini://omarpolo.com:1965",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "1965", "", "", ""),
+	    IRI("gemini", "omarpolo.com", "1965", "", "", ""),
 	    "can parse with port and empty path");
 	TEST("gemini://omarpolo.com:1965/",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "1965", "", "", ""),
+	    IRI("gemini", "omarpolo.com", "1965", "", "", ""),
 	    "can parse with port and empty path")
 	TEST("gemini://omarpolo.com:196s",
 	    FAIL,
@@ -123,31 +123,31 @@ main(void)
 	/* path */
 	TEST("gemini://omarpolo.com/foo/bar/baz",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
 	    "parse simple paths");
 	TEST("gemini://omarpolo.com/foo//bar///baz",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
 	    "parse paths with multiple slashes");
 	TEST("gemini://omarpolo.com/foo/./bar/./././baz",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
 	    "parse paths with . elements");
 	TEST("gemini://omarpolo.com/foo/bar/../bar/baz",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
 	    "parse paths with .. elements");
 	TEST("gemini://omarpolo.com/foo/../foo/bar/../bar/baz/../baz",
 	    PASS,
-	    URI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "foo/bar/baz", "", ""),
 	    "parse paths with multiple .. elements");
 	TEST("gemini://omarpolo.com/foo/..",
 	    PASS,
-            URI("gemini", "omarpolo.com", "", "", "", ""),
+            IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse paths with a trailing ..");
 	TEST("gemini://omarpolo.com/foo/../",
 	    PASS,
-            URI("gemini", "omarpolo.com", "", "", "", ""),
+            IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse paths with a trailing ..");
 	TEST("gemini://omarpolo.com/foo/../..",
 	    FAIL,
@@ -155,41 +155,41 @@ main(void)
 	    "reject paths that would escape the root");
 	TEST("gemini://omarpolo.com/foo/../foo/../././/bar/baz/.././.././/",
 	    PASS,
-            URI("gemini", "omarpolo.com", "", "", "", ""),
+            IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse path with lots of cleaning available");
 
 	/* query */
 	TEST("foo://example.com/foo/?gne",
 	    PASS,
-	    URI("foo", "example.com", "", "foo/", "gne", ""),
+	    IRI("foo", "example.com", "", "foo/", "gne", ""),
 	    "parse query strings");
 	TEST("foo://example.com/foo/?gne&foo",
 	    PASS,
-	    URI("foo", "example.com", "", "foo/", "gne&foo", ""),
+	    IRI("foo", "example.com", "", "foo/", "gne&foo", ""),
 	    "parse query strings");
 	TEST("foo://example.com/foo/?gne%2F",
 	    PASS,
-	    URI("foo", "example.com", "", "foo/", "gne/", ""),
+	    IRI("foo", "example.com", "", "foo/", "gne/", ""),
 	    "parse query strings");
 
 	/* fragment */
 	TEST("foo://bar.co/#foo",
 	    PASS,
-	    URI("foo", "bar.co", "", "", "", "foo"),
+	    IRI("foo", "bar.co", "", "", "", "foo"),
 	    "can recognize fragments");
 
 	/* percent encoding */
 	TEST("foo://bar.com/caf%C3%A8.gmi",
 	    PASS,
-	    URI("foo", "bar.com", "", "cafè.gmi", "", ""),
+	    IRI("foo", "bar.com", "", "cafè.gmi", "", ""),
 	    "can decode");
 	TEST("foo://bar.com/caff%C3%A8%20macchiato.gmi",
 	    PASS,
-	    URI("foo", "bar.com", "", "caffè macchiato.gmi", "", ""),
+	    IRI("foo", "bar.com", "", "caffè macchiato.gmi", "", ""),
 	    "can decode");
 	TEST("foo://bar.com/caff%C3%A8+macchiato.gmi",
 	    PASS,
-	    URI("foo", "bar.com", "", "caffè+macchiato.gmi", "", ""),
+	    IRI("foo", "bar.com", "", "caffè+macchiato.gmi", "", ""),
 	    "can decode");
 	TEST("foo://bar.com/foo%2F..%2F..",
 	    FAIL,
@@ -203,19 +203,19 @@ main(void)
 	/* IRI */
         TEST("foo://bar.com/cafè.gmi",
 	    PASS,
-	    URI("foo", "bar.com", "", "cafè.gmi", "" , ""),
+	    IRI("foo", "bar.com", "", "cafè.gmi", "" , ""),
 	    "decode IRI (with a 2-byte utf8 seq)");
 	TEST("foo://bar.com/世界.gmi",
 	    PASS,
-	    URI("foo", "bar.com", "", "世界.gmi", "" , ""),
+	    IRI("foo", "bar.com", "", "世界.gmi", "" , ""),
 	    "decode IRI");
 	TEST("foo://bar.com/😼.gmi",
 	    PASS,
-	    URI("foo", "bar.com", "", "😼.gmi", "" , ""),
+	    IRI("foo", "bar.com", "", "😼.gmi", "" , ""),
 	    "decode IRI (with a 3-byte utf8 seq)");
 	TEST("foo://bar.com/😼/𤭢.gmi",
 	    PASS,
-	    URI("foo", "bar.com", "", "😼/𤭢.gmi", "" , ""),
+	    IRI("foo", "bar.com", "", "😼/𤭢.gmi", "" , ""),
 	    "decode IRI (with a 3-byte and a 4-byte utf8 seq)");
 	TEST("foo://bar.com/世界/\xC0\x80",
 	    FAIL,

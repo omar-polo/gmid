@@ -2,6 +2,6 @@ cert.pem
 key.pem
 TAGS
 gmid
-uri_test
+iri_test
 *.o
 docs

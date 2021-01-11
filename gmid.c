@@ -572,7 +572,7 @@ handle(struct pollfd *fds, struct client *client)
 {
 	char buf[GEMINI_URL_LEN];
 	const char *parse_err;
-	struct uri uri;
+	struct iri iri;
 
 	switch (client->state) {
 	case S_OPEN:
@@ -593,7 +593,7 @@ handle(struct pollfd *fds, struct client *client)
 		}
 
 		parse_err = "invalid request";
-		if (!trim_req_uri(buf) || !parse_uri(buf, &uri, &parse_err)) {
+		if (!trim_req_iri(buf) || !parse_iri(buf, &iri, &parse_err)) {
 			if (!start_reply(fds, client, BAD_REQUEST, parse_err))
 				return;
 			goodbye(fds, client);
@@ -601,11 +601,11 @@ handle(struct pollfd *fds, struct client *client)
 		}
 
 		LOGI(client, "GET %s%s%s",
-		    *uri.path ? uri.path : "/",
-		    *uri.query ? "?" : "",
-		    *uri.query ? uri.query : "");
+		    *iri.path ? iri.path : "/",
+		    *iri.query ? "?" : "",
+		    *iri.query ? iri.query : "");
 
-		send_file(uri.path, uri.query, fds, client);
+		send_file(iri.path, iri.query, fds, client);
 		break;
 
 	case S_INITIALIZING:
