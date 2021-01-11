@@ -15,7 +15,6 @@
  */
 
 #include <sys/mman.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 
 #include <assert.h>
