@@ -6,7 +6,7 @@
 # SYNOPSIS
 
 **gmid**
-\[**-fh**]
+\[**-6fh**]
 \[**-c**&nbsp;*cert.pem*]
 \[**-d**&nbsp;*docs*]
 \[**-k**&nbsp;*key.pem*]
@@ -50,6 +50,10 @@ will try to serve a
 file inside that directory.
 
 The options are as follows:
+
+**-6**
+
+> Enable IPv6.
 
 **-c** *cert.pem*
 

@@ -348,14 +348,22 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 
 	case 0: { 		/* child */
 		char *ex, *requri, *portno;
-		char addr[INET_ADDRSTRLEN];
+		char addr[NI_MAXHOST];
 		char *argv[] = { NULL, NULL, NULL };
+		int ec;
 
 		close(p[0]);
 		if (dup2(p[1], 1) == -1)
 			goto childerr;
 
 		if (inet_ntop(c->af, &c->addr, addr, sizeof(addr)) == NULL)
+			goto childerr;
+
+		ec = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
+		    addr, sizeof(addr),
+		    NULL, 0,
+		    NI_NUMERICHOST | NI_NUMERICSERV);
+		if (ec != 0)
 			goto childerr;
 
 		if (asprintf(&portno, "%d", port) == -1)
@@ -853,7 +861,7 @@ main(int argc, char **argv)
 	const char *cert = "cert.pem", *key = "key.pem";
 	struct tls *ctx = NULL;
 	struct tls_config *conf;
-	int sock4, sock6, ch;
+	int sock4, sock6, enable_ipv6, ch;
 	connected_clients = 0;
 
 	if ((dir = absolutify_path("docs")) == NULL)
@@ -862,9 +870,14 @@ main(int argc, char **argv)
 	cgi = NULL;
 	port = 1965;
 	foreground = 0;
+	enable_ipv6 = 0;
 
-	while ((ch = getopt(argc, argv, "c:d:fhk:p:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "6c:d:fhk:p:x:")) != -1) {
 		switch (ch) {
+		case '6':
+			enable_ipv6 = 1;
+			break;
+
 		case 'c':
 			cert = optarg;
 			break;
@@ -946,7 +959,10 @@ main(int argc, char **argv)
 		errx(1, "tls_configure: %s", tls_error(ctx));
 
 	sock4 = make_socket(port, AF_INET);
-	sock6 = make_socket(port, AF_INET6);
+	if (enable_ipv6)
+		sock6 = make_socket(port, AF_INET6);
+	else
+		sock6 = -1;
 
 	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
 		err(1, "open: %s", dir);
