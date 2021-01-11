@@ -209,8 +209,8 @@ path_clean(char *path)
 
 	/* 2. eliminate each . path name element */
 	for (i = path; *i; ++i) {
-		if ((i == path || *i == '/') && *(i+1) == '.' &&
-		    *(i+2) == '/') {
+		if ((i == path || *i == '/') &&
+		    *i != '.' && i[1] == '.' && i[2] == '/') {
 			/* move also the \0 */
 			memmove(i, i+2, strlen(i)-1);
 			i--;

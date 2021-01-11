@@ -153,6 +153,10 @@ main(void)
 	    FAIL,
             empty,
 	    "reject paths that would escape the root");
+	TEST("gemini://omarpolo.com/foo/../../",
+	    FAIL,
+            empty,
+	    "reject paths that would escape the root")
 	TEST("gemini://omarpolo.com/foo/../foo/../././/bar/baz/.././.././/",
 	    PASS,
             IRI("gemini", "omarpolo.com", "", "", "", ""),
