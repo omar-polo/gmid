@@ -600,6 +600,13 @@ handle(struct pollfd *fds, struct client *client)
 			return;
 		}
 
+		if (strcmp(iri.schema, "gemini")) {
+			if (!start_reply(fds, client, PROXY_REFUSED, "won't proxy request"))
+				return;
+			goodbye(fds, client);
+			return;
+		}
+
 		LOGI(client, "GET %s%s%s",
 		    *iri.path ? iri.path : "/",
 		    *iri.query ? "?" : "",

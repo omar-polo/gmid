@@ -45,6 +45,7 @@
 #define SUCCESS		20
 #define TEMP_FAILURE	40
 #define NOT_FOUND	51
+#define PROXY_REFUSED	53
 #define BAD_REQUEST	59
 
 #define MAX_USERS	64

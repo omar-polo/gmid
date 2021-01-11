@@ -1,6 +1,7 @@
 2021-01-11  Omar Polo  <op@omarpolo.com>
 
 	* gmid.c (main): ipv6 disabled by default and -6 flag to enable it
+	(handle): reject non-gemini protocols with 53
 
 2021-01-10  Omar Polo  <op@omarpolo.com>
 
