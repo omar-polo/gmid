@@ -71,7 +71,8 @@ safe_setenv(const char *name, const char *val)
 }
 
 __attribute__ ((format (printf, 1, 2)))
-static inline void __dead
+__attribute__ ((__noreturn__))
+static inline void
 fatal(const char *fmt, ...)
 {
 	va_list ap;
@@ -992,4 +993,6 @@ main(int argc, char **argv)
 	close(sock6);
 	tls_free(ctx);
 	tls_config_free(conf);
+
+	return 0;
 }
