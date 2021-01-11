@@ -12,9 +12,6 @@ gmid: gmid.o uri.o utf8.o
 TAGS: gmid.c uri.c utf8.c
 	-etags gmid.c uri.c utf8.c || true
 
-README.md: gmid.1
-	mandoc -Tmarkdown gmid.1 | sed -e '1d' -e '$$d' > README.md
-
 clean:
 	rm -f *.o gmid
 

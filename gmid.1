@@ -29,8 +29,8 @@
 .Ek
 .Sh DESCRIPTION
 .Nm
-is a very simple and minimal gemini server that can serve static files
-and execute CGI scripts.
+is a simple and minimal gemini server that can serve static files and
+execute CGI scripts.
 .Pp
 .Nm
 won't serve files outside the given directory and won't follow
@@ -137,16 +137,17 @@ and the user request is
 Then
 .Ev SCRIPT_NAME
 will be
-.Pa /cgi-bin/script ,
+.Pa cgi-bin/script ,
 .Ev SCRIPT_EXECUTABLE
 will be
 .Pa $DOCUMENT_ROOT/cgi-bin/script ,
 .Ev REQUEST_URI
 will be
-.Pa /cgi-bin/script/foo/bar ,
+.Pa cgi-bin/script/foo/bar ,
 .Ev REQUEST_RELATIVE
 will be
-.Pa foo/bar and
+.Pa foo/bar
+and
 .Ev QUERY_STRING
 will be
 .Ar quux .
