@@ -37,6 +37,10 @@
 # define INFTIM -1
 #endif
 
+#ifndef __dead
+# define __dead
+#endif
+
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
 /* large enough to hold a copy of a gemini URL and still have extra room */
