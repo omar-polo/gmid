@@ -97,6 +97,10 @@ main(void)
 	TEST("gemini:/omarpolo.com", FAIL, empty, "FAIL with invalid marker");
 	TEST("gemini//omarpolo.com", FAIL, empty, "FAIL with invalid marker");
 	TEST("h!!p://omarpolo.com", FAIL, empty, "FAIL with invalid schema");
+	TEST("GEMINI://omarpolo.com",
+	    PASS,
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    "Schemas are case insensitive.");
 
 	/* authority */
 	TEST("gemini://omarpolo.com",

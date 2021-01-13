@@ -77,12 +77,19 @@ parse_scheme(struct parser *p)
 		return 0;
 	}
 
-	p->iri++;
-	while (isalnum(*p->iri)
+	do {
+		/* normalize the scheme (i.e. lowercase it)
+		 *
+		 * XXX: since we cannot have good things, tolower
+		 * depends on the LC_CTYPE locale.  The good things is
+		 * that we're sure p->iri points to something in the
+		 * ASCII range, so it shouldn't do weird stuff. */
+		*p->iri = tolower(*p->iri);
+		p->iri++;
+	} while (isalnum(*p->iri)
 	    || *p->iri == '+'
 	    || *p->iri == '-'
-	    || *p->iri == '.')
-		p->iri++;
+	    || *p->iri == '.');
 
 	if (*p->iri != ':') {
 		p->err = "illegal character in scheme";
