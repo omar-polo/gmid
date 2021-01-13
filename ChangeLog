@@ -1,4 +1,11 @@
+2021-01-13  Omar Polo  <op@omarpolo.com>
+
+	* iri.c (parse_scheme): normalize scheme while parsing, so we're
+	RFC3986 compliant.
+
 2021-01-11  Omar Polo  <op@omarpolo.com>
+
+	* 1.4 and 1.4.1 tagged
 
 	* gmid.c (main): ipv6 disabled by default and -6 flag to enable it
 	(handle): reject non-gemini protocols with 53
