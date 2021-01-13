@@ -16,7 +16,7 @@ CGI scripts are enabled, while the given directory is unveiled with
 
 ## Features
 
- - IRI support (RFC RFC3987)
+ - IRI support (RFC3987)
  - dual stack: can serve over both IPv4 and IPv6
  - CGI scripts
  - (very) low memory footprint
