@@ -569,51 +569,86 @@ send_dir(char *path, struct pollfd *fds, struct client *client)
 }
 
 void
-handle(struct pollfd *fds, struct client *client)
+handle_handshake(struct pollfd *fds, struct client *c)
+{
+	switch (tls_handshake(c->ctx)) {
+	case 0:  /* success */
+	case -1: /* already handshaked */
+		break;
+	case TLS_WANT_POLLIN:
+		fds->events = POLLIN;
+		return;
+	case TLS_WANT_POLLOUT:
+		fds->events = POLLOUT;
+		return;
+	default:
+		/* unreachable */
+		abort();
+	}
+
+	/* TODO: check SNI here */
+	logs(LOG_DEBUG, c, "client wanted to talk to: %s", tls_conn_servername(c->ctx));
+
+	c->state = S_OPEN;
+	handle_open_conn(fds, c);
+}
+
+void
+handle_open_conn(struct pollfd *fds, struct client *c)
 {
 	char buf[GEMINI_URL_LEN];
-	const char *parse_err;
+	const char *parse_err = "invalid request";
 	struct iri iri;
 
+	bzero(buf, sizeof(buf));
+
+	switch (tls_read(c->ctx, buf, sizeof(buf)-1)) {
+	case -1:
+		LOGE(c, "tls_read: %s", tls_error(c->ctx));
+		goodbye(fds, c);
+		return;
+
+	case TLS_WANT_POLLIN:
+		fds->events = POLLIN;
+		return;
+
+	case TLS_WANT_POLLOUT:
+		fds->events = POLLOUT;
+		return;
+	}
+
+	if (!trim_req_iri(buf) || !parse_iri(buf, &iri, &parse_err)) {
+		if (!start_reply(fds, c, BAD_REQUEST, parse_err))
+			return;
+		goodbye(fds, c);
+		return;
+	}
+
+	if (strcmp(iri.schema, "gemini")) {
+		if (!start_reply(fds, c, PROXY_REFUSED, "won't proxy request"))
+			return;
+		goodbye(fds, c);
+		return;
+	}
+
+	LOGI(c, "GET %s%s%s",
+		*iri.path ? iri.path : "/",
+		*iri.query ? "?" : "",
+		*iri.query ? iri.query : "");
+
+	send_file(iri.path, iri.query, fds, c);
+}
+
+void
+handle(struct pollfd *fds, struct client *client)
+{
 	switch (client->state) {
+	case S_HANDSHAKE:
+		handle_handshake(fds, client);
+		break;
+
 	case S_OPEN:
-		bzero(buf, GEMINI_URL_LEN);
-		switch (tls_read(client->ctx, buf, sizeof(buf)-1)) {
-		case -1:
-			LOGE(client, "tls_read: %s", tls_error(client->ctx));
-			goodbye(fds, client);
-			return;
-
-		case TLS_WANT_POLLIN:
-			fds->events = POLLIN;
-			return;
-
-		case TLS_WANT_POLLOUT:
-			fds->events = POLLOUT;
-			return;
-		}
-
-		parse_err = "invalid request";
-		if (!trim_req_iri(buf) || !parse_iri(buf, &iri, &parse_err)) {
-			if (!start_reply(fds, client, BAD_REQUEST, parse_err))
-				return;
-			goodbye(fds, client);
-			return;
-		}
-
-		if (strcmp(iri.schema, "gemini")) {
-			if (!start_reply(fds, client, PROXY_REFUSED, "won't proxy request"))
-				return;
-			goodbye(fds, client);
-			return;
-		}
-
-		LOGI(client, "GET %s%s%s",
-		    *iri.path ? iri.path : "/",
-		    *iri.query ? "?" : "",
-		    *iri.query ? iri.query : "");
-
-		send_file(iri.path, iri.query, fds, client);
+                handle_open_conn(fds, client);
 		break;
 
 	case S_INITIALIZING:
@@ -738,7 +773,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 			fds[i].fd = fd;
 			fds[i].events = POLLIN;
 
-			clients[i].state = S_OPEN;
+			clients[i].state = S_HANDSHAKE;
 			clients[i].fd = -1;
 			clients[i].child = -1;
 			clients[i].buf = MAP_FAILED;

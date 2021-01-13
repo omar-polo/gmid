@@ -51,6 +51,7 @@
 #define MAX_USERS	64
 
 enum {
+	S_HANDSHAKE,
 	S_OPEN,
 	S_INITIALIZING,
 	S_SENDING,
@@ -111,6 +112,8 @@ void		 cgi_poll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
 void		 send_file(char*, char*, struct pollfd*, struct client*);
 void		 send_dir(char*, struct pollfd*, struct client*);
+void		 handle_handshake(struct pollfd*, struct client*);
+void		 handle_open_conn(struct pollfd*, struct client*);
 void		 handle(struct pollfd*, struct client*);
 
 void		 mark_nonblock(int);
