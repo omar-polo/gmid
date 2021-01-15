@@ -979,6 +979,7 @@ main(int argc, char **argv)
 	conf.foreground = 1;
 	conf.port = 1965;
 	conf.ipv6 = 0;
+	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
 	connected_clients = 0;
 
@@ -1067,8 +1068,7 @@ main(int argc, char **argv)
 	tls_config_verify_client_optional(tlsconf);
 	tls_config_insecure_noverifycert(tlsconf);
 
-	if (tls_config_set_protocols(tlsconf,
-	    TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3) == -1)
+	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
 		err(1, "tls_config_set_protocols");
 
 	load_vhosts(tlsconf);

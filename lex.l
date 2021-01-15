@@ -54,6 +54,7 @@ off		yylval.num = 0; return TBOOL;
 daemon		return TDAEMON;
 ipv6		return TIPV6;
 port		return TPORT;
+protocols	return TPROTOCOLS;
 server		return TSERVER;
 
 cert		return TCERT;

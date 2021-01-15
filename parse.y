@@ -43,7 +43,7 @@ extern void yyerror(const char*);
 }
 
 %token TBOOL TSTRING TNUM
-%token TDAEMON TIPV6 TPORT TSERVER
+%token TDAEMON TIPV6 TPORT TPROTOCOLS TSERVER
 %token TCERT TKEY TROOT TCGI
 %token TERR
 
@@ -62,6 +62,10 @@ options		: /* empty */
 option		: TDAEMON TBOOL		{ conf.foreground = !$2; }
 		| TIPV6 TBOOL		{ conf.ipv6 = $2; }
 		| TPORT TNUM		{ conf.port = $2; }
+		| TPROTOCOLS TSTRING {
+			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
+				errx(1, "invalid protocols string \"%s\"", $2);
+		}
 		;
 
 vhosts		: /* empty */
