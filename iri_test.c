@@ -123,6 +123,10 @@ main(void)
 	    FAIL,
 	    empty,
 	    "FAIL with invalid port number");
+	TEST("gemini://OmArPoLo.CoM",
+	    PASS,
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    "host is case-insensitive");
 
 	/* path */
 	TEST("gemini://omarpolo.com/foo/bar/baz",
