@@ -639,7 +639,7 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-	if (strcmp(iri.schema, "gemini")) {
+	if (strcmp(iri.schema, "gemini") || iri.port_no != conf.port) {
 		if (!start_reply(fds, c, PROXY_REFUSED, "won't proxy request"))
 			return;
 		goodbye(fds, c);

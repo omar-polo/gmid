@@ -160,7 +160,8 @@ parse_authority(struct parser *p)
 		*p->iri = '\0';
 		p->iri++;
 		return parse_port(p);
-	}
+	} else
+		p->parsed->port_no = 1965;
 
 	if (*p->iri == '/') {
 		*p->iri = '\0';
