@@ -1,5 +1,7 @@
 2021-01-15  Omar Polo  <op@omarpolo.com>
 
+	* gmid.c (handle_open_conn): ensure the port number of the request matches
+
 	* sandbox.c (sandbox): sandbox on OpenBSD (pledge/unveil, as before) and on FreeBSD (capsicum) too
 
 	* sample.conf: added sample configuration
