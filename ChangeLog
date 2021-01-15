@@ -1,5 +1,7 @@
 2021-01-15  Omar Polo  <op@omarpolo.com>
 
+	* sample.conf: added sample configuration
+
 	* gmid.c (main): changed behaviour: daemon off by default
 	(main): changed -c in -C (cert option)
 	(main): changed -k in -K (key option, for consistency with -C)
