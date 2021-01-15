@@ -96,9 +96,6 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		if (dup2(p[1], 1) == -1)
 			goto childerr;
 
-		if (inet_ntop(c->af, &c->addr, addr, sizeof(addr)) == NULL)
-			goto childerr;
-
 		ec = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
 		    addr, sizeof(addr),
 		    NULL, 0,
