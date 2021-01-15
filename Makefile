@@ -14,8 +14,9 @@ lex.yy.c: lex.l y.tab.c
 y.tab.c: parse.y
 	${YACC} -b y -d parse.y
 
-gmid: gmid.o iri.o utf8.o lex.yy.o y.tab.o
-	${CC} gmid.o iri.o utf8.o lex.yy.o y.tab.o -o gmid ${LDFLAGS}
+OBJS = gmid.o iri.o utf8.o lex.yy.o y.tab.o sandbox.o
+gmid: ${OBJS}
+	${CC} ${OBJS} -o gmid ${LDFLAGS}
 
 TAGS: gmid.c iri.c utf8.c
 	-etags gmid.c iri.c utf8.c || true

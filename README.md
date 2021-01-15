@@ -22,6 +22,7 @@ CGI scripts are enabled, while the given directory is unveiled with
  - (very) low memory footprint
  - small codebase, easily hackable
  - virtual hosts
+ - sandboxed on OpenBSD and FreeBSD
 
 
 ## Drawbacks
@@ -29,6 +30,9 @@ CGI scripts are enabled, while the given directory is unveiled with
  - not suited for very busy hosts.  If you receive an high number of
    connection per-second you'd probably want to run multiple gmid
    instances behind relayd/haproxy or a different server.
+
+ - the sandbox on FreeBSD is **NOT** activated if CGI scripts are
+   enabled: CGI script cannot be used with the way `capsicum(4)` works
 
 
 ## Building

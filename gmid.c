@@ -29,11 +29,6 @@
 
 #include "gmid.h"
 
-#define LOGE(c, fmt, ...) logs(LOG_ERR,    c, fmt, __VA_ARGS__)
-#define LOGN(c, fmt, ...) logs(LOG_NOTICE, c, fmt, __VA_ARGS__)
-#define LOGI(c, fmt, ...) logs(LOG_INFO,   c, fmt, __VA_ARGS__)
-#define LOGD(c, fmt, ...) logs(LOG_DEBUG,  c, fmt, __VA_ARGS__)
-
 struct vhost hosts[HOSTSLEN];
 
 int connected_clients;
@@ -90,8 +85,7 @@ fatal(const char *fmt, ...)
 	exit(1);
 }
 
-__attribute__ ((format (printf, 3, 4)))
-static inline void
+void
 logs(int priority, struct client *c,
     const char *fmt, ...)
 {
@@ -103,13 +97,18 @@ logs(int priority, struct client *c,
 
 	va_start(ap, fmt);
 
-	len = sizeof(c->addr);
-	ec = getnameinfo((struct sockaddr*)&c->addr, len,
-	    hbuf, sizeof(hbuf),
-	    sbuf, sizeof(sbuf),
-	    NI_NUMERICHOST | NI_NUMERICSERV);
-	if (ec != 0)
-		fatal("getnameinfo: %s", gai_strerror(ec));
+	if (c == NULL) {
+		strncpy(hbuf, "<internal>", sizeof(hbuf));
+		sbuf[0] = '\0';
+	} else {
+		len = sizeof(c->addr);
+		ec = getnameinfo((struct sockaddr*)&c->addr, len,
+			hbuf, sizeof(hbuf),
+			sbuf, sizeof(sbuf),
+			NI_NUMERICHOST | NI_NUMERICSERV);
+		if (ec != 0)
+			fatal("getnameinfo: %s", gai_strerror(ec));
+	}
 
 	if (vasprintf(&fmted, fmt, ap) == -1)
 		fatal("vasprintf: %s", strerror(errno));
@@ -961,30 +960,6 @@ load_vhosts(struct tls_config *tlsconf)
 	}
 }
 
-/* we can augment this function to handle also capsicum and seccomp eventually */
-void
-sandbox()
-{
-        struct vhost *h;
-	int has_cgi = 0;
-
-	for (h = hosts; h->domain != NULL; ++h) {
-		if (unveil(h->dir, "rx") == -1)
-			err(1, "unveil %s for domain %s", h->dir, h->domain);
-
-		if (h->cgi != NULL)
-			has_cgi = 1;
-	}
-
-	if (pledge("stdio rpath inet proc exec", NULL) == -1)
-		err(1, "pledge");
-
-	/* drop proc and exec if cgi isn't enabled */
-	if (!has_cgi)
-		if (pledge("stdio rpath inet", NULL) == -1)
-			err(1, "pledge");
-}
-
 void
 usage(const char *me)
 {
@@ -1002,7 +977,7 @@ main(int argc, char **argv)
 	int sock4, sock6, ch;
 	const char *config_path = NULL;
 	size_t i;
-	int conftest = 0, has_cgi = 0;
+	int conftest = 0;
 
 	bzero(hosts, sizeof(hosts));
 	for (i = 0; i < HOSTSLEN; ++i)

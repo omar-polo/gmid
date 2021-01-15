@@ -1,5 +1,7 @@
 2021-01-15  Omar Polo  <op@omarpolo.com>
 
+	* sandbox.c (sandbox): sandbox on OpenBSD (pledge/unveil, as before) and on FreeBSD (capsicum) too
+
 	* sample.conf: added sample configuration
 
 	* gmid.c (main): changed behaviour: daemon off by default
