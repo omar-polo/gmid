@@ -50,6 +50,27 @@
 
 #define MAX_USERS	64
 
+#define HOSTSLEN	64
+
+struct vhost {
+	const char	*domain;
+	const char	*cert;
+	const char	*key;
+	const char	*dir;
+	const char	*cgi;
+	int		 dirfd;
+};
+
+extern struct vhost hosts[HOSTSLEN];
+
+struct conf {
+	int	foreground;
+	int	port;
+	int	ipv6;
+};
+
+extern struct conf conf;
+
 enum {
 	S_HANDSHAKE,
 	S_OPEN,
@@ -70,6 +91,7 @@ struct client {
 	ssize_t		 len, off;	  /* mmap/static buffer  */
 	int		 af;
 	struct sockaddr_storage	 addr;
+	struct vhost	*host;	/* host he's talking to */
 };
 
 struct iri {
@@ -122,7 +144,19 @@ void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
 void		 goodbye(struct pollfd*, struct client*);
 void		 loop(struct tls*, int, int);
 
+char		*absolutify_path(const char*);
+void		 yyerror(const char*);
+int		 parse_portno(const char*);
+void		 parse_conf(const char*);
+void		 load_vhosts(struct tls_config*);
+void		 sandbox();
+
 void		 usage(const char*);
+
+extern FILE *yyin;
+extern int yylineno;
+extern int yyparse(void);
+extern int yylex(void);
 
 /* utf8.c */
 int		 valid_multibyte_utf8(struct parser*);

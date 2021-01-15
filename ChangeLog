@@ -1,3 +1,12 @@
+2021-01-15  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): changed behaviour: daemon off by default
+	(main): changed -c in -C (cert option)
+	(main): changed -k in -K (key option, for consistency with -C)
+	(main): added -c to load a configuration
+	(main): certs, key and doc (-C -K and -d) doesn't have a default value anymore
+	(handle_handshake): add vhosts support
+
 2021-01-13  Omar Polo  <op@omarpolo.com>
 
 	* iri.c (parse_scheme): normalize scheme while parsing, so we're

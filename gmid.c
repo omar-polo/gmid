@@ -34,11 +34,12 @@
 #define LOGI(c, fmt, ...) logs(LOG_INFO,   c, fmt, __VA_ARGS__)
 #define LOGD(c, fmt, ...) logs(LOG_DEBUG,  c, fmt, __VA_ARGS__)
 
-const char *dir, *cgi;
-int dirfd;
-int port;
-int foreground;
+struct vhost hosts[HOSTSLEN];
+
 int connected_clients;
+int goterror;
+
+struct conf conf;
 
 struct etm {			/* file extension to mime */
 	const char	*mime;
@@ -79,7 +80,7 @@ fatal(const char *fmt, ...)
 
 	va_start(ap, fmt);
 
-	if (foreground) {
+	if (conf.foreground) {
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
 	} else
@@ -113,7 +114,7 @@ logs(int priority, struct client *c,
 	if (vasprintf(&fmted, fmt, ap) == -1)
 		fatal("vasprintf: %s", strerror(errno));
 
-	if (foreground)
+	if (conf.foreground)
 		fprintf(stderr, "%s:%s %s\n", hbuf, sbuf, fmted);
 	else {
 		if (asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted) == -1)
@@ -221,7 +222,7 @@ check_path(struct client *c, const char *path, int *fd)
 	struct stat sb;
 
 	assert(path != NULL);
-	if ((*fd = openat(dirfd, *path ? path : ".",
+	if ((*fd = openat(c->host->dirfd, *path ? path : ".",
 		    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
 		return FILE_MISSING;
 	}
@@ -289,7 +290,7 @@ open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 {
 	switch (check_path(c, fpath, &c->fd)) {
 	case FILE_EXECUTABLE:
-		if (cgi != NULL && starts_with(fpath, cgi))
+		if (c->host->cgi != NULL && starts_with(fpath, c->host->cgi))
 			return start_cgi(fpath, "", query, fds, c);
 
 		/* fallthrough */
@@ -318,7 +319,7 @@ open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 		return 0;
 
 	case FILE_MISSING:
-		if (cgi != NULL && starts_with(fpath, cgi))
+		if (c->host->cgi != NULL && starts_with(fpath, c->host->cgi))
 			return check_for_cgi(fpath, query, fds, c);
 
 		if (!start_reply(fds, c, NOT_FOUND, "not found"))
@@ -366,10 +367,10 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		if (ec != 0)
 			goto childerr;
 
-		if (asprintf(&portno, "%d", port) == -1)
+		if (asprintf(&portno, "%d", conf.port) == -1)
 			goto childerr;
 
-		if (asprintf(&ex, "%s/%s", dir, spath) == -1)
+		if (asprintf(&ex, "%s/%s", c->host->dir, spath) == -1)
 			goto childerr;
 
 		if (asprintf(&requri, "%s%s%s", spath,
@@ -391,7 +392,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		safe_setenv("QUERY_STRING", query);
 		safe_setenv("REMOTE_HOST", addr);
 		safe_setenv("REMOTE_ADDR", addr);
-		safe_setenv("DOCUMENT_ROOT", dir);
+		safe_setenv("DOCUMENT_ROOT", c->host->dir);
 
 		if (tls_peer_cert_provided(c->ctx)) {
 			safe_setenv("AUTH_TYPE", "Certificate");
@@ -571,6 +572,9 @@ send_dir(char *path, struct pollfd *fds, struct client *client)
 void
 handle_handshake(struct pollfd *fds, struct client *c)
 {
+	struct vhost *h;
+	const char *servname;
+
 	switch (tls_handshake(c->ctx)) {
 	case 0:  /* success */
 	case -1: /* already handshaked */
@@ -586,11 +590,27 @@ handle_handshake(struct pollfd *fds, struct client *c)
 		abort();
 	}
 
-	/* TODO: check SNI here */
-	logs(LOG_DEBUG, c, "client wanted to talk to: %s", tls_conn_servername(c->ctx));
+	servname = tls_conn_servername(c->ctx);
+	if (servname == NULL)
+		goto wronghost;
 
-	c->state = S_OPEN;
-	handle_open_conn(fds, c);
+	for (h = hosts; h->domain != NULL; ++h) {
+		if (!strcmp(h->domain, servname) || !strcmp(h->domain, "*"))
+			break;
+	}
+
+	if (h->domain != NULL) {
+		c->state = S_OPEN;
+		c->host = h;
+		handle_open_conn(fds, c);
+		return;
+	}
+
+wronghost:
+	/* XXX: check the correct response */
+	if (!start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI"))
+		return;
+	goodbye(fds, c);
 }
 
 void
@@ -889,75 +909,155 @@ absolutify_path(const char *path)
 }
 
 void
+yyerror(const char *msg)
+{
+	goterror = 1;
+	fprintf(stderr, "%d: %s\n", yylineno, msg);
+}
+
+int
+parse_portno(const char *p)
+{
+	char *ep;
+	long lval;
+
+	errno = 0;
+	lval = strtol(p, &ep, 10);
+	if (p[0] == '\0' || *ep != '\0')
+		errx(1, "not a number: %s", p);
+	if (lval < 0 || lval > UINT16_MAX)
+		errx(1, "port number out of range for domain %s: %ld", p, lval);
+	return lval;
+}
+
+void
+parse_conf(const char *path)
+{
+	if ((yyin = fopen(path, "r")) == NULL)
+		err(1, "cannot open config %s", path);
+	yyparse();
+	fclose(yyin);
+
+	if (goterror)
+		exit(1);
+}
+
+void
+load_vhosts(struct tls_config *tlsconf)
+{
+	struct vhost *h;
+
+	/* we need to set something, then we can add how many key we want */
+	if (tls_config_set_keypair_file(tlsconf, hosts->cert, hosts->key))
+		errx(1, "tls_config_set_keypair_file failed");
+
+	for (h = hosts; h->domain != NULL; ++h) {
+		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
+			errx(1, "failed to load the keypair (%s, %s)",
+			    h->cert, h->key);
+
+		if ((h->dirfd = open(h->dir, O_RDONLY | O_DIRECTORY)) == -1)
+			err(1, "open %s for domain %s", h->dir, h->domain);
+	}
+}
+
+/* we can augment this function to handle also capsicum and seccomp eventually */
+void
+sandbox()
+{
+        struct vhost *h;
+	int has_cgi = 0;
+
+	for (h = hosts; h->domain != NULL; ++h) {
+		if (unveil(h->dir, "rx") == -1)
+			err(1, "unveil %s for domain %s", h->dir, h->domain);
+
+		if (h->cgi != NULL)
+			has_cgi = 1;
+	}
+
+	if (pledge("stdio rpath inet proc exec", NULL) == -1)
+		err(1, "pledge");
+
+	/* drop proc and exec if cgi isn't enabled */
+	if (!has_cgi)
+		if (pledge("stdio rpath inet", NULL) == -1)
+			err(1, "pledge");
+}
+
+void
 usage(const char *me)
 {
 	fprintf(stderr,
-	    "USAGE: %s [-h] [-c cert.pem] [-d docs] [-k key.pem] "
-	    "[-l logfile] [-p port] [-x cgi-bin]\n",
+	    "USAGE: %s [-n] [-c config] | [-6fh] [-C cert] [-d root] [-K key] "
+	    "[-p port] [-x cgi-bin]\n",
 	    me);
 }
 
 int
 main(int argc, char **argv)
 {
-	const char *cert = "cert.pem", *key = "key.pem";
 	struct tls *ctx = NULL;
-	struct tls_config *conf;
-	int sock4, sock6, enable_ipv6, ch;
+	struct tls_config *tlsconf;
+	int sock4, sock6, ch;
+	const char *config_path = NULL;
+	size_t i;
+	int conftest = 0, has_cgi = 0;
+
+	bzero(hosts, sizeof(hosts));
+	for (i = 0; i < HOSTSLEN; ++i)
+		hosts[i].dirfd = -1;
+
+	conf.foreground = 1;
+	conf.port = 1965;
+	conf.ipv6 = 0;
+
 	connected_clients = 0;
 
-	if ((dir = absolutify_path("docs")) == NULL)
-		err(1, "absolutify_path");
-
-	cgi = NULL;
-	port = 1965;
-	foreground = 0;
-	enable_ipv6 = 0;
-
-	while ((ch = getopt(argc, argv, "6c:d:fhk:p:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "6C:c:d:fhK:np:x:")) != -1) {
 		switch (ch) {
 		case '6':
-			enable_ipv6 = 1;
+			conf.ipv6 = 1;
+			break;
+
+		case 'C':
+			hosts[0].cert = optarg;
 			break;
 
 		case 'c':
-			cert = optarg;
+			config_path = optarg;
 			break;
 
 		case 'd':
-			free((char*)dir);
-			if ((dir = absolutify_path(optarg)) == NULL)
+			free((char*)hosts[0].dir);
+			if ((hosts[0].dir = absolutify_path(optarg)) == NULL)
 				err(1, "absolutify_path");
 			break;
 
 		case 'f':
-			foreground = 1;
+			conf.foreground = 1;
 			break;
 
 		case 'h':
 			usage(*argv);
 			return 0;
 
-		case 'k':
-			key = optarg;
+		case 'K':
+			hosts[0].key = optarg;
 			break;
 
-		case 'p': {
-			char *ep;
-			long lval;
-
-			errno = 0;
-			lval = strtol(optarg, &ep, 10);
-			if (optarg[0] == '\0' || *ep != '\0')
-				err(1, "not a number: %s", optarg);
-			if (lval < 0 || lval > UINT16_MAX)
-				err(1, "port number out of range: %s", optarg);
-			port = lval;
+		case 'n':
+			conftest = 1;
 			break;
-		}
+
+		case 'p':
+			conf.port = parse_portno(optarg);
 
 		case 'x':
-			cgi = optarg;
+			/* drop the starting / (if any) */
+			if (*optarg == '/')
+				optarg++;
+			hosts[0].cgi = optarg;
 			break;
 
 		default:
@@ -965,6 +1065,21 @@ main(int argc, char **argv)
 			return 1;
 		}
 	}
+
+	if (config_path != NULL) {
+		if (hosts[0].cert != NULL || hosts[0].key != NULL ||
+		    hosts[0].dir != NULL)
+			errx(1, "can't specify options in conf mode");
+		parse_conf(config_path);
+	} else {
+		if (hosts[0].cert == NULL || hosts[0].key == NULL ||
+		    hosts[0].dir == NULL)
+			errx(1, "missing cert, key or root directory to serve");
+		hosts[0].domain = "*";
+	}
+
+	if (conftest)
+                errx(0, "config OK");
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
@@ -974,60 +1089,46 @@ main(int argc, char **argv)
 #endif
 	signal(SIGUSR2, sig_handler);
 
-	if (!foreground)
+	if (!conf.foreground)
 		signal(SIGHUP, SIG_IGN);
 
-	if ((conf = tls_config_new()) == NULL)
+	if ((tlsconf = tls_config_new()) == NULL)
 		err(1, "tls_config_new");
 
 	/* optionally accept client certs, but don't try to verify them */
-	tls_config_verify_client_optional(conf);
-	tls_config_insecure_noverifycert(conf);
+	tls_config_verify_client_optional(tlsconf);
+	tls_config_insecure_noverifycert(tlsconf);
 
-	if (tls_config_set_protocols(conf,
+	if (tls_config_set_protocols(tlsconf,
 	    TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3) == -1)
 		err(1, "tls_config_set_protocols");
 
-	if (tls_config_set_cert_file(conf, cert) == -1)
-		err(1, "tls_config_set_cert_file: %s", cert);
-
-	if (tls_config_set_key_file(conf, key) == -1)
-		err(1, "tls_config_set_key_file: %s", key);
+	load_vhosts(tlsconf);
 
 	if ((ctx = tls_server()) == NULL)
 		err(1, "tls_server");
 
-	if (tls_configure(ctx, conf) == -1)
+	if (tls_configure(ctx, tlsconf) == -1)
 		errx(1, "tls_configure: %s", tls_error(ctx));
 
-	sock4 = make_socket(port, AF_INET);
-	if (enable_ipv6)
-		sock6 = make_socket(port, AF_INET6);
+	sock4 = make_socket(conf.port, AF_INET);
+	if (conf.ipv6)
+		sock6 = make_socket(conf.port, AF_INET6);
 	else
 		sock6 = -1;
 
-	if ((dirfd = open(dir, O_RDONLY | O_DIRECTORY)) == -1)
-		err(1, "open: %s", dir);
 
-	if (!foreground && daemon(0, 1) == -1)
+	if (!conf.foreground && daemon(0, 1) == -1)
 		exit(1);
 
-	if (unveil(dir, "rx") == -1)
-		err(1, "unveil");
-
-	if (pledge("stdio rpath inet proc exec", NULL) == -1)
-		err(1, "pledge");
-
-	/* drop proc and exec if cgi isn't enabled */
-	if (cgi == NULL && pledge("stdio rpath inet", NULL) == -1)
-		err(1, "pledge");
+	sandbox();
 
 	loop(ctx, sock4, sock6);
 
 	close(sock4);
 	close(sock6);
 	tls_free(ctx);
-	tls_config_free(conf);
+	tls_config_free(tlsconf);
 
 	return 0;
 }

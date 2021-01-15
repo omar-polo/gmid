@@ -5,3 +5,5 @@ gmid
 iri_test
 *.o
 docs
+lex.yy.c
+y.tab.*
