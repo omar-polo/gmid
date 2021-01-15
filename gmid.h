@@ -130,12 +130,7 @@ ssize_t		 filesize(int);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
 int		 check_path(struct client*, const char*, int*);
-int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
 int		 open_file(char*, char*, struct pollfd*, struct client*);
-int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
-void		 cgi_poll_on_child(struct pollfd*, struct client*);
-void		 cgi_poll_on_client(struct pollfd*, struct client*);
-void		 handle_cgi(struct pollfd*, struct client*);
 void		 send_file(char*, char*, struct pollfd*, struct client*);
 void		 send_dir(char*, struct pollfd*, struct client*);
 void		 handle_handshake(struct pollfd*, struct client*);
@@ -161,6 +156,13 @@ extern FILE *yyin;
 extern int yylineno;
 extern int yyparse(void);
 extern int yylex(void);
+
+/* cgi.c */
+int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
+int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
+void		 cgi_poll_on_child(struct pollfd*, struct client*);
+void		 cgi_poll_on_client(struct pollfd*, struct client*);
+void		 handle_cgi(struct pollfd*, struct client*);
 
 /* sandbox.c */
 void		 sandbox();
