@@ -92,7 +92,7 @@ struct client {
 	ssize_t		 len, off;	  /* mmap/static buffer  */
 	int		 af;
 	struct sockaddr_storage	 addr;
-	struct vhost	*host;	/* host he's talking to */
+	struct vhost	*host;	/* host she's talking to */
 };
 
 struct iri {
@@ -155,6 +155,7 @@ void		 load_vhosts(struct tls_config*);
 
 void		 usage(const char*);
 
+/* provided by lex/yacc */
 extern FILE *yyin;
 extern int yylineno;
 extern int yyparse(void);

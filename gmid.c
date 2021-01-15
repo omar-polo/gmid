@@ -103,9 +103,9 @@ logs(int priority, struct client *c,
 	} else {
 		len = sizeof(c->addr);
 		ec = getnameinfo((struct sockaddr*)&c->addr, len,
-			hbuf, sizeof(hbuf),
-			sbuf, sizeof(sbuf),
-			NI_NUMERICHOST | NI_NUMERICSERV);
+		    hbuf, sizeof(hbuf),
+		    sbuf, sizeof(sbuf),
+		    NI_NUMERICHOST | NI_NUMERICSERV);
 		if (ec != 0)
 			fatal("getnameinfo: %s", gai_strerror(ec));
 	}
@@ -147,9 +147,8 @@ starts_with(const char *str, const char *prefix)
 int
 start_reply(struct pollfd *pfd, struct client *client, int code, const char *reason)
 {
-	char buf[1030] = {0}; 	/* status + ' ' + max reply len + \r\n\0 */
+	char buf[1030]; 	/* status + ' ' + max reply len + \r\n\0 */
 	int len;
-	int ret;
 
 	client->code = code;
 	client->meta = reason;
@@ -157,18 +156,17 @@ start_reply(struct pollfd *pfd, struct client *client, int code, const char *rea
 
 	len = snprintf(buf, sizeof(buf), "%d %s\r\n", code, reason);
 	assert(len < (int)sizeof(buf));
-	ret = tls_write(client->ctx, buf, len);
-	if (ret == TLS_WANT_POLLIN) {
+
+	switch (tls_write(client->ctx, buf, len)) {
+	case TLS_WANT_POLLIN:
 		pfd->events = POLLIN;
 		return 0;
-	}
-
-	if (ret == TLS_WANT_POLLOUT) {
+	case TLS_WANT_POLLOUT:
 		pfd->events = POLLOUT;
 		return 0;
+	default:
+		return 1;
 	}
-
-	return 1;
 }
 
 ssize_t
@@ -188,7 +186,7 @@ path_ext(const char *path)
 {
 	const char *end;
 
-	end = path + strlen(path)-1; /* the last byte before the NUL */
+	end = path + strlen(path)-1;
 	for (; end != path; --end) {
 		if (*end == '.')
 			return end+1;
@@ -222,7 +220,7 @@ check_path(struct client *c, const char *path, int *fd)
 
 	assert(path != NULL);
 	if ((*fd = openat(c->host->dirfd, *path ? path : ".",
-		    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
+	    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
 		return FILE_MISSING;
 	}
 
@@ -283,7 +281,6 @@ err:
 	return 0;
 }
 
-
 int
 open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 {
@@ -337,7 +334,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
     struct pollfd *fds, struct client *c)
 {
 	pid_t pid;
-	int p[2]; 		/* read end, write end */
+	int p[2];		/* read end, write end */
 
 	if (pipe(p) == -1)
 		goto err;
@@ -346,7 +343,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 	case -1:
 		goto err;
 
-	case 0: { 		/* child */
+	case 0: {		/* child */
 		char *ex, *requri, *portno;
 		char addr[NI_MAXHOST];
 		char *argv[] = { NULL, NULL, NULL };
@@ -373,8 +370,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 			goto childerr;
 
 		if (asprintf(&requri, "%s%s%s", spath,
-		    *relpath == '\0' ? "" : "/",
-		    relpath) == -1)
+		    *relpath == '\0' ? "" : "/", relpath) == -1)
 			goto childerr;
 
 		argv[0] = argv[1] = ex;
@@ -591,7 +587,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 
 	servname = tls_conn_servername(c->ctx);
 	if (servname == NULL)
-		goto wronghost;
+		goto hostnotfound;
 
 	for (h = hosts; h->domain != NULL; ++h) {
 		if (!strcmp(h->domain, servname) || !strcmp(h->domain, "*"))
@@ -605,7 +601,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-wronghost:
+hostnotfound:
 	/* XXX: check the correct response */
 	if (!start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI"))
 		return;
@@ -651,9 +647,9 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	}
 
 	LOGI(c, "GET %s%s%s",
-		*iri.path ? iri.path : "/",
-		*iri.query ? "?" : "",
-		*iri.query ? iri.query : "");
+	    *iri.path ? iri.path : "/",
+	    *iri.query ? "?" : "",
+	    *iri.query ? iri.query : "");
 
 	send_file(iri.path, iri.query, fds, c);
 }
@@ -810,16 +806,13 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 void
 goodbye(struct pollfd *pfd, struct client *c)
 {
-	ssize_t ret;
-
 	c->state = S_CLOSING;
 
-	ret = tls_close(c->ctx);
-	if (ret == TLS_WANT_POLLIN) {
+	switch (tls_close(c->ctx)) {
+	case TLS_WANT_POLLIN:
 		pfd->events = POLLIN;
 		return;
-	}
-	if (ret == TLS_WANT_POLLOUT) {
+	case TLS_WANT_POLLOUT:
 		pfd->events = POLLOUT;
 		return;
 	}
@@ -1091,7 +1084,6 @@ main(int argc, char **argv)
 		sock6 = make_socket(conf.port, AF_INET6);
 	else
 		sock6 = -1;
-
 
 	if (!conf.foreground && daemon(0, 1) == -1)
 		exit(1);

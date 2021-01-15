@@ -97,12 +97,12 @@ parse_scheme(struct parser *p)
 	}
 
 	*p->iri = '\0';
-	if (*(++p->iri) != '/' || *(++p->iri) != '/') {
+	if (p->iri[1] != '/' || p->iri[2] != '/') {
 		p->err = "invalid marker after scheme";
 		return 0;
 	}
 
-	p->iri++;
+	p->iri += 3;
 	return 1;
 }
 
