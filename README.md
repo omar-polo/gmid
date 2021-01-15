@@ -21,10 +21,6 @@ CGI scripts are enabled, while the given directory is unveiled with
  - CGI scripts
  - (very) low memory footprint
  - small codebase, easily hackable
-
-
-## Planned features
-
  - virtual hosts
 
 
