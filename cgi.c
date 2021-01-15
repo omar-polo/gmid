@@ -119,7 +119,10 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		safe_setenv("GATEWAY_INTERFACE", "CGI/1.1");
 		safe_setenv("SERVER_SOFTWARE", "gmid");
 		safe_setenv("SERVER_PORT", portno);
-		/* setenv("SERVER_NAME", "", 1); */
+
+		if (!strcmp(c->host->domain, "*"))
+			safe_setenv("SERVER_NAME", c->host->domain)
+
 		safe_setenv("SCRIPT_NAME", spath);
 		safe_setenv("SCRIPT_EXECUTABLE", ex);
 		safe_setenv("REQUEST_URI", requri);

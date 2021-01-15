@@ -1,5 +1,7 @@
 2021-01-15  Omar Polo  <op@omarpolo.com>
 
+	* cgi.c (start_cgi): set SERVER_NAME to the vhost when executing CGI scripts
+
 	* parse.y (option): add ability to specify the tls versions with "protocols"
 
 	* gmid.c (handle_open_conn): ensure the port number of the request matches
