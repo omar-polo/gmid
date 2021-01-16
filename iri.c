@@ -81,9 +81,10 @@ parse_scheme(struct parser *p)
 		/* normalize the scheme (i.e. lowercase it)
 		 *
 		 * XXX: since we cannot have good things, tolower
-		 * depends on the LC_CTYPE locale.  The good things is
-		 * that we're sure p->iri points to something in the
-		 * ASCII range, so it shouldn't do weird stuff. */
+		 * behaviour depends on the LC_CTYPE locale.  The good
+		 * news is that we're sure p->iri points to something
+		 * that's in the ASCII range, so tolower can't
+		 * mis-behave on some systems due to the locale. */
 		*p->iri = tolower(*p->iri);
 		p->iri++;
 	} while (isalnum(*p->iri)
