@@ -2,16 +2,15 @@
 
 > dead simple, zero configuration Gemini server
 
-gmid is a simple and minimal Gemini server.  It requires no
-configuration whatsoever so it's well suited for local development
-machines.
+gmid is a simple and minimal Gemini server.  It can run without
+configuration, so it's well suited for local development, but at the
+same time has a configuration file flexible enough to meet the
+requirements of most capsules.
 
-Care has been taken to assure that gmid doesn't serve files outside
-the given directory, and it won't follow symlinks.  Furthermore, on
-OpenBSD, gmid is also `pledge(2)`ed and `unveil(2)`ed: the set of
-pledges are `stdio rpath inet`, with the addition of `proc exec` if
-CGI scripts are enabled, while the given directory is unveiled with
-`rx`.
+gmid was initially written to serve static files, but can also
+optionally execute CGI scripts.  It was also written with security in
+mind: on FreeBSD and OpenBSD is sandboxed via `capsicum(4)`and
+`pledge(2)`/`unveil(2)` respectively.
 
 
 ## Features
@@ -22,7 +21,7 @@ CGI scripts are enabled, while the given directory is unveiled with
  - (very) low memory footprint
  - small codebase, easily hackable
  - virtual hosts
- - sandboxed on OpenBSD and FreeBSD
+ - sandboxed by default on OpenBSD and FreeBSD
 
 
 ## Drawbacks
@@ -30,10 +29,6 @@ CGI scripts are enabled, while the given directory is unveiled with
  - not suited for very busy hosts.  If you receive an high number of
    connection per-second you'd probably want to run multiple gmid
    instances behind relayd/haproxy or a different server.
-
- - the sandbox on FreeBSD is **NOT** activated if CGI scripts are
-   enabled: CGI script cannot be used with the way `capsicum(4)` works
-
 
 ## Building
 
@@ -53,3 +48,20 @@ The Makefile isn't able to produce a statically linked executable
     strip gmid
 
 to enjoy your ~2.3M statically-linked gmid.
+
+
+## Architecture/Security considerations
+
+gmid is composed by two processes: a listener and an executor.  The
+listener process is the only one that needs internet access and is
+sandboxed.  When a CGI script needs to be executed, the executor
+(outside of the sandbox) sets up a pipe and gives one end to the
+listener, while the other is bound to the CGI script standard output.
+This way, is still possible to execute CGI scripts without restriction
+even if the presence of a sandbox.
+
+On OpenBSD, the listener process runs with the `stdio recvfd rpath
+inet` pledges and has `unveil(2)`ed only the directories that it
+serves; the executor has `stdio sendfd proc exec` as pledges.
+
+On FreeBSD, the executor process is sandboxed with `capsicum(4)`.

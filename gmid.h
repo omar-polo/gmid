@@ -72,6 +72,7 @@ struct conf {
 };
 
 extern struct conf conf;
+extern int exfd;
 
 enum {
 	S_HANDSHAKE,
@@ -87,7 +88,7 @@ struct client {
 	int		 code;
 	const char	*meta;
 	int		 fd, waiting_on_child;
-	pid_t		 child;
+	int		 child;
 	char		 sbuf[1024];	  /* static buffer */
 	void		*buf, *i;	  /* mmap buffer */
 	ssize_t		 len, off;	  /* mmap/static buffer  */
@@ -149,6 +150,8 @@ int		 parse_portno(const char*);
 void		 parse_conf(const char*);
 void		 load_vhosts(struct tls_config*);
 
+int		 listener_main();
+
 void		 usage(const char*);
 
 /* provided by lex/yacc */
@@ -156,6 +159,15 @@ extern FILE *yyin;
 extern int yylineno;
 extern int yyparse(void);
 extern int yylex(void);
+
+/* ex.c */
+int		 send_string(int, const char*);
+int		 recv_string(int, char**);
+int		 send_vhost(int, struct vhost*);
+int		 recv_vhost(int, struct vhost**);
+int		 send_fd(int, int);
+int		 recv_fd(int);
+int		 executor_main(int);
 
 /* cgi.c */
 int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);

@@ -34,6 +34,8 @@ struct vhost hosts[HOSTSLEN];
 int connected_clients;
 int goterror;
 
+int exfd;
+
 struct conf conf;
 
 struct etm {			/* file extension to mime */
@@ -458,7 +460,7 @@ handle(struct pollfd *fds, struct client *client)
 		/* fallthrough */
 
 	case S_SENDING:
-		if (client->child != -1)
+		if (client->child)
 			handle_cgi(fds, client);
 		else
 			send_file(NULL, NULL, fds, client);
@@ -567,7 +569,8 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 
 			clients[i].state = S_HANDSHAKE;
 			clients[i].fd = -1;
-			clients[i].child = -1;
+			clients[i].child = 0;
+			clients[i].waiting_on_child = 0;
 			clients[i].buf = MAP_FAILED;
 			clients[i].af = AF_INET;
 			clients[i].addr = addr;
@@ -730,6 +733,45 @@ load_vhosts(struct tls_config *tlsconf)
 	}
 }
 
+int
+listener_main()
+{
+	int sock4, sock6;
+	struct tls *ctx = NULL;
+	struct tls_config *tlsconf;
+
+	if ((tlsconf = tls_config_new()) == NULL)
+		err(1, "tls_config_new");
+
+	/* optionally accept client certs, but don't try to verify them */
+	tls_config_verify_client_optional(tlsconf);
+	tls_config_insecure_noverifycert(tlsconf);
+
+	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
+		err(1, "tls_config_set_protocols");
+
+	if ((ctx = tls_server()) == NULL)
+		errx(1, "tls_server failure");
+
+	load_vhosts(tlsconf);
+
+	if (tls_configure(ctx, tlsconf) == -1)
+		errx(1, "tls_configure: %s", tls_error(ctx));
+
+	if (!conf.foreground && daemon(0, 1) == -1)
+		exit(1);
+
+	sock4 = make_socket(conf.port, AF_INET);
+	sock6 = -1;
+	if (conf.ipv6)
+		sock6 = make_socket(conf.port, AF_INET6);
+
+	sandbox();
+	loop(ctx, sock4, sock6);
+
+	return 0;
+}
+
 void
 usage(const char *me)
 {
@@ -742,9 +784,7 @@ usage(const char *me)
 int
 main(int argc, char **argv)
 {
-	struct tls *ctx = NULL;
-	struct tls_config *tlsconf;
-	int sock4, sock6, ch;
+	int ch, p[2];
 	const char *config_path = NULL;
 	size_t i;
 	int conftest = 0;
@@ -838,41 +878,21 @@ main(int argc, char **argv)
 	if (!conf.foreground)
 		signal(SIGHUP, SIG_IGN);
 
-	if ((tlsconf = tls_config_new()) == NULL)
-		err(1, "tls_config_new");
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
+		fatal("socketpair: %s", strerror(errno));
 
-	/* optionally accept client certs, but don't try to verify them */
-	tls_config_verify_client_optional(tlsconf);
-	tls_config_insecure_noverifycert(tlsconf);
+	switch (fork()) {
+	case -1:
+		fatal("fork: %s", strerror(errno));
 
-	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
-		err(1, "tls_config_set_protocols");
+	case 0:			/* child */
+		close(p[0]);
+		exfd = p[1];
+		listener_main();
+		_exit(0);
 
-	load_vhosts(tlsconf);
-
-	if ((ctx = tls_server()) == NULL)
-		err(1, "tls_server");
-
-	if (tls_configure(ctx, tlsconf) == -1)
-		errx(1, "tls_configure: %s", tls_error(ctx));
-
-	sock4 = make_socket(conf.port, AF_INET);
-	if (conf.ipv6)
-		sock6 = make_socket(conf.port, AF_INET6);
-	else
-		sock6 = -1;
-
-	if (!conf.foreground && daemon(0, 1) == -1)
-		exit(1);
-
-	sandbox();
-
-	loop(ctx, sock4, sock6);
-
-	close(sock4);
-	close(sock6);
-	tls_free(ctx);
-	tls_config_free(tlsconf);
-
-	return 0;
+	default:		/* parent */
+		close(p[1]);
+		return executor_main(p[0]);
+	}
 }

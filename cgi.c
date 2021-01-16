@@ -16,18 +16,11 @@
 
 #include <netdb.h>
 
+#include <err.h>
 #include <errno.h>
 #include <string.h>
 
 #include "gmid.h"
-
-static inline void
-safe_setenv(const char *name, const char *val)
-{
-	if (val == NULL)
-		val = "";
-	setenv(name, val, 1);
-}
 
 /*
  * the inverse of this algorithm, i.e. starting from the start of the
@@ -76,94 +69,53 @@ int
 start_cgi(const char *spath, const char *relpath, const char *query,
     struct pollfd *fds, struct client *c)
 {
-	pid_t pid;
-	int p[2];		/* read end, write end */
+	char addr[NI_MAXHOST];
+	const char *ruser, *cissuer, *chash;
+	int e;
 
-	if (pipe(p) == -1)
+	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
+	    addr, sizeof(addr),
+	    NULL, 0,
+	    NI_NUMERICHOST);
+	if (e != 0)
 		goto err;
 
-	switch (pid = fork()) {
-	case -1:
+	if (tls_peer_cert_provided(c->ctx)) {
+		ruser = tls_peer_cert_subject(c->ctx);
+		cissuer = tls_peer_cert_issuer(c->ctx);
+		chash = tls_peer_cert_hash(c->ctx);
+	} else {
+		ruser = NULL;
+		cissuer = NULL;
+		chash = NULL;
+	}
+
+	if (!send_string(exfd, spath)
+	    || !send_string(exfd, relpath)
+	    || !send_string(exfd, query)
+	    || !send_string(exfd, addr)
+	    || !send_string(exfd, ruser)
+	    || !send_string(exfd, cissuer)
+	    || !send_string(exfd, chash)
+	    || !send_vhost(exfd, c->host))
 		goto err;
 
-	case 0: {		/* child */
-		char *ex, *requri, *portno;
-		char addr[NI_MAXHOST];
-		char *argv[] = { NULL, NULL, NULL };
-		int ec;
-
-		close(p[0]);
-		if (dup2(p[1], 1) == -1)
-			goto childerr;
-
-		ec = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
-		    addr, sizeof(addr),
-		    NULL, 0,
-		    NI_NUMERICHOST | NI_NUMERICSERV);
-		if (ec != 0)
-			goto childerr;
-
-		if (asprintf(&portno, "%d", conf.port) == -1)
-			goto childerr;
-
-		if (asprintf(&ex, "%s/%s", c->host->dir, spath) == -1)
-			goto childerr;
-
-		if (asprintf(&requri, "%s%s%s", spath,
-		    *relpath == '\0' ? "" : "/", relpath) == -1)
-			goto childerr;
-
-		argv[0] = argv[1] = ex;
-
-		/* fix the env */
-		safe_setenv("GATEWAY_INTERFACE", "CGI/1.1");
-		safe_setenv("SERVER_SOFTWARE", "gmid");
-		safe_setenv("SERVER_PORT", portno);
-
-		if (!strcmp(c->host->domain, "*"))
-			safe_setenv("SERVER_NAME", c->host->domain)
-
-		safe_setenv("SCRIPT_NAME", spath);
-		safe_setenv("SCRIPT_EXECUTABLE", ex);
-		safe_setenv("REQUEST_URI", requri);
-		safe_setenv("REQUEST_RELATIVE", relpath);
-		safe_setenv("QUERY_STRING", query);
-		safe_setenv("REMOTE_HOST", addr);
-		safe_setenv("REMOTE_ADDR", addr);
-		safe_setenv("DOCUMENT_ROOT", c->host->dir);
-
-		if (tls_peer_cert_provided(c->ctx)) {
-			safe_setenv("AUTH_TYPE", "Certificate");
-			safe_setenv("REMOTE_USER", tls_peer_cert_subject(c->ctx));
-			safe_setenv("TLS_CLIENT_ISSUER", tls_peer_cert_issuer(c->ctx));
-			safe_setenv("TLS_CLIENT_HASH", tls_peer_cert_hash(c->ctx));
-		}
-
-		execvp(ex, argv);
-		goto childerr;
-	}
-
-	default:		/* parent */
-		close(p[1]);
-		close(c->fd);
-		c->fd = p[0];
-		c->child = pid;
-		mark_nonblock(c->fd);
-		c->state = S_SENDING;
-		handle_cgi(fds, c);
+	close(c->fd);
+	if ((c->fd = recv_fd(exfd)) == -1) {
+		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
+			return 0;
+		goodbye(fds, c);
 		return 0;
 	}
-
-err:
-	if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
-		return 0;
-	goodbye(fds, c);
+	c->child = 1;
+	c->state = S_SENDING;
+	cgi_poll_on_child(fds, c);
+	/* handle_cgi(fds, c); */
 	return 0;
 
-childerr:
-	dprintf(p[1], "%d internal server error\r\n", TEMP_FAILURE);
-	close(p[1]);
-	_exit(1);
+err:
+	/* fatal("cannot talk to the executor process: %s", strerror(errno)); */
+	err(1, "cannot talk to the executor process");
 }
 
 void
