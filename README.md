@@ -9,8 +9,8 @@ requirements of most capsules.
 
 gmid was initially written to serve static files, but can also
 optionally execute CGI scripts.  It was also written with security in
-mind: on FreeBSD and OpenBSD is sandboxed via `capsicum(4)`and
-`pledge(2)`/`unveil(2)` respectively.
+mind: on Linux, FreeBSD and OpenBSD is sandboxed via `seccomp(2)`,
+`capsicum(4)`and `pledge(2)`+`unveil(2)` respectively.
 
 
 ## Features
@@ -21,7 +21,7 @@ mind: on FreeBSD and OpenBSD is sandboxed via `capsicum(4)`and
  - (very) low memory footprint
  - small codebase, easily hackable
  - virtual hosts
- - sandboxed by default on OpenBSD and FreeBSD
+ - sandboxed by default on OpenBSD, Linux and FreeBSD
 
 
 ## Drawbacks
@@ -62,9 +62,13 @@ even if the presence of a sandbox.
 
 On OpenBSD, the listener process runs with the `stdio recvfd rpath
 inet` pledges and has `unveil(2)`ed only the directories that it
-serves. Furthermore, the executor process has `stdio sendfd proc exec`
-as pledges.
+serves; the executor has `stdio sendfd proc exec` as pledges.
 
-On FreeBSD, the listener process is sandboxed with `capsicum(4)`.
+On FreeBSD, the executor process is sandboxed with `capsicum(4)`.
 
-On linux, a seccomp filter is installed for the listener process.
+On Linux, a `seccomp(2)` filter is installed to filter the syscalls
+allowed, see [sandbox.c](sandbox.c) for more information on the BPF
+program.
+
+In any case, you are invited to run gmid inside some sort of
+container/jail.
