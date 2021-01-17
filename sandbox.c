@@ -135,6 +135,7 @@ sandbox()
 
 		/* these are used to serve the files.  note how we
 		 * allow openat but not open. */
+		SC_ALLOW(poll),
 		SC_ALLOW(ppoll),
 		SC_ALLOW(accept),
 		SC_ALLOW(fcntl),
