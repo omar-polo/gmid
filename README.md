@@ -62,6 +62,9 @@ even if the presence of a sandbox.
 
 On OpenBSD, the listener process runs with the `stdio recvfd rpath
 inet` pledges and has `unveil(2)`ed only the directories that it
-serves; the executor has `stdio sendfd proc exec` as pledges.
+serves. Furthermore, the executor process has `stdio sendfd proc exec`
+as pledges.
 
-On FreeBSD, the executor process is sandboxed with `capsicum(4)`.
+On FreeBSD, the listener process is sandboxed with `capsicum(4)`.
+
+On linux, a seccomp filter is installed for the listener process.

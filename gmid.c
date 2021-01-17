@@ -673,7 +673,7 @@ absolutify_path(const char *path)
 	if (*path == '/')
 		return strdup(path);
 
-	wd = getwd(NULL);
+	wd = getcwd(NULL, 0);
 	if (asprintf(&r, "%s/%s", wd, path) == -1)
 		err(1, "asprintf");
 	free(wd);
