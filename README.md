@@ -32,22 +32,23 @@ mind: on Linux, FreeBSD and OpenBSD is sandboxed via `seccomp(2)`,
 
 ## Building
 
-gmid depends a POSIX libc and libtls.  It can probably be linked
-against libretls, but I've never tried.
+gmid depends on a POSIX libc and libtls (part of LibreSSL).  It can
+probably be linked against libretls, but I've never tried.  At build
+time, flex and yacc (or GNU bison) are also needed.
 
-See [INSTALL.gmi](INSTALL.gmi) for more info, but the build is as
-simple as
-
-    make
-
-The Makefile isn't able to produce a statically linked executable
-(yet), so for that you have to execute by hand
+The build is as simple as
 
     make
-    cc -static *.o /usr/lib/lib{crypto,tls,ssl}.a -o gmid
-    strip gmid
+
+or
+
+    make static
 
 to enjoy your ~2.3M statically-linked gmid.
+
+To install execute:
+
+    make install
 
 
 ## Architecture/Security considerations
