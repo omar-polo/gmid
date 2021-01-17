@@ -1,0 +1,4 @@
+#!/bin/sh
+
+printf "20 text/gemini\r\n"
+printf "# hello world\n"

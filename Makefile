@@ -27,5 +27,11 @@ clean:
 iri_test: iri_test.o iri.o utf8.o
 	${CC} iri_test.o iri.o utf8.o -o iri_test ${LDFLAGS}
 
-test: iri_test
+test: gmid iri_test
+	@echo "IRI tests"
+	@echo "=============================="
 	./iri_test
+	@echo
+	@echo "server tests"
+	@echo "=============================="
+	cd test && ./test.sh
