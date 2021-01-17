@@ -36,7 +36,7 @@ check_path(struct client *c, const char *path, int *fd)
 
 	assert(path != NULL);
 	if ((*fd = openat(c->host->dirfd, *path ? path : ".",
-	    O_RDONLY | O_NOFOLLOW | O_CLOEXEC)) == -1) {
+	    O_RDONLY | O_NOFOLLOW)) == -1) {
 		return FILE_MISSING;
 	}
 
