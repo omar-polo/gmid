@@ -32,9 +32,9 @@ mind: on Linux, FreeBSD and OpenBSD is sandboxed via `seccomp(2)`,
 
 ## Building
 
-gmid depends on a POSIX libc and libtls (part of LibreSSL).  It can
-probably be linked against libretls, but I've never tried.  At build
-time, flex and yacc (or GNU bison) are also needed.
+gmid depends on a POSIX libc and libtls (provided either by LibreSSL
+or libretls).  At build time, flex and yacc (or GNU bison) are also
+needed.
 
 The build is as simple as
 
