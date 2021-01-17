@@ -121,37 +121,26 @@ enum {
 };
 
 /* gmid.c */
-__attribute__ ((format (printf, 3, 4))) void logs(int, struct client*, const char*, ...);
+
+__attribute__((format (printf, 1, 2)))
+__attribute__((__noreturn__))
+void fatal(const char*, ...);
+
+__attribute__((format (printf, 3, 4)))
+void logs(int, struct client*, const char*, ...);
 
 void		 sig_handler(int);
 int		 starts_with(const char*, const char*);
-
-int		 start_reply(struct pollfd*, struct client*, int, const char*);
 ssize_t		 filesize(int);
 const char	*path_ext(const char*);
 const char	*mime(const char*);
-int		 check_path(struct client*, const char*, int*);
-int		 open_file(char*, char*, struct pollfd*, struct client*);
-void		 send_file(char*, char*, struct pollfd*, struct client*);
-void		 send_dir(char*, struct pollfd*, struct client*);
-void		 handle_handshake(struct pollfd*, struct client*);
-void		 handle_open_conn(struct pollfd*, struct client*);
-void		 handle(struct pollfd*, struct client*);
-
-void		 mark_nonblock(int);
-int		 make_soket(int);
-void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
-void		 goodbye(struct pollfd*, struct client*);
-void		 loop(struct tls*, int, int);
-
 char		*absolutify_path(const char*);
 void		 yyerror(const char*);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
 void		 load_vhosts(struct tls_config*);
-
+int		 make_soket(int);
 int		 listener_main();
-
 void		 usage(const char*);
 
 /* provided by lex/yacc */
@@ -159,6 +148,25 @@ extern FILE *yyin;
 extern int yylineno;
 extern int yyparse(void);
 extern int yylex(void);
+
+/* server.c */
+int		 check_path(struct client*, const char*, int*);
+int		 open_file(char*, char*, struct pollfd*, struct client*);
+int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
+void		 mark_nonblock(int);
+void		 handle_handshake(struct pollfd*, struct client*);
+void		 handle_open_conn(struct pollfd*, struct client*);
+int		 start_reply(struct pollfd*, struct client*, int, const char*);
+int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
+void		 send_file(char*, char*, struct pollfd*, struct client*);
+void		 send_dir(char*, struct pollfd*, struct client*);
+void		 cgi_poll_on_child(struct pollfd*, struct client*);
+void		 cgi_poll_on_client(struct pollfd*, struct client*);
+void		 handle_cgi(struct pollfd*, struct client*);
+void		 goodbye(struct pollfd*, struct client*);
+void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
+void		 handle(struct pollfd*, struct client*);
+void		 loop(struct tls*, int, int);
 
 /* ex.c */
 int		 send_string(int, const char*);
@@ -168,13 +176,6 @@ int		 recv_vhost(int, struct vhost**);
 int		 send_fd(int, int);
 int		 recv_fd(int);
 int		 executor_main(int);
-
-/* cgi.c */
-int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
-int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
-void		 cgi_poll_on_child(struct pollfd*, struct client*);
-void		 cgi_poll_on_client(struct pollfd*, struct client*);
-void		 handle_cgi(struct pollfd*, struct client*);
 
 /* sandbox.c */
 void		 sandbox();
