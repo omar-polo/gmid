@@ -876,8 +876,11 @@ main(int argc, char **argv)
 #endif
 	signal(SIGUSR2, sig_handler);
 
-	if (!conf.foreground)
+	if (!conf.foreground) {
 		signal(SIGHUP, SIG_IGN);
+		if (daemon(1, 1) == -1)
+			err(1, "daemon");
+	}
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
 		fatal("socketpair: %s", strerror(errno));
