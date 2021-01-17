@@ -12,7 +12,7 @@ get() {
 
 # check "path" "expected-sha256"
 check() {
-	got=`get "$1" | sha256`
+	got=`get "$1" | $sha | awk '{print \$1}'`
 	if [ "$got" '!=' "$2" ]; then
 		echo "FAIL $1 (with_cgi: $with_cgi)"
 		quit
@@ -25,6 +25,16 @@ quit() {
 	pkill gmid
 	exit ${1:-1}
 }
+
+# check for sha256sum (linux) or sha256 (OpenBSD)
+if which sha256sum >/dev/null; then
+	sha=sha256sum
+elif which sha256 >/dev/null; then
+	sha=sha256
+else
+	echo "No sha256/sha256sum binary available"
+	exit 1
+fi
 
 with_cgi="no"
 ./../gmid -c no-cgi.conf 2>/dev/null &
