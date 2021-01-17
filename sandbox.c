@@ -8,13 +8,6 @@
 void
 sandbox()
 {
-	struct vhost *h;
-	int has_cgi = 0;
-
-	for (h = hosts; h->domain != NULL; ++h)
-		if (h->cgi != NULL)
-			has_cgi = 1;
-
 	if (cap_enter() == -1)
 		err(1, "cap_enter");
 }
