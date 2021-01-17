@@ -66,8 +66,8 @@ serves; the executor has `stdio sendfd proc exec` as pledges.
 
 On FreeBSD, the executor process is sandboxed with `capsicum(4)`.
 
-On Linux, a `seccomp(2)` filter is installed to filter the syscalls
-allowed, see [sandbox.c](sandbox.c) for more information on the BPF
+On Linux, a `seccomp(2)` filter is installed to allow only certain
+syscalls, see [sandbox.c](sandbox.c) for more information on the BPF
 program.
 
 In any case, you are invited to run gmid inside some sort of
