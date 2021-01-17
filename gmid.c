@@ -838,6 +838,7 @@ main(int argc, char **argv)
 
 		case 'p':
 			conf.port = parse_portno(optarg);
+			break;
 
 		case 'x':
 			/* drop the starting / (if any) */
