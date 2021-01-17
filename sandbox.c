@@ -21,10 +21,179 @@ sandbox()
 
 #elif defined(__linux__)
 
+#include <sys/prctl.h>
+#include <sys/syscall.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+
+#include <linux/audit.h>
+#include <linux/filter.h>
+#include <linux/seccomp.h>
+
+#include <errno.h>
+#include <stddef.h>
+#include <stdio.h>
+#include <seccomp.h>
+#include <string.h>
+
+/* thanks chromium' src/seccomp.c */
+#if defined(__i386__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_I386
+#elif defined(__x86_64__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_X86_64
+#elif defined(__arm__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARM
+#elif defined(__aarch64__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_AARCH64
+#elif defined(__mips__)
+#  if defined(__mips64)
+#    if defined(__MIPSEB__)
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPS64
+#    else
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPSEL64
+#    endif
+#  else
+#    if defined(__MIPSEB__)
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPS
+#    else
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPSEL
+#    endif
+#  endif
+#else
+#  error "Platform does not support seccomp filter yet"
+#endif
+
+/* uncomment to enable debugging.  ONLY FOR DEVELOPMENT */
+/* #define SC_DEBUG */
+
+#ifdef SC_DEBUG
+# define SC_FAIL SECCOMP_RET_TRAP
+#else
+# define SC_FAIL SECCOMP_RET_KILL
+#endif
+
+/* make the filter more readable */
+#define SC_ALLOW(nr)						\
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_##nr, 0, 1),	\
+	BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW)
+
+#ifdef SC_DEBUG
+
+#include <signal.h>
+#include <unistd.h>
+
+static void
+sandbox_seccomp_violation(int signum, siginfo_t *info, void *ctx)
+{
+	(void)signum;
+	(void)ctx;
+
+	fprintf(stderr, "%s: unexpected system call (arch:0x%x,syscall:%d @ %p)\n",
+	    __func__, info->si_arch, info->si_syscall, info->si_call_addr);
+	_exit(1);
+}
+
+static void
+sandbox_seccomp_catch_sigsys(void)
+{
+	struct sigaction act;
+	sigset_t mask;
+
+	memset(&act, 0, sizeof(act));
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGSYS);
+
+	act.sa_sigaction = &sandbox_seccomp_violation;
+	act.sa_flags = SA_SIGINFO;
+	if (sigaction(SIGSYS, &act, NULL) == -1) {
+		fprintf(stderr, "%s: sigaction(SIGSYS): %s\n",
+		    __func__, strerror(errno));
+		exit(1);
+	}
+	if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1) {
+		fprintf(stderr, "%s: sigprocmask(SIGSYS): %s\n",
+		    __func__, strerror(errno));
+		exit(1);
+	}
+}
+#endif	/* SC_DEBUG */
+
 void
 sandbox()
 {
-	/* TODO: seccomp */
+	struct sock_filter filter[] = {
+		/* load the *current* architecture */
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+		    (offsetof(struct seccomp_data, arch))),
+		/* ensure it's the same that we've been compiled on */
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+		    SECCOMP_AUDIT_ARCH, 1, 0),
+		/* if not, kill the program */
+		BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
+
+		/* load the syscall number */
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+		    (offsetof(struct seccomp_data, nr))),
+
+		/* allow logging on stdout */
+		SC_ALLOW(write),
+		SC_ALLOW(writev),
+		SC_ALLOW(readv),
+
+		/* these are used to serve the files.  note how we
+		 * allow openat but not open. */
+		SC_ALLOW(ppoll),
+		SC_ALLOW(accept),
+		SC_ALLOW(fcntl),
+		SC_ALLOW(read),
+		SC_ALLOW(openat),
+		SC_ALLOW(fstat),
+		SC_ALLOW(close),
+		SC_ALLOW(lseek),
+		SC_ALLOW(brk),
+		SC_ALLOW(mmap),
+		SC_ALLOW(munmap),
+
+		/* we need recvmsg to receive fd */
+		SC_ALLOW(recvmsg),
+
+		/* XXX: ??? */
+		SC_ALLOW(getpid),
+
+		SC_ALLOW(exit),
+		SC_ALLOW(exit_group),
+
+		/* allow ioctl but only on fd 1, glibc doing stuff? */
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 3),
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+		    (offsetof(struct seccomp_data, args[0]))),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 1, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+
+		/* disallow enything else */
+		BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
+	};
+
+	struct sock_fprog prog = {
+		.len = (unsigned short) (sizeof(filter) / sizeof(filter[0])),
+		.filter = filter,
+	};
+
+#ifdef SC_DEBUG
+	sandbox_seccomp_catch_sigsys();
+#endif
+
+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1) {
+		fprintf(stderr, "%s: prctl(PR_SET_NO_NEW_PRIVS): %s\n",
+		    __func__, strerror(errno));
+		exit(1);
+	}
+
+	if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) == -1) {
+		fprintf(stderr, "%s: prctl(PR_SET_SECCOMP): %s\n",
+		    __func__, strerror(errno));
+		exit(1);
+	}
 }
 
 #elif defined(__OpenBSD__)
