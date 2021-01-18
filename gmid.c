@@ -14,9 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <err.h>
 #include <errno.h>
-
 #include <fcntl.h>
 #include <limits.h>
 #include <netdb.h>
@@ -186,7 +184,7 @@ absolutify_path(const char *path)
 
 	wd = getcwd(NULL, 0);
 	if (asprintf(&r, "%s/%s", wd, path) == -1)
-		err(1, "asprintf");
+		fatal("asprintf: %s", strerror(errno));
 	free(wd);
 	return r;
 }
@@ -207,9 +205,9 @@ parse_portno(const char *p)
 	errno = 0;
 	lval = strtol(p, &ep, 10);
 	if (p[0] == '\0' || *ep != '\0')
-		errx(1, "not a number: %s", p);
+		fatal("not a number: %s", p);
 	if (lval < 0 || lval > UINT16_MAX)
-		errx(1, "port number out of range for domain %s: %ld", p, lval);
+		fatal("port number out of range for domain %s: %ld", p, lval);
 	return lval;
 }
 
@@ -217,7 +215,7 @@ void
 parse_conf(const char *path)
 {
 	if ((yyin = fopen(path, "r")) == NULL)
-		err(1, "cannot open config %s", path);
+		fatal("cannot open config %s", path);
 	yyparse();
 	fclose(yyin);
 
@@ -232,15 +230,15 @@ load_vhosts(struct tls_config *tlsconf)
 
 	/* we need to set something, then we can add how many key we want */
 	if (tls_config_set_keypair_file(tlsconf, hosts->cert, hosts->key))
-		errx(1, "tls_config_set_keypair_file failed");
+		fatal("tls_config_set_keypair_file failed");
 
 	for (h = hosts; h->domain != NULL; ++h) {
 		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
-			errx(1, "failed to load the keypair (%s, %s)",
+			fatal("failed to load the keypair (%s, %s)",
 			    h->cert, h->key);
 
 		if ((h->dirfd = open(h->dir, O_RDONLY | O_DIRECTORY)) == -1)
-			err(1, "open %s for domain %s", h->dir, h->domain);
+			fatal("open %s for domain %s", h->dir, h->domain);
 	}
 }
 
@@ -307,22 +305,22 @@ listener_main()
 	struct tls_config *tlsconf;
 
 	if ((tlsconf = tls_config_new()) == NULL)
-		err(1, "tls_config_new");
+		fatal("tls_config_new");
 
 	/* optionally accept client certs, but don't try to verify them */
 	tls_config_verify_client_optional(tlsconf);
 	tls_config_insecure_noverifycert(tlsconf);
 
 	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
-		err(1, "tls_config_set_protocols");
+		fatal("tls_config_set_protocols");
 
 	if ((ctx = tls_server()) == NULL)
-		errx(1, "tls_server failure");
+		fatal("tls_server failure");
 
 	load_vhosts(tlsconf);
 
 	if (tls_configure(ctx, tlsconf) == -1)
-		errx(1, "tls_configure: %s", tls_error(ctx));
+		fatal("tls_configure: %s", tls_error(ctx));
 
 	if (!conf.foreground && daemon(0, 1) == -1)
 		exit(1);
@@ -381,7 +379,7 @@ main(int argc, char **argv)
 		case 'd':
 			free((char*)hosts[0].dir);
 			if ((hosts[0].dir = absolutify_path(optarg)) == NULL)
-				err(1, "absolutify_path");
+				fatal("absolutify_path");
 			break;
 
 		case 'f':
@@ -420,17 +418,19 @@ main(int argc, char **argv)
 	if (config_path != NULL) {
 		if (hosts[0].cert != NULL || hosts[0].key != NULL ||
 		    hosts[0].dir != NULL)
-			errx(1, "can't specify options in conf mode");
+			fatal("can't specify options in conf mode");
 		parse_conf(config_path);
 	} else {
 		if (hosts[0].cert == NULL || hosts[0].key == NULL ||
 		    hosts[0].dir == NULL)
-			errx(1, "missing cert, key or root directory to serve");
+			fatal("missing cert, key or root directory to serve");
 		hosts[0].domain = "*";
 	}
 
-	if (conftest)
-                errx(0, "config OK");
+	if (conftest) {
+		puts("config OK");
+		return 0;
+	}
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
@@ -443,7 +443,7 @@ main(int argc, char **argv)
 	if (!conf.foreground) {
 		signal(SIGHUP, SIG_IGN);
 		if (daemon(1, 1) == -1)
-			err(1, "daemon");
+			fatal("daemon: %s", strerror(errno));
 	}
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)

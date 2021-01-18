@@ -20,7 +20,6 @@
 #include <netdb.h>
 
 #include <assert.h>
-#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <string.h>
@@ -73,7 +72,7 @@ open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 
 		if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
 			    c->fd, 0)) == MAP_FAILED) {
-			warn("mmap: %s", fpath);
+			LOGW(c, "mmap: %s: %s", fpath, strerror(errno));
 			goodbye(fds, c);
 			return 0;
 		}
@@ -322,7 +321,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 
 err:
 	/* fatal("cannot talk to the executor process: %s", strerror(errno)); */
-	err(1, "cannot talk to the executor process");
+	fatal("cannot talk to the executor process");
 }
 
 void
@@ -600,7 +599,7 @@ loop(struct tls *ctx, int sock4, int sock6)
 	for (;;) {
 		if (poll(fds, MAX_USERS, INFTIM) == -1) {
 			if (errno == EINTR) {
-                                warnx("connected clients: %d",
+                                fprintf(stderr, "connected clients: %d\n",
 				    connected_clients);
 				continue;
 			}
