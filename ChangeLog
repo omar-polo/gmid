@@ -1,3 +1,7 @@
+2021-01-19  Omar Polo  <op@omarpolo.com>
+
+	* Dockerfile: add a dockerfile
+
 2021-01-18  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (option): add mime and "default type" options for media types.

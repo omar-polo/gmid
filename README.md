@@ -50,6 +50,22 @@ To install execute:
 
     make install
 
+If you have trouble installing LibreSSL or libretls, as they aren't
+available as package on various Linux distribution, you can use Docker
+to build a `gmid` image with:
+
+    docker build -t gmid .
+
+and then run it with something along the lines of
+
+    docker run --rm -it -p 1965:1965 \
+        -v /path/to/cert.pem:...:ro \
+        -v /path/to/key.pem:...:ro \
+        -v /path/to/docs:/var/gemini \
+        gmid -f -d /var/gemini -K ... -C ...
+
+ellipses used for brevity.
+
 
 ## Architecture/Security considerations
 
