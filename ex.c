@@ -208,7 +208,8 @@ launch_cgi(const char *spath, const char *relpath, const char *query,
 			goto childerr;
 
 		if (asprintf(&requri, "%s%s%s", spath,
-		    (relpath != NULL && *relpath == '\0') ? "" : "/", relpath) == -1)
+		    (relpath != NULL && *relpath == '\0') ? "" : "/",
+		    (relpath != NULL ? relpath : "")) == -1)
 			goto childerr;
 
 		argv[0] = argv[1] = ex;
