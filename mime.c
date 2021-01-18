@@ -26,6 +26,7 @@ struct etm {			/* extension to mime */
 };
 
 struct mimes {
+	char		*def;
 	struct etm	*t;
 	size_t		len;
 	size_t		cap;
@@ -41,6 +42,19 @@ init_mime(void)
 
 	if ((mimes.t = calloc(mimes.cap, sizeof(struct etm))) == NULL)
 		fatal("calloc: %s", strerror(errno));
+
+	mimes.def = strdup("application/octet-stream");
+	if (mimes.def == NULL)
+		fatal("strdup: %s", strerror(errno));
+
+}
+
+void
+set_default_mime(const char *m)
+{
+	free(mimes.def);
+	if ((mimes.def = strdup(m)) == NULL)
+		fatal("strdup: %s", strerror(errno));
 }
 
 /* register mime for the given extension */
@@ -102,15 +116,15 @@ path_ext(const char *path)
 const char *
 mime(const char *path)
 {
-	const char *ext, *def = "application/octet-stream";
+	const char *ext;
 	struct etm *t;
 
 	if ((ext = path_ext(path)) == NULL)
-		return def;
+		return mimes.def;
 
 	for (t = mimes.t; t->mime != NULL; ++t)
 		if (!strcmp(ext, t->ext))
 			return t->mime;
 
-	return def;
+	return mimes.def;
 }

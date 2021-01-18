@@ -55,6 +55,9 @@ daemon		return TDAEMON;
 ipv6		return TIPV6;
 port		return TPORT;
 protocols	return TPROTOCOLS;
+mime		return TMIME;
+default		return TDEFAULT;
+type		return TTYPE;
 server		return TSERVER;
 
 cert		return TCERT;

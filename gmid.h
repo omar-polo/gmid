@@ -149,8 +149,10 @@ extern int yylex(void);
 
 /* mime.c */
 void		 init_mime(void);
+void		 set_default_mime(const char*);
 void		 add_mime(const char*, const char*);
 void		 load_default_mime(void);
+int		 load_mime_file(const char*);
 const char	*mime(const char*);
 
 /* server.c */
