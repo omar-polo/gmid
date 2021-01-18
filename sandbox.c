@@ -135,7 +135,9 @@ sandbox()
 
 		/* these are used to serve the files.  note how we
 		 * allow openat but not open. */
+#ifndef __aarch64__
 		SC_ALLOW(poll),
+#endif
 		SC_ALLOW(ppoll),
 		SC_ALLOW(accept),
 		SC_ALLOW(fcntl),
