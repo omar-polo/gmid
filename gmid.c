@@ -32,28 +32,6 @@ int exfd;
 
 struct conf conf;
 
-struct etm {			/* file extension to mime */
-	const char	*mime;
-	const char	*ext;
-} filetypes[] = {
-	{"application/pdf",	"pdf"},
-
-	{"image/gif",		"gif"},
-	{"image/jpeg",		"jpg"},
-	{"image/jpeg",		"jpeg"},
-	{"image/png",		"png"},
-	{"image/svg+xml",	"svg"},
-
-	{"text/gemini",		"gemini"},
-	{"text/gemini",		"gmi"},
-	{"text/markdown",	"markdown"},
-	{"text/markdown",	"md"},
-	{"text/plain",		"txt"},
-	{"text/xml",		"xml"},
-
-	{NULL, NULL}
-};
-
 void
 fatal(const char *fmt, ...)
 {
@@ -140,38 +118,6 @@ filesize(int fd)
 	if (lseek(fd, 0, SEEK_SET) == -1)
 		return -1;
 	return len;
-}
-
-const char *
-path_ext(const char *path)
-{
-	const char *end;
-
-	end = path + strlen(path)-1;
-	for (; end != path; --end) {
-		if (*end == '.')
-			return end+1;
-		if (*end == '/')
-			break;
-	}
-
-	return NULL;
-}
-
-const char *
-mime(const char *path)
-{
-	const char *ext, *def = "application/octet-stream";
-	struct etm *t;
-
-	if ((ext = path_ext(path)) == NULL)
-		return def;
-
-	for (t = filetypes; t->mime != NULL; ++t)
-		if (!strcmp(ext, t->ext))
-			return t->mime;
-
-	return def;
 }
 
 char *
@@ -304,6 +250,8 @@ listener_main()
 	struct tls *ctx = NULL;
 	struct tls_config *tlsconf;
 
+	load_default_mime();
+
 	if ((tlsconf = tls_config_new()) == NULL)
 		fatal("tls_config_new");
 
@@ -361,6 +309,8 @@ main(int argc, char **argv)
 	conf.port = 1965;
 	conf.ipv6 = 0;
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
+
+	init_mime();
 
 	while ((ch = getopt(argc, argv, "6C:c:d:fhK:np:x:")) != -1) {
 		switch (ch) {

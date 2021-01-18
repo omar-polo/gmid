@@ -132,8 +132,6 @@ void logs(int, struct client*, const char*, ...);
 void		 sig_handler(int);
 int		 starts_with(const char*, const char*);
 ssize_t		 filesize(int);
-const char	*path_ext(const char*);
-const char	*mime(const char*);
 char		*absolutify_path(const char*);
 void		 yyerror(const char*);
 int		 parse_portno(const char*);
@@ -148,6 +146,12 @@ extern FILE *yyin;
 extern int yylineno;
 extern int yyparse(void);
 extern int yylex(void);
+
+/* mime.c */
+void		 init_mime(void);
+void		 add_mime(const char*, const char*);
+void		 load_default_mime(void);
+const char	*mime(const char*);
 
 /* server.c */
 int		 check_path(struct client*, const char*, int*);
