@@ -64,11 +64,24 @@ struct vhost {
 
 extern struct vhost hosts[HOSTSLEN];
 
+struct etm {			/* extension to mime */
+	const char	*mime;
+	const char	*ext;
+};
+
+struct mimes {
+	char		*def;
+	struct etm	*t;
+	size_t		len;
+	size_t		cap;
+};
+
 struct conf {
-	int	foreground;
-	int	port;
-	int	ipv6;
-	uint32_t protos;
+	int		foreground;
+	int		port;
+	int		ipv6;
+	uint32_t	protos;
+	struct mimes	mimes;
 };
 
 extern struct conf conf;
