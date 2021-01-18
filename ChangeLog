@@ -1,3 +1,7 @@
+2021-01-18  Omar Polo  <op@omarpolo.com>
+
+	* parse.y (servopts): add mime and "default type" options for media types.
+
 2021-01-17  Omar Polo  <op@omarpolo.com>
 
 	* sandbox.c (sandbox): added initial seccomp(2) support
