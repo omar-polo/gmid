@@ -11,7 +11,7 @@ LIBDIR =	/usr/lib/
 
 .PHONY: all static clean test install
 
-all: gmid TAGS README.md
+all: gmid TAGS
 
 lex.yy.c: lex.l y.tab.c
 	${LEX} lex.l
