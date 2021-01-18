@@ -28,68 +28,146 @@
 .Op Fl d Ar root
 .Op Fl K Ar key
 .Op Fl p Ar port
-.Op Fl x Ar cgi-bin
+.Op Fl x Ar directory
 .Ek
 .Sh DESCRIPTION
 .Nm
 is a simple and minimal gemini server that can serve static files and
 execute CGI scripts.
-.Pp
-.Nm
-won't serve files outside the given directory and won't follow
-symlinks.
-Furthermore, on
-.Ox ,
-.Xr pledge 2
-and
-.Xr unveil 2
-are used to ensure that
-.Nm
-dosen't do anything else than read files from the given directory,
-accept network connections and, optionally, execute CGI scripts.
+It can run without a configuration file with a limited set of features
+available.
+If a configuration file is given, no other flags shall be given,
+except for
+.Fl n .
 .Pp
 .Nm
 fully supports IRIs (Internationalized Resource Identifiers, see
 RFC3987).
 .Pp
-It should be noted that
-.Nm
-is very simple in its implementation, and so it may not be appropriate
-for serving sites with lots of users.
-After all, the code is single threaded and use a single process,
-although it can handle multiple clients at the same time.
-.Pp
-If a user request path is a directory,
-.Nm
-will try to serve a
-.Pa index.gmi
-file inside that directory.
-.Pp
 The options are as follows:
+.Bl -tag -width 12m
+.It Fl c Pa config
+Specifies the configuration file.
+.It Fl n
+Check that the configuration is valid, but don't start the server.
+.El
+.Pp
+If no configuration file is given,
+.Nm
+will look for the following option
 .Bl -tag -width 12m
 .It Fl 6
 Enable IPv6.
-.It Fl c Ar cert.pem
-The certificate to use, by default is
-.Pa cert.pem .
-.It Fl d Ar docs
+.It Fl C Pa file
+The certificate to use.
+.It Fl d Pa directory
 The root directory to serve.
-.Nm
-won't serve any file that is outside that directory.
-By default is
-.Pa docs .
 .It Fl f
-stays and log in the foreground, do not daemonize the process.
+Stays and log in the foreground, do not daemonize the process.
 .It Fl h
 Print the usage and exit.
-.It Fl k Ar key.pem
-The key for the certificate, by default is
-.Pa key.pem .
+.It Fl K Pa file
+The key for the certificate.
 .It Fl p Ar port
-The port to bind to, by default 1965.
-.It Fl x Ar dir
-Enable execution of CGI scripts inside the given directory (relative
-to the document root.)  Cannot be provided more than once.
+The port to listen on, by default 1965.
+.It Fl x Pa directory
+Enable execution of CGI scripts.
+See the description of the
+.Ic cgi
+.Ic server
+option in the section
+.Sq Servers
+below to learn how
+.Pa directory
+is processed.
+Cannot be provided more than once.
+.El
+.Sh CONFIGURATION FILE
+The configuration file is divided into two sections:
+.Bl -tag -width xxxx
+.It Sy Global Options
+Global settings for
+.Nm .
+.It Sy Servers
+Virtual hosts definition
+.El
+.Pp
+Within the sections, empty lines are ignored and comments can be put
+anywhere in the file using a hash mark
+.Pq Sq # ,
+and extend to the end of the current line.
+A boolean is either the symbol
+.Sq on
+or
+.Sq off .
+.Ss Global Options
+.Bl -tag -width 12m
+.It Ic daemon Ar bool
+Enable or disables the daemon mode.
+In daemon mode
+.Nm
+will log to syslog and fork in the background.
+By default is off.
+.It Ic ipv6 Ar bool
+Enable or disable IPv6 support.
+By default is off.
+.It Ic port Ar portno
+The port to listen on.
+By default is 1965.
+.It Ic protocols Ar string
+Specify the TLS protocols to enable.
+Refer to
+.Xr tls_config_parse_protocols 3
+for the valid protocol string values.
+By default, both TLSv1.3 and TLSv1.2 are used.
+Use
+.Dq tlsv1.3
+to enable only TLSv1.3.
+.It Ic mime Ar mime-type Ar file-extension
+Add a mapping for the given
+.Ar file-extension
+to the given
+.Ar mime-type .
+Both argument are strings.
+.It Ic default type Ar string
+Set the default media type that is used if the media type for a
+specified extension is not found.
+If not specified, the
+.Ic default type
+is set to
+.Dq application/octet-stream .
+.El
+.Ss Servers
+Every virtual host is defined by a
+.Ic server
+block:
+.Bl -tag -width Ds
+.It Ic server Ar hostname Brq ...
+.El
+.Pp
+Followed by a block of options that is enclosed in curly brackets:
+.Bl -tag -width Ds
+.It Ic cert Pa file
+Path to the certificate to use for this server.
+The
+.Pa file
+should contain a PEM encoded certificate.
+This option is mandatory.
+.It Ic key Pa file
+Specify the private key to use for this server.
+The
+.Pa file
+should contain a PEM encoded private key.
+This option is mandatory.
+.It Ic root Pa directory
+Specify the root directory for this server.
+This option is mandatory.
+.It Ic cgi Pa path
+Enable the execution of CGI scripts if
+.Pa path
+is a prefix of the user request string.
+An empty path "" will effectively enable the execution of any file
+with the executable bit set inside the root directory.
 .El
 .Sh CGI
 When CGI scripts are enabled for a directory, a request for an
@@ -122,6 +200,7 @@ The root directory being served, the one provided with the
 .Ar d
 parameter to
 .Nm
+or the root directory of the virtual host.
 .It Ev AUTH_TYPE
 The string "Certificate" if the client used a certificate, otherwise unset.
 .It Ev REMOTE_USER
@@ -190,15 +269,47 @@ option is
 and not
 .Pa docs/cgi-bin ,
 since it's relative to the document root.
+.Pp
+The following is an example of a possible configuration for a site
+that enables only TLSv1.3, adds a mime type for the file extension
+"rtf" and defines two virtual host:
+.Bd -literal -offset indent
+ipv6 on		# enable ipv6
+daemon on	# enable daemon mode
+
+protocols "tlsv1.3"
+
+mime "application/rtf" "rtf"
+
+server "example.com" {
+	cert "/path/to/cert.pem"
+	key  "/path/to/key.pem"
+	root "/var/gemini/example.com"
+}
+
+server "it.example.com" {
+	cert "/path/to/cert.pem"
+	key  "/path/to/key.pem"
+	root "/var/gemini/it.example.com"
+	cgi  "/cgi-bin"
+}
+.Ed
 .Sh ACKNOWLEDGEMENTS
 .Nm
-uses the "Flexible and Economical" UTF-8 decoder written by
-.An Bjoern Hoehrmann .
+uses the
+.Dq Flexible and Economical
+UTF-8 decoder written by
+.An Bjoern Hoehrmann
+for its IRI parser.
 .Sh CAVEATS
 .Bl -bullet
 .It
-it doesn't support virtual hosts: the host part of the request URL is
-completely ignored.
+The root directories of all virtual hosts are opened during the daemon
+startup; this means that if a root directory gets deleted and then
+re-created,
+.Nm
+won't be able to serve files inside that directory until a restart.
+This restriction applies only to the root directories and not their content.
 .It
 a %2F sequence in the path part is indistinguishable from a literal
 slash: this is not RFC3986-compliant.
