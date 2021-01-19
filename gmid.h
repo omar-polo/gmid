@@ -106,7 +106,6 @@ struct client {
 	char		 sbuf[1024];	  /* static buffer */
 	void		*buf, *i;	  /* mmap buffer */
 	ssize_t		 len, off;	  /* mmap/static buffer  */
-	int		 af;
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host she's talking to */
 };

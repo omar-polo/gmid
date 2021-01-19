@@ -531,7 +531,6 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 			clients[i].child = 0;
 			clients[i].waiting_on_child = 0;
 			clients[i].buf = MAP_FAILED;
-			clients[i].af = AF_INET;
 			clients[i].addr = addr;
 
 			connected_clients++;
