@@ -77,7 +77,7 @@ open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
 			return 0;
 		}
 		c->i = c->buf;
-		return start_reply(fds, c, SUCCESS, mime(fpath));
+		return start_reply(fds, c, SUCCESS, mime(c->host, fpath));
 
 	case FILE_DIRECTORY:
 		LOGD(c, "%s is a directory, trying %s/index.gmi", fpath, fpath);

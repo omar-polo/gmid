@@ -1,6 +1,7 @@
 2021-01-19  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (servopt): add "lang" server option
+	(servopt): moving "default type" from global options to server options
 
 	* Dockerfile: add a dockerfile
 

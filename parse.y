@@ -66,7 +66,6 @@ option		: TDAEMON TBOOL		{ conf.foreground = !$2; }
 				errx(1, "invalid protocols string \"%s\"", $2);
 		}
 		| TMIME TSTRING TSTRING	{ add_mime($2, $3); }
-		| TDEFAULT TTYPE TSTRING { set_default_mime($3); }
 		;
 
 vhosts		: /* empty */
@@ -99,9 +98,12 @@ servopt		: TCERT TSTRING		{ host->cert = $2; }
 			if (*host->cgi == '/')
 				host->cgi++;
 		}
+		| TDEFAULT TTYPE TSTRING {
+			free(host->default_mime);
+			host->default_mime = $3;
+		}
 		| TLANG TSTRING {
 			free(host->lang);
 			host->lang = $2;
 		}
 		;
-

@@ -61,6 +61,7 @@ struct vhost {
 	const char	*cgi;
 	char		*lang;
 	int		 dirfd;
+	char		*default_mime;
 };
 
 extern struct vhost hosts[HOSTSLEN];
@@ -71,7 +72,6 @@ struct etm {			/* extension to mime */
 };
 
 struct mimes {
-	char		*def;
 	struct etm	*t;
 	size_t		len;
 	size_t		cap;
@@ -163,11 +163,10 @@ extern int yylex(void);
 
 /* mime.c */
 void		 init_mime(void);
-void		 set_default_mime(const char*);
 void		 add_mime(const char*, const char*);
 void		 load_default_mime(void);
 int		 load_mime_file(const char*);
-const char	*mime(const char*);
+const char	*mime(struct vhost*, const char*);
 
 /* server.c */
 int		 check_path(struct client*, const char*, int*);
