@@ -59,6 +59,7 @@ struct vhost {
 	const char	*key;
 	const char	*dir;
 	const char	*cgi;
+	char		*lang;
 	int		 dirfd;
 };
 

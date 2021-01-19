@@ -58,6 +58,7 @@ protocols	return TPROTOCOLS;
 mime		return TMIME;
 default		return TDEFAULT;
 type		return TTYPE;
+lang		return TLANG;
 server		return TSERVER;
 
 cert		return TCERT;

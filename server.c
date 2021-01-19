@@ -249,14 +249,21 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 int
 start_reply(struct pollfd *pfd, struct client *client, int code, const char *reason)
 {
-	char buf[1030]; 	/* status + ' ' + max reply len + \r\n\0 */
+	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
 	int len;
 
 	client->code = code;
 	client->meta = reason;
 	client->state = S_INITIALIZING;
 
-	len = snprintf(buf, sizeof(buf), "%d %s\r\n", code, reason);
+	snprintf(buf, sizeof(buf), "%d ", code);
+	strlcat(buf, reason, sizeof(buf));
+	if (!strcmp(reason, "text/gemini") && client->host->lang != NULL) {
+		strlcat(buf, "; lang=", sizeof(buf));
+		strlcat(buf, client->host->lang, sizeof(buf));
+	}
+
+	len = strlcat(buf, "\r\n", sizeof(buf));
 	assert(len < (int)sizeof(buf));
 
 	switch (tls_write(client->ctx, buf, len)) {

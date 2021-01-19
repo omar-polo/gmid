@@ -168,6 +168,11 @@ Enable the execution of CGI scripts if
 is a prefix of the user request string.
 An empty path "" will effectively enable the execution of any file
 with the executable bit set inside the root directory.
+.It Ic lang Ar string
+Specify the language tag for the text/gemini content served.
+If not specified, no
+.Dq lang
+parameter will be added in the response.
 .El
 .Sh CGI
 When CGI scripts are enabled for a directory, a request for an

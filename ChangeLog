@@ -1,5 +1,7 @@
 2021-01-19  Omar Polo  <op@omarpolo.com>
 
+	* parse.y (servopt): add "lang" server option
+
 	* Dockerfile: add a dockerfile
 
 2021-01-18  Omar Polo  <op@omarpolo.com>

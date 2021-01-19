@@ -43,7 +43,7 @@ extern void yyerror(const char*);
 }
 
 %token TDAEMON TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TSERVER
-%token TCERT TKEY TROOT TCGI
+%token TCERT TKEY TROOT TCGI TLANG
 %token TERR
 
 %token <str>	TSTRING
@@ -98,6 +98,10 @@ servopt		: TCERT TSTRING		{ host->cert = $2; }
 			/* drop the starting '/', if any */
 			if (*host->cgi == '/')
 				host->cgi++;
-}
+		}
+		| TLANG TSTRING {
+			free(host->lang);
+			host->lang = $2;
+		}
 		;
 
