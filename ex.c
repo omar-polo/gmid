@@ -277,6 +277,7 @@ executor_main(int fd)
 		    addr, ruser, cissuer, chash, vhost);
 		if (!send_fd(fd, d))
 			break;
+		close(d);
 
 		free(spath);
 		free(relpath);
