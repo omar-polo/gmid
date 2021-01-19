@@ -247,26 +247,26 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 }
 
 int
-start_reply(struct pollfd *pfd, struct client *client, int code, const char *reason)
+start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 {
 	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
 	int len;
 
-	client->code = code;
-	client->meta = reason;
-	client->state = S_INITIALIZING;
+	c->code = code;
+	c->meta = meta;
+	c->state = S_INITIALIZING;
 
 	snprintf(buf, sizeof(buf), "%d ", code);
-	strlcat(buf, reason, sizeof(buf));
-	if (!strcmp(reason, "text/gemini") && client->host->lang != NULL) {
+	strlcat(buf, meta, sizeof(buf));
+	if (!strcmp(meta, "text/gemini") && c->host->lang != NULL) {
 		strlcat(buf, "; lang=", sizeof(buf));
-		strlcat(buf, client->host->lang, sizeof(buf));
+		strlcat(buf, c->host->lang, sizeof(buf));
 	}
 
 	len = strlcat(buf, "\r\n", sizeof(buf));
 	assert(len < (int)sizeof(buf));
 
-	switch (tls_write(client->ctx, buf, len)) {
+	switch (tls_write(c->ctx, buf, len)) {
 	case TLS_WANT_POLLIN:
 		pfd->events = POLLIN;
 		return 0;
