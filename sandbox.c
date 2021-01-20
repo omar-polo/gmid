@@ -135,10 +135,15 @@ sandbox()
 
 		/* these are used to serve the files.  note how we
 		 * allow openat but not open. */
-#ifndef __aarch64__
+
+#ifdef __aarch64__
+		/* it seems that on aarch64 there isn't a poll(2)
+		 * syscall, but instead it's implemented on top of
+		 * ppoll(2). */
+		SC_ALLOW(ppoll),
+#else
 		SC_ALLOW(poll),
 #endif
-		SC_ALLOW(ppoll),
 		SC_ALLOW(accept),
 		SC_ALLOW(fcntl),
 		SC_ALLOW(read),
