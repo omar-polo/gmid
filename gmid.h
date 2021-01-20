@@ -38,6 +38,7 @@
 #define PATHBUF		2048
 
 #define SUCCESS		20
+#define TEMP_REDIRECT	30
 #define TEMP_FAILURE	40
 #define NOT_FOUND	51
 #define PROXY_REFUSED	53
@@ -88,28 +89,6 @@ struct conf {
 extern struct conf conf;
 extern int exfd;
 
-enum {
-	S_HANDSHAKE,
-	S_OPEN,
-	S_INITIALIZING,
-	S_SENDING,
-	S_CLOSING,
-};
-
-struct client {
-	struct tls	*ctx;
-	int		 state;
-	int		 code;
-	const char	*meta;
-	int		 fd, waiting_on_child;
-	int		 child;
-	char		 sbuf[1024];	  /* static buffer */
-	void		*buf, *i;	  /* mmap buffer */
-	ssize_t		 len, off;	  /* mmap/static buffer  */
-	struct sockaddr_storage	 addr;
-	struct vhost	*host;	/* host she's talking to */
-};
-
 struct iri {
 	char		*schema;
 	char		*host;
@@ -127,6 +106,30 @@ struct parser {
 };
 
 enum {
+	S_HANDSHAKE,
+	S_OPEN,
+	S_INITIALIZING,
+	S_SENDING,
+	S_CLOSING,
+};
+
+struct client {
+	struct tls	*ctx;
+	char		 req[GEMINI_URL_LEN];
+	struct iri	 iri;
+	int		 state;
+	int		 code;
+	const char	*meta;
+	int		 fd, waiting_on_child;
+	int		 child;
+	char		 sbuf[1024];	  /* static buffer */
+	void		*buf, *i;	  /* mmap buffer */
+	ssize_t		 len, off;	  /* mmap/static buffer  */
+	struct sockaddr_storage	 addr;
+	struct vhost	*host;	/* host she's talking to */
+};
+
+enum {
 	FILE_EXISTS,
 	FILE_EXECUTABLE,
 	FILE_DIRECTORY,
@@ -141,6 +144,7 @@ void fatal(const char*, ...);
 
 __attribute__((format (printf, 3, 4)))
 void logs(int, struct client*, const char*, ...);
+void log_request(struct client*, char*, size_t);
 
 void		 sig_handler(int);
 int		 starts_with(const char*, const char*);
@@ -169,15 +173,15 @@ const char	*mime(struct vhost*, const char*);
 
 /* server.c */
 int		 check_path(struct client*, const char*, int*);
-int		 open_file(char*, char*, struct pollfd*, struct client*);
+int		 open_file(struct pollfd*, struct client*);
 int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
 void		 mark_nonblock(int);
 void		 handle_handshake(struct pollfd*, struct client*);
 void		 handle_open_conn(struct pollfd*, struct client*);
 int		 start_reply(struct pollfd*, struct client*, int, const char*);
 int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
-void		 send_file(char*, char*, struct pollfd*, struct client*);
-void		 send_dir(char*, struct pollfd*, struct client*);
+void		 send_file(struct pollfd*, struct client*);
+void		 send_dir(struct pollfd*, struct client*);
 void		 cgi_poll_on_child(struct pollfd*, struct client*);
 void		 cgi_poll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);

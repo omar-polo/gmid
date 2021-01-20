@@ -91,6 +91,56 @@ logs(int priority, struct client *c,
 	va_end(ap);
 }
 
+/* strchr, but with a bound */
+static char *
+gmid_strnchr(char *s, int c, size_t len)
+{
+	size_t i;
+
+	for (i = 0; i < len; ++i)
+		if (s[i] == c)
+			return &s[i];
+	return NULL;
+}
+
+void
+log_request(struct client *c, char *meta, size_t l)
+{
+	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
+	char *t;
+	size_t len;
+	int ec;
+
+	len = sizeof(c->addr);
+	ec = getnameinfo((struct sockaddr*)&c->addr, len,
+	    hbuf, sizeof(hbuf),
+	    sbuf, sizeof(sbuf),
+	    NI_NUMERICHOST | NI_NUMERICSERV);
+	if (ec != 0)
+		fatal("getnameinfo: %s", gai_strerror(ec));
+
+	/* serialize the IRI */
+	strlcpy(b, c->iri.schema, sizeof(b));
+	strlcat(b, "://", sizeof(b));
+	strlcat(b, c->iri.host, sizeof(b));
+	strlcat(b, "/", sizeof(b));
+	strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
+	if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */
+		strlcat(b, "?", sizeof(b));
+		strlcat(b, c->iri.query, sizeof(b));
+	}
+
+	if ((t = gmid_strnchr(meta, '\r', l)) == NULL)
+		t = meta + len;
+
+	if (conf.foreground)
+		fprintf(stderr, "%s:%s GET %s %.*s\n", hbuf, sbuf, b,
+		    (int)(t - meta), meta);
+	else
+		syslog(LOG_INFO | LOG_DAEMON, "%s:%s GET %s %.*s",
+		    hbuf, sbuf, b, (int)(t - meta), meta);
+}
+
 void
 sig_handler(int sig)
 {

@@ -54,41 +54,43 @@ check_path(struct client *c, const char *path, int *fd)
 }
 
 int
-open_file(char *fpath, char *query, struct pollfd *fds, struct client *c)
+open_file(struct pollfd *fds, struct client *c)
 {
-	switch (check_path(c, fpath, &c->fd)) {
+	switch (check_path(c, c->iri.path, &c->fd)) {
 	case FILE_EXECUTABLE:
-		if (c->host->cgi != NULL && starts_with(fpath, c->host->cgi))
-			return start_cgi(fpath, "", query, fds, c);
+		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi))
+			return start_cgi(c->iri.path, "", c->iri.query, fds, c);
 
 		/* fallthrough */
 
 	case FILE_EXISTS:
 		if ((c->len = filesize(c->fd)) == -1) {
-			LOGE(c, "failed to get file size for %s", fpath);
+			LOGE(c, "failed to get file size for %s", c->iri.path);
 			goodbye(fds, c);
 			return 0;
 		}
 
 		if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
 			    c->fd, 0)) == MAP_FAILED) {
-			LOGW(c, "mmap: %s: %s", fpath, strerror(errno));
+			LOGW(c, "mmap: %s: %s", c->iri.path, strerror(errno));
 			goodbye(fds, c);
 			return 0;
 		}
 		c->i = c->buf;
-		return start_reply(fds, c, SUCCESS, mime(c->host, fpath));
+		if (!start_reply(fds, c, SUCCESS, mime(c->host, c->iri.path)))
+			return 0;
+		send_file(fds, c);
+		return 0;
 
 	case FILE_DIRECTORY:
-		LOGD(c, "%s is a directory, trying %s/index.gmi", fpath, fpath);
 		close(c->fd);
 		c->fd = -1;
-		send_dir(fpath, fds, c);
+		send_dir(fds, c);
 		return 0;
 
 	case FILE_MISSING:
-		if (c->host->cgi != NULL && starts_with(fpath, c->host->cgi))
-			return check_for_cgi(fpath, query, fds, c);
+		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi))
+			return check_for_cgi(c->iri.path, c->iri.query, fds, c);
 
 		if (!start_reply(fds, c, NOT_FOUND, "not found"))
 			return 0;
@@ -203,13 +205,12 @@ hostnotfound:
 void
 handle_open_conn(struct pollfd *fds, struct client *c)
 {
-	char buf[GEMINI_URL_LEN];
 	const char *parse_err = "invalid request";
-	struct iri iri;
 
-	bzero(buf, sizeof(buf));
+	bzero(c->req, sizeof(c->req));
+	bzero(&c->iri, sizeof(c->iri));
 
-	switch (tls_read(c->ctx, buf, sizeof(buf)-1)) {
+	switch (tls_read(c->ctx, c->req, sizeof(c->req)-1)) {
 	case -1:
 		LOGE(c, "tls_read: %s", tls_error(c->ctx));
 		goodbye(fds, c);
@@ -224,33 +225,29 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-	if (!trim_req_iri(buf) || !parse_iri(buf, &iri, &parse_err)) {
+	if (!trim_req_iri(c->req) || !parse_iri(c->req, &c->iri, &parse_err)) {
 		if (!start_reply(fds, c, BAD_REQUEST, parse_err))
 			return;
 		goodbye(fds, c);
 		return;
 	}
 
-	if (strcmp(iri.schema, "gemini") || iri.port_no != conf.port) {
+	/* XXX: we should check that the SNI matches the requested host */
+	if (strcmp(c->iri.schema, "gemini") || c->iri.port_no != conf.port) {
 		if (!start_reply(fds, c, PROXY_REFUSED, "won't proxy request"))
 			return;
 		goodbye(fds, c);
 		return;
 	}
 
-	LOGI(c, "GET %s%s%s",
-	    *iri.path ? iri.path : "/",
-	    *iri.query ? "?" : "",
-	    *iri.query ? iri.query : "");
-
-	send_file(iri.path, iri.query, fds, c);
+	open_file(fds, c);
 }
 
 int
 start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 {
 	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
-	int len;
+	size_t len;
 
 	c->code = code;
 	c->meta = meta;
@@ -264,7 +261,7 @@ start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 	}
 
 	len = strlcat(buf, "\r\n", sizeof(buf));
-	assert(len < (int)sizeof(buf));
+	assert(len < sizeof(buf));
 
 	switch (tls_write(c->ctx, buf, len)) {
 	case TLS_WANT_POLLIN:
@@ -274,6 +271,7 @@ start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 		pfd->events = POLLOUT;
 		return 0;
 	default:
+		log_request(c, buf, sizeof(buf));
 		return 1;
 	}
 }
@@ -323,6 +321,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 	c->child = 1;
 	c->state = S_SENDING;
 	cgi_poll_on_child(fds, c);
+	c->code = -1;
 	/* handle_cgi(fds, c); */
 	return 0;
 
@@ -332,15 +331,9 @@ err:
 }
 
 void
-send_file(char *path, char *query, struct pollfd *fds, struct client *c)
+send_file(struct pollfd *fds, struct client *c)
 {
 	ssize_t ret, len;
-
-	if (c->fd == -1) {
-		if (!open_file(path, query, fds, c))
-			return;
-		c->state = S_SENDING;
-	}
 
 	len = (c->buf + c->len) - c->i;
 
@@ -370,28 +363,56 @@ send_file(char *path, char *query, struct pollfd *fds, struct client *c)
 }
 
 void
-send_dir(char *path, struct pollfd *fds, struct client *client)
+send_dir(struct pollfd *fds, struct client *c)
 {
-	char fpath[PATHBUF];
 	size_t len;
 
-	bzero(fpath, PATHBUF);
-
-	if (path[0] != '.')
-		fpath[0] = '.';
-
-	/* this cannot fail since sizeof(fpath) > maxlen of path */
-	strlcat(fpath, path, PATHBUF);
-	len = strlen(fpath);
-
-	/* add a trailing / in case. */
-	if (fpath[len-1] != '/') {
-		fpath[len] = '/';
+	/* guard against a re-entrant call:
+	 *
+	 *	open_file -> send_dir -> open_file -> send_dir
+	 *
+	 * this can happen only if:
+	 *
+	 *  - user requested a dir, say foo/
+	 *  - we try to serve foo/index.gmi
+	 *  - foo/index.gmi is a directory.
+	 *
+	 * It's an unlikely case, but can happen.  We then redirect
+	 * to foo/index.gmi
+	 */
+	if (c->iri.path == c->sbuf) {
+		if (!start_reply(fds, c, TEMP_REDIRECT, c->sbuf))
+			return;
+		goodbye(fds, c);
+		return;
 	}
 
-	strlcat(fpath, "index.gmi", sizeof(fpath));
+	len = strlen(c->iri.path);
+	if (len > 0 && c->iri.path[len-1] != '/') {
+		/* redirect to url with the trailing / */
+		strlcpy(c->sbuf, c->iri.path, sizeof(c->sbuf));
+		strlcat(c->sbuf, "/", sizeof(c->sbuf));
+		if (!start_reply(fds, c, TEMP_REDIRECT, c->sbuf))
+			return;
+		goodbye(fds, c);
+		return;
+	}
 
-	send_file(fpath, NULL, fds, client);
+        strlcpy(c->sbuf, c->iri.path, sizeof(c->sbuf));
+	if (len != 0)
+		strlcat(c->sbuf, "/", sizeof(c->sbuf));
+	len = strlcat(c->sbuf, "index.gmi", sizeof(c->sbuf));
+
+	if (len >= sizeof(c->sbuf)) {
+		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
+			return;
+		goodbye(fds, c);
+		return;
+	}
+
+	close(c->fd);
+	c->iri.path = c->sbuf;
+	open_file(fds, c);
 }
 
 void
@@ -445,6 +466,13 @@ handle_cgi(struct pollfd *fds, struct client *c)
 			}
 			c->len = r;
 			c->off = 0;
+
+			/* XXX: if we haven't still read a whole
+			 * reply line, we should go back to poll! */
+			if (c->code == -1) {
+				c->code = 0;
+				log_request(c, c->sbuf, sizeof(c->sbuf));
+			}
 		}
 
 		while (c->len > 0) {
@@ -571,7 +599,7 @@ handle(struct pollfd *fds, struct client *client)
 		if (client->child)
 			handle_cgi(fds, client);
 		else
-			send_file(NULL, NULL, fds, client);
+			send_file(fds, client);
 		break;
 
 	case S_CLOSING:
