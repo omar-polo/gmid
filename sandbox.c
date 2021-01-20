@@ -145,7 +145,6 @@ sandbox()
 		SC_ALLOW(poll),
 #endif
 		SC_ALLOW(accept),
-		SC_ALLOW(fcntl),
 		SC_ALLOW(read),
 		SC_ALLOW(openat),
 		SC_ALLOW(fstat),
@@ -163,6 +162,20 @@ sandbox()
 
 		SC_ALLOW(exit),
 		SC_ALLOW(exit_group),
+
+		/* allow only F_GETFL and F_SETFL fcntl */
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fcntl, 0, 6);
+		BPF_STMT(BPF_LD  | BPF_W | BPF_ABS,
+		    (offsetof(struct seccomp_data, args[1])));
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_GETFL, 0 1);
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW);
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_SETFL, 0, 1);
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW);
+		BPF_STMT(BPF_RET | BPF_K, SC_FAIL);
+
+		/* re-load the syscall number */
+		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+		    (offsetof(struct seccomp_data, nr))),
 
 		/* allow ioctl but only on fd 1, glibc doing stuff? */
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 3),
