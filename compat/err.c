@@ -18,7 +18,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-/* cheat: if we don't have getprogname in stdlib, will link against
+/* cheat: if we don't have getprogname in libc, we will link against
  * compat/getprogname.c anyway. */
 const char *getprogname(void);
 
