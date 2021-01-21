@@ -136,6 +136,10 @@ Every virtual host is defined by a
 block:
 .Bl -tag -width Ds
 .It Ic server Ar hostname Brq ...
+Match the server name using shell globbing rules.  This can be an explicit name,
+.Ar www.example.com ,
+or a name including a wildcards,
+.Ar *.example.com .
 .El
 .Pp
 Followed by a block of options that is enclosed in curly brackets:
@@ -249,7 +253,7 @@ $ cat <<EOF > docs/index.gmi
 # Hello world
 test paragraph...
 EOF
-$ gmid -c cert.pem -k key.pem -d docs
+$ gmid -C cert.pem -K key.pem -d docs
 .Ed
 .Pp
 Now you can visit gemini://localhost/ with your preferred gemini
@@ -264,7 +268,7 @@ $ cat <<EOF > docs/cgi-bin/hello-world
 printf "20 text/plain\\r\\n"
 echo "hello world!"
 EOF
-$ gmid -x cgi-bin
+$ gmid -C cert.pem -K key.pem -d docs -x cgi-bin
 .Ed
 .Pp
 Note that the argument to the
@@ -297,6 +301,7 @@ server "it.example.com" {
 	key  "/path/to/key.pem"
 	root "/var/gemini/it.example.com"
 	cgi  "/cgi-bin"
+	lang "it"
 }
 .Ed
 .Sh ACKNOWLEDGEMENTS
