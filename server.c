@@ -340,6 +340,9 @@ send_file(struct pollfd *fds, struct client *c)
 {
 	ssize_t ret, len;
 
+	/* ensure the correct state */
+	c->state = S_SENDING;
+
 	len = (c->buf + c->len) - c->i;
 
 	while (len > 0) {
