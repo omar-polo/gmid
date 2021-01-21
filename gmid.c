@@ -199,8 +199,8 @@ yyerror(const char *msg)
 int
 parse_portno(const char *p)
 {
-	char	*errstr;
-	int	 n;
+	const char *errstr;
+	int n;
 
 	n = strtonum(p, 0, UINT16_MAX, &errstr);
 	if (errstr != NULL)
