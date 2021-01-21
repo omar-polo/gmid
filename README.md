@@ -75,7 +75,7 @@ sandboxed.  When a CGI script needs to be executed, the executor
 (outside of the sandbox) sets up a pipe and gives one end to the
 listener, while the other is bound to the CGI script standard output.
 This way, is still possible to execute CGI scripts without restriction
-even if the presence of a sandbox.
+even in the presence of a sandbox.
 
 On OpenBSD, the listener process runs with the `stdio recvfd rpath
 inet` pledges and has `unveil(2)`ed only the directories that it
