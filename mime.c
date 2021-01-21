@@ -35,11 +35,15 @@ init_mime(struct mime *mime)
 void
 add_mime(struct mime *mime, const char *mt, const char *ext)
 {
+	size_t oldcap;
+
 	if (mime->len == mime->cap) {
+		oldcap = mime->cap;
 		mime->cap *= 1.5;
-		mime->t = realloc(mime->t, mime->cap * sizeof(struct etm));
+		mime->t = recallocarray(mime->t, oldcap, mime->cap,
+		    sizeof(struct etm));
 		if (mime->t == NULL)
-			fatal("realloc: %s", strerror(errno));
+			err(1, "recallocarray");
 	}
 
 	mime->t[mime->len].mime = mt;
