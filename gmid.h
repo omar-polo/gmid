@@ -156,8 +156,8 @@ void		 yyerror(const char*);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
 void		 load_vhosts(struct tls_config*);
-int		 make_soket(int);
-int		 listener_main();
+int		 make_socket(int, int);
+int		 listener_main(void);
 void		 usage(const char*);
 
 /* provided by lex/yacc */
@@ -202,7 +202,7 @@ int		 recv_fd(int);
 int		 executor_main(int);
 
 /* sandbox.c */
-void		 sandbox();
+void		 sandbox(void);
 
 /* utf8.c */
 int		 valid_multibyte_utf8(struct parser*);
