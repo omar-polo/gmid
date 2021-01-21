@@ -45,5 +45,7 @@ test: gmid iri_test
 	cd test && ./test.sh
 
 install: gmid
-	install -o root -g wheel -m 0755 gmid   ${PREFIX}/bin/
-	install -o root -g wheel -m 0644 gmid.1 ${PREFIX}/man/man1
+	mkdir -p ${DESTDIR}${BINDIR}
+	mkdir -p ${DESTDIR}${MANDIR}/man1
+	${INSTALL_PROGRAM} gmid ${DESTDIR}${BINDIR}
+	${INSTALL_MAN} gmid.1 ${DESTDIR}${BINDIR}
