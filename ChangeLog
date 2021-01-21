@@ -1,5 +1,7 @@
 2021-01-21  Omar Polo  <op@omarpolo.com>
 
+	* configure: added a configure script
+
 	* server.c (handle_handshake): glob for vhost domain
 
 	* gmid.c (log_request): logs the full IRI and the response code (even for CGI)
