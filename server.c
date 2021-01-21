@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fnmatch.h>
 #include <string.h>
 
 #include "gmid.h"
@@ -185,7 +186,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 		if (!strcmp(h->domain, "*"))
 			break;
 
-		if (servname != NULL && !strcmp(h->domain, servname))
+		if (servname != NULL && !fnmatch(h->domain, servname, 0))
 			break;
 	}
 
