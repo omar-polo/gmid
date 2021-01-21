@@ -162,6 +162,24 @@ starts_with(const char *str, const char *prefix)
 	return 1;
 }
 
+int
+ends_with(const char *str, const char *sufx)
+{
+	size_t i, j;
+
+	i = strlen(str);
+	j = strlen(sufx);
+
+	if (j > i)
+		return 0;
+
+	i -= j;
+	for (j = 0; str[i] != '\0'; i++, j++)
+		if (str[i] != sufx[j])
+			return 0;
+	return 1;
+}
+
 ssize_t
 filesize(int fd)
 {

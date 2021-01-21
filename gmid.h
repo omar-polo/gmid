@@ -150,6 +150,7 @@ void log_request(struct client*, char*, size_t);
 
 void		 sig_handler(int);
 int		 starts_with(const char*, const char*);
+int		 ends_with(const char*, const char*);
 ssize_t		 filesize(int);
 char		*absolutify_path(const char*);
 void		 yyerror(const char*);
