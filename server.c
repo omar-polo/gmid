@@ -196,6 +196,11 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	}
 
 hostnotfound:
+	if (servname != NULL)
+		strncpy(c->req, servname, sizeof(c->req));
+	else
+		strncpy(c->req, "null", sizeof(c->req));
+
 	/* XXX: check the correct response */
 	if (!start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI"))
 		return;

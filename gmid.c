@@ -119,15 +119,19 @@ log_request(struct client *c, char *meta, size_t l)
 	if (ec != 0)
 		fatal("getnameinfo: %s", gai_strerror(ec));
 
-	/* serialize the IRI */
-	strlcpy(b, c->iri.schema, sizeof(b));
-	strlcat(b, "://", sizeof(b));
-	strlcat(b, c->iri.host, sizeof(b));
-	strlcat(b, "/", sizeof(b));
-	strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
-	if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */
-		strlcat(b, "?", sizeof(b));
-		strlcat(b, c->iri.query, sizeof(b));
+	if (c->iri.schema != NULL) {
+		/* serialize the IRI */
+		strlcpy(b, c->iri.schema, sizeof(b));
+		strlcat(b, "://", sizeof(b));
+		strlcat(b, c->iri.host, sizeof(b));
+		strlcat(b, "/", sizeof(b));
+		strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
+		if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */
+			strlcat(b, "?", sizeof(b));
+			strlcat(b, c->iri.query, sizeof(b));
+		}
+	} else {
+		strlcpy(b, c->req, sizeof(b));
 	}
 
 	if ((t = gmid_strnchr(meta, '\r', l)) == NULL)
