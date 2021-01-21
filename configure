@@ -227,6 +227,7 @@ fi
 
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
+runtest getprogname	GETPROGNAME	|| true
 runtest libtls		LIBTLS		|| true
 runtest recallocarray	RECALLOCARRAY	|| true
 runtest strlcat		STRLCAT		|| true
@@ -277,6 +278,8 @@ if [ ${HAVE_ERR} -eq 0 ]; then
 	echo "extern	void	 warn(const char*, ...);"
 	echo "extern	void	 warnx(const char*, ...);"
 	COMPAT="${COMPAT} compat/err.o"
+else
+	echo "#include <err.h>"
 fi
 if [ ${HAVE_EXPLICIT_BZERO} -eq 0 ]; then
 	echo "extern	void	 explicit_bzero(void*, size_t);"
