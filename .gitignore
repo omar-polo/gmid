@@ -7,3 +7,9 @@ iri_test
 docs
 lex.yy.c
 y.tab.*
+Makefile.local
+config.h
+config.h.old
+config.log
+config.log.old
+configure.local

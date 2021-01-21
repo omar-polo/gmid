@@ -1,0 +1,328 @@
+#!/bin/sh
+#
+# Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+# adapted from mandoc configure and oconfigure, thanks schwarze@ and
+# kristaps@!
+
+set -e
+
+[ -w config.log ] && mv config.log config.log.old
+[ -w config.h   ] && mv config.h   config.h.old
+
+# Output file descriptor usage:
+# 1 (stdout): config.h, Makefile.local
+# 2 (stderr): original stderr, usually to the console
+# 3: config.log
+
+exec 3> config.log
+echo "file config.log: writing..."
+
+# --------
+# default settings: initialize all vars here
+
+CC=cc
+CFLAGS=
+LDFLAGS=-ltls
+YACC=yacc
+LEX=lex
+STATIC=
+
+HAVE_ERR=
+HAVE_GETPROGNAME=
+HAVE_LIBTLS=
+HAVE_STRLCAT=
+HAVE_STRLCPY=
+HAVE_VASPRINTF=
+
+NEED_GNU_SOURCE=0
+NEED_OPENBSD_SOURCE=0
+
+PREFIX="/usr/local"
+BINDIR=
+
+INSTALL="install"
+
+# try to auto detect CFLAGS and LDFLAGS
+which pkg-config 2>/dev/null 1>&2 && {
+        if ! got=`pkg-config --cflags libtls`; then
+		CFLAGS="$got"
+	fi
+
+	if ! got=`pkg-config --libs libtls`; then
+		LDFLAGS="$got"
+	fi
+}
+
+# auto detect lex/flex
+which ${LEX} 2>/dev/null 1>&2 || {
+	echo "${LEX} not found: trying flex" 1>&2
+	echo "${LEX} not found: trying flex" 1>&3
+	LEX=flex
+	which ${LEX} 2>/dev/null 1>&2 || {
+		echo "${LEX} not found: giving up" 1>&2
+		echo "${LEX} not found: giving up" 1>&3
+		exit 1
+	}
+}
+
+# auto detect yacc/bison
+which ${YACC} 2>/dev/null 1>&2 || {
+	echo "${YACC} not found: trying bison" 1>&2
+	echo "${YACC} not found: trying bison" 1>&3
+	YACC=bison
+	which ${YACC} 2>/dev/null 1>&2 || {
+		echo "${YACC} not found: giving up" 1>&2
+		echo "${YACC} not found: giving up" 1>&3
+		exit 1
+	}
+}
+
+# --------
+# allow certain variables to be overridden on the command line
+
+for keyvals in "$@"; do
+	key=`echo $keyvals | cut -s -d '=' -f1`
+	if [ -z "$key" ]; then
+		echo "$0: invalid key-value: $keyvals" 1>&2
+		exit 1
+	fi
+	vals=`echo $keyvals | cut -d '=' -f 2-`
+	case "$key" in
+		BINDIR)  BINDIR="$val" ;;
+		CC)      CC="$val" ;;
+		CFLAGS)  CFLAGS="$val" ;;
+		DESTDIR) DESTDIR="$val" ;;
+		LDFLAGS) LDFLAGS="$val" ;;
+		LEX)     LEX="$lex" ;;
+		PREFIX)  PREFIX="$val" ;;
+		YACC)    YACC="$val" ;;
+		*)
+			echo "$0: invalid key: $key" 1>&2
+			exit 1
+	esac
+done
+
+# --------
+# tests functions
+
+# Check whether this HAVE_ setting is manually overridden.
+# If yes, use the override, if no, do not decide anything yet.
+# Arguments: test file name, test var name, manual value
+ismanual() {
+	[ -z "${3}" ] && return 1
+	echo "tested ${1}: HAVE_${2}=${3} (manual)" 1>&2
+	echo "tested ${1}: HAVE_${2}=${3} (manual)" 1>&3
+	echo 1>&3
+	return 0
+}
+
+# Run a single autoconfiguration test.
+# In case of success, enable the feature.
+# In case of failure, do not decide anything yet.
+# Arguments: test file name, test var name, additional CFLAGS
+singletest() {
+	n=${1}${3}
+	cat 1>&3 << __HEREDOC__
+testing ${n} ...
+${COMP} -o have/${1} have/${1}.c ${3} ${LDFLAGS}
+__HEREDOC__
+
+	if ${COMP} -o "have/${1}" "have/${1}.c" ${3} ${LDFLAGS} 1>&3 2>&3
+	then
+		echo "partial result of ${n}: ${CC} succeeded" 1>&3
+	else
+		echo "tested ${n}: no (compilation failed)" 1>&2
+		echo "result of ${n}: ${CC} failed with exit status $?" 1>&3
+		echo "result of compiling ${n}: no" 1>&3
+		echo 1>&3
+		return 1
+	fi
+
+	if ./have/${1} 1>&3 2>&3; then
+		echo "tested ${n}: yes" 1>&2
+		echo "result of running ${n}: yes" 1>&3
+		echo 1>&3
+		eval HAVE_${2}=1
+		[ "${3}" = "-D_GNU_SOURCE" ] && NEED_GNU_SOURCE=1
+		[ "${3}" = "-D_OPENBSD_SOURCE" ] && NEED_OPENBSD_SOURCE=1
+		[ "${3}" = "-lsocket" ] && LD_RECVMSG="-lsocket"
+		rm "have/${1}"
+		return 0
+	else
+		echo "tested ${n}: no (execution failed)" 1>&2
+		echo "result of ${n}: execution failed with exit status $?" 1>&3
+		echo "result of running ${n}: no" 1>&3
+		echo 1>&3
+		rm "have/${1}"
+		return 1
+	fi
+}
+
+# Run a complete autoconfiguration test, including the check for
+# a manual override and disabling the feature on failure.
+# Arguments: test file name, test var name, additional CFLAGS
+# The final argument can optionally be repeated a second time.
+runtest() {
+	eval _manual=\${HAVE_${2}}
+	ismanual "${1}" "${2}" "${_manual}" && return 0
+	singletest "${1}" "${2}" "${3}" && return 0
+	[ -n "${4}" ] && singletest "${1}" "${2}" "${4}" && return 0
+	eval HAVE_${2}=0
+	return 1
+}
+
+# --------
+# compiler options
+
+DEFCFLAGS="-g -W -Wall -Wmissing-prototypes -Wstrict-prototypes -Wwrite-strings -Wno-unused-parameter"
+
+if [ -n "${CFLAGS}" ]; then
+	COMP="${CC} ${CFLAGS} -Wno-unused -Werror"
+else
+	COMP="${CC} ${CDEFCFLAGS} -Wno-unused -Werror"
+fi
+echo -n "testing ${CC} -W: " 1>&2
+echo -n "testing ${CC} -W: " 1>&3
+runtest noop WFLAG || true
+
+if [ -n "${CFLAGS}" ]; then
+	echo "CFLAGS specified manually:" 1>&3
+elif [ ${HAVE_WFLAG} -eq 0 ]; then
+	CFLAGS="-g"
+else
+	CFLAGS="${DEFCFLAGS}"
+fi
+echo "selected CFLAGS=\"${CFLAGS}\"" 1>&2
+echo "selected CFLAGS=\"${CFLAGS}\"" 1>&3
+echo 1>&3
+
+COMP="${CC} ${CFLAGS}"
+[ ${HAVE_WFLAG} -eq 0 ] || COMP="${COMP} -Wno-unused -Werror"
+
+if [ -n "${STATIC}" ]; then
+	echo "selected STATIC=\"${STATIC}\" (manual)" 1>&2
+	echo "selected STATIC=\"${STATIC}\" (manual)" 1>&3
+	echo 1>&3
+else
+	runtest noop STATIC -static || true
+	[ ${HAVE_STATIC} -eq 0 ] || STATIC="-static"
+	echo "selected STATIC=\"${STATIC}\"" 1>&2
+	echo "selected STATIC=\"${STATIC}\"" 1>&3
+	echo 1>&3
+fi
+
+# --------
+# tests for config.h
+
+runtest err		ERR		|| true
+runtest libtls		LIBTLS		|| true
+runtest strlcat		STRLCAT		|| true
+runtest strlcpy		STRLCPY		|| true
+runtest vasprintf	VASPRINTF	"" -D_GNU_SOURCE || true
+
+if [ ${HAVE_LIBTLS} -eq 0 ]; then
+	echo "FATAL: libtls not found" 1>&2
+	echo "FATAL: libtls not found" 1>&3
+	exit 1
+fi
+
+# --------
+# write config.h
+
+exec > config.h
+
+cat <<__HEREDOC__
+#ifdef __cplusplus
+#error "Do not use C++."
+#endif
+
+__HEREDOC__
+
+[ ${NEED_GNU_SOURCE} -eq 0 ] || echo "#define _GNU_SOURCE"
+[ ${NEED_OPENBSD_SOURCE} -eq 0 ] || echo "#define _OPENBSD_SOURCE"
+
+[ ${HAVE_STRLCAT} -eq 0 -o ${HAVE_STRLCPY} -eq 0 ] \
+	&& echo "#include <sys/types.h>"
+[ ${HAVE_VASPRINTF} -eq 0 ] && echo "#include <stdarg.h>"
+
+cat <<__HEREDOC__
+
+#define HAVE_ERR		${HAVE_ERR}
+#define HAVE_GETPROGNAME	${HAVE_GETPROGNAME}
+#define HAVE_STRLCAT		${HAVE_STRLCAT}
+#define HAVE_STRLCPY		${HAVE_STRLCPY}
+#define HAVE_VASPRINTF		${HAVE_VASPRINTF}
+
+__HEREDOC__
+
+if [ ${HAVE_ERR} -eq 0 ]; then
+	echo "extern	void	 err(int, const char*, ...);"
+	echo "extern	void	 errx(int, const char*, ...);"
+	echo "extern	void	 warn(const char*, ...);"
+	echo "extern	void	 warnx(const char*, ...);"
+	COMPAT="${COMPAT} compat/err.o"
+fi
+
+if [ ${HAVE_STRLCAT} -eq 0 ]; then
+	echo "extern	size_t	 strlcat(char*, const char*, size_t);"
+	COMPAT="${COMPAT} compat/strlcat.o"
+fi
+if [ ${HAVE_STRLCPY} -eq 0 ]; then
+	echo "extern	size_t	 strlcpy(char*, const char*, size_t);"
+	COMPAT="${COMPAT} compat/strlcpy.o"
+fi
+if [ ${HAVE_VASPRINTF} -eq 0 ]; then
+	echo "extern	int	 vasprintf(char**, const char*, va_list);"
+	COMPAT="${COMPAT} compat/vasprintf.o"
+fi
+echo "file config.h: written" 1>&2
+echo "file config.h: written" 1>&3
+
+# --------
+# tests for Makefile.local
+
+exec > Makefile.local
+
+[ -z "${BINDIR}"          ] && BINDIR="${PREFIX}/bin"
+[ -z "${MANDIR}"          ] && MANDIR="${PREFIX}/man"
+
+[ -z "${INSTALL_PROGRAM}" ] && INSTALL_PROGRAM="${INSTALL} -m 0555"
+[ -z "${INSTALL_LIB}"     ] && INSTALL_LIB="${INSTALL} -m 0444"
+[ -z "${INSTALL_MAN}"     ] && INSTALL_MAN="${INSTALL} -m 0444"
+[ -z "${INSTALL_DATA}"    ] && INSTALL_DATA="${INSTALL} -m 0444"
+
+cat << __HEREDOC__
+CC		= ${CC}
+CFLAGS		= ${CFLAGS}
+LDFLAGS		= ${LDFLAGS}
+YACC		= ${YACC}
+LEX		= ${LEX}
+COMPAT		= ${COMPAT}
+STATIC		= ${STATIC}
+PREFIX		= ${PREFIX}
+BINDIR		= ${BINDIR}
+INCLUDEDIR	= ${INCLUDEDIR}
+INSTALL		= ${INSTALL}
+INSTALL_PROGRAM	= ${INSTALL_PROGRAM}
+INSTALL_LIB	= ${INSTALL_LIB}
+INSTALL_MAN	= ${INSTALL_MAN}
+INSTALL_DATA	= ${INSTALL_DATA}
+__HEREDOC__
+
+echo "file Makefile.local: written" 1>&2
+echo "file Makefile.local: written" 1>&3
+
+exit 0

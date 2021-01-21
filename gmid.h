@@ -28,6 +28,8 @@
 #include <tls.h>
 #include <unistd.h>
 
+#include "config.h"
+
 #ifndef INFTIM
 # define INFTIM -1
 #endif
