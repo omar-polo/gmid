@@ -33,10 +33,20 @@ int
 check_path(struct client *c, const char *path, int *fd)
 {
 	struct stat sb;
+	const char *p;
 
 	assert(path != NULL);
-	if ((*fd = openat(c->host->dirfd, *path ? path : ".",
-	    O_RDONLY | O_NOFOLLOW)) == -1) {
+
+	if (*path == '\0')
+		p = ".";
+	else if (*path == '/')
+		/* in send_dir we add an initial / (to be
+		 * redirect-friendly), but here we want to skip it */
+		p = path+1;
+	else
+		p = path;
+
+	if ((*fd = openat(c->host->dirfd, p, O_RDONLY | O_NOFOLLOW)) == -1) {
 		return FILE_MISSING;
 	}
 
@@ -395,10 +405,12 @@ send_dir(struct pollfd *fds, struct client *c)
 		return;
 	}
 
+	strlcpy(c->sbuf, "/", sizeof(c->sbuf));
+
 	len = strlen(c->iri.path);
 	if (len > 0 && c->iri.path[len-1] != '/') {
 		/* redirect to url with the trailing / */
-		strlcpy(c->sbuf, c->iri.path, sizeof(c->sbuf));
+		strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
 		if (!start_reply(fds, c, TEMP_REDIRECT, c->sbuf))
 			return;
@@ -406,9 +418,11 @@ send_dir(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-        strlcpy(c->sbuf, c->iri.path, sizeof(c->sbuf));
-	if (len != 0)
+	strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
+
+	if (!ends_with(c->sbuf, "/"))
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
+
 	len = strlcat(c->sbuf, "index.gmi", sizeof(c->sbuf));
 
 	if (len >= sizeof(c->sbuf)) {
