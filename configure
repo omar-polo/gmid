@@ -99,7 +99,7 @@ for keyvals in "$@"; do
 		echo "$0: invalid key-value: $keyvals" 1>&2
 		exit 1
 	fi
-	vals=`echo $keyvals | cut -d '=' -f 2-`
+	val=`echo $keyvals | cut -d '=' -f 2-`
 	case "$key" in
 		BINDIR)  BINDIR="$val" ;;
 		CC)      CC="$val" ;;
