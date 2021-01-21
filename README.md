@@ -71,11 +71,11 @@ your distribution of choice or use docker instead.
 However, it's possible to link `gmid` to locally-installed libtls
 quite easily.  (It's how I test gmid on Fedora, for instance)
 
-Let's say you have compiled and installed libressl in `$LIBRESSL`,
+Let's say you have compiled and installed libretls in `$LIBRETLS`,
 then you can build `gmid` with
 
-    ./configure CFLAGS="-I$LIBRESSL/include" \
-                LDFLAGS="$LIBRESSL/lib/libtls.a -lssl -lcrypto"
+    ./configure CFLAGS="-I$LIBRETLS/include" \
+                LDFLAGS="$LIBRETLS/lib/libtls.a -lssl -lcrypto"
     make
 
 (Fedora requires also `-lpthread` for some reason)
