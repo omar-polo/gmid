@@ -56,15 +56,10 @@ BINDIR=
 INSTALL="install"
 
 # try to auto detect CFLAGS and LDFLAGS
-which pkg-config 2>/dev/null 1>&2 && {
-        if ! got=`pkg-config --cflags libtls`; then
-		CFLAGS="$got"
-	fi
-
-	if ! got=`pkg-config --libs libtls`; then
-		LDFLAGS="$got"
-	fi
-}
+if which pkg-config 2>/dev/null 1>&2 && pkg-config libtls; then
+	CFLAGS=`pkg-config --cflags libtls`
+	LDFLAGS=`pkg-config --libs  libtls`
+fi
 
 # auto detect lex/flex
 which ${LEX} 2>/dev/null 1>&2 || {
