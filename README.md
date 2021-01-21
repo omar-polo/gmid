@@ -41,7 +41,7 @@ The build is as simple as
     make
 
 If the configure scripts fails to pick up something, please open an
-isuse or notify me via email.
+issue or notify me via email.
 
 To install execute:
 
