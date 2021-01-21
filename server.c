@@ -180,11 +180,12 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	}
 
 	servname = tls_conn_servername(c->ctx);
-	if (servname == NULL)
-		goto hostnotfound;
 
 	for (h = hosts; h->domain != NULL; ++h) {
-		if (!strcmp(h->domain, servname) || !strcmp(h->domain, "*"))
+		if (!strcmp(h->domain, "*"))
+			break;
+
+		if (servname != NULL && !strcmp(h->domain, servname))
 			break;
 	}
 
@@ -195,13 +196,11 @@ handle_handshake(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-hostnotfound:
 	if (servname != NULL)
 		strncpy(c->req, servname, sizeof(c->req));
 	else
 		strncpy(c->req, "null", sizeof(c->req));
 
-	/* XXX: check the correct response */
 	if (!start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI"))
 		return;
 	goodbye(fds, c);
