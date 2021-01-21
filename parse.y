@@ -65,7 +65,7 @@ option		: TDAEMON TBOOL		{ conf.foreground = !$2; }
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
 				errx(1, "invalid protocols string \"%s\"", $2);
 		}
-		| TMIME TSTRING TSTRING	{ add_mime($2, $3); }
+		| TMIME TSTRING TSTRING	{ add_mime(&conf.mime, $2, $3); }
 		;
 
 vhosts		: /* empty */

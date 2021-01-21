@@ -304,7 +304,7 @@ listener_main()
 	struct tls *ctx = NULL;
 	struct tls_config *tlsconf;
 
-	load_default_mime();
+	load_default_mime(&conf.mime);
 
 	if ((tlsconf = tls_config_new()) == NULL)
 		fatal("tls_config_new");
@@ -364,7 +364,7 @@ main(int argc, char **argv)
 	conf.ipv6 = 0;
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
-	init_mime();
+	init_mime(&conf.mime);
 
 	while ((ch = getopt(argc, argv, "6C:c:d:fhK:np:x:")) != -1) {
 		switch (ch) {

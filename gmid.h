@@ -74,7 +74,7 @@ struct etm {			/* extension to mime */
 	const char	*ext;
 };
 
-struct mimes {
+struct mime {
 	struct etm	*t;
 	size_t		len;
 	size_t		cap;
@@ -85,7 +85,7 @@ struct conf {
 	int		port;
 	int		ipv6;
 	uint32_t	protos;
-	struct mimes	mimes;
+	struct mime	mime;
 };
 
 extern struct conf conf;
@@ -167,10 +167,9 @@ extern int yyparse(void);
 extern int yylex(void);
 
 /* mime.c */
-void		 init_mime(void);
-void		 add_mime(const char*, const char*);
-void		 load_default_mime(void);
-int		 load_mime_file(const char*);
+void		 init_mime(struct mime*);
+void		 add_mime(struct mime*, const char*, const char*);
+void		 load_default_mime(struct mime*);
 const char	*mime(struct vhost*, const char*);
 
 /* server.c */

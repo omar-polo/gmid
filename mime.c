@@ -21,36 +21,35 @@
 #include "gmid.h"
 
 void
-init_mime(void)
+init_mime(struct mime *mime)
 {
-	conf.mimes.len = 0;
-	conf.mimes.cap = 16;
+	mime->len = 0;
+	mime->cap = 16;
 
-	conf.mimes.t = calloc(conf.mimes.cap, sizeof(struct etm));
-	if (conf.mimes.t == NULL)
+	mime->t = calloc(mime->cap, sizeof(struct etm));
+	if (mime->t == NULL)
 		fatal("calloc: %s", strerror(errno));
 }
 
 /* register mime for the given extension */
 void
-add_mime(const char *mime, const char *ext)
+add_mime(struct mime *mime, const char *mt, const char *ext)
 {
-	if (conf.mimes.len == conf.mimes.cap) {
-		conf.mimes.cap *= 1.5;
-		conf.mimes.t = realloc(conf.mimes.t,
-		    conf.mimes.cap * sizeof(struct etm));
-		if (conf.mimes.t == NULL)
+	if (mime->len == mime->cap) {
+		mime->cap *= 1.5;
+		mime->t = realloc(mime->t, mime->cap * sizeof(struct etm));
+		if (mime->t == NULL)
 			fatal("realloc: %s", strerror(errno));
 	}
 
-	conf.mimes.t[conf.mimes.len].mime = mime;
-	conf.mimes.t[conf.mimes.len].ext  = ext;
-	conf.mimes.len++;
+	mime->t[mime->len].mime = mt;
+	mime->t[mime->len].ext  = ext;
+	mime->len++;
 }
 
 /* load a default set of common mime-extension associations */
 void
-load_default_mime()
+load_default_mime(struct mime *mime)
 {
 	struct etm *i, m[] = {
 		{"application/pdf",	"pdf"},
@@ -69,7 +68,7 @@ load_default_mime()
 	};
 
 	for (i = m; i->mime != NULL; ++i)
-		add_mime(i->mime, i->ext);
+		add_mime(mime, i->mime, i->ext);
 }
 
 static const char *
@@ -100,7 +99,7 @@ mime(struct vhost *host, const char *path)
 	if ((ext = path_ext(path)) == NULL)
 		return def;
 
-	for (t = conf.mimes.t; t->mime != NULL; ++t)
+	for (t = conf.mime.t; t->mime != NULL; ++t)
 		if (!strcmp(ext, t->ext))
 			return t->mime;
 
