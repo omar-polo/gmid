@@ -293,6 +293,10 @@ parse_path(struct parser *p)
 {
 	char c;
 
+	/* trim initial slashes */
+	while (*p->iri == '/')
+		p->iri++;
+
 	p->parsed->path = p->iri;
 	if (*p->iri == '\0') {
 		p->parsed->query = p->parsed->fragment = p->iri;

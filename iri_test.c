@@ -169,6 +169,14 @@ main(void)
 	    PASS,
             IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse path with lots of cleaning available");
+	TEST("gemini://omarpolo.com//foo",
+	    PASS,
+            IRI("gemini", "omarpolo.com", "", "foo", "", ""),
+	    "Trim initial slashes");
+	TEST("gemini://omarpolo.com/////foo",
+	    PASS,
+            IRI("gemini", "omarpolo.com", "", "foo", "", ""),
+	    "Trim initial slashes (pt. 2)");
 
 	/* query */
 	TEST("foo://example.com/foo/?gne",
