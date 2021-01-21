@@ -41,10 +41,13 @@ LEX=lex
 STATIC=
 
 HAVE_ERR=
+HAVE_EXPLICIT_BZERO=
 HAVE_GETPROGNAME=
 HAVE_LIBTLS=
+HAVE_RECALLOCARRAY=
 HAVE_STRLCAT=
 HAVE_STRLCPY=
+HAVE_STRTONUM=
 HAVE_VASPRINTF=
 
 NEED_GNU_SOURCE=0
@@ -223,9 +226,12 @@ fi
 # tests for config.h
 
 runtest err		ERR		|| true
+runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest libtls		LIBTLS		|| true
+runtest recallocarray	RECALLOCARRAY	|| true
 runtest strlcat		STRLCAT		|| true
 runtest strlcpy		STRLCPY		|| true
+runtest strtonum	STRTONUM	|| true
 runtest vasprintf	VASPRINTF	"" -D_GNU_SOURCE || true
 
 if [ ${HAVE_LIBTLS} -eq 0 ]; then
@@ -243,7 +249,6 @@ cat <<__HEREDOC__
 #ifdef __cplusplus
 #error "Do not use C++."
 #endif
-
 __HEREDOC__
 
 [ ${NEED_GNU_SOURCE} -eq 0 ] || echo "#define _GNU_SOURCE"
@@ -256,9 +261,12 @@ __HEREDOC__
 cat <<__HEREDOC__
 
 #define HAVE_ERR		${HAVE_ERR}
+#define HAVE_EXPLICIT_BZERO	${HAVE_EXPLICIT_BZERO}
 #define HAVE_GETPROGNAME	${HAVE_GETPROGNAME}
+#define HAVE_RECALLOCARRAY	${HAVE_RECALLOCARRAY}
 #define HAVE_STRLCAT		${HAVE_STRLCAT}
 #define HAVE_STRLCPY		${HAVE_STRLCPY}
+#define HAVE_STRTONUM		${HAVE_STRTONUM}
 #define HAVE_VASPRINTF		${HAVE_VASPRINTF}
 
 __HEREDOC__
@@ -270,7 +278,14 @@ if [ ${HAVE_ERR} -eq 0 ]; then
 	echo "extern	void	 warnx(const char*, ...);"
 	COMPAT="${COMPAT} compat/err.o"
 fi
-
+if [ ${HAVE_EXPLICIT_BZERO} -eq 0 ]; then
+	echo "extern	void	 explicit_bzero(void*, size_t);"
+	COMPAT="${COMPAT} compat/explicit_bzero.o"
+fi
+if [ ${HAVE_RECALLOCARRAY} -eq 0 ]; then
+	echo "extern	void*	 recallocarray(void*, size_t, size_t, size_t);"
+	COMPAT="${COMPAT} compat/recallocarray.o"
+fi
 if [ ${HAVE_STRLCAT} -eq 0 ]; then
 	echo "extern	size_t	 strlcat(char*, const char*, size_t);"
 	COMPAT="${COMPAT} compat/strlcat.o"
@@ -278,6 +293,10 @@ fi
 if [ ${HAVE_STRLCPY} -eq 0 ]; then
 	echo "extern	size_t	 strlcpy(char*, const char*, size_t);"
 	COMPAT="${COMPAT} compat/strlcpy.o"
+fi
+if [ ${HAVE_STRTONUM} -eq 0 ]; then
+	echo "extern	long long strtonum(const char*, long long, long long, const char**)"
+	COMPAT="${COMPAT} compat/strtonum.o"
 fi
 if [ ${HAVE_VASPRINTF} -eq 0 ]; then
 	echo "extern	int	 vasprintf(char**, const char*, va_list);"
