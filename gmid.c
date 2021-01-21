@@ -199,16 +199,13 @@ yyerror(const char *msg)
 int
 parse_portno(const char *p)
 {
-	char *ep;
-	long lval;
+	char	*errstr;
+	int	 n;
 
-	errno = 0;
-	lval = strtol(p, &ep, 10);
-	if (p[0] == '\0' || *ep != '\0')
-		fatal("not a number: %s", p);
-	if (lval < 0 || lval > UINT16_MAX)
-		fatal("port number out of range for domain %s: %ld", p, lval);
-	return lval;
+	n = strtonum(p, 0, UINT16_MAX, &errstr);
+	if (errstr != NULL)
+		errx(1, "port number is %s: %s", errstr, p);
+	return n;
 }
 
 void
