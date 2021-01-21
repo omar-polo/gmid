@@ -40,12 +40,6 @@ The build is as simple as
 
     make
 
-or
-
-    make static
-
-to enjoy your ~2.3M statically-linked gmid.
-
 To install execute:
 
     make install
