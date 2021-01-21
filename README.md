@@ -40,6 +40,9 @@ The build is as simple as
 
     make
 
+If the configure scripts fails to pick up something, please open an
+isuse or notify me via email.
+
 To install execute:
 
     make install
@@ -59,6 +62,23 @@ and then run it with something along the lines of
         gmid -f -d /var/gemini -K ... -C ...
 
 ellipses used for brevity.
+
+#### Local libretls
+
+This is **NOT** recommended, please try to port LibreSSL/LibreTLS to
+your distribution of choice or use docker instead.
+
+However, it's possible to link `gmid` to locally-installed libtls
+quite easily.  (It's how I test gmid on Fedora, for instance)
+
+Let's say you have compiled and installed libressl in `$LIBRESSL`,
+then you can build `gmid` with
+
+    ./configure CFLAGS="-I$LIBRESSL/include" \
+                LDFLAGS="$LIBRESSL/lib/libtls.a -lssl -lcrypto"
+    make
+
+(Fedora requires also `-lpthread` for some reason)
 
 
 ## Architecture/Security considerations
