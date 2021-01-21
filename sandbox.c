@@ -27,7 +27,6 @@ sandbox()
 #include <fcntl.h>
 #include <stddef.h>
 #include <stdio.h>
-#include <seccomp.h>
 #include <string.h>
 
 /* thanks chromium' src/seccomp.c */
