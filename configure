@@ -298,7 +298,7 @@ if [ ${HAVE_STRLCPY} -eq 0 ]; then
 	COMPAT="${COMPAT} compat/strlcpy.o"
 fi
 if [ ${HAVE_STRTONUM} -eq 0 ]; then
-	echo "extern	long long strtonum(const char*, long long, long long, const char**)"
+	echo "extern	long long strtonum(const char*, long long, long long, const char**);"
 	COMPAT="${COMPAT} compat/strtonum.o"
 fi
 if [ ${HAVE_VASPRINTF} -eq 0 ]; then
