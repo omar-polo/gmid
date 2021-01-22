@@ -8,7 +8,8 @@ if which sha256 2>/dev/null >/dev/null; then
 fi
 
 if which sha256sum 2>/dev/null >/dev/null; then
-	exec sha256sum "$1" | awk '{print $1}' > "$2"
+	sha256sum "$1" | awk '{print $1}' > "$2"
+	exit $?
 fi
 
 echo "No sha binary found"
