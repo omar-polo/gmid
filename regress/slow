@@ -1,0 +1,6 @@
+#!/bin/sh
+
+printf "20 "
+sleep 1
+printf "text/gemini\r\n"
+echo "# hello world"

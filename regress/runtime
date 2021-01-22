@@ -1,0 +1,163 @@
+#!/bin/sh
+
+set -e
+
+# usage: config <global config> <stuff for localhost>
+# generates a configuration file reg.conf
+config() {
+	cat <<EOF > reg.conf
+daemon off
+ipv6 off
+port 10965
+$1
+server "localhost" {
+	cert "cert.pem"
+	key  "key.pem"
+	root "testdata"
+	$2
+}
+EOF
+}
+
+checkconf() {
+	./../gmid -n -c reg.conf
+}
+
+# usage: get <path>
+# return the body of the request on stdout
+get() {
+	(./gg.py "$1" 10965 | sed 1d) || true
+}
+
+# usage: head <path>
+# return the meta response line on stdout
+head() {
+	(./gg.py "$1" 10965 | sed 1q) || true
+}
+
+run() {
+	# filter out logs for GET requests
+	(./../gmid -c reg.conf 2>&1 | grep -v GET) >&2 &
+	pid=$!
+}
+
+# usage: check [exit-message]
+# check if gmid is still running
+check() {
+	if ! ps $pid >/dev/null; then
+		echo ${1:-"gmid crashed?"}
+		exit 1
+	fi
+}
+
+# quit gmid
+quit() {
+	pkill gmid || true
+	wait || true
+}
+
+# usage: eq a b errmsg
+# if a and b aren't equal strings, exit with errmsg
+eq() {
+	if ! [ "$1" = "$2" ]; then
+		echo "$3: \"$1\" not equal \"$2\""
+		exit 1
+	fi
+}
+
+onexit() {
+	rm -f bigfile bigfile.sha
+	quit
+}
+
+# tests
+
+trap 'onexit' INT TERM EXIT
+
+endl=`printf "\r\n"`
+lf=`echo`
+
+config "" ""
+checkconf
+run
+
+eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
+eq "$(get /)"		"# hello world$ln"	"Unexpected body for /"
+echo OK GET /
+
+eq "$(head /foo)"	"51 not found"		"Unexpected head /foo"
+eq "$(get /foo)"	""			"Unexpected body /foo"
+echo OK GET /foo
+
+# should redirect if asked for a directory but without the trailing /
+eq "$(head /dir)"	"30 /dir/"		"Unexpected redirect for /dir"
+eq "$(get  /dir)"	""			"Unexpected body for redirect"
+echo OK GET /dir
+
+# 51 for a directory without index.gmi
+eq "$(head /dir/)"	"51 not found"		"Unexpected head for /"
+eq "$(get  /dir/)"	""			"Unexpected body for error"
+echo OK GET /dir/
+
+eq "$(head /dir/foo.gmi)" "20 text/gemini"	"Unexpected head for /dir/foo.gmi"
+eq "$(get  /dir/foo.gmi)" "# hello world$ln"	"Unexpected body for /dir/foo.gmi"
+echo OK GET /dir/foo.gmi
+
+# try a big file
+eq "$(head /bigfile)"	"20 application/octet-stream" "Unexpected head for /bigfile"
+get /bigfile > bigfile
+./sha bigfile bigfile.sha
+eq "$(cat bigfile.sha)"	"$(cat testdata/bigfile.sha)" "Unexpected sha for /bigfile"
+echo OK GET /bigfile
+
+# shouldn't be executing cgi scripts
+eq "$(head /hello)"	"20 application/octet-stream" "Unexpected head for /hello"
+echo OK GET /hello
+
+check "should be running"
+quit
+
+# try with custom mime
+config 'mime "text/x-funny-text" "gmi"' 'default type "application/x-trash"'
+checkconf
+run
+
+eq "$(head /)"		"20 text/x-funny-text"		"Unexpected head for /"
+echo OK GET / with custom mime
+
+eq "$(head /hello)"	"20 application/x-trash"	"Unexpected head for /hello"
+echo OK GET /hello with custom mime
+
+check "should be running"
+quit
+
+# try with custom lang
+config '' 'lang "it"'
+checkconf
+run
+
+eq "$(head /)"		"20 text/gemini; lang=it"	"Unexpected head for /"
+echo OK GET / with custom lang
+
+check "should be running"
+quit
+
+# finally try with CGI scripts
+config '' 'cgi ""'
+checkconf
+run
+
+eq "$(head /hello)"	"20 text/gemini"		"Unexpected head for /hello"
+eq "$(get  /hello)"	"# hello world$ln"		"Unexpected body for /hello"
+echo OK GET /hello with cgi
+
+eq "$(head /slow)"	"20 text/gemini"		"Unexpected head for /slow"
+eq "$(get  /slow)"	"# hello world$ln"		"Unexpected body for /slow"
+echo OK GET /slow with cgi
+
+eq "$(head /err)"	""		"Unexpected head for /err"
+eq "$(get  /err)"	""		"Unexpected body for /err"
+echo OK GET /err with cgi
+
+check "should be running"
+quit

@@ -13,3 +13,6 @@ config.h.old
 config.log
 config.log.old
 configure.local
+regress/testdata
+regress/*.pem
+regress/reg.conf

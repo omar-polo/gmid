@@ -1,0 +1,29 @@
+#!/bin/sh
+
+set -e
+
+dotimes() {
+	if which jot 2>/dev/null >/dev/null; then
+		jot "$@"
+	elif which seq 2>/dev/null >/dev/null; then
+		seq "$@"
+	else
+		echo "no jot/seq binary found"
+		exit 1
+	fi
+}
+
+file="$1"
+
+if [ -z "$file" ]; then
+	echo "USAGE: $(dirname "$0") <filename>"
+	exit 1
+fi
+
+printf "" > "$file"
+
+for i in `dotimes 1024`; do
+	for j in `dotimes 1024`; do
+		echo "a" >> "$file"
+	done
+done

@@ -1,4 +1,4 @@
-.PHONY: all static clean test install
+.PHONY: all static clean regress install
 
 all: Makefile.local gmid TAGS
 
@@ -29,11 +29,14 @@ TAGS: ${SRCS}
 	-etags ${SRCS} || true
 
 clean:
-	rm -f *.o lex.yy.c y.tab.c y.tab.h y.output gmid iri_test
-	rm -f Makefile.local
+	rm -f *.o lex.yy.c y.tab.c y.tab.h y.output gmid
+	make -C regress clean
 
 iri_test: iri_test.o iri.o utf8.o
 	${CC} iri_test.o iri.o utf8.o -o iri_test ${LDFLAGS}
+
+regress: gmid
+	make -C regress all
 
 test: gmid iri_test
 	@echo "IRI tests"
