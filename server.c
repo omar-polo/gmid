@@ -77,14 +77,14 @@ open_file(struct pollfd *fds, struct client *c)
 	case FILE_EXISTS:
 		if ((c->len = filesize(c->fd)) == -1) {
 			LOGE(c, "failed to get file size for %s", c->iri.path);
-			goodbye(fds, c);
+			close_conn(fds, c);
 			return 0;
 		}
 
 		if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
 			    c->fd, 0)) == MAP_FAILED) {
 			LOGW(c, "mmap: %s: %s", c->iri.path, strerror(errno));
-			goodbye(fds, c);
+			close_conn(fds, c);
 			return 0;
 		}
 		c->i = c->buf;
@@ -105,7 +105,7 @@ open_file(struct pollfd *fds, struct client *c)
 
 		if (!start_reply(fds, c, NOT_FOUND, "not found"))
 			return 0;
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return 0;
 
 	default:
@@ -154,7 +154,7 @@ check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 err:
 	if (!start_reply(fds, c, NOT_FOUND, "not found"))
 		return 0;
-	goodbye(fds, c);
+	close_conn(fds, c);
 	return 0;
 }
 
@@ -214,7 +214,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 
 	if (!start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI"))
 		return;
-	goodbye(fds, c);
+	close_conn(fds, c);
 }
 
 void
@@ -228,7 +228,7 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	switch (tls_read(c->ctx, c->req, sizeof(c->req)-1)) {
 	case -1:
 		LOGE(c, "tls_read: %s", tls_error(c->ctx));
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return;
 
 	case TLS_WANT_POLLIN:
@@ -243,7 +243,7 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	if (!trim_req_iri(c->req) || !parse_iri(c->req, &c->iri, &parse_err)) {
 		if (!start_reply(fds, c, BAD_REQUEST, parse_err))
 			return;
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return;
 	}
 
@@ -251,7 +251,7 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	if (strcmp(c->iri.schema, "gemini") || c->iri.port_no != conf.port) {
 		if (!start_reply(fds, c, PROXY_REFUSED, "won't proxy request"))
 			return;
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return;
 	}
 
@@ -330,7 +330,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 	if ((c->fd = recv_fd(exfd)) == -1) {
 		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
 			return 0;
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return 0;
 	}
 	c->child = 1;
@@ -359,7 +359,7 @@ send_file(struct pollfd *fds, struct client *c)
 		switch (ret = tls_write(c->ctx, c->i, len)) {
 		case -1:
 			LOGE(c, "tls_write: %s", tls_error(c->ctx));
-			goodbye(fds, c);
+			close_conn(fds, c);
 			return;
 
 		case TLS_WANT_POLLIN:
@@ -377,7 +377,7 @@ send_file(struct pollfd *fds, struct client *c)
 		}
 	}
 
-	goodbye(fds, c);
+	close_conn(fds, c);
 }
 
 void
@@ -401,7 +401,7 @@ send_dir(struct pollfd *fds, struct client *c)
 	if (c->iri.path == c->sbuf) {
 		if (!start_reply(fds, c, TEMP_REDIRECT, c->sbuf))
 			return;
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return;
 	}
 
@@ -414,7 +414,7 @@ send_dir(struct pollfd *fds, struct client *c)
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
 		if (!start_reply(fds, c, TEMP_REDIRECT, c->sbuf))
 			return;
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return;
 	}
 
@@ -428,7 +428,7 @@ send_dir(struct pollfd *fds, struct client *c)
 	if (len >= sizeof(c->sbuf)) {
 		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
 			return;
-		goodbye(fds, c);
+		close_conn(fds, c);
 		return;
 	}
 
@@ -519,11 +519,11 @@ handle_cgi(struct pollfd *fds, struct client *c)
 	}
 
 end:
-	goodbye(fds, c);
+	close_conn(fds, c);
 }
 
 void
-goodbye(struct pollfd *pfd, struct client *c)
+close_conn(struct pollfd *pfd, struct client *c)
 {
 	c->state = S_CLOSING;
 
@@ -609,7 +609,7 @@ handle(struct pollfd *fds, struct client *client)
 
 		if (client->code != SUCCESS) {
 			/* we don't need a body */
-			goodbye(fds, client);
+			close_conn(fds, client);
 			return;
 		}
 
@@ -625,7 +625,7 @@ handle(struct pollfd *fds, struct client *client)
 		break;
 
 	case S_CLOSING:
-		goodbye(fds, client);
+		close_conn(fds, client);
 		break;
 
 	default:
@@ -674,7 +674,7 @@ loop(struct tls *ctx, int sock4, int sock6)
 				/* fds[i] may be the fd of the stdin
 				 * of a cgi script that has exited. */
 				if (!clients[i].waiting_on_child) {
-					goodbye(&fds[i], &clients[i]);
+					close_conn(&fds[i], &clients[i]);
 					continue;
 				}
 			}
