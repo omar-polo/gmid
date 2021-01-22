@@ -63,7 +63,7 @@ and then run it with something along the lines of
 
 ellipses used for brevity.
 
-#### Local libretls
+### Local libretls
 
 This is **NOT** recommended, please try to port LibreSSL/LibreTLS to
 your distribution of choice or use docker instead.
@@ -79,6 +79,16 @@ then you can build `gmid` with
     make
 
 (Fedora requires also `-lpthread` for some reason)
+
+
+### Testing
+
+The regression suite requires python3 at the moment.  Execute
+
+    make regress
+
+to start the suite.  Keep in mind that the suit will create files
+inside the `regress` directory and bind the 10965 port.
 
 
 ## Architecture/Security considerations
