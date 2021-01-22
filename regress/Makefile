@@ -8,6 +8,9 @@ all: iri_test runtime
 iri_test: iri_test.o ../iri.o ../utf8.o
 	${CC} iri_test.o ../iri.o ../utf8.o -o iri_test ${LDFLAGS}
 
+fill-file: fill-file.o
+	${CC} fill-file.o -o fill-file
+
 key.pem: cert.pem
 
 # XXX: key size is NOT GOOD.  This is only for testing.  Smaller keys
@@ -24,9 +27,9 @@ clean:
 	rm -f *.o iri_test cert.pem key.pem
 	rm -rf testdata
 
-testdata:
+testdata: fill-file
 	mkdir testdata
-	./genbigfile testdata/bigfile
+	./fill-file testdata/bigfile
 	./sha testdata/bigfile testdata/bigfile.sha
 	printf "# hello world\n" > testdata/index.gmi
 	./sha testdata/index.gmi testdata/index.gmi.sha

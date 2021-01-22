@@ -16,3 +16,6 @@ configure.local
 regress/testdata
 regress/*.pem
 regress/reg.conf
+regress/fill-file
+regress/iri_test
+regress/*.o
