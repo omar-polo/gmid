@@ -102,10 +102,7 @@ open_file(struct pollfd *fds, struct client *c)
 	case FILE_MISSING:
 		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi))
 			return check_for_cgi(c->iri.path, c->iri.query, fds, c);
-
-		if (!start_reply(fds, c, NOT_FOUND, "not found"))
-			return 0;
-		close_conn(fds, c);
+		goodbye(fds, c, NOT_FOUND, "not found");
 		return 0;
 
 	default:
@@ -152,9 +149,7 @@ check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 	}
 
 err:
-	if (!start_reply(fds, c, NOT_FOUND, "not found"))
-		return 0;
-	close_conn(fds, c);
+	goodbye(fds, c, NOT_FOUND, "not found");
 	return 0;
 }
 
@@ -212,9 +207,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	else
 		strncpy(c->req, "null", sizeof(c->req));
 
-	if (!start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI"))
-		return;
-	close_conn(fds, c);
+	goodbye(fds, c, BAD_REQUEST, "Wrong host or missing SNI");
 }
 
 void
@@ -241,17 +234,13 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	}
 
 	if (!trim_req_iri(c->req) || !parse_iri(c->req, &c->iri, &parse_err)) {
-		if (!start_reply(fds, c, BAD_REQUEST, parse_err))
-			return;
-		close_conn(fds, c);
+		goodbye(fds, c, BAD_REQUEST, parse_err);
 		return;
 	}
 
 	/* XXX: we should check that the SNI matches the requested host */
 	if (strcmp(c->iri.schema, "gemini") || c->iri.port_no != conf.port) {
-		if (!start_reply(fds, c, PROXY_REFUSED, "won't proxy request"))
-			return;
-		close_conn(fds, c);
+		goodbye(fds, c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}
 
@@ -328,9 +317,7 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 
 	close(c->fd);
 	if ((c->fd = recv_fd(exfd)) == -1) {
-		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
-			return 0;
-		close_conn(fds, c);
+		goodbye(fds, c, TEMP_FAILURE, "internal server error");
 		return 0;
 	}
 	c->child = 1;
@@ -399,9 +386,7 @@ send_dir(struct pollfd *fds, struct client *c)
 	 * to foo/index.gmi
 	 */
 	if (c->iri.path == c->sbuf) {
-		if (!start_reply(fds, c, TEMP_REDIRECT, c->sbuf))
-			return;
-		close_conn(fds, c);
+		goodbye(fds, c, TEMP_REDIRECT, c->sbuf);
 		return;
 	}
 
@@ -412,9 +397,7 @@ send_dir(struct pollfd *fds, struct client *c)
 		/* redirect to url with the trailing / */
 		strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
-		if (!start_reply(fds, c, TEMP_REDIRECT, c->sbuf))
-			return;
-		close_conn(fds, c);
+		goodbye(fds, c, TEMP_REDIRECT, c->sbuf);
 		return;
 	}
 
@@ -426,9 +409,7 @@ send_dir(struct pollfd *fds, struct client *c)
 	len = strlcat(c->sbuf, "index.gmi", sizeof(c->sbuf));
 
 	if (len >= sizeof(c->sbuf)) {
-		if (!start_reply(fds, c, TEMP_FAILURE, "internal server error"))
-			return;
-		close_conn(fds, c);
+		goodbye(fds, c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
@@ -549,6 +530,14 @@ close_conn(struct pollfd *pfd, struct client *c)
 
 	close(pfd->fd);
 	pfd->fd = -1;
+}
+
+void
+goodbye(struct pollfd *fds, struct client *c, int code, const char *meta)
+{
+	if (!start_reply(fds, c, code, meta))
+		return;
+	close_conn(fds, c);
 }
 
 void

@@ -188,6 +188,7 @@ void		 cgi_poll_on_child(struct pollfd*, struct client*);
 void		 cgi_poll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
 void		 close_conn(struct pollfd*, struct client*);
+void		 goodbye(struct pollfd*, struct client*, int, const char*);
 void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
 void		 handle(struct pollfd*, struct client*);
 void		 loop(struct tls*, int, int);
