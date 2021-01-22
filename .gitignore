@@ -1,5 +1,4 @@
-cert.pem
-key.pem
+*.pem
 TAGS
 gmid
 iri_test
