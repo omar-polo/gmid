@@ -5,6 +5,8 @@
 
 #include <string.h>
 
+#include "../config.h"
+
 void
 explicit_bzero(void *buf, size_t len)
 {

@@ -18,9 +18,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-/* cheat: if we don't have getprogname in libc, we will link against
- * compat/getprogname.c anyway. */
-const char *getprogname(void);
+#include "../config.h"
 
 static void vwarn_impl(const char*, va_list);
 static void vwarnx_impl(const char*, va_list);

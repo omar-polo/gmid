@@ -272,6 +272,14 @@ cat <<__HEREDOC__
 
 __HEREDOC__
 
+[ ${HAVE_VASPRINTF} -eq 0 ] && echo "#include <stdarg.h>"
+
+[ ${HAVE_EXPLICIT_BZERO} -eq 0 -o \
+  ${HAVE_RECALLOCARRAY} -eq 0 -o \
+  ${HAVE_STRLCAT} -eq 0 -o \
+  ${HAVE_STRLCPY} -eq 0 -o \
+  ${HAVE_STRTONUM} -eq 0 ] && echo "#include <stddef.h>"
+
 if [ ${HAVE_ERR} -eq 0 ]; then
 	echo "extern	void	 err(int, const char*, ...);"
 	echo "extern	void	 errx(int, const char*, ...);"

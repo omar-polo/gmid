@@ -20,6 +20,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "../config.h"
+
 /*
  * This is sqrt(SIZE_MAX+1), as s1*s2 <= SIZE_MAX
  * if both s1 < MUL_NO_OVERFLOW and s2 < MUL_NO_OVERFLOW
@@ -33,10 +35,6 @@
  * an arbitrary number.
  */
 #define getpagesize()	(1UL << 12)
-
-/* cheat: provide a prototype for explicit_bzero: if libc doesn't
- * provide it, we will link to compat/explicit_bzero.c anyway. */
-void explicit_bzero(void*, size_t);
 
 void *
 recallocarray(void *ptr, size_t oldnmemb, size_t newnmemb, size_t size)
