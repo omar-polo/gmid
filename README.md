@@ -87,7 +87,7 @@ The regression suite requires python3 at the moment.  Execute
 
     make regress
 
-to start the suite.  Keep in mind that the suit will create files
+to start the suite.  Keep in mind that the suite will create files
 inside the `regress` directory and bind the 10965 port.
 
 
