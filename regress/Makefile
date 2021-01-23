@@ -17,7 +17,7 @@ key.pem: cert.pem
 # are quicker to generate.  DON'T DO THIS AT HOME.
 cert.pem:
 	printf ".\n.\n.\n.\n.\nlocalhost\n.\n" |	\
-		openssl req -x509 -newkey rsa:1024	\
+		openssl req -x509 -newkey rsa:2048	\
 			-keyout key.pem			\
 			-out cert.pem			\
 			-days 365 -nodes
