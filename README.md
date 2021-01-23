@@ -75,11 +75,8 @@ Let's say you have compiled and installed libretls in `$LIBRETLS`,
 then you can build `gmid` with
 
     ./configure CFLAGS="-I$LIBRETLS/include" \
-                LDFLAGS="$LIBRETLS/lib/libtls.a -lssl -lcrypto"
+                LDFLAGS="$LIBRETLS/lib/libtls.a -lssl -lcrypto -lpthread"
     make
-
-(Fedora requires also `-lpthread` for some reason)
-
 
 ### Testing
 
