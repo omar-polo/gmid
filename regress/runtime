@@ -168,7 +168,7 @@ eq "$(head /err)"	""		"Unexpected head for /err"
 eq "$(get  /err)"	""		"Unexpected body for /err"
 echo OK GET /err with cgi
 
-eq "$(raw /invalid | wc -c | xargs)" 2049		"Unexpected body for /invalid"
+eq "$(raw /invalid | wc -c | xargs)" 2048		"Unexpected body for /invalid"
 echo OK GET /invalid with cgi
 
 check "should be running"
