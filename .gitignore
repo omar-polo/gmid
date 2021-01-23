@@ -1,7 +1,7 @@
 *.pem
 TAGS
 gmid
-iri_test
+gg
 *.o
 docs
 lex.yy.c

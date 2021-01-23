@@ -1,0 +1,156 @@
+/*
+ * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#include <string.h>
+
+#include "gmid.h"
+
+int
+main(int argc, char **argv)
+{
+	struct iri iri;
+	struct tls_config *conf;
+	struct tls *ctx;
+	char iribuf[GEMINI_URL_LEN], req[GEMINI_URL_LEN], buf[1024];
+	const char *parse_err = "unknown error", *port = "1965";
+	char *t;
+	int ch, flag2, flag3, bflag, cflag, hflag, Nflag, Vflag;
+	ssize_t len;
+
+	flag2 = flag3 = bflag = cflag = hflag = Nflag = Vflag = 0;
+	while ((ch = getopt(argc, argv, "23cbhNV")) != -1) {
+		switch (ch) {
+		case '2':
+			flag2 = 1;
+			break;
+		case '3':
+			flag3 = 1;
+			break;
+		case 'b':
+			bflag = 1;
+			break;
+		case 'c':
+			cflag = 1;
+			break;
+		case 'h':
+			hflag = 1;
+			break;
+		case 'N':
+			Nflag = 1;
+			break;
+		case 'V':
+			Vflag = 1;
+			break;
+		default:
+			fprintf(stderr, "USAGE: %s [-23cbhNV]", *argv);
+			return 1;
+		}
+	}
+	argc -= optind;
+	argv += optind;
+
+	if ((bflag + cflag + hflag + Vflag) > 1)
+		errx(1, "only one of bchr flags can be used.");
+
+	if (flag2 + flag3 > 1)
+		errx(1, "only -2 or -3 can be specified at the same time.");
+
+	if (argc != 1)
+		errx(1, "missing IRI");
+
+	if (strlcpy(iribuf, argv[0], sizeof(iribuf)) >= sizeof(iribuf))
+		errx(1, "request too long: %s", argv[0]);
+	if (strlcpy(req, argv[0], sizeof(req)) >= sizeof(iribuf))
+		errx(1, "request too long: %s", argv[0]);
+	if (strlcat(req, "\r\n", sizeof(req)) >= sizeof(req))
+		errx(1, "request too long: %s", argv[0]);
+
+	if (!parse_iri(iribuf, &iri, &parse_err))
+		errx(1, "invalid IRI: %s", parse_err);
+
+	if (Vflag)
+		errx(0, "IRI: OK");
+
+	if ((conf = tls_config_new()) == NULL)
+		errx(1, "tls_config_new");
+
+	tls_config_insecure_noverifycert(conf);
+	if (Nflag)
+		tls_config_insecure_noverifyname(conf);
+
+	if (flag2 && tls_config_set_protocols(conf, TLS_PROTOCOL_TLSv1_2) == -1)
+		errx(1, "cannot set TLSv1.2");
+	if (flag3 && tls_config_set_protocols(conf, TLS_PROTOCOL_TLSv1_3) == -1)
+		errx(1, "cannot set TLSv1.3");
+
+	if ((ctx = tls_client()) == NULL)
+		errx(1, "tls_client creation failed");
+
+	if (tls_configure(ctx, conf) == -1)
+		errx(1, "tls_configure: %s", tls_error(ctx));
+
+	if (*iri.port == '\0')
+		iri.port = (char*)port;
+	if (tls_connect(ctx, iri.host, iri.port) == -1)
+		errx(1, "tls_connect: %s", tls_error(ctx));
+
+	tls_write(ctx, req, strlen(req));
+	/* if (tls_write(ctx, req, strlen(req)) != -1) */
+	/*	errx(1, "tls_write: %s", tls_error(ctx)); */
+
+	for (;;) {
+		len = tls_read(ctx, buf, sizeof(buf));
+		if (len == 0 || len == -1)
+			break;
+
+		if (bflag) {
+			bflag = 0;
+			if ((t = strchr(buf, '\r')) != NULL)
+				t += 2;
+			else if ((t = strchr(buf, '\n')) != NULL)
+				t += 1;
+			else
+				continue;
+			len -= t - buf;
+			write(1, t, len);
+			continue;
+		}
+
+		if (cflag) {
+			write(1, buf, 2);
+			write(1, "\n", 1);
+			break;
+		}
+
+		if (hflag) {
+			t = strchr(buf, '\r');
+			if (t == NULL)
+				t = strchr(buf, '\n');
+			if (t == NULL)
+				t = &buf[len];
+                        write(1, buf, t - buf);
+			write(1, "\n", 1);
+			break;
+		}
+
+		write(1, buf, len);
+	}
+
+	tls_close(ctx);
+	tls_free(ctx);
+
+	return 0;
+}

@@ -19,6 +19,9 @@ OBJS = ${SRCS:.c=.o} lex.yy.o y.tab.o ${COMPAT}
 gmid: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS}
 
+gg: gg.o iri.o utf8.o
+	${CC} gg.o iri.o utf8.o -o $@ ${LDFLAGS}
+
 static: ${OBJS}
 	${CC} -static ${OBJS} \
 		${LIBDIR}/libcrypto.a ${LIBDIR}/libtls.a ${LIBDIR}/libssl.a \
