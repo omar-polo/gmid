@@ -112,9 +112,14 @@ main(int argc, char **argv)
 	/*	errx(1, "tls_write: %s", tls_error(ctx)); */
 
 	for (;;) {
-		len = tls_read(ctx, buf, sizeof(buf));
-		if (len == 0 || len == -1)
-			break;
+		switch (len = tls_read(ctx, buf, sizeof(buf))) {
+		case 0:
+		case -1:
+			goto end;
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		}
 
 		if (bflag) {
 			bflag = 0;
@@ -148,6 +153,7 @@ main(int argc, char **argv)
 
 		write(1, buf, len);
 	}
+end:
 
 	tls_close(ctx);
 	tls_free(ctx);
