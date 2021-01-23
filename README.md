@@ -80,7 +80,7 @@ then you can build `gmid` with
 
 ### Testing
 
-The regression suite requires python3 at the moment.  Execute
+Execute
 
     make regress
 

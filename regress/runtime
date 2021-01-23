@@ -26,19 +26,28 @@ checkconf() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	(./gg.py "$1" 10965 | sed 1d) || true
+	./../gg -b "gemini://localhost:10965/$1"
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	(./gg.py "$1" 10965 | sed 1q) || true
+	./../gg -h "gemini://localhost:10965/$1"
+}
+
+# usage: raw <path>
+# return both header and body
+raw() {
+	./../gg "gemini://localhost:10965/$1"
 }
 
 run() {
 	# filter out logs for GET requests
 	(./../gmid -c reg.conf 2>&1 | grep -v GET) >&2 &
 	pid=$!
+	# give gmid time to bind the port, otherwise we end up
+	# executing gg when gmid isn't ready yet.
+	sleep 1
 }
 
 # usage: check [exit-message]
@@ -159,8 +168,7 @@ eq "$(head /err)"	""		"Unexpected head for /err"
 eq "$(get  /err)"	""		"Unexpected body for /err"
 echo OK GET /err with cgi
 
-eq "$(head /invalid | wc -c | xargs)" 2049		"Unexpected body for /invalid"
-eq "$(get /invalid)"		""			"Unexpected body for /invalid"
+eq "$(raw /invalid | wc -c | xargs)" 2049		"Unexpected body for /invalid"
 echo OK GET /invalid with cgi
 
 check "should be running"

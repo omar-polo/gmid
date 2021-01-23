@@ -32,13 +32,13 @@ TAGS: ${SRCS}
 	-etags ${SRCS} || true
 
 clean:
-	rm -f *.o lex.yy.c y.tab.c y.tab.h y.output gmid
+	rm -f *.o lex.yy.c y.tab.c y.tab.h y.output gmid gg
 	make -C regress clean
 
 iri_test: iri_test.o iri.o utf8.o
 	${CC} iri_test.o iri.o utf8.o -o iri_test ${LDFLAGS}
 
-regress: gmid
+regress: gmid gg
 	make -C regress all
 
 test: gmid iri_test
