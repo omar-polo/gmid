@@ -24,7 +24,7 @@ main(int argc, char **argv)
 	struct iri iri;
 	struct tls_config *conf;
 	struct tls *ctx;
-	char iribuf[GEMINI_URL_LEN], req[GEMINI_URL_LEN], buf[1024];
+	char iribuf[GEMINI_URL_LEN], buf[GEMINI_URL_LEN];
 	const char *parse_err = "unknown error", *port = "1965";
 	char *t;
 	int ch, flag2, flag3, bflag, cflag, hflag, Nflag, Vflag;
@@ -73,9 +73,9 @@ main(int argc, char **argv)
 
 	if (strlcpy(iribuf, argv[0], sizeof(iribuf)) >= sizeof(iribuf))
 		errx(1, "request too long: %s", argv[0]);
-	if (strlcpy(req, argv[0], sizeof(req)) >= sizeof(iribuf))
+	if (strlcpy(buf, argv[0], sizeof(buf)) >= sizeof(iribuf))
 		errx(1, "request too long: %s", argv[0]);
-	if (strlcat(req, "\r\n", sizeof(req)) >= sizeof(req))
+	if (strlcat(buf, "\r\n", sizeof(buf)) >= sizeof(buf))
 		errx(1, "request too long: %s", argv[0]);
 
 	if (!parse_iri(iribuf, &iri, &parse_err))
@@ -107,8 +107,8 @@ main(int argc, char **argv)
 	if (tls_connect(ctx, iri.host, port) == -1)
 		errx(1, "tls_connect: %s", tls_error(ctx));
 
-	tls_write(ctx, req, strlen(req));
-	/* if (tls_write(ctx, req, strlen(req)) != -1) */
+	tls_write(ctx, buf, strlen(buf));
+	/* if (tls_write(ctx, buf, strlen(buf)) != -1) */
 	/*	errx(1, "tls_write: %s", tls_error(ctx)); */
 
 	for (;;) {
