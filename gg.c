@@ -102,9 +102,9 @@ main(int argc, char **argv)
 	if (tls_configure(ctx, conf) == -1)
 		errx(1, "tls_configure: %s", tls_error(ctx));
 
-	if (*iri.port == '\0')
-		iri.port = (char*)port;
-	if (tls_connect(ctx, iri.host, iri.port) == -1)
+	if (*iri.port != '\0')
+		port = iri.port;
+	if (tls_connect(ctx, iri.host, port) == -1)
 		errx(1, "tls_connect: %s", tls_error(ctx));
 
 	tls_write(ctx, req, strlen(req));
