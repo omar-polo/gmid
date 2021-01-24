@@ -112,7 +112,8 @@ enum {
 	S_HANDSHAKE,
 	S_OPEN,
 	S_INITIALIZING,
-	S_SENDING,
+	S_SENDING_FILE,
+	S_SENDING_CGI,
 	S_CLOSING,
 };
 
@@ -120,11 +121,10 @@ struct client {
 	struct tls	*ctx;
 	char		 req[GEMINI_URL_LEN];
 	struct iri	 iri;
-	int		 state;
+	int		 state, next;
 	int		 code;
 	const char	*meta;
 	int		 fd, waiting_on_child;
-	int		 child;
 	char		 sbuf[1024];	  /* static buffer */
 	void		*buf, *i;	  /* mmap buffer */
 	ssize_t		 len, off;	  /* mmap/static buffer  */
@@ -181,7 +181,7 @@ int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
 void		 mark_nonblock(int);
 void		 handle_handshake(struct pollfd*, struct client*);
 void		 handle_open_conn(struct pollfd*, struct client*);
-int		 start_reply(struct pollfd*, struct client*, int, const char*);
+void		 start_reply(struct pollfd*, struct client*, int, const char*);
 int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
 void		 send_file(struct pollfd*, struct client*);
 void		 send_dir(struct pollfd*, struct client*);
@@ -189,7 +189,6 @@ void		 cgi_poll_on_child(struct pollfd*, struct client*);
 void		 cgi_poll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
 void		 close_conn(struct pollfd*, struct client*);
-void		 goodbye(struct pollfd*, struct client*, int, const char*);
 void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
 void		 handle(struct pollfd*, struct client*);
 void		 loop(struct tls*, int, int);

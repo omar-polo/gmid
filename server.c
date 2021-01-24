@@ -88,9 +88,8 @@ open_file(struct pollfd *fds, struct client *c)
 			return 0;
 		}
 		c->i = c->buf;
-		if (!start_reply(fds, c, SUCCESS, mime(c->host, c->iri.path)))
-			return 0;
-		send_file(fds, c);
+		c->next = S_SENDING_FILE;
+		start_reply(fds, c, SUCCESS, mime(c->host, c->iri.path));
 		return 0;
 
 	case FILE_DIRECTORY:
@@ -102,7 +101,7 @@ open_file(struct pollfd *fds, struct client *c)
 	case FILE_MISSING:
 		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi))
 			return check_for_cgi(c->iri.path, c->iri.query, fds, c);
-		goodbye(fds, c, NOT_FOUND, "not found");
+		start_reply(fds, c, NOT_FOUND, "not found");
 		return 0;
 
 	default:
@@ -149,7 +148,7 @@ check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 	}
 
 err:
-	goodbye(fds, c, NOT_FOUND, "not found");
+	start_reply(fds, c, NOT_FOUND, "not found");
 	return 0;
 }
 
@@ -207,7 +206,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	else
 		strncpy(c->req, "null", sizeof(c->req));
 
-	goodbye(fds, c, BAD_REQUEST, "Wrong host or missing SNI");
+	start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI");
 }
 
 void
@@ -234,20 +233,20 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	}
 
 	if (!trim_req_iri(c->req) || !parse_iri(c->req, &c->iri, &parse_err)) {
-		goodbye(fds, c, BAD_REQUEST, parse_err);
+		start_reply(fds, c, BAD_REQUEST, parse_err);
 		return;
 	}
 
 	/* XXX: we should check that the SNI matches the requested host */
 	if (strcmp(c->iri.schema, "gemini") || c->iri.port_no != conf.port) {
-		goodbye(fds, c, PROXY_REFUSED, "won't proxy request");
+		start_reply(fds, c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}
 
 	open_file(fds, c);
 }
 
-int
+void
 start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 {
 	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
@@ -268,16 +267,28 @@ start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 	assert(len < sizeof(buf));
 
 	switch (tls_write(c->ctx, buf, len)) {
+	case -1:
+		close_conn(pfd, c);
+		return;
 	case TLS_WANT_POLLIN:
 		pfd->events = POLLIN;
-		return 0;
+		return;
 	case TLS_WANT_POLLOUT:
 		pfd->events = POLLOUT;
-		return 0;
-	default:
-		log_request(c, buf, sizeof(buf));
-		return 1;
+		return;
 	}
+
+	log_request(c, buf, sizeof(buf));
+
+	/* we don't need a body */
+	if (c->code != SUCCESS) {
+		close_conn(pfd, c);
+		return;
+	}
+
+	/* advance the state machine */
+	c->state = c->next;
+	handle(pfd, c);
 }
 
 int
@@ -317,11 +328,10 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 
 	close(c->fd);
 	if ((c->fd = recv_fd(exfd)) == -1) {
-		goodbye(fds, c, TEMP_FAILURE, "internal server error");
+		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return 0;
 	}
-	c->child = 1;
-	c->state = S_SENDING;
+	c->state = S_SENDING_CGI;
 	cgi_poll_on_child(fds, c);
 	c->code = -1;
 	/* handle_cgi(fds, c); */
@@ -338,7 +348,7 @@ send_file(struct pollfd *fds, struct client *c)
 	ssize_t ret, len;
 
 	/* ensure the correct state */
-	c->state = S_SENDING;
+	c->state = S_SENDING_FILE;
 
 	len = (c->buf + c->len) - c->i;
 
@@ -381,7 +391,7 @@ send_dir(struct pollfd *fds, struct client *c)
 	 *  - foo/$INDEX is a directory.
 	 */
 	if (c->iri.path == c->sbuf) {
-		goodbye(fds, c, TEMP_REDIRECT, c->sbuf);
+		start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
 		return;
 	}
 
@@ -392,7 +402,7 @@ send_dir(struct pollfd *fds, struct client *c)
 		/* redirect to url with the trailing / */
 		strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
-		goodbye(fds, c, TEMP_REDIRECT, c->sbuf);
+		start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
 		return;
 	}
 
@@ -406,7 +416,7 @@ send_dir(struct pollfd *fds, struct client *c)
 	len = strlcat(c->sbuf, index, sizeof(c->sbuf));
 
 	if (len >= sizeof(c->sbuf)) {
-		goodbye(fds, c, TEMP_FAILURE, "internal server error");
+		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
@@ -565,14 +575,6 @@ close_conn(struct pollfd *pfd, struct client *c)
 }
 
 void
-goodbye(struct pollfd *fds, struct client *c, int code, const char *meta)
-{
-	if (!start_reply(fds, c, code, meta))
-		return;
-	close_conn(fds, c);
-}
-
-void
 do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 {
 	int i, fd;
@@ -598,8 +600,8 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 			fds[i].events = POLLIN;
 
 			clients[i].state = S_HANDSHAKE;
+			clients[i].next = S_SENDING_FILE;
 			clients[i].fd = -1;
-			clients[i].child = 0;
 			clients[i].waiting_on_child = 0;
 			clients[i].buf = MAP_FAILED;
 			clients[i].addr = addr;
@@ -625,24 +627,15 @@ handle(struct pollfd *fds, struct client *client)
 		break;
 
 	case S_INITIALIZING:
-		if (!start_reply(fds, client, client->code, client->meta))
-			return;
+		start_reply(fds, client, client->code, client->meta);
+                break;
 
-		if (client->code != SUCCESS) {
-			/* we don't need a body */
-			close_conn(fds, client);
-			return;
-		}
+	case S_SENDING_FILE:
+		send_file(fds, client);
+		break;
 
-		client->state = S_SENDING;
-
-		/* fallthrough */
-
-	case S_SENDING:
-		if (client->child)
-			handle_cgi(fds, client);
-		else
-			send_file(fds, client);
+	case S_SENDING_CGI:
+		handle_cgi(fds, client);
 		break;
 
 	case S_CLOSING:
