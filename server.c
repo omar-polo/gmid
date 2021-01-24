@@ -64,13 +64,15 @@ check_path(struct client *c, const char *path, int *fd)
 	return FILE_EXISTS;
 }
 
-int
+void
 open_file(struct pollfd *fds, struct client *c)
 {
 	switch (check_path(c, c->iri.path, &c->fd)) {
 	case FILE_EXECUTABLE:
-		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi))
-			return start_cgi(c->iri.path, "", c->iri.query, fds, c);
+		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi)) {
+			start_cgi(c->iri.path, "", c->iri.query, fds, c);
+			return;
+		}
 
 		/* fallthrough */
 
@@ -78,31 +80,33 @@ open_file(struct pollfd *fds, struct client *c)
 		if ((c->len = filesize(c->fd)) == -1) {
 			LOGE(c, "failed to get file size for %s", c->iri.path);
 			close_conn(fds, c);
-			return 0;
+			return;
 		}
 
 		if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
 			    c->fd, 0)) == MAP_FAILED) {
 			LOGW(c, "mmap: %s: %s", c->iri.path, strerror(errno));
 			close_conn(fds, c);
-			return 0;
+			return;
 		}
 		c->i = c->buf;
 		c->next = S_SENDING_FILE;
 		start_reply(fds, c, SUCCESS, mime(c->host, c->iri.path));
-		return 0;
+		return;
 
 	case FILE_DIRECTORY:
 		close(c->fd);
 		c->fd = -1;
 		send_dir(fds, c);
-		return 0;
+		return;
 
 	case FILE_MISSING:
-		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi))
-			return check_for_cgi(c->iri.path, c->iri.query, fds, c);
+		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi)) {
+			check_for_cgi(c->iri.path, c->iri.query, fds, c);
+			return;
+		}
 		start_reply(fds, c, NOT_FOUND, "not found");
-		return 0;
+		return;
 
 	default:
 		/* unreachable */
@@ -118,7 +122,7 @@ open_file(struct pollfd *fds, struct client *c)
  * from the end and strip one component at a time, until either an
  * executable is found or we emptied the path.
  */
-int
+void
 check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 {
 	char *end;
@@ -136,7 +140,8 @@ check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 
 		switch (check_path(c, path, &c->fd)) {
 		case FILE_EXECUTABLE:
-			return start_cgi(path, end+1, query, fds,c);
+			start_cgi(path, end+1, query, fds,c);
+			return;
 		case FILE_MISSING:
 			break;
 		default:
@@ -149,7 +154,7 @@ check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 
 err:
 	start_reply(fds, c, NOT_FOUND, "not found");
-	return 0;
+	return;
 }
 
 void
@@ -291,7 +296,7 @@ start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 	handle(pfd, c);
 }
 
-int
+void
 start_cgi(const char *spath, const char *relpath, const char *query,
     struct pollfd *fds, struct client *c)
 {
@@ -329,13 +334,13 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 	close(c->fd);
 	if ((c->fd = recv_fd(exfd)) == -1) {
 		start_reply(fds, c, TEMP_FAILURE, "internal server error");
-		return 0;
+		return;
 	}
 	c->state = S_SENDING_CGI;
 	cgi_poll_on_child(fds, c);
 	c->code = -1;
 	/* handle_cgi(fds, c); */
-	return 0;
+	return;
 
 err:
 	/* fatal("cannot talk to the executor process: %s", strerror(errno)); */

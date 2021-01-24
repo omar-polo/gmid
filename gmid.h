@@ -176,13 +176,13 @@ const char	*mime(struct vhost*, const char*);
 
 /* server.c */
 int		 check_path(struct client*, const char*, int*);
-int		 open_file(struct pollfd*, struct client*);
-int		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
+void		 open_file(struct pollfd*, struct client*);
+void		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
 void		 mark_nonblock(int);
 void		 handle_handshake(struct pollfd*, struct client*);
 void		 handle_open_conn(struct pollfd*, struct client*);
 void		 start_reply(struct pollfd*, struct client*, int, const char*);
-int		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
+void		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
 void		 send_file(struct pollfd*, struct client*);
 void		 send_dir(struct pollfd*, struct client*);
 void		 cgi_poll_on_child(struct pollfd*, struct client*);
