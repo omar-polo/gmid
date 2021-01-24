@@ -1,5 +1,7 @@
 2021-01-24  Omar Polo  <op@omarpolo.com>
 
+	* server.c (open_dir): add directory listing (disabled by default)
+
 	* parse.y (vhost): added support for location blocks
 
 	* server.c (send_dir): make the directory index customizable

@@ -46,7 +46,7 @@ extern void yyerror(const char*);
 }
 
 %token TDAEMON TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TSERVER
-%token TLOCATION TCERT TKEY TROOT TCGI TLANG
+%token TLOCATION TCERT TKEY TROOT TCGI TLANG TINDEX TAUTO
 %token TERR
 
 %token <str>	TSTRING
@@ -138,4 +138,5 @@ locopt		: TDEFAULT TTYPE TSTRING {
 			free(loc->index);
 			loc->index = $2;
 		}
+		| TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 		;

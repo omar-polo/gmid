@@ -199,9 +199,25 @@ run
 eq "$(head /dir/hello)"	"20 text/plain"			"Unexpected head for /"
 echo OK GET /dir/hello with location and default type
 
-eq "$(head /dir/)"	"20 text/plain"			"Unexpected head for /dir"
+eq "$(head /dir/)"	"20 text/plain"			"Unexpected head for /dir/"
 eq "$(get  /dir/|tail -1)" 'echo "# hello world"'	"Unexpected body for /dir/"
 echo OK GET /dir/ with location and custom index
+
+check "should be running"
+quit
+
+config '' 'location "/dir/" { auto index on }'
+checkconf
+run
+
+eq "$(head /)"		"20 text/gemini"		"Unexpected head for /"
+eq "$(get  /)"		"# hello world$ln"		"Unexpected body for /"
+echo OK GET / with auto index
+
+eq "$(head /dir)"		"30 /dir/"		"Unexpected head for /dir"
+eq "$(head /dir/)"		"20 text/gemini"	"Unexpected head for /dir/"
+eq "$(get /dir/|wc -l|xargs)"	"3"			"Unexpected body for /dir/"
+echo OK GET /dir/ with auto index on
 
 check "should be running"
 quit

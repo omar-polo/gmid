@@ -156,6 +156,9 @@ starts_with(const char *str, const char *prefix)
 {
 	size_t i;
 
+	if (prefix == NULL)
+		return 0;
+
 	for (i = 0; prefix[i] != '\0'; ++i)
 		if (str[i] != prefix[i])
 			return 0;

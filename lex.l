@@ -67,6 +67,7 @@ root		return TROOT;
 cgi		return TCGI;
 lang		return TLANG;
 index		return TINDEX;
+auto		return TAUTO;
 
 [{}]		return *yytext;
 

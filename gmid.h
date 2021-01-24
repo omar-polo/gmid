@@ -17,10 +17,13 @@
 #ifndef GMID_H
 #define GMID_H
 
+#include <sys/socket.h>
+#include <sys/types.h>
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <sys/socket.h>
 
+#include <dirent.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -62,6 +65,7 @@ struct location {
 	char		*lang;
 	char		*default_mime;
 	char		*index;
+	int		 auto_index; /* 0 auto, -1 off, 1 on */
 };
 
 struct vhost {
@@ -119,6 +123,7 @@ enum {
 	S_OPEN,
 	S_INITIALIZING,
 	S_SENDING_FILE,
+	S_SENDING_DIR,
 	S_SENDING_CGI,
 	S_CLOSING,
 };
@@ -134,6 +139,7 @@ struct client {
 	char		 sbuf[1024];	  /* static buffer */
 	void		*buf, *i;	  /* mmap buffer */
 	ssize_t		 len, off;	  /* mmap/static buffer  */
+	DIR		*dir;
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host she's talking to */
 };
@@ -185,8 +191,10 @@ const char	*mime(struct vhost*, const char*);
 const char	*vhost_lang(struct vhost*, const char*);
 const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
+int		 vhost_auto_index(struct vhost*, const char*);
 int		 check_path(struct client*, const char*, int*);
 void		 open_file(struct pollfd*, struct client*);
+void		 load_file(struct pollfd*, struct client*);
 void		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
 void		 mark_nonblock(int);
 void		 handle_handshake(struct pollfd*, struct client*);
@@ -194,7 +202,10 @@ void		 handle_open_conn(struct pollfd*, struct client*);
 void		 start_reply(struct pollfd*, struct client*, int, const char*);
 void		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
 void		 send_file(struct pollfd*, struct client*);
-void		 send_dir(struct pollfd*, struct client*);
+void		 open_dir(struct pollfd*, struct client*);
+void		 redirect_canonical_dir(struct pollfd*, struct client*);
+int		 read_next_dir_entry(struct client*);
+void		 send_directory_listing(struct pollfd*, struct client*);
 void		 cgi_poll_on_child(struct pollfd*, struct client*);
 void		 cgi_poll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);

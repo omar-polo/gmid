@@ -78,10 +78,27 @@ vhost_index(struct vhost *v, const char *path)
 }
 
 int
+vhost_auto_index(struct vhost *v, const char *path)
+{
+	struct location *loc;
+	int auto_index = 0;
+
+	for (loc = v->locations; loc->match != NULL; ++loc) {
+		if (!fnmatch(loc->match, path, 0)) {
+			if (loc->auto_index)
+				auto_index = loc->auto_index;
+		}
+	}
+
+	return auto_index == 1;
+}
+
+int
 check_path(struct client *c, const char *path, int *fd)
 {
 	struct stat sb;
 	const char *p;
+	int flags;
 
 	assert(path != NULL);
 
@@ -94,9 +111,10 @@ check_path(struct client *c, const char *path, int *fd)
 	else
 		p = path;
 
-	if ((*fd = openat(c->host->dirfd, p, O_RDONLY | O_NOFOLLOW)) == -1) {
+	flags = O_RDONLY | O_NOFOLLOW;
+
+	if (*fd == -1 && (*fd = openat(c->host->dirfd, p, flags)) == -1)
 		return FILE_MISSING;
-	}
 
 	if (fstat(*fd, &sb) == -1) {
 		LOGN(c, "failed stat for %s: %s", path, strerror(errno));
@@ -117,7 +135,7 @@ open_file(struct pollfd *fds, struct client *c)
 {
 	switch (check_path(c, c->iri.path, &c->fd)) {
 	case FILE_EXECUTABLE:
-		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi)) {
+		if (starts_with(c->iri.path, c->host->cgi)) {
 			start_cgi(c->iri.path, "", c->iri.query, fds, c);
 			return;
 		}
@@ -125,27 +143,11 @@ open_file(struct pollfd *fds, struct client *c)
 		/* fallthrough */
 
 	case FILE_EXISTS:
-		if ((c->len = filesize(c->fd)) == -1) {
-			LOGE(c, "failed to get file size for %s", c->iri.path);
-			close_conn(fds, c);
-			return;
-		}
-
-		if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
-			    c->fd, 0)) == MAP_FAILED) {
-			LOGW(c, "mmap: %s: %s", c->iri.path, strerror(errno));
-			close_conn(fds, c);
-			return;
-		}
-		c->i = c->buf;
-		c->next = S_SENDING_FILE;
-		start_reply(fds, c, SUCCESS, mime(c->host, c->iri.path));
+		load_file(fds, c);
 		return;
 
 	case FILE_DIRECTORY:
-		close(c->fd);
-		c->fd = -1;
-		send_dir(fds, c);
+		open_dir(fds, c);
 		return;
 
 	case FILE_MISSING:
@@ -162,6 +164,25 @@ open_file(struct pollfd *fds, struct client *c)
 	}
 }
 
+void
+load_file(struct pollfd *fds, struct client *c)
+{
+	if ((c->len = filesize(c->fd)) == -1) {
+		LOGE(c, "failed to get file size for %s", c->iri.path);
+		start_reply(fds, c, TEMP_FAILURE, "internal server error");
+		return;
+	}
+
+	if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
+		    c->fd, 0)) == MAP_FAILED) {
+		LOGW(c, "mmap: %s: %s", c->iri.path, strerror(errno));
+		start_reply(fds, c, TEMP_FAILURE, "internal server error");
+		return;
+	}
+	c->i = c->buf;
+	c->next = S_SENDING_FILE;
+	start_reply(fds, c, SUCCESS, mime(c->host, c->iri.path));
+}
 
 /*
  * the inverse of this algorithm, i.e. starting from the start of the
@@ -434,49 +455,157 @@ send_file(struct pollfd *fds, struct client *c)
 }
 
 void
-send_dir(struct pollfd *fds, struct client *c)
+open_dir(struct pollfd *fds, struct client *c)
 {
 	size_t len;
+	int dirfd;
+	char *before_file;
 
-	/* guard against a re-entrant call: open_file -> send_dir ->
-	 * open_file -> send_dir.  This can happen only if:
-	 *
-	 *  - user requested a dir, say foo/
-	 *  - we try to serve foo/$INDEX
-	 *  - foo/$INDEX is a directory.
-	 */
-	if (c->iri.path == c->sbuf) {
-		start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
+	len = strlen(c->iri.path);
+	if (len > 0 && !ends_with(c->iri.path, "/")) {
+		redirect_canonical_dir(fds, c);
 		return;
 	}
 
 	strlcpy(c->sbuf, "/", sizeof(c->sbuf));
-
-	len = strlen(c->iri.path);
-	if (len > 0 && c->iri.path[len-1] != '/') {
-		/* redirect to url with the trailing / */
-		strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
+	strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
+	if (!ends_with(c->sbuf, "/"))
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
-		start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
+	before_file = strchr(c->sbuf, '\0');
+	len = strlcat(c->sbuf, vhost_index(c->host, c->iri.path),
+	    sizeof(c->sbuf));
+	if (len >= sizeof(c->sbuf)) {
+		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
+	c->iri.path = c->sbuf;
+
+	/* close later unless we have to generate the dir listing */
+	dirfd = c->fd;
+	c->fd = -1;
+
+	switch (check_path(c, c->iri.path, &c->fd)) {
+	case FILE_EXECUTABLE:
+		if (starts_with(c->iri.path, c->host->cgi)) {
+			start_cgi(c->iri.path, "", c->iri.query, fds, c);
+			break;
+		}
+
+		/* fallthrough */
+
+	case FILE_EXISTS:
+                load_file(fds, c);
+		break;
+
+	case FILE_DIRECTORY:
+		start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
+		break;
+
+	case FILE_MISSING:
+		*before_file = '\0';
+
+		if (!vhost_auto_index(c->host, c->iri.path)) {
+			start_reply(fds, c, NOT_FOUND, "not found");
+			break;
+		}
+
+		c->fd = dirfd;
+		c->next = S_SENDING_DIR;
+
+		if ((c->dir = fdopendir(c->fd)) == NULL) {
+			LOGE(c, "can't fdopendir(%d) (vhost:%s) %s: %s",
+			    c->fd, c->host->domain, c->iri.path, strerror(errno));
+			start_reply(fds, c, TEMP_FAILURE, "internal server error");
+			return;
+		}
+		c->off = 0;
+
+                start_reply(fds, c, SUCCESS, "text/gemini");
+		return;
+
+	default:
+		/* unreachable */
+		abort();
+	}
+
+	close(dirfd);
+}
+
+void
+redirect_canonical_dir(struct pollfd *fds, struct client *c)
+{
+	size_t len;
+
+	strlcpy(c->sbuf, "/", sizeof(c->sbuf));
 	strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
-
-	if (!ends_with(c->sbuf, "/"))
-		strlcat(c->sbuf, "/", sizeof(c->sbuf));
-
-	len = strlcat(c->sbuf, vhost_index(c->host, c->iri.path),
-	    sizeof(c->sbuf));
+	len = strlcat(c->sbuf, "/", sizeof(c->sbuf));
 
 	if (len >= sizeof(c->sbuf)) {
 		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
-	close(c->fd);
-	c->iri.path = c->sbuf;
-	open_file(fds, c);
+	start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
+}
+
+int
+read_next_dir_entry(struct client *c)
+{
+	struct dirent *d;
+
+	do {
+		errno = 0;
+		if ((d = readdir(c->dir)) == NULL) {
+			if (errno != 0)
+				LOGE(c, "readdir: %s", strerror(errno));
+			return 0;
+		}
+	} while (!strcmp(d->d_name, "."));
+
+	/* XXX: url escape */
+	snprintf(c->sbuf, sizeof(c->sbuf), "=> %s %s\n",
+	    d->d_name, d->d_name);
+	c->len = strlen(c->sbuf);
+	c->off = 0;
+
+	return 1;
+}
+
+void
+send_directory_listing(struct pollfd *fds, struct client *c)
+{
+	ssize_t r;
+
+	while (1) {
+		if (c->len == 0) {
+			if (!read_next_dir_entry(c))
+				goto end;
+		}
+
+		while (c->len > 0) {
+			switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
+			case -1:
+				goto end;
+
+			case TLS_WANT_POLLOUT:
+				fds->events = POLLOUT;
+				return;
+
+			case TLS_WANT_POLLIN:
+				fds->events = POLLIN;
+				return;
+
+			default:
+				c->off += r;
+				c->len -= r;
+				break;
+			}
+		}
+	}
+
+end:
+	close_conn(fds, c);
 }
 
 void
@@ -624,6 +753,9 @@ close_conn(struct pollfd *pfd, struct client *c)
 	if (c->fd != -1)
 		close(c->fd);
 
+	if (c->dir != NULL)
+		closedir(c->dir);
+
 	close(pfd->fd);
 	pfd->fd = -1;
 }
@@ -658,6 +790,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 			clients[i].fd = -1;
 			clients[i].waiting_on_child = 0;
 			clients[i].buf = MAP_FAILED;
+			clients[i].dir = NULL;
 			clients[i].addr = addr;
 
 			connected_clients++;
@@ -686,6 +819,10 @@ handle(struct pollfd *fds, struct client *client)
 
 	case S_SENDING_FILE:
 		send_file(fds, client);
+		break;
+
+	case S_SENDING_DIR:
+		send_directory_listing(fds, client);
 		break;
 
 	case S_SENDING_CGI:
