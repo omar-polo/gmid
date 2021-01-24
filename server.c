@@ -371,19 +371,14 @@ void
 send_dir(struct pollfd *fds, struct client *c)
 {
 	size_t len;
+	const char *index = "index.gmi";
 
-	/* guard against a re-entrant call:
-	 *
-	 *	open_file -> send_dir -> open_file -> send_dir
-	 *
-	 * this can happen only if:
+	/* guard against a re-entrant call: open_file -> send_dir ->
+	 * open_file -> send_dir.  This can happen only if:
 	 *
 	 *  - user requested a dir, say foo/
-	 *  - we try to serve foo/index.gmi
-	 *  - foo/index.gmi is a directory.
-	 *
-	 * It's an unlikely case, but can happen.  We then redirect
-	 * to foo/index.gmi
+	 *  - we try to serve foo/$INDEX
+	 *  - foo/$INDEX is a directory.
 	 */
 	if (c->iri.path == c->sbuf) {
 		goodbye(fds, c, TEMP_REDIRECT, c->sbuf);
@@ -406,7 +401,9 @@ send_dir(struct pollfd *fds, struct client *c)
 	if (!ends_with(c->sbuf, "/"))
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
 
-	len = strlcat(c->sbuf, "index.gmi", sizeof(c->sbuf));
+	if (c->host->index != NULL)
+		index = c->host->index;
+	len = strlcat(c->sbuf, index, sizeof(c->sbuf));
 
 	if (len >= sizeof(c->sbuf)) {
 		goodbye(fds, c, TEMP_FAILURE, "internal server error");

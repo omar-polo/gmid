@@ -58,13 +58,14 @@ protocols	return TPROTOCOLS;
 mime		return TMIME;
 default		return TDEFAULT;
 type		return TTYPE;
-lang		return TLANG;
 server		return TSERVER;
 
 cert		return TCERT;
 key		return TKEY;
 root		return TROOT;
 cgi		return TCGI;
+lang		return TLANG;
+index		return TINDEX;
 
 [{}]		return *yytext;
 

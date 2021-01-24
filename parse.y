@@ -106,4 +106,8 @@ servopt		: TCERT TSTRING		{ host->cert = $2; }
 			free(host->lang);
 			host->lang = $2;
 		}
+		| TINDEX TSTRING {
+			free(host->index);
+			host->index = $2;
+		}
 		;

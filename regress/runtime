@@ -173,3 +173,14 @@ echo OK GET /invalid with cgi
 
 check "should be running"
 quit
+
+config '' 'index "foo.gmi"'
+checkconf
+run
+
+eq "$(head /dir/)"	"20 text/gemini"	"Unexpected head for /"
+eq "$(get  /dir/)"	"# hello world$ln"	"Unexpected body for error"
+echo OK GET /dir/ with custom index
+
+check "should be running"
+quit

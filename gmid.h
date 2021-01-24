@@ -65,6 +65,7 @@ struct vhost {
 	char		*lang;
 	int		 dirfd;
 	char		*default_mime;
+	char		*index;
 };
 
 extern struct vhost hosts[HOSTSLEN];
