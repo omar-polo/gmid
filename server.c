@@ -29,6 +29,54 @@
 
 int connected_clients;
 
+const char *
+vhost_lang(struct vhost *v, const char *path)
+{
+	struct location *loc;
+	const char *lang = NULL;
+
+	for (loc = v->locations; loc->match != NULL; ++loc) {
+		if (!fnmatch(loc->match, path, 0)) {
+			if (loc->lang != NULL)
+				lang = loc->lang;
+		}
+	}
+
+	return lang;
+}
+
+const char *
+vhost_default_mime(struct vhost *v, const char *path)
+{
+	struct location *loc;
+	const char *default_mime = "application/octet-stream";
+
+	for (loc = v->locations; loc->match != NULL; ++loc) {
+		if (!fnmatch(loc->match, path, 0)) {
+			if (loc->default_mime != NULL)
+				default_mime = loc->default_mime;
+		}
+	}
+
+	return default_mime;
+}
+
+const char *
+vhost_index(struct vhost *v, const char *path)
+{
+	struct location *loc;
+	const char *index = "index.gmi";
+
+	for (loc = v->locations; loc->match != NULL; ++loc) {
+		if (!fnmatch(loc->match, path, 0)) {
+			if (loc->index != NULL)
+				index = loc->index;
+		}
+	}
+
+	return index;
+}
+
 int
 check_path(struct client *c, const char *path, int *fd)
 {
@@ -255,17 +303,20 @@ void
 start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 {
 	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
+	const char *lang;
 	size_t len;
 
 	c->code = code;
 	c->meta = meta;
 	c->state = S_INITIALIZING;
 
+	lang = vhost_lang(c->host, c->iri.path);
+
 	snprintf(buf, sizeof(buf), "%d ", code);
 	strlcat(buf, meta, sizeof(buf));
-	if (!strcmp(meta, "text/gemini") && c->host->lang != NULL) {
+	if (!strcmp(meta, "text/gemini") && lang != NULL) {
 		strlcat(buf, "; lang=", sizeof(buf));
-		strlcat(buf, c->host->lang, sizeof(buf));
+		strlcat(buf, lang, sizeof(buf));
 	}
 
 	len = strlcat(buf, "\r\n", sizeof(buf));
@@ -386,7 +437,6 @@ void
 send_dir(struct pollfd *fds, struct client *c)
 {
 	size_t len;
-	const char *index = "index.gmi";
 
 	/* guard against a re-entrant call: open_file -> send_dir ->
 	 * open_file -> send_dir.  This can happen only if:
@@ -416,9 +466,8 @@ send_dir(struct pollfd *fds, struct client *c)
 	if (!ends_with(c->sbuf, "/"))
 		strlcat(c->sbuf, "/", sizeof(c->sbuf));
 
-	if (c->host->index != NULL)
-		index = c->host->index;
-	len = strlcat(c->sbuf, index, sizeof(c->sbuf));
+	len = strlcat(c->sbuf, vhost_index(c->host, c->iri.path),
+	    sizeof(c->sbuf));
 
 	if (len >= sizeof(c->sbuf)) {
 		start_reply(fds, c, TEMP_FAILURE, "internal server error");

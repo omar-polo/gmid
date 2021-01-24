@@ -30,6 +30,9 @@
 struct vhost *host = &hosts[0];
 size_t ihost = 0;
 
+struct location *loc = &hosts[0].locations[0];
+size_t iloc = 0;
+
 extern void yyerror(const char*);
 
 %}
@@ -43,7 +46,7 @@ extern void yyerror(const char*);
 }
 
 %token TDAEMON TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TSERVER
-%token TCERT TKEY TROOT TCGI TLANG
+%token TLOCATION TCERT TKEY TROOT TCGI TLANG
 %token TERR
 
 %token <str>	TSTRING
@@ -72,15 +75,20 @@ vhosts		: /* empty */
 		| vhosts vhost
 		;
 
-vhost		: TSERVER TSTRING '{' servopts '}' {
+vhost		: TSERVER TSTRING '{' servopts locations '}' {
+			host->locations[0].match = (char*)"*";
 			host->domain = $2;
 
 			if (host->cert == NULL || host->key == NULL ||
 			    host->dir == NULL)
 				errx(1, "invalid vhost definition: %s", $2);
+
 			if (++ihost == HOSTSLEN)
 				errx(1, "too much vhosts defined");
-                        host++;
+
+			host++;
+			loc = &host->locations[0];
+			iloc = 0;
 		}
 		| error '}'		{ yyerror("error in server directive"); }
 		;
@@ -98,16 +106,36 @@ servopt		: TCERT TSTRING		{ host->cert = $2; }
 			if (*host->cgi == '/')
 				host->cgi++;
 		}
-		| TDEFAULT TTYPE TSTRING {
-			free(host->default_mime);
-			host->default_mime = $3;
+		| locopt
+		;
+
+locations	: /* empty */
+		| locations location
+		;
+
+location	: TLOCATION TSTRING '{' locopts '}' {
+			loc->match = $2;
+			if (++iloc == LOCLEN)
+				errx(1, "too much location rules defined");
+			loc++;
+		}
+		| error '}'
+		;
+
+locopts		: /* empty */
+		| locopts locopt
+		;
+
+locopt		: TDEFAULT TTYPE TSTRING {
+			free(loc->default_mime);
+			loc->default_mime = $3;
 		}
 		| TLANG TSTRING {
-			free(host->lang);
-			host->lang = $2;
+			free(loc->lang);
+			loc->lang = $2;
 		}
 		| TINDEX TSTRING {
-			free(host->index);
-			host->index = $2;
+			free(loc->index);
+			loc->index = $2;
 		}
 		;

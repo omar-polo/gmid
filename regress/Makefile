@@ -35,6 +35,7 @@ testdata: fill-file
 	./sha testdata/index.gmi testdata/index.gmi.sha
 	cp hello slow err invalid serve-bigfile testdata/
 	mkdir testdata/dir
+	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi
 
 runtime: testdata cert.pem

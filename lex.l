@@ -60,6 +60,7 @@ default		return TDEFAULT;
 type		return TTYPE;
 server		return TSERVER;
 
+location	return TLOCATION;
 cert		return TCERT;
 key		return TKEY;
 root		return TROOT;

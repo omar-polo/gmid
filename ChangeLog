@@ -1,5 +1,7 @@
 2021-01-24  Omar Polo  <op@omarpolo.com>
 
+	* parse.y (vhost): added support for location blocks
+
 	* server.c (send_dir): make the directory index customizable
 
 2021-01-23  Omar Polo  <op@omarpolo.com>

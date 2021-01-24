@@ -181,6 +181,21 @@ parameter will be added in the response.
 Set the directory index file.
 If not specified, it defaults to
 .Pa index.gmi
+.It Ic location Pa path Brq ...
+Specify server configuration rules for a specific location.
+The
+.Pa path
+argument will be matched against the request path with shell globbing
+rules.
+In case of multiple location statements in the same context, the last
+matching location will be put into effect.
+Therefore is advisable to match for a generic paths first and for more
+specific ones later on.
+A
+.Ic location
+section may include most of the server configuration rules
+except
+.Ic cert , Ic key , Ic root , Ic location No and Ic CGI .
 .El
 .Sh CGI
 When CGI scripts are enabled for a directory, a request for an

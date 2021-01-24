@@ -97,8 +97,7 @@ mime(struct vhost *host, const char *path)
 	const char *def, *ext;
 	struct etm *t;
 
-	if ((def = host->default_mime) == NULL)
-		def = "application/octet-stream";
+	def = vhost_default_mime(host, path);
 
 	if ((ext = path_ext(path)) == NULL)
 		return def;

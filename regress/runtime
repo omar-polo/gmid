@@ -191,3 +191,17 @@ echo OK GET /dir/ with custom index
 
 check "should be running"
 quit
+
+config '' 'location "/dir/" { default type "text/plain" index "hello" }'
+checkconf
+run
+
+eq "$(head /dir/hello)"	"20 text/plain"			"Unexpected head for /"
+echo OK GET /dir/hello with location and default type
+
+eq "$(head /dir/)"	"20 text/plain"			"Unexpected head for /dir"
+eq "$(get  /dir/|tail -1)" 'echo "# hello world"'	"Unexpected body for /dir/"
+echo OK GET /dir/ with location and custom index
+
+check "should be running"
+quit
