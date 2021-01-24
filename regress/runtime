@@ -171,6 +171,13 @@ echo OK GET /err with cgi
 eq "$(raw /invalid | wc -c | xargs)" 2048		"Unexpected body for /invalid"
 echo OK GET /invalid with cgi
 
+# try a big file
+eq "$(head /serve-bigfile)"	"20 application/octet-stream" "Unexpected head for /serve-bigfile"
+get /bigfile > bigfile
+./sha bigfile bigfile.sha
+eq "$(cat bigfile.sha)"	"$(cat testdata/bigfile.sha)" "Unexpected sha for /serve-bigfile"
+echo OK GET /serve-bigfile with cgi
+
 check "should be running"
 quit
 
