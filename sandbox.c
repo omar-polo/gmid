@@ -179,16 +179,21 @@ sandbox()
 		/* alpine on amd64 does a clock_gettime(2) */
 		SC_ALLOW(clock_gettime),
 
+		/* for directory listing */
+		SC_ALLOW(getdents64),
+
 		SC_ALLOW(exit),
 		SC_ALLOW(exit_group),
 
 		/* allow only F_GETFL and F_SETFL fcntl */
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fcntl, 0, 6),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fcntl, 0, 8),
 		BPF_STMT(BPF_LD  | BPF_W | BPF_ABS,
 		    (offsetof(struct seccomp_data, args[1]))),
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_GETFL, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_SETFL, 0, 1),
+		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
+		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_SETFD, 0, 1),
 		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
 		BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
 
