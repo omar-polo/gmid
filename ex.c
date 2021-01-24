@@ -215,6 +215,7 @@ launch_cgi(const char *spath, const char *relpath, const char *query,
 		argv[0] = argv[1] = ex;
 
 		safe_setenv("GATEWAY_INTERFACE", "CGI/1.1");
+		safe_setenv("SERVER_PROTOCOL", "GEMINI");
 		safe_setenv("SERVER_SOFTWARE", "gmid");
 		safe_setenv("SERVER_PORT", portno);
 

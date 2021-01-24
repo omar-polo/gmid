@@ -192,12 +192,20 @@ the environment from
 .Nm
 with these additional variables set:
 .Bl -tag -width 18m
+.It Ev GATEWAY_INTERFACE
+"CGI/1.1"
+.It Ev SERVER_PROTOCOL
+"GEMINI"
 .It Ev SERVER_SOFTWARE
 "gmid"
 .It Ev SERVER_PORT
 "1965"
+.It Ev SERVER_NAME
+The vhost.
+This variable is not available when operating without a configuration.
 .It Ev SCRIPT_NAME
-The (public) path to the script.
+The (public) path to the script, e.g.
+.Pa "/cgi-bin/example.cgi"
 .It Ev SCRIPT_EXECUTABLE
 The full path to the executable.
 .It Ev REQUEST_URI
@@ -217,11 +225,13 @@ parameter to
 .Nm
 or the root directory of the virtual host.
 .It Ev AUTH_TYPE
-The string "Certificate" if the client used a certificate, otherwise unset.
+The string "Certificate" if the client used a certificate, otherwise
+unset.
 .It Ev REMOTE_USER
 The subject of the client certificate if provided, otherwise unset.
 .It Ev TLS_CLIENT_ISSUER
-The is the issuer of the client certificate if provided, otherwise unset.
+The is the issuer of the client certificate if provided, otherwise
+unset.
 .It Ev TLS_CLIENT_HASH
 The hash of the client certificate if provided, otherwise unset.
 The format is "ALGO:HASH".
