@@ -237,6 +237,8 @@ launch_cgi(const char *spath, const char *relpath, const char *query,
 			safe_setenv("TLS_CLIENT_HASH", chash);
 		}
 
+		fchdir(vhost->dir);
+
 		execvp(ex, argv);
 		goto childerr;
 	}
