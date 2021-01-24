@@ -186,7 +186,9 @@ If not specified, it defaults to
 When CGI scripts are enabled for a directory, a request for an
 executable file will execute it and fed its output to the client.
 .Pp
-The CGI scripts will inherit the environment from
+The CGI scripts are executed in the root directory of the virtual
+host, or in the served directory if run without config, and inherits
+the environment from
 .Nm
 with these additional variables set:
 .Bl -tag -width 18m
