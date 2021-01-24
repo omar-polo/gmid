@@ -1,3 +1,12 @@
+2021-01-24  Omar Polo  <op@omarpolo.com>
+
+	* server.c (send_dir): make the directory index customizable
+
+2021-01-23  Omar Polo  <op@omarpolo.com>
+
+	* gg.c (main): added gg, a barebone gemini client.  used by the
+	regress suite
+
 2021-01-21  Omar Polo  <op@omarpolo.com>
 
 	* configure: added a configure script
