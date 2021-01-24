@@ -362,13 +362,10 @@ usage(const char *me)
 	    me);
 }
 
-int
-main(int argc, char **argv)
+void
+init_config(void)
 {
-	int ch, p[2];
-	const char *config_path = NULL;
 	size_t i;
-	int conftest = 0;
 
 	bzero(hosts, sizeof(hosts));
 	for (i = 0; i < HOSTSLEN; ++i)
@@ -380,6 +377,14 @@ main(int argc, char **argv)
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
 	init_mime(&conf.mime);
+}
+
+int
+main(int argc, char **argv)
+{
+	int ch, p[2];
+	const char *config_path = NULL;
+	int conftest = 0;
 
 	while ((ch = getopt(argc, argv, "6C:c:d:fhK:np:x:")) != -1) {
 		switch (ch) {
