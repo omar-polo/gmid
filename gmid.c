@@ -386,6 +386,8 @@ main(int argc, char **argv)
 	const char *config_path = NULL;
 	int conftest = 0;
 
+	init_config();
+
 	while ((ch = getopt(argc, argv, "6C:c:d:fhK:np:x:")) != -1) {
 		switch (ch) {
 		case '6':
