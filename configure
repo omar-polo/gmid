@@ -307,6 +307,10 @@ if [ ${HAVE_EXPLICIT_BZERO} -eq 0 ]; then
 	echo "extern	void	 explicit_bzero(void*, size_t);"
 	COMPAT="${COMPAT} compat/explicit_bzero.o"
 fi
+if [ ${HAVE_GETPROGNAME} -eq 0 ]; then
+	echo "extern	const char *getprogname(void);"
+	COMPAT="${COMPAT} compat/getprogname.o"
+fi
 if [ ${HAVE_RECALLOCARRAY} -eq 0 ]; then
 	echo "extern	void*	 recallocarray(void*, size_t, size_t, size_t);"
 	COMPAT="${COMPAT} compat/recallocarray.o"
