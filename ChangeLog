@@ -1,5 +1,13 @@
 2021-01-25  Omar Polo  <op@omarpolo.com>
 
+	* gmid.1: manpage improvements (example and usage)
+
+	* gmid.c (main): Dropping -C, -K, -f, changing the meaning of -d:
+	now it's the certificate directory.  Serve the directory given as
+	positional argument (or the current one) when running in
+	config-less mode.
+	(gen_certificate): automatically generate a certificate
+
 	* parse.y (option): added chroot and user options
 
 2021-01-24  Omar Polo  <op@omarpolo.com>
