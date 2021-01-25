@@ -22,6 +22,7 @@ mind: on Linux, FreeBSD and OpenBSD is sandboxed via `seccomp(2)`,
  - small codebase, easily hackable
  - virtual hosts
  - sandboxed by default on OpenBSD, Linux and FreeBSD
+ - chroot support
 
 
 ## Drawbacks
@@ -109,4 +110,4 @@ syscalls, see [sandbox.c](sandbox.c) for more information on the BPF
 program.
 
 In any case, you are invited to run gmid inside some sort of
-container/jail.
+container/jail/chroot.
