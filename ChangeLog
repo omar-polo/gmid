@@ -1,3 +1,7 @@
+2021-01-25  Omar Polo  <op@omarpolo.com>
+
+	* parse.y (option): added chroot and user options
+
 2021-01-24  Omar Polo  <op@omarpolo.com>
 
 	* server.c (open_dir): add directory listing (disabled by default)
