@@ -262,7 +262,14 @@ executor_main(int fd)
 	int d;
 
 #ifdef __OpenBSD__
-	pledge("stdio sendfd proc exec", NULL);
+	for (vhost = hosts; vhost->domain != NULL; ++vhost) {
+		if (unveil(vhost->dir, "x") == -1)
+			err(1, "unveil %s for domain %s",
+			    vhost->dir, vhost->domain);
+	}
+
+	if (pledge("stdio sendfd proc exec", NULL))
+		err(1, "pledge");
 #endif
 
 	for (;;) {
