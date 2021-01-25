@@ -357,15 +357,6 @@ listener_main()
 }
 
 void
-usage(const char *me)
-{
-	fprintf(stderr,
-	    "USAGE: %s [-n] [-c config] | [-6fh] [-C cert] [-d root] [-K key] "
-	    "[-p port] [-x cgi-bin]\n",
-	    me);
-}
-
-void
 init_config(void)
 {
 	size_t i;
@@ -380,6 +371,15 @@ init_config(void)
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
 	init_mime(&conf.mime);
+}
+
+void
+usage(const char *me)
+{
+	fprintf(stderr,
+	    "USAGE: %s [-n] [-c config] | [-6fh] [-C cert] [-d root] [-K key] "
+	    "[-p port] [-x cgi-bin]\n",
+	    me);
 }
 
 int
