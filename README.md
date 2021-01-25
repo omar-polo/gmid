@@ -17,7 +17,8 @@ gmid can be used from the command line to serve local directories
     # serve the directory docs
     gmid docs
 
-or you can pass a configuration file and have access to every feature
+or you can pass a configuration file and have access to all the
+features
 
     gmid -c /etc/gmid.conf
 
