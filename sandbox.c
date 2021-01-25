@@ -245,7 +245,7 @@ sandbox()
 	struct vhost *h;
 
 	for (h = hosts; h->domain != NULL; ++h) {
-		if (unveil(h->dir, "rx") == -1)
+		if (unveil(h->dir, "r") == -1)
 			err(1, "unveil %s for domain %s", h->dir, h->domain);
 	}
 
