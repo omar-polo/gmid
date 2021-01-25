@@ -7,10 +7,21 @@ configuration, so it's well suited for local development, but at the
 same time has a configuration file flexible enough to meet the
 requirements of most capsules.
 
-gmid was initially written to serve static files, but can also
+It was initially written to serve static files, but can also
 optionally execute CGI scripts.  It was also written with security in
 mind: on Linux, FreeBSD and OpenBSD is sandboxed via `seccomp(2)`,
 `capsicum(4)`and `pledge(2)`+`unveil(2)` respectively.
+
+gmid can be used from the command line to serve local directories
+
+    # serve the directory docs
+    gmid docs
+
+or you can pass a configuration file and have access to every feature
+
+    gmid -c /etc/gmid.conf
+
+Please consult the [manpage](gmid.1) for more information.
 
 
 ## Features
@@ -21,6 +32,10 @@ mind: on Linux, FreeBSD and OpenBSD is sandboxed via `seccomp(2)`,
  - (very) low memory footprint
  - small codebase, easily hackable
  - virtual hosts
+ - rules per-location
+ - directory listings
+ - mime types configurable
+ - index file configurable
  - sandboxed by default on OpenBSD, Linux and FreeBSD
  - chroot support
 
