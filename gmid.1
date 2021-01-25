@@ -1,4 +1,4 @@
-.\" Copyright (c) 2020 Omar Polo <op@omarpolo.com>
+.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd $Mdocdate: October 2 2020$
+.Dd $Mdocdate: January 25 2021$
 .Dt GMIND 1
 .Os
 .Sh NAME
@@ -23,12 +23,12 @@
 .Op Fl n
 .Op Fl c Ar config
 |
-.Op Fl 6fh
-.Op Fl C Ar cert
-.Op Fl d Ar root
-.Op Fl K Ar key
+.Op Fl 6h
+.Op Fl d Pa certs-dir
+.Op Fl H Ar hostname
 .Op Fl p Ar port
-.Op Fl x Ar directory
+.Op Fl x Pa cgi
+.Op Pa dir
 .Ek
 .Sh DESCRIPTION
 .Nm
@@ -45,32 +45,46 @@ fully supports IRIs (Internationalized Resource Identifiers, see
 RFC3987).
 .Pp
 The options are as follows:
-.Bl -tag -width 12m
+.Bl -tag -width 14m
 .It Fl c Pa config
-Specifies the configuration file.
+Specify the configuration file.
 .It Fl n
 Check that the configuration is valid, but don't start the server.
 .El
 .Pp
 If no configuration file is given,
 .Nm
-will look for the following option
-.Bl -tag -width 12m
+will look for the following options
+.Bl -tag -width 14m
 .It Fl 6
 Enable IPv6.
-.It Fl C Pa file
-The certificate to use.
-.It Fl d Pa directory
-The root directory to serve.
-.It Fl f
-Stays and log in the foreground, do not daemonize the process.
+.It Fl d Pa certs-path
+Directory where certificates for the config-less mode are stored.
+By default is
+.Pa $XDG_DATA_HOME/gmid ,
+i.e.
+.Pa ~/.local/share/gmid .
+.It Fl H
+The hostname, by default
+.Ar localhost .
+Certificates for the given
+.Ar hostname
+are searched inside the
+.Pa certs-dir
+directory given with the
+.Fl d
+option.
+The have the form
+.Pa hostname.cert.pem
+and
+.Pa hostname.key.pem .
+If a certificate and key doesn't exists for a given hostname they
+would be automatically generated.
 .It Fl h
 Print the usage and exit.
-.It Fl K Pa file
-The key for the certificate.
 .It Fl p Ar port
 The port to listen on, by default 1965.
-.It Fl x Pa directory
+.It Fl x Pa path
 Enable execution of CGI scripts.
 See the description of the
 .Ic cgi
@@ -78,9 +92,12 @@ See the description of the
 option in the section
 .Sq Servers
 below to learn how
-.Pa directory
+.Pa path
 is processed.
 Cannot be provided more than once.
+.It Pa dir
+The root directory to serve.
+By default the current working directory is assumed.
 .El
 .Sh CONFIGURATION FILE
 The configuration file is divided into two sections:
@@ -89,7 +106,7 @@ The configuration file is divided into two sections:
 Global settings for
 .Nm .
 .It Sy Servers
-Virtual hosts definition
+Virtual hosts definition.
 .El
 .Pp
 Within the sections, empty lines are ignored and comments can be put
@@ -100,6 +117,8 @@ A boolean is either the symbol
 .Sq on
 or
 .Sq off .
+A string is a sequence of characters wrapped in double quotes,
+.Dq like this .
 .Ss Global Options
 .Bl -tag -width 12m
 .It Ic daemon Ar bool
@@ -107,7 +126,7 @@ Enable or disables the daemon mode.
 In daemon mode
 .Nm
 will log to syslog and fork in the background.
-By default is off.
+By default is on.
 .It Ic ipv6 Ar bool
 Enable or disable IPv6 support.
 By default is off.
@@ -175,6 +194,7 @@ This option is mandatory.
 .It Ic root Pa directory
 Specify the root directory for this server.
 This option is mandatory.
+It's relative to the chroot, if enabled.
 .It Ic cgi Pa path
 Enable the execution of CGI scripts if
 .Pa path
@@ -196,7 +216,7 @@ parameter will be added in the response.
 .It Ic index Ar string
 Set the directory index file.
 If not specified, it defaults to
-.Pa index.gmi
+.Pa index.gmi .
 .It Ic auto Ic index Ar bool
 If no index file is found, automatically generate a directory listing.
 It's disabled by default.
@@ -293,40 +313,33 @@ and
 will be
 .Ar quux .
 .Sh EXAMPLES
-To quickly getting started
+Serve the current directory
 .Bd -literal -offset indent
-$ # generate a cert and a key
-$ openssl req -x509 -newkey rsa:4096 -keyout key.pem \\
-        -out cert.pem -days 365 -nodes
-$ mkdir docs
-$ cat <<EOF > docs/index.gmi
-# Hello world
-test paragraph...
-EOF
-$ gmid -C cert.pem -K key.pem -d docs
+$ gmid .
 .Ed
 .Pp
-Now you can visit gemini://localhost/ with your preferred gemini
-client.
-.Pp
-To add some CGI scripts, assuming a setup similar to the previous
-example, you can
+To serve the directory
+.Pa docs
+and enable CGI scripts inside
+.Pa docs/cgi ,
+you can
 .Bd -literal -offset indent
-$ mkdir docs/cgi-bin
-$ cat <<EOF > docs/cgi-bin/hello-world
+$ mkdir docs/cgi
+$ cat <<EOF > cgi/hello
 #!/bin/sh
 printf "20 text/plain\\r\\n"
-echo "hello world!"
+echo "hello world"
 EOF
-$ gmid -C cert.pem -K key.pem -d docs -x cgi-bin
+$ chmod +x docs/cgi/hello
+$ gmid -x cgi docs
 .Ed
 .Pp
 Note that the argument to the
 .Fl x
 option is
-.Pa cgi-bin
+.Pa cgi
 and not
-.Pa docs/cgi-bin ,
+.Pa docs/cgi ,
 since it's relative to the document root.
 .Pp
 The following is an example of a possible configuration for a site
@@ -334,7 +347,6 @@ that enables only TLSv1.3, adds a mime type for the file extension
 "rtf" and defines two virtual host:
 .Bd -literal -offset indent
 ipv6 on		# enable ipv6
-daemon on	# enable daemon mode
 
 protocols "tlsv1.3"
 
@@ -354,13 +366,33 @@ server "it.example.com" {
 	lang "it"
 }
 .Ed
+.Pp
+Yet another example, showing how to enable a
+.Ic chroot
+and use
+.Ic location
+rule
+.Bd -literal -offset indent
+chroot "/var/gemini"
+user "_gmid"
+
+server "example.com" {
+	cert "/path/to/cert.pem"
+	key  "/path/to/key.pem"
+	root "/var/gemini/example.com"
+
+	location "/static/" {
+		auto index on
+		index "index.gemini"
+	}
+}
+.Ed
 .Sh ACKNOWLEDGEMENTS
 .Nm
 uses the
 .Dq Flexible and Economical
 UTF-8 decoder written by
-.An Bjoern Hoehrmann
-for its IRI parser.
+.An Bjoern Hoehrmann .
 .Sh CAVEATS
 .Bl -bullet
 .It
