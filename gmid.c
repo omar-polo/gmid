@@ -18,6 +18,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <netdb.h>
+#include <pwd.h>
 #include <signal.h>
 #include <stdarg.h>
 #include <string.h>
@@ -31,6 +32,8 @@ int goterror;
 int exfd;
 
 struct conf conf;
+
+struct tls *ctx;
 
 void
 fatal(const char *fmt, ...)
@@ -242,19 +245,11 @@ parse_conf(const char *path)
 }
 
 void
-load_vhosts(struct tls_config *tlsconf)
+load_vhosts(void)
 {
 	struct vhost *h;
 
-	/* we need to set something, then we can add how many key we want */
-	if (tls_config_set_keypair_file(tlsconf, hosts->cert, hosts->key))
-		fatal("tls_config_set_keypair_file failed");
-
 	for (h = hosts; h->domain != NULL; ++h) {
-		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
-			fatal("failed to load the keypair (%s, %s)",
-			    h->cert, h->key);
-
 		if ((h->dirfd = open(h->dir, O_RDONLY | O_DIRECTORY)) == -1)
 			fatal("open %s for domain %s", h->dir, h->domain);
 	}
@@ -315,14 +310,11 @@ make_socket(int port, int family)
 	return sock;
 }
 
-int
-listener_main()
+void
+setup_tls(void)
 {
-	int sock4, sock6;
-	struct tls *ctx = NULL;
 	struct tls_config *tlsconf;
-
-	load_default_mime(&conf.mime);
+	struct vhost *h;
 
 	if ((tlsconf = tls_config_new()) == NULL)
 		fatal("tls_config_new");
@@ -337,10 +329,26 @@ listener_main()
 	if ((ctx = tls_server()) == NULL)
 		fatal("tls_server failure");
 
-	load_vhosts(tlsconf);
+	/* we need to set something, then we can add how many key we want */
+	if (tls_config_set_keypair_file(tlsconf, hosts->cert, hosts->key))
+		fatal("tls_config_set_keypair_file failed");
+
+	for (h = hosts; h->domain != NULL; ++h) {
+		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
+			fatal("failed to load the keypair (%s, %s)",
+			    h->cert, h->key);
+	}
 
 	if (tls_configure(ctx, tlsconf) == -1)
 		fatal("tls_configure: %s", tls_error(ctx));
+}
+
+int
+listener_main(void)
+{
+	int sock4, sock6;
+
+	load_default_mime(&conf.mime);
 
 	if (!conf.foreground && daemon(0, 1) == -1)
 		exit(1);
@@ -349,6 +357,8 @@ listener_main()
 	sock6 = -1;
 	if (conf.ipv6)
 		sock6 = make_socket(conf.port, AF_INET6);
+
+	load_vhosts();
 
 	sandbox();
 	loop(ctx, sock4, sock6);
@@ -371,6 +381,38 @@ init_config(void)
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
 	init_mime(&conf.mime);
+
+	conf.chroot = NULL;
+	conf.user = NULL;
+}
+
+void
+drop_priv(void)
+{
+	struct passwd *pw = NULL;
+
+	if (conf.chroot != NULL && conf.user == NULL)
+		fatal("can't chroot without an user to switch to after.");
+
+	if (conf.user != NULL) {
+		if ((pw = getpwnam(conf.user)) == NULL)
+			fatal("can't find user %s", conf.user);
+	}
+
+	if (conf.chroot != NULL) {
+		if (chroot(conf.chroot) != 0 || chdir("/") != 0)
+			fatal("%s: %s", conf.chroot, strerror(errno));
+	}
+
+	if (pw != NULL) {
+		if (setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) == -1)
+			fatal("setresuid(%d): %s", pw->pw_uid,
+			    strerror(errno));
+	}
+
+	if (getuid() == 0)
+		LOGW(NULL, "%s",
+		    "not a good idea to run a network daemon as root");
 }
 
 void
@@ -460,6 +502,11 @@ main(int argc, char **argv)
 		puts("config OK");
 		return 0;
 	}
+
+	/* setup tls before dropping privileges: we don't want user
+	 * to put private certs inside the chroot. */
+	setup_tls();
+	drop_priv();
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);

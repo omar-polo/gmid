@@ -129,6 +129,22 @@ Add a mapping for the given
 to the given
 .Ar mime-type .
 Both argument are strings.
+.It Ic chroot Pa path
+.Xr chroot 2
+the process to the given
+.Pa path .
+The daemon has to be run with root privileges and thus the option
+.Ic user
+needs to be provided, so
+.Nm
+can drop the privileges.
+Note that they are dropped after loading the TLS keys, so it's
+recommended to put those outside the chroot.
+Future version of
+.Nm
+may require this.
+.It Ic user Ar string
+Run the daemon as the given user.
 .El
 .Ss Servers
 Every virtual host is defined by a

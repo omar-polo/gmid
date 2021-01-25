@@ -58,6 +58,8 @@ protocols	return TPROTOCOLS;
 mime		return TMIME;
 default		return TDEFAULT;
 type		return TTYPE;
+chroot		return TCHROOT;
+user		return TUSER;
 server		return TSERVER;
 
 location	return TLOCATION;

@@ -92,11 +92,13 @@ struct mime {
 };
 
 struct conf {
-	int		foreground;
-	int		port;
-	int		ipv6;
-	uint32_t	protos;
-	struct mime	mime;
+	int		 foreground;
+	int		 port;
+	int		 ipv6;
+	uint32_t	 protos;
+	struct mime	 mime;
+	char		*chroot;
+	char		*user;
 };
 
 extern struct conf conf;
@@ -169,10 +171,12 @@ char		*absolutify_path(const char*);
 void		 yyerror(const char*);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
-void		 load_vhosts(struct tls_config*);
+void		 load_vhosts(void);
 int		 make_socket(int, int);
+void		 setup_tls(void);
 int		 listener_main(void);
 void		 init_config(void);
+void		 drop_priv(void);
 void		 usage(const char*);
 
 /* provided by lex/yacc */
