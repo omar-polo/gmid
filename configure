@@ -44,6 +44,7 @@ HAVE_ERR=
 HAVE_EXPLICIT_BZERO=
 HAVE_GETPROGNAME=
 HAVE_LIBTLS=
+HAVE_OPENSSL=
 HAVE_RECALLOCARRAY=
 HAVE_STRLCAT=
 HAVE_STRLCPY=
@@ -59,9 +60,15 @@ BINDIR=
 INSTALL="install"
 
 # try to auto detect CFLAGS and LDFLAGS
-if which pkg-config 2>/dev/null 1>&2 && pkg-config libtls; then
-	CFLAGS=`pkg-config --cflags libtls`
-	LDFLAGS=`pkg-config --libs  libtls`
+if which pkg-config 2>/dev/null 1>&2; then
+	if pkg-config libtls; then
+		CFLAGS="$(pkg-config --cflags libtls)"
+		LDFLAGS="$(pkg-config --libs libtls)"
+	fi
+	if pkg-config openssl; then
+		CFLAGS="${CFLAGS} $(pkg-config --cflags openssl)"
+		LDFLAGS="${LDFLAGS} $(pkg-config --libs openssl)"
+	fi
 fi
 
 # auto detect lex/flex
@@ -229,6 +236,7 @@ runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest getprogname	GETPROGNAME	|| true
 runtest libtls		LIBTLS		|| true
+runtest openssl		OPENSSL		|| true
 runtest recallocarray	RECALLOCARRAY	|| true
 runtest strlcat		STRLCAT		|| true
 runtest strlcpy		STRLCPY		|| true
@@ -238,6 +246,12 @@ runtest vasprintf	VASPRINTF	"" -D_GNU_SOURCE || true
 if [ ${HAVE_LIBTLS} -eq 0 ]; then
 	echo "FATAL: libtls not found" 1>&2
 	echo "FATAL: libtls not found" 1>&3
+	exit 1
+fi
+
+if [ ${HAVE_OPENSSL} -eq 0 ]; then
+	echo "FATAL: openssl not found" 1>&2
+	echo "FATAL: openssl not found" 1>&3
 	exit 1
 fi
 

@@ -35,6 +35,9 @@ vhost_lang(struct vhost *v, const char *path)
 	struct location *loc;
 	const char *lang = NULL;
 
+	if (v == NULL)
+		return lang;
+
 	for (loc = v->locations; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
 			if (loc->lang != NULL)

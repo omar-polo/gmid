@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/stat.h>
+
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -22,6 +24,9 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <string.h>
+
+#include <openssl/pem.h>
+#include <openssl/x509.h>
 
 #include "gmid.h"
 
@@ -214,6 +219,119 @@ absolutify_path(const char *path)
 }
 
 void
+gen_certificate(const char *host, const char *certpath, const char *keypath)
+{
+	BIGNUM		e;
+	EVP_PKEY	*pkey;
+	RSA		*rsa;
+	X509		*x509;
+	X509_NAME	*name;
+	FILE		*f;
+	const char	*org = "gmid";
+
+	LOGN(NULL, "generating a new certificate for %s in %s (it could take a while)",
+	    host, certpath);
+
+	if ((pkey = EVP_PKEY_new()) == NULL)
+                fatal("couldn't create a new private key");
+
+	if ((rsa = RSA_new()) == NULL)
+		fatal("could'nt generate rsa");
+
+	BN_init(&e);
+	BN_set_word(&e, 17);
+	if (!RSA_generate_key_ex(rsa, 4096, &e, NULL))
+		fatal("couldn't generate a rsa key");
+
+	if (!EVP_PKEY_assign_RSA(pkey, rsa))
+		fatal("couldn't assign the key");
+
+	if ((x509 = X509_new()) == NULL)
+		fatal("couldn't generate the X509 certificate");
+
+	ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+	X509_gmtime_adj(X509_get_notBefore(x509), 0);
+	X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 years */
+
+	if (!X509_set_pubkey(x509, pkey))
+		fatal("couldn't set the public key");
+
+	name = X509_get_subject_name(x509);
+	if (!X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, org, -1, -1, 0))
+		fatal("couldn't add N to cert");
+	if (!X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, host, -1, -1, 0))
+		fatal("couldn't add CN to cert");
+	X509_set_issuer_name(x509, name);
+
+	if (!X509_sign(x509, pkey, EVP_sha256()))
+                fatal("couldn't sign the certificate");
+
+	if ((f = fopen(keypath, "w")) == NULL)
+		fatal("fopen(%s): %s", keypath, strerror(errno));
+	if (!PEM_write_PrivateKey(f, pkey, NULL, NULL, 0, NULL, NULL))
+		fatal("couldn't write private key");
+	fclose(f);
+
+	if ((f = fopen(certpath, "w")) == NULL)
+		fatal("fopen(%s): %s", certpath, strerror(errno));
+	if (!PEM_write_X509(f, x509))
+		fatal("couldn't write cert");
+	fclose(f);
+
+	X509_free(x509);
+	RSA_free(rsa);
+}
+
+/* XXX: create recursively */
+void
+mkdirs(const char *path)
+{
+	if (mkdir(path, 0755) == -1 && errno != EEXIST)
+		fatal("can't mkdir %s: %s", path, strerror(errno));
+}
+
+/* $XDG_DATA_HOME/gmid */
+char *
+data_dir(void)
+{
+	const char *home, *xdg;
+	char dir[PATH_MAX];
+	char *t;
+
+	if ((xdg = getenv("XDG_DATA_HOME")) == NULL) {
+		if ((home = getenv("HOME")) == NULL)
+			errx(1, "XDG_DATA_HOME and HOME both empty");
+		if (asprintf(&t, "%s/.local/share/gmid", home) == -1)
+			err(1, "asprintf");
+		mkdirs(t);
+		return t;
+	}
+
+	if (asprintf(&t, "%s/gmid", xdg) == -1)
+		err(1, "asprintf");
+	mkdirs(t);
+	return t;
+}
+
+void
+load_local_cert(const char *hostname, const char *dir)
+{
+	char *cert, *key;
+
+	if (asprintf(&cert, "%s/%s.cert.pem", dir, hostname) == -1)
+		errx(1, "asprintf");
+	if (asprintf(&key, "%s/%s.key.pem", dir, hostname) == -1)
+		errx(1, "asprintf");
+
+	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
+		gen_certificate(hostname, cert, key);
+
+	hosts[0].cert = cert;
+	hosts[0].key = key;
+	hosts[0].domain = hostname;
+}
+
+void
 yyerror(const char *msg)
 {
 	goterror = 1;
@@ -333,7 +451,7 @@ setup_tls(void)
 	if (tls_config_set_keypair_file(tlsconf, hosts->cert, hosts->key))
 		fatal("tls_config_set_keypair_file failed");
 
-	for (h = hosts; h->domain != NULL; ++h) {
+	for (h = &hosts[1]; h->domain != NULL; ++h) {
 		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
 			fatal("failed to load the keypair (%s, %s)",
 			    h->cert, h->key);
@@ -375,7 +493,7 @@ init_config(void)
 	for (i = 0; i < HOSTSLEN; ++i)
 		hosts[i].dirfd = -1;
 
-	conf.foreground = 1;
+	conf.foreground = 0;
 	conf.port = 1965;
 	conf.ipv6 = 0;
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
@@ -419,8 +537,8 @@ void
 usage(const char *me)
 {
 	fprintf(stderr,
-	    "USAGE: %s [-n] [-c config] | [-6fh] [-C cert] [-d root] [-K key] "
-	    "[-p port] [-x cgi-bin]\n",
+	    "USAGE: %s [-n] [-c config] | [-6h] [-d certs-dir] [-H host]"
+	    "       [-p port] [-x cgi] [dir]",
 	    me);
 }
 
@@ -428,19 +546,16 @@ int
 main(int argc, char **argv)
 {
 	int ch, p[2];
-	const char *config_path = NULL;
-	int conftest = 0;
+	const char *config_path = NULL, *certs_dir = NULL, *hostname = NULL;
+	int conftest = 0, configless = 0;
 
 	init_config();
 
-	while ((ch = getopt(argc, argv, "6C:c:d:fhK:np:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "6c:d:H:hnp:x:")) != -1) {
 		switch (ch) {
 		case '6':
 			conf.ipv6 = 1;
-			break;
-
-		case 'C':
-			hosts[0].cert = optarg;
+			configless = 1;
 			break;
 
 		case 'c':
@@ -448,22 +563,18 @@ main(int argc, char **argv)
 			break;
 
 		case 'd':
-			free((char*)hosts[0].dir);
-			if ((hosts[0].dir = absolutify_path(optarg)) == NULL)
-				fatal("absolutify_path");
+			certs_dir = optarg;
+			configless = 1;
 			break;
 
-		case 'f':
-			conf.foreground = 1;
+		case 'H':
+			hostname = optarg;
+			configless = 1;
 			break;
 
 		case 'h':
 			usage(*argv);
 			return 0;
-
-		case 'K':
-			hosts[0].key = optarg;
-			break;
 
 		case 'n':
 			conftest = 1;
@@ -471,6 +582,7 @@ main(int argc, char **argv)
 
 		case 'p':
 			conf.port = parse_portno(optarg);
+			configless = 1;
 			break;
 
 		case 'x':
@@ -478,6 +590,7 @@ main(int argc, char **argv)
 			if (*optarg == '/')
 				optarg++;
 			hosts[0].cgi = optarg;
+			configless = 1;
 			break;
 
 		default:
@@ -485,17 +598,36 @@ main(int argc, char **argv)
 			return 1;
 		}
 	}
+	argc -= optind;
+	argv += optind;
 
 	if (config_path != NULL) {
-		if (hosts[0].cert != NULL || hosts[0].key != NULL ||
-		    hosts[0].dir != NULL)
-			fatal("can't specify options in conf mode");
+		if (argc > 0 || configless)
+			fatal("can't specify options is config mode.");
+
 		parse_conf(config_path);
 	} else {
-		if (hosts[0].cert == NULL || hosts[0].key == NULL ||
-		    hosts[0].dir == NULL)
-			fatal("missing cert, key or root directory to serve");
-		hosts[0].domain = "*";
+		conf.foreground = 1;
+
+		if (hostname == NULL)
+			hostname = "localhost";
+		if (certs_dir == NULL)
+			certs_dir = data_dir();
+		load_local_cert(hostname, certs_dir);
+
+                switch (argc) {
+		case 0:
+			hosts[0].dir = ".";
+			break;
+		case 1:
+			hosts[0].dir = argv[0];
+			break;
+		default:
+			usage(getprogname());
+			return 1;
+		}
+
+		LOGN(NULL, "serving %s on port %d", hosts[0].dir, conf.port);
 	}
 
 	if (conftest) {
