@@ -73,12 +73,11 @@ to build a `gmid` image with:
 and then run it with something along the lines of
 
     docker run --rm -it -p 1965:1965 \
-        -v /path/to/cert.pem:...:ro \
-        -v /path/to/key.pem:...:ro \
+        -v /path/to/gmid.conf:...:ro \
         -v /path/to/docs:/var/gemini \
-        gmid -f -d /var/gemini -K ... -C ...
+        gmid -c .../gmid.conf
 
-ellipses used for brevity.
+ellipses for brevity.
 
 ### Local libretls
 
