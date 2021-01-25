@@ -179,6 +179,9 @@ sandbox()
 		/* alpine on amd64 does a clock_gettime(2) */
 		SC_ALLOW(clock_gettime),
 
+		/* void on aarch64 does a gettrandom */
+		SC_ALLOW(getrandom),
+
 		/* for directory listing */
 		SC_ALLOW(getdents64),
 
