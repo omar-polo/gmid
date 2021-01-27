@@ -164,50 +164,6 @@ sig_handler(int sig)
 	(void)sig;
 }
 
-int
-starts_with(const char *str, const char *prefix)
-{
-	size_t i;
-
-	if (prefix == NULL)
-		return 0;
-
-	for (i = 0; prefix[i] != '\0'; ++i)
-		if (str[i] != prefix[i])
-			return 0;
-	return 1;
-}
-
-int
-ends_with(const char *str, const char *sufx)
-{
-	size_t i, j;
-
-	i = strlen(str);
-	j = strlen(sufx);
-
-	if (j > i)
-		return 0;
-
-	i -= j;
-	for (j = 0; str[i] != '\0'; i++, j++)
-		if (str[i] != sufx[j])
-			return 0;
-	return 1;
-}
-
-ssize_t
-filesize(int fd)
-{
-	ssize_t len;
-
-	if ((len = lseek(fd, 0, SEEK_END)) == -1)
-		return -1;
-	if (lseek(fd, 0, SEEK_SET) == -1)
-		return -1;
-	return len;
-}
-
 char *
 absolutify_path(const char *path)
 {
@@ -234,8 +190,8 @@ gen_certificate(const char *host, const char *certpath, const char *keypath)
 	FILE		*f;
 	const char	*org = "gmid";
 
-	LOGN(NULL, "generating a new certificate for %s in %s (it could take a while)",
-	    host, certpath);
+	LOGN(NULL, "generating new certificate for %s (it could take a while)",
+	    host);
 
 	if ((pkey = EVP_PKEY_new()) == NULL)
                 fatal("couldn't create a new private key");

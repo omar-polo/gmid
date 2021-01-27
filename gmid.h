@@ -157,7 +157,6 @@ enum {
 };
 
 /* gmid.c */
-
 __attribute__((format (printf, 1, 2)))
 __attribute__((__noreturn__))
 void fatal(const char*, ...);
@@ -167,9 +166,6 @@ void logs(int, struct client*, const char*, ...);
 void log_request(struct client*, char*, size_t);
 
 void		 sig_handler(int);
-int		 starts_with(const char*, const char*);
-int		 ends_with(const char*, const char*);
-ssize_t		 filesize(int);
 char		*absolutify_path(const char*);
 void		 gen_certificate(const char*, const char*, const char*);
 void		 mkdirs(const char*);
@@ -247,5 +243,10 @@ int		 trim_req_iri(char*, const char **);
 
 /* puny.c */
 int		 puny_decode(const char*, char*, size_t);
+
+/* utils.c */
+int		 starts_with(const char*, const char*);
+int		 ends_with(const char*, const char*);
+ssize_t		 filesize(int);
 
 #endif

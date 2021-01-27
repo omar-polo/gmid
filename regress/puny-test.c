@@ -24,6 +24,7 @@ struct suite {
 	const char	*res;
 } t[] = {
 	{"foo",			"foo"},
+	{"h.n",			"h.n"},
 	{"xn-invalid",		"xn-invalid"},
 	{"naïve",		"naïve"},
 	{"xn--8ca",		"è"},

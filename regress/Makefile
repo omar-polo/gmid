@@ -7,8 +7,8 @@ all: puny-test testdata iri_test cert.pem
 	./runtime
 	./iri_test
 
-puny-test: puny-test.o ../puny.o ../utf8.o
-	${CC} puny-test.o ../puny.o ../utf8.o -o puny-test
+puny-test: puny-test.o ../puny.o ../utf8.o ../utils.o
+	${CC} puny-test.o ../puny.o ../utf8.o ../utils.o -o puny-test
 
 iri_test: iri_test.o ../iri.o ../utf8.o
 	${CC} iri_test.o ../iri.o ../utf8.o -o iri_test

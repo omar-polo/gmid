@@ -142,11 +142,7 @@ decode(const char *str, char *out, size_t len)
 	unsigned int numpoints;
 	const char *s;
 
-	if (str == NULL || len <= 4)
-		return 0;
-
-	/* todo: starts_with */
-	if (strstr(str, "xn--") != str) {
+	if (!starts_with(str, "xn--")) {
 		strncpy(out, str, len);
 		return 1;
 	}
@@ -223,6 +219,8 @@ puny_decode(const char *hostname, char *out, size_t len)
 	size_t l;
 
 	memset(out, 0, len);
+	if (hostname == NULL)
+		return 1;
 
 	s = hostname;
 	for (;;) {
