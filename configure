@@ -31,10 +31,13 @@ exec 3> config.log
 echo "file config.log: writing..."
 
 # --------
-# default settings: initialize all vars here
+# default settings: initialize all vars here such that nothing is
+# leaked from the environment except for CC and CFLAGS
 
-CC=cc
-CFLAGS=
+CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
+CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
+CFLAGS="${CFLAGS} -g -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
+CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
 LDFLAGS=-ltls
 YACC=yacc
 LEX=lex
@@ -192,30 +195,11 @@ runtest() {
 # --------
 # compiler options
 
-DEFCFLAGS="-g -W -Wall -Wmissing-prototypes -Wstrict-prototypes -Wwrite-strings -Wno-unused-parameter"
+COMP="${CC} ${CFLAGS} -Wno-unused -Werror"
 
-if [ -n "${CFLAGS}" ]; then
-	COMP="${CC} ${CFLAGS} -Wno-unused -Werror"
-else
-	COMP="${CC} ${CDEFCFLAGS} -Wno-unused -Werror"
-fi
-echo -n "testing ${CC} -W: " 1>&2
-echo -n "testing ${CC} -W: " 1>&3
-runtest noop WFLAG || true
-
-if [ -n "${CFLAGS}" ]; then
-	echo "CFLAGS specified manually:" 1>&3
-elif [ ${HAVE_WFLAG} -eq 0 ]; then
-	CFLAGS="-g"
-else
-	CFLAGS="${DEFCFLAGS}"
-fi
 echo "selected CFLAGS=\"${CFLAGS}\"" 1>&2
 echo "selected CFLAGS=\"${CFLAGS}\"" 1>&3
 echo 1>&3
-
-COMP="${CC} ${CFLAGS}"
-[ ${HAVE_WFLAG} -eq 0 ] || COMP="${COMP} -Wno-unused -Werror"
 
 if [ -n "${STATIC}" ]; then
 	echo "selected STATIC=\"${STATIC}\" (manual)" 1>&2
