@@ -52,9 +52,11 @@ static const char *
 copy_until_delimiter(const char *s, char *out, size_t len)
 {
 	char *end, *t;
+	size_t l;
 
 	end = strchr(s, '\0');
-	if (end - s  > len)
+	l = end - s;
+	if (l > len)
 		return NULL;
 
 	for (t = end; t >= s; --t)
@@ -92,7 +94,6 @@ static int
 insert(char *out, size_t len, int codepoint, size_t i)
 {
 	int l;
-	size_t outlen;
 	char *t;
 
 	if (codepoint <= 0x7F)
@@ -203,7 +204,7 @@ decode(const char *str, char *out, size_t len)
 	return 1;
 }
 
-const char *
+static const char *
 end_of_component(const char *hostname)
 {
 	for (; *hostname != '\0' && *hostname != '.'; ++hostname)
@@ -225,7 +226,8 @@ puny_decode(const char *hostname, char *out, size_t len)
 	s = hostname;
 	for (;;) {
 		end = end_of_component(s);
-		if (end - s >= sizeof(comp))
+		l = end - s;
+		if (l >= sizeof(comp))
 			return 0;
 
 		memcpy(comp, s, end - s);
