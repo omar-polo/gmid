@@ -256,7 +256,6 @@ char *
 data_dir(void)
 {
 	const char *home, *xdg;
-	char dir[PATH_MAX];
 	char *t;
 
 	if ((xdg = getenv("XDG_DATA_HOME")) == NULL) {
