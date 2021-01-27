@@ -35,7 +35,7 @@ vhost_lang(struct vhost *v, const char *path)
 	struct location *loc;
 	const char *lang = NULL;
 
-	if (v == NULL)
+	if (v == NULL || path == NULL)
 		return lang;
 
 	for (loc = v->locations; loc->match != NULL; ++loc) {
@@ -54,6 +54,9 @@ vhost_default_mime(struct vhost *v, const char *path)
 	struct location *loc;
 	const char *default_mime = "application/octet-stream";
 
+	if (v == NULL || path == NULL)
+		return default_mime;
+
 	for (loc = v->locations; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
 			if (loc->default_mime != NULL)
@@ -69,6 +72,9 @@ vhost_index(struct vhost *v, const char *path)
 {
 	struct location *loc;
 	const char *index = "index.gmi";
+
+	if (v == NULL || path == NULL)
+		return index;
 
 	for (loc = v->locations; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
