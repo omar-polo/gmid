@@ -28,15 +28,15 @@ Please consult the [manpage](gmid.1) for more information.
 ## Features
 
  - IRI support (RFC3987)
+ - punycode support
  - dual stack: can serve over both IPv4 and IPv6
  - CGI scripts
  - (very) low memory footprint
  - small codebase, easily hackable
  - virtual hosts
- - rules per-location
- - directory listings
- - mime types configurable
- - index file configurable
+ - per-location rules
+ - optional directory listings
+ - configurable mime types
  - sandboxed by default on OpenBSD, Linux and FreeBSD
  - chroot support
 
@@ -46,6 +46,26 @@ Please consult the [manpage](gmid.1) for more information.
  - not suited for very busy hosts.  If you receive an high number of
    connection per-second you'd probably want to run multiple gmid
    instances behind relayd/haproxy or a different server.
+
+
+## Internationalisation (IRIs, UNICODE, punycode, all that stuff)
+
+Even thought the current Gemini specification doesn't mention anything
+in this regard, I do think these are important things, so I tried to
+implement them in the most user-friendly way I could think of.
+
+For starters, gmid has full support for IRI (RFC3987 --
+Internationalized Resource Identifiers).  IRIs are a superset of URI,
+so there aren't incompatibilities with URI-only clients.
+
+There is full support also for punycode.  In theory, the users doesn't
+even need to know that punycode is a thing.  The hostname in the
+configuration file can (and must be) written with proper UNICODE, gmid
+will do the rest.
+
+The only missing piece is UNICODE normalisation.  gmid doesn't
+do that (yet).
+
 
 ## Building
 
