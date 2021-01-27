@@ -30,6 +30,7 @@ Please consult the [manpage](gmid.1) for more information.
  - IRI support (RFC3987)
  - punycode support
  - dual stack: can serve over both IPv4 and IPv6
+ - automatic certificate generation (in config-less mode)
  - CGI scripts
  - (very) low memory footprint
  - small codebase, easily hackable
