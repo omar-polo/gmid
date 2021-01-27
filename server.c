@@ -275,6 +275,11 @@ handle_handshake(struct pollfd *fds, struct client *c)
 			break;
 	}
 
+	LOGD(c, "handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
+	    servname != NULL ? servname : "(null)",
+	    c->domain,
+	    h->domain != NULL ? h->domain : "(null)");
+
 	if (h->domain != NULL) {
 		c->state = S_OPEN;
 		c->host = h;
