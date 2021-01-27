@@ -76,7 +76,7 @@ auto		return TAUTO;
 
 [ \t]+		;
 
-.		errx(1, "%d: unexpected character %c", yylineno, *yytext);
+.		yyerror("unexpected character"); exit(1);
 
 %%
 

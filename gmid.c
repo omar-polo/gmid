@@ -32,7 +32,7 @@
 
 struct vhost hosts[HOSTSLEN];
 
-int exfd, foreground, goterror;
+int exfd, foreground;
 
 struct conf conf;
 
@@ -289,37 +289,6 @@ load_local_cert(const char *hostname, const char *dir)
 	hosts[0].cert = cert;
 	hosts[0].key = key;
 	hosts[0].domain = hostname;
-}
-
-void
-yyerror(const char *msg)
-{
-	goterror = 1;
-	fprintf(stderr, "%d: %s\n", yylineno, msg);
-}
-
-int
-parse_portno(const char *p)
-{
-	const char *errstr;
-	int n;
-
-	n = strtonum(p, 0, UINT16_MAX, &errstr);
-	if (errstr != NULL)
-		errx(1, "port number is %s: %s", errstr, p);
-	return n;
-}
-
-void
-parse_conf(const char *path)
-{
-	if ((yyin = fopen(path, "r")) == NULL)
-		fatal("cannot open config %s", path);
-	yyparse();
-	fclose(yyin);
-
-	if (goterror)
-		exit(1);
 }
 
 void

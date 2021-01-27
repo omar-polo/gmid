@@ -171,9 +171,6 @@ void		 gen_certificate(const char*, const char*, const char*);
 void		 mkdirs(const char*);
 char		*data_dir(void);
 void		 load_local_cert(const char*, const char*);
-void		 yyerror(const char*);
-int		 parse_portno(const char*);
-void		 parse_conf(const char*);
 void		 load_vhosts(void);
 int		 make_socket(int, int);
 void		 setup_tls(void);
@@ -187,6 +184,10 @@ extern FILE *yyin;
 extern int yylineno;
 extern int yyparse(void);
 extern int yylex(void);
+
+void		 yyerror(const char*);
+int		 parse_portno(const char*);
+void		 parse_conf(const char*);
 
 /* mime.c */
 void		 init_mime(struct mime*);

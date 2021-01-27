@@ -33,7 +33,12 @@ size_t ihost = 0;
 struct location *loc = &hosts[0].locations[0];
 size_t iloc = 0;
 
-extern void yyerror(const char*);
+int goterror = 0;
+const char *config_path;
+
+void		 yyerror(const char*);
+int		 parse_portno(const char*);
+void		 parse_conf(const char*);
 
 %}
 
@@ -145,3 +150,37 @@ locopt		: TDEFAULT TTYPE TSTRING {
 		}
 		| TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 		;
+
+%%
+
+void
+yyerror(const char *msg)
+{
+	goterror = 1;
+	fprintf(stderr, "%s:%d: %s\n", config_path, yylineno, msg);
+}
+
+int
+parse_portno(const char *p)
+{
+	const char *errstr;
+	int n;
+
+	n = strtonum(p, 0, UINT16_MAX, &errstr);
+	if (errstr != NULL)
+		errx(1, "port number is %s: %s", errstr, p);
+	return n;
+}
+
+void
+parse_conf(const char *path)
+{
+	config_path = path;
+	if ((yyin = fopen(path, "r")) == NULL)
+		fatal("cannot open config %s", path);
+	yyparse();
+	fclose(yyin);
+
+	if (goterror)
+		exit(1);
+}
