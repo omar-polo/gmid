@@ -20,7 +20,8 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl 23bchNV
+.Op Fl 23bchNVv
+.Op Fl H Ar hostname
 .Ar IRI
 .Ek
 .Sh DESCRIPTION
@@ -38,6 +39,11 @@ Use only TLSv1.3.
 Print only the body of the response.
 .It Fl c
 Print only the response code.
+.It Fl H Ar hostname
+Use the given
+.Ar hostname
+for SNI, instead of the one extracted from the IRI.
+The IRI hostname will still be used for the DNS resolution.
 .It Fl h
 Print only the response header.
 .It Fl N
@@ -45,6 +51,8 @@ Don't check whether the peer certificate name matches the requested
 hostname.
 .It Fl V
 Only validate the IRI, don't do the Gemini transaction.
+.It Fl v
+Print also the request.
 .El
 .Pp
 Note that

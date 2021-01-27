@@ -18,6 +18,8 @@
 
 #include "gmid.h"
 
+int flag2, flag3, bflag, cflag, hflag, Nflag, Vflag, vflag;
+
 int
 main(int argc, char **argv)
 {
@@ -26,12 +28,14 @@ main(int argc, char **argv)
 	struct tls *ctx;
 	char iribuf[GEMINI_URL_LEN], buf[GEMINI_URL_LEN];
 	const char *parse_err = "unknown error", *port = "1965";
+	const char *hostname;
 	char *t;
-	int ch, flag2, flag3, bflag, cflag, hflag, Nflag, Vflag;
+	int ch;
+	int handshake;
 	ssize_t len;
 
-	flag2 = flag3 = bflag = cflag = hflag = Nflag = Vflag = 0;
-	while ((ch = getopt(argc, argv, "23cbhNV")) != -1) {
+	hostname = NULL;
+	while ((ch = getopt(argc, argv, "23cbH:hNVv")) != -1) {
 		switch (ch) {
 		case '2':
 			flag2 = 1;
@@ -45,6 +49,9 @@ main(int argc, char **argv)
 		case 'c':
 			cflag = 1;
 			break;
+		case 'H':
+			hostname = optarg;
+			break;
 		case 'h':
 			hflag = 1;
 			break;
@@ -54,8 +61,12 @@ main(int argc, char **argv)
 		case 'V':
 			Vflag = 1;
 			break;
+		case 'v':
+			vflag = 1;
+			break;
 		default:
-			fprintf(stderr, "USAGE: %s [-23cbhNV]", *argv);
+			fprintf(stderr, "USAGE: %s [-23cbhNVv] [-H hostname]\n",
+			    *argv);
 			return 1;
 		}
 	}
@@ -104,12 +115,26 @@ main(int argc, char **argv)
 
 	if (*iri.port != '\0')
 		port = iri.port;
-	if (tls_connect(ctx, iri.host, port) == -1)
+
+	if (hostname == NULL)
+		hostname = iri.host;
+
+	if (tls_connect_servername(ctx, iri.host, port, hostname) == -1)
 		errx(1, "tls_connect: %s", tls_error(ctx));
 
-	tls_write(ctx, buf, strlen(buf));
-	/* if (tls_write(ctx, buf, strlen(buf)) != -1) */
-	/*	errx(1, "tls_write: %s", tls_error(ctx)); */
+	for (handshake = 0; !handshake;) {
+		switch (tls_handshake(ctx)) {
+		case 0:
+		case -1:
+			handshake = 1;
+			break;
+		}
+	}
+
+	if (vflag)
+		printf("%s", buf);
+	if (tls_write(ctx, buf, strlen(buf)) == -1)
+		errx(1, "tls_write: %s", tls_error(ctx));
 
 	for (;;) {
 		switch (len = tls_read(ctx, buf, sizeof(buf))) {
