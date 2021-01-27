@@ -612,12 +612,16 @@ main(int argc, char **argv)
 
 		parse_conf(config_path);
 	} else {
+		configless = 1;
+		foreground = 1;
+
 		if (hostname == NULL)
 			hostname = "localhost";
 		if (certs_dir == NULL)
 			certs_dir = data_dir();
 		load_local_cert(hostname, certs_dir);
 
+		hosts[0].domain = "*";
 		hosts[0].locations[0].auto_index = 1;
 		hosts[0].locations[0].match = "*";
 
