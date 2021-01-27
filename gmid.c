@@ -32,7 +32,7 @@
 
 struct vhost hosts[HOSTSLEN];
 
-int exfd, foreground;
+int exfd, foreground, verbose;
 
 struct conf conf;
 
@@ -64,6 +64,11 @@ logs(int priority, struct client *c,
 	size_t len;
 	int ec;
 	va_list ap;
+
+	if (foreground && !verbose) {
+		if (priority == LOG_DEBUG || priority == LOG_INFO)
+			return;
+	}
 
 	va_start(ap, fmt);
 
@@ -476,7 +481,7 @@ main(int argc, char **argv)
 
 	init_config();
 
-	while ((ch = getopt(argc, argv, "6c:d:fH:hnp:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "6c:d:fH:hnp:vx:")) != -1) {
 		switch (ch) {
 		case '6':
 			conf.ipv6 = 1;
@@ -512,6 +517,10 @@ main(int argc, char **argv)
 		case 'p':
 			conf.port = parse_portno(optarg);
 			configless = 1;
+			break;
+
+		case 'v':
+			verbose = 1;
 			break;
 
 		case 'x':
