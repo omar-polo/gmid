@@ -308,8 +308,10 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-	if (!trim_req_iri(c->req) || !parse_iri(c->req, &c->iri, &parse_err)) {
-		start_reply(fds, c, BAD_REQUEST, parse_err);
+	if (!trim_req_iri(c->req, &parse_err)
+	    || !parse_iri(c->req, &c->iri, &parse_err)) {
+		LOGI(c, "iri parse error: %s", parse_err);
+		start_reply(fds, c, BAD_REQUEST, "invalid request");
 		return;
 	}
 

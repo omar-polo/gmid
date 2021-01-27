@@ -243,7 +243,7 @@ char		*utf8_nth(char*, size_t);
 
 /* iri.c */
 int		 parse_iri(char*, struct iri*, const char**);
-int		 trim_req_iri(char*);
+int		 trim_req_iri(char*, const char **);
 
 /* puny.c */
 int		 puny_decode(const char*, char*, size_t);
