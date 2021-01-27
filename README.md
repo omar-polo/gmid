@@ -49,9 +49,9 @@ Please consult the [manpage](gmid.1) for more information.
 
 ## Building
 
-gmid depends on a POSIX libc and libtls (provided either by LibreSSL
-or libretls).  At build time, flex and yacc (or GNU bison) are also
-needed.
+gmid depends on a POSIX libc, OpenSSL/LibreSSL and libtls (provided
+either by LibreSSL or libretls).  At build time, flex and yacc (or GNU
+bison) are also needed.
 
 The build is as simple as
 
@@ -115,8 +115,8 @@ This way, is still possible to execute CGI scripts without
 restrictions even in the presence of a sandbox.
 
 On OpenBSD, the listener process runs with the `stdio recvfd rpath
-inet` pledges and has `unveil(2)`ed only the directories that it
-serves; the executor has `stdio sendfd proc exec` as pledges.
+inet` pledges, the executor has `stdio sendfd proc exec` as pledges;
+both have unveiled only the served directories.
 
 On FreeBSD, the executor process is sandboxed with `capsicum(4)`.
 
