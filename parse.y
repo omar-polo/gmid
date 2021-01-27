@@ -45,7 +45,7 @@ extern void yyerror(const char*);
 	int		 num;
 }
 
-%token TDAEMON TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
+%token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
 %token TCHROOT TUSER TSERVER
 %token TLOCATION TCERT TKEY TROOT TCGI TLANG TINDEX TAUTO
 %token TERR
@@ -62,8 +62,7 @@ options		: /* empty */
 		| options option
 		;
 
-option		: TDAEMON TBOOL		{ conf.foreground = !$2; }
-		| TIPV6 TBOOL		{ conf.ipv6 = $2; }
+option		: TIPV6 TBOOL		{ conf.ipv6 = $2; }
 		| TPORT TNUM		{ conf.port = $2; }
 		| TPROTOCOLS TSTRING {
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)

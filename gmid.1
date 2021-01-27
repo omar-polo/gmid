@@ -20,7 +20,7 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl n
+.Op Fl fn
 .Op Fl c Ar config
 |
 .Op Fl 6h
@@ -38,6 +38,8 @@ It can run without a configuration file with a limited set of features
 available.
 If a configuration file is given, no other flags shall be given,
 except for
+.Fl f
+and
 .Fl n .
 .Pp
 .Nm
@@ -48,6 +50,8 @@ The options are as follows:
 .Bl -tag -width 14m
 .It Fl c Pa config
 Specify the configuration file.
+.It Fl f
+Stays and logs on the foreground.
 .It Fl n
 Check that the configuration is valid, but don't start the server.
 .El
@@ -121,12 +125,6 @@ A string is a sequence of characters wrapped in double quotes,
 .Dq like this .
 .Ss Global Options
 .Bl -tag -width 12m
-.It Ic daemon Ar bool
-Enable or disables the daemon mode.
-In daemon mode
-.Nm
-will log to syslog and fork in the background.
-By default is on.
 .It Ic ipv6 Ar bool
 Enable or disable IPv6 support.
 By default is off.

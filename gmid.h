@@ -95,7 +95,6 @@ struct mime {
 };
 
 struct conf {
-	int		 foreground;
 	int		 port;
 	int		 ipv6;
 	uint32_t	 protos;

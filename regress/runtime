@@ -6,7 +6,6 @@ set -e
 # generates a configuration file reg.conf
 config() {
 	cat <<EOF > reg.conf
-daemon off
 ipv6 off
 port 10965
 $1
@@ -43,7 +42,7 @@ raw() {
 
 run() {
 	# filter out logs for GET requests
-	(./../gmid -c reg.conf 2>&1 | grep -v GET) >&2 &
+	(./../gmid -f -c reg.conf 2>&1 | grep -v GET) >&2 &
 	pid=$!
 	# give gmid time to bind the port, otherwise we end up
 	# executing gg when gmid isn't ready yet.

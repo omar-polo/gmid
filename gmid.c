@@ -32,9 +32,7 @@
 
 struct vhost hosts[HOSTSLEN];
 
-int goterror;
-
-int exfd;
+int exfd, foreground, goterror;
 
 struct conf conf;
 
@@ -47,7 +45,7 @@ fatal(const char *fmt, ...)
 
 	va_start(ap, fmt);
 
-	if (conf.foreground) {
+	if (foreground) {
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
 	} else
@@ -85,7 +83,7 @@ logs(int priority, struct client *c,
 	if (vasprintf(&fmted, fmt, ap) == -1)
 		fatal("vasprintf: %s", strerror(errno));
 
-	if (conf.foreground)
+	if (foreground)
 		fprintf(stderr, "%s:%s %s\n", hbuf, sbuf, fmted);
 	else {
 		if (asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted) == -1)
@@ -152,7 +150,7 @@ log_request(struct client *c, char *meta, size_t l)
 	if ((t = gmid_strnchr(meta, '\r', l)) == NULL)
 		t = meta + len;
 
-	if (conf.foreground)
+	if (foreground)
 		fprintf(stderr, "%s:%s GET %s %.*s\n", hbuf, sbuf, b,
 		    (int)(t - meta), meta);
 	else
@@ -475,9 +473,6 @@ listener_main(void)
 
 	load_default_mime(&conf.mime);
 
-	if (!conf.foreground && daemon(0, 1) == -1)
-		exit(1);
-
 	sock4 = make_socket(conf.port, AF_INET);
 	sock6 = -1;
 	if (conf.ipv6)
@@ -500,7 +495,6 @@ init_config(void)
 	for (i = 0; i < HOSTSLEN; ++i)
 		hosts[i].dirfd = -1;
 
-	conf.foreground = 0;
 	conf.port = 1965;
 	conf.ipv6 = 0;
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
@@ -544,7 +538,7 @@ void
 usage(const char *me)
 {
 	fprintf(stderr,
-	    "USAGE: %s [-n] [-c config] | [-6h] [-d certs-dir] [-H host]"
+	    "USAGE: %s [-fn] [-c config] | [-6h] [-d certs-dir] [-H host]"
 	    "       [-p port] [-x cgi] [dir]",
 	    me);
 }
@@ -558,7 +552,7 @@ main(int argc, char **argv)
 
 	init_config();
 
-	while ((ch = getopt(argc, argv, "6c:d:H:hnp:x:")) != -1) {
+	while ((ch = getopt(argc, argv, "6c:d:fH:hnp:x:")) != -1) {
 		switch (ch) {
 		case '6':
 			conf.ipv6 = 1;
@@ -572,6 +566,10 @@ main(int argc, char **argv)
 		case 'd':
 			certs_dir = optarg;
 			configless = 1;
+			break;
+
+		case 'f':
+			foreground = 1;
 			break;
 
 		case 'H':
@@ -614,8 +612,6 @@ main(int argc, char **argv)
 
 		parse_conf(config_path);
 	} else {
-		conf.foreground = 1;
-
 		if (hostname == NULL)
 			hostname = "localhost";
 		if (certs_dir == NULL)
@@ -657,9 +653,9 @@ main(int argc, char **argv)
 	signal(SIGINFO, sig_handler);
 #endif
 	signal(SIGUSR2, sig_handler);
+	signal(SIGHUP, SIG_IGN);
 
-	if (!conf.foreground) {
-		signal(SIGHUP, SIG_IGN);
+	if (!foreground && !configless) {
 		if (daemon(1, 1) == -1)
 			fatal("daemon: %s", strerror(errno));
 	}
