@@ -64,10 +64,10 @@
 #define LOGD(c, fmt, ...) logs(LOG_DEBUG,   c, fmt, __VA_ARGS__)
 
 struct location {
-	char		*match;
-	char		*lang;
-	char		*default_mime;
-	char		*index;
+	const char	*match;
+	const char	*lang;
+	const char	*default_mime;
+	const char	*index;
 	int		 auto_index; /* 0 auto, -1 off, 1 on */
 };
 

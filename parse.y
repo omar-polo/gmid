@@ -129,15 +129,18 @@ locopts		: /* empty */
 		;
 
 locopt		: TDEFAULT TTYPE TSTRING {
-			free(loc->default_mime);
+			if (loc->default_mime != NULL)
+				yyerror("`default type' specified more than once");
 			loc->default_mime = $3;
 		}
 		| TLANG TSTRING {
-			free(loc->lang);
+			if (loc->lang != NULL)
+				yyerror("`lang' specified more than once");
 			loc->lang = $2;
 		}
 		| TINDEX TSTRING {
-			free(loc->index);
+			if (loc->index != NULL)
+				yyerror("`index' specified more than once");
 			loc->index = $2;
 		}
 		| TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
