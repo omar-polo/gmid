@@ -54,6 +54,9 @@
 #define HOSTSLEN	64
 #define LOCLEN		32
 
+/* RFC1034 imposes this limit.  63+1 for the NUL-terminator */
+#define DOMAIN_NAME_LEN (63+1)
+
 #define LOGE(c, fmt, ...) logs(LOG_ERR,     c, fmt, __VA_ARGS__)
 #define LOGW(c, fmt, ...) logs(LOG_WARNING, c, fmt, __VA_ARGS__)
 #define LOGN(c, fmt, ...) logs(LOG_NOTICE,  c, fmt, __VA_ARGS__)
@@ -134,6 +137,7 @@ struct client {
 	struct tls	*ctx;
 	char		 req[GEMINI_URL_LEN];
 	struct iri	 iri;
+	char		 domain[DOMAIN_NAME_LEN];
 	int		 state, next;
 	int		 code;
 	const char	*meta;
@@ -236,9 +240,13 @@ void		 sandbox(void);
 
 /* utf8.c */
 int		 valid_multibyte_utf8(struct parser*);
+char		*utf8_nth(char*, size_t);
 
 /* iri.c */
 int		 parse_iri(char*, struct iri*, const char**);
 int		 trim_req_iri(char*);
+
+/* puny.c */
+int		 puny_decode(char*, char*, size_t);
 
 #endif

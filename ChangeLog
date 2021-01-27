@@ -1,3 +1,7 @@
+2021-01-26  Omar Polo  <op@omarpolo.com>
+
+	* puny.c (puny_decode): initial punycode support!
+
 2021-01-25  Omar Polo  <op@omarpolo.com>
 
 	* gmid.1: manpage improvements (example and usage)

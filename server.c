@@ -262,12 +262,10 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	}
 
 	servname = tls_conn_servername(c->ctx);
+	puny_decode(servname, c->domain, sizeof(c->domain));
 
 	for (h = hosts; h->domain != NULL; ++h) {
-		if (!strcmp(h->domain, "*"))
-			break;
-
-		if (servname != NULL && !fnmatch(h->domain, servname, 0))
+		if (!fnmatch(h->domain, c->domain, 0))
 			break;
 	}
 
@@ -290,6 +288,7 @@ void
 handle_open_conn(struct pollfd *fds, struct client *c)
 {
 	const char *parse_err = "invalid request";
+	char decoded[DOMAIN_NAME_LEN];
 
 	bzero(c->req, sizeof(c->req));
 	bzero(&c->iri, sizeof(c->iri));
@@ -314,8 +313,11 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-	/* XXX: we should check that the SNI matches the requested host */
-	if (strcmp(c->iri.schema, "gemini") || c->iri.port_no != conf.port) {
+	puny_decode(c->iri.host, decoded, sizeof(decoded));
+
+	if (c->iri.port_no != conf.port
+	    || strcmp(c->iri.schema, "gemini")
+	    || strcmp(decoded, c->domain)) {
 		start_reply(fds, c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}

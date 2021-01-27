@@ -77,3 +77,20 @@ valid_multibyte_utf8(struct parser *p)
 	}
 	return 1;
 }
+
+char *
+utf8_nth(char *s, size_t n)
+{
+	size_t i;
+	uint32_t cp = 0, state = 0;
+
+	for (i = 0; *s && i < n; ++s)
+		if (!utf8_decode(&state, &cp, *s))
+			++i;
+
+	if (state != UTF8_ACCEPT)
+		return NULL;
+	if (i == n)
+		return s;
+	return NULL;
+}

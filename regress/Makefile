@@ -2,11 +2,16 @@ include ../Makefile.local
 
 .PHONY: all clean runtime
 
-all: iri_test runtime
+all: puny-test testdata iri_test cert.pem
+	./puny-test
+	./runtime
 	./iri_test
 
+puny-test: puny-test.o ../puny.o ../utf8.o
+	${CC} puny-test.o ../puny.o ../utf8.o -o puny-test
+
 iri_test: iri_test.o ../iri.o ../utf8.o
-	${CC} iri_test.o ../iri.o ../utf8.o -o iri_test ${LDFLAGS}
+	${CC} iri_test.o ../iri.o ../utf8.o -o iri_test
 
 fill-file: fill-file.o
 	${CC} fill-file.o -o fill-file
@@ -38,5 +43,5 @@ testdata: fill-file
 	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi
 
-runtime: testdata cert.pem
+runtime: testdata
 	./runtime

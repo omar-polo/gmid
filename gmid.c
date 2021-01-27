@@ -131,7 +131,14 @@ log_request(struct client *c, char *meta, size_t l)
 		/* serialize the IRI */
 		strlcpy(b, c->iri.schema, sizeof(b));
 		strlcat(b, "://", sizeof(b));
-		strlcat(b, c->iri.host, sizeof(b));
+
+		/* log the decoded host name, but if it was invalid
+		 * use the raw one. */
+		if (*c->domain != '\0')
+			strlcat(b, c->domain, sizeof(b));
+		else
+			strlcat(b, c->iri.host, sizeof(b));
+
 		strlcat(b, "/", sizeof(b));
 		strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
 		if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */

@@ -17,4 +17,5 @@ regress/*.pem
 regress/reg.conf
 regress/fill-file
 regress/iri_test
+regress/puny-test
 regress/*.o
