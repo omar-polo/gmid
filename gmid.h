@@ -247,6 +247,6 @@ int		 parse_iri(char*, struct iri*, const char**);
 int		 trim_req_iri(char*);
 
 /* puny.c */
-int		 puny_decode(char*, char*, size_t);
+int		 puny_decode(const char*, char*, size_t);
 
 #endif

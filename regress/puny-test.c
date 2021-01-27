@@ -48,16 +48,12 @@ main(int argc, char **argv)
 {
 	struct suite *i;
 	int failed;
-	char *hostname;
 	char buf[64];		/* name len */
 
 	failed = 0;
 	for (i = t; i->src != NULL; ++i) {
-		if ((hostname = strdup(i->src)) == NULL)
-			return 0;
-
 		memset(buf, 0, sizeof(buf));
-		if (!puny_decode(hostname, buf, sizeof(buf))) {
+		if (!puny_decode(i->src, buf, sizeof(buf))) {
                         printf("decode: failure with %s\n", i->src);
                         failed = 1;
 			continue;
@@ -70,8 +66,6 @@ main(int argc, char **argv)
 			continue;
 		} else
 			printf("OK:  %s => %s\n", i->src, buf);
-
-		free(hostname);
 	}
 
 	return failed;
