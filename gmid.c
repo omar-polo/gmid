@@ -615,6 +615,9 @@ main(int argc, char **argv)
 			certs_dir = data_dir();
 		load_local_cert(hostname, certs_dir);
 
+		hosts[0].locations[0].auto_index = 1;
+		hosts[0].locations[0].match = "*";
+
                 switch (argc) {
 		case 0:
 			hosts[0].dir = ".";
