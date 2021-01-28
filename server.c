@@ -876,7 +876,8 @@ loop(struct tls *ctx, int sock4, int sock6)
 	fds[1].fd = sock6;
 
 	for (;;) {
-		if (poll(fds, MAX_USERS, INFTIM) == -1) {
+		int p;
+		if ((p = poll(fds, MAX_USERS, 5 * 1000)) == -1) {
 			if (errno == EINTR) {
                                 fprintf(stderr, "connected clients: %d\n",
 				    connected_clients);
@@ -884,6 +885,9 @@ loop(struct tls *ctx, int sock4, int sock6)
 			}
 			fatal("poll: %s", strerror(errno));
 		}
+		
+		if (p == 0)
+			exit(0);
 
 		for (i = 0; i < MAX_USERS; i++) {
 			if (fds[i].revents == 0)

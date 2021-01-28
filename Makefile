@@ -16,8 +16,11 @@ y.tab.c: parse.y
 SRCS = gmid.c iri.c utf8.c ex.c server.c sandbox.c mime.c puny.c utils.c
 OBJS = ${SRCS:.c=.o} lex.yy.o y.tab.o ${COMPAT}
 
+.c.o:
+	${CC} -pg -static ${CFLAGS} -c $< -o $@
+
 gmid: ${OBJS}
-	${CC} ${OBJS} -o gmid ${LDFLAGS}
+	${CC} -pg -static ${OBJS} -o gmid ${LDFLAGS}
 
 gg: gg.o iri.o utf8.o ${COMPAT}
 	${CC} gg.o iri.o utf8.o ${COMPAT} -o $@ ${LDFLAGS}

@@ -394,7 +394,7 @@ listener_main(void)
 
 	load_vhosts();
 
-	sandbox();
+	/* sandbox(); */
 	loop(ctx, sock4, sock6);
 
 	return 0;
@@ -597,6 +597,7 @@ main(int argc, char **argv)
 
 	default:		/* parent */
 		close(p[1]);
-		return executor_main(p[0]);
+		executor_main(p[0]);
+		_exit(0);
 	}
 }
