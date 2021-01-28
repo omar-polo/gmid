@@ -86,6 +86,12 @@ vhost		: TSERVER TSTRING '{' servopts locations '}' {
 			host->locations[0].match = (char*)"*";
 			host->domain = $2;
 
+			if (strstr($2, "xn--") != NULL) {
+				warnx("%s:%d \"%s\" looks like punycode: "
+				    "you should use the decoded hostname."
+				    config_path, yylineno);
+			}
+
 			if (host->cert == NULL || host->key == NULL ||
 			    host->dir == NULL)
 				errx(1, "invalid vhost definition: %s", $2);
