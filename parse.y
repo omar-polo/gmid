@@ -19,6 +19,7 @@
 
 #include <err.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "gmid.h"
 
