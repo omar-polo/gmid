@@ -166,7 +166,6 @@ void logs(int, struct client*, const char*, ...);
 void log_request(struct client*, char*, size_t);
 
 void		 sig_handler(int);
-char		*absolutify_path(const char*);
 void		 gen_certificate(const char*, const char*, const char*);
 void		 mkdirs(const char*);
 char		*data_dir(void);

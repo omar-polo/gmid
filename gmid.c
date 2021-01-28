@@ -169,21 +169,6 @@ sig_handler(int sig)
 	(void)sig;
 }
 
-char *
-absolutify_path(const char *path)
-{
-	char *wd, *r;
-
-	if (*path == '/')
-		return strdup(path);
-
-	wd = getcwd(NULL, 0);
-	if (asprintf(&r, "%s/%s", wd, path) == -1)
-		fatal("asprintf: %s", strerror(errno));
-	free(wd);
-	return r;
-}
-
 void
 gen_certificate(const char *host, const char *certpath, const char *keypath)
 {
