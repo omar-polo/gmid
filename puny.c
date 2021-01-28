@@ -225,7 +225,7 @@ puny_decode(const char *hostname, char *out, size_t len)
 
 	s = hostname;
 	for (;;) {
-		end = end_of_component(s);
+		end = end_of_label(s);
 		l = end - s;
 		if (l >= sizeof(label))
 			return 0;

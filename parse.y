@@ -88,8 +88,8 @@ vhost		: TSERVER TSTRING '{' servopts locations '}' {
 
 			if (strstr($2, "xn--") != NULL) {
 				warnx("%s:%d \"%s\" looks like punycode: "
-				    "you should use the decoded hostname."
-				    config_path, yylineno);
+				    "you should use the decoded hostname.",
+				    config_path, yylineno, $2);
 			}
 
 			if (host->cert == NULL || host->key == NULL ||
