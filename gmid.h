@@ -39,9 +39,6 @@
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
-/* large enough to hold a copy of a gemini URL and still have extra room */
-#define PATHBUF		2048
-
 #define SUCCESS		20
 #define TEMP_REDIRECT	30
 #define TEMP_FAILURE	40
