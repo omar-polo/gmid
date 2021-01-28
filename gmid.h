@@ -51,8 +51,9 @@
 #define HOSTSLEN	64
 #define LOCLEN		32
 
-/* RFC1034 imposes this limit.  63+1 for the NUL-terminator */
-#define DOMAIN_NAME_LEN (63+1)
+/* maximum hostname and label length, +1 for the NUL-terminator */
+#define DOMAIN_NAME_LEN	(253+1)
+#define LABEL_LEN	(63+1)
 
 #define LOGE(c, fmt, ...) logs(LOG_ERR,     c, fmt, __VA_ARGS__)
 #define LOGW(c, fmt, ...) logs(LOG_WARNING, c, fmt, __VA_ARGS__)

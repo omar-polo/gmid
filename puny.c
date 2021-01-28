@@ -49,7 +49,7 @@ adapt(int delta, int numpoints, int firsttime)
 }
 
 static const char *
-copy_until_delimiter(const char *s, char *out, size_t len)
+copy_label(const char *s, char *out, size_t len)
 {
 	char *end, *t;
 	size_t l;
@@ -117,16 +117,16 @@ insert(char *out, size_t len, int codepoint, size_t i)
 	switch (l) {
 	case 2:
 		t[1] = ( codepoint        & 0x3F) + 0x80;
-		t[0] = ((codepoint >> 6)  & 0x1F) + 0xC0;
+		t[0] = ((codepoint >>  6) & 0x1F) + 0xC0;
 		break;
 	case 3:
 		t[2] = ( codepoint        & 0x3F) + 0x80;
-		t[1] = ((codepoint >> 6)  & 0x3F) + 0x80;
+		t[1] = ((codepoint >>  6) & 0x3F) + 0x80;
 		t[0] = ((codepoint >> 12) & 0x0F) + 0xE0;
 		break;
 	case 4:
 		t[3] = ( codepoint        & 0x3F) + 0x80;
-		t[2] = ((codepoint >> 6)  & 0x3F) + 0x80;
+		t[2] = ((codepoint >>  6) & 0x3F) + 0x80;
 		t[1] = ((codepoint >> 12) & 0x3F) + 0x80;
 		t[0] = ((codepoint >> 18) & 0x07) + 0xF0;
 		break;
@@ -152,7 +152,7 @@ decode(const char *str, char *out, size_t len)
 	str += 4;
 
 	if (strchr(str, '-') != NULL) {
-		if ((s = copy_until_delimiter(str, out, len)) == NULL)
+		if ((s = copy_label(str, out, len)) == NULL)
 			return 0;
 		if (*s == '-')
 			s++;
@@ -205,7 +205,7 @@ decode(const char *str, char *out, size_t len)
 }
 
 static const char *
-end_of_component(const char *hostname)
+end_of_label(const char *hostname)
 {
 	for (; *hostname != '\0' && *hostname != '.'; ++hostname)
 		;		/* nop */
@@ -215,7 +215,7 @@ end_of_component(const char *hostname)
 int
 puny_decode(const char *hostname, char *out, size_t len)
 {
-	char comp[DOMAIN_NAME_LEN];
+	char label[LABEL_LEN];
 	const char *s, *end;
 	size_t l;
 
@@ -227,13 +227,13 @@ puny_decode(const char *hostname, char *out, size_t len)
 	for (;;) {
 		end = end_of_component(s);
 		l = end - s;
-		if (l >= sizeof(comp))
+		if (l >= sizeof(label))
 			return 0;
 
-		memcpy(comp, s, end - s);
-		comp[end - s] = '\0';
+		memcpy(label, s, l);
+		label[l] = '\0';
 
-		if (!decode(comp, out, len))
+		if (!decode(label, out, len))
 			return 0;
 
 		if (*end == '\0')
