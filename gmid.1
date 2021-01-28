@@ -171,7 +171,8 @@ Every virtual host is defined by a
 block:
 .Bl -tag -width Ds
 .It Ic server Ar hostname Brq ...
-Match the server name using shell globbing rules.  This can be an explicit name,
+Match the server name using shell globbing rules.
+This can be an explicit name,
 .Ar www.example.com ,
 or a name including a wildcards,
 .Ar *.example.com .
@@ -312,6 +313,44 @@ and
 .Ev QUERY_STRING
 will be
 .Ar quux .
+.Sh MIME
+To auto-detect the MIME type of the response
+.Nm
+looks at the file extension and consults its internal table.
+By default the following mappings are loaded, but they can be
+overridden or extended using the
+.Ic mime
+configuration option.
+If no MIME is found, the value of
+.Ic default type
+matching the file
+.Ic location
+will be used, which is
+.Dq application/octet-stream
+by default.
+.Pp
+.Bl -tag -offset indent -width 14m -compact
+.It gemini, gmi
+text/gemini
+.It gif
+image/gif
+.It jpeg
+image/jpeg
+.It jpg
+image/jpeg
+.It markdown, md
+text/markdown
+.It pdf
+application/pdf
+.It png
+image/png
+.It svg
+image/svg+xml
+.It txt
+text/plain
+.It xml
+text/xml
+.El
 .Sh EXAMPLES
 Serve the current directory
 .Bd -literal -offset indent
