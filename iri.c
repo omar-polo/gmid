@@ -48,10 +48,10 @@ sub_delimiters(int p)
 static int
 parse_pct_encoded(struct parser *p)
 {
-	if (*p->iri != '%')
+	if (p->iri[0] != '%')
 		return 0;
 
-	if (!isxdigit(*(p->iri+1)) || !isxdigit(*(p->iri+2))) {
+	if (!isxdigit(p->iri[1]) || !isxdigit(p->iri[2])) {
 		p->err = "illegal percent-encoding";
 		return 0;
 	}
