@@ -19,7 +19,6 @@
 #if defined(__FreeBSD__)
 
 #include <sys/capsicum.h>
-#include <err.h>
 
 void
 sandbox()
@@ -239,7 +238,6 @@ sandbox()
 
 #elif defined(__OpenBSD__)
 
-#include <err.h>
 #include <unistd.h>
 
 void
