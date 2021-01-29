@@ -147,7 +147,8 @@ parse_authority(struct parser *p)
 
 	while (unreserved(*p->iri)
 	    || sub_delimiters(*p->iri)
-	    || parse_pct_encoded(p)) {
+	    || parse_pct_encoded(p)
+	    || valid_multibyte_utf8(p)) {
 		/* normalize the host name. */
 		if (*p->iri < 0x7F)
 			*p->iri = tolower(*p->iri);
