@@ -132,6 +132,18 @@ main(void)
 	    PASS,
 	    IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "host is case-insensitive");
+	TEST("gemini://xn--nave-6pa.omarpolo.com",
+	    PASS,
+	    IRI("gemini", "xn--nave-6pa.omarpolo.com", "", "", "", ""),
+	    "Can parse punycode-encoded hostnames");
+	TEST("gemini://naïve.omarpolo.com",
+	    PASS,
+	    IRI("gemini", "naïve.omarpolo.com", "", "", "", ""),
+	    "Accept non punycode-encoded hostnames");
+	TEST("gemini://na%c3%afve.omarpolo.com",
+	    PASS,
+	    IRI("gemini", "naïve.omarpolo.com", "", "", "", ""),
+	    "Can percent decode hostnames");
 
 	/* path */
 	TEST("gemini://omarpolo.com/foo/bar/baz",
