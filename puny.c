@@ -91,7 +91,7 @@ digit_value(char c)
 }
 
 static int
-insert(char *out, size_t len, int codepoint, size_t i, char **err)
+insert(char *out, size_t len, int codepoint, size_t i, const char **err)
 {
 	int l;
 	char *t;
@@ -207,7 +207,7 @@ decode(const char *str, char *out, size_t len, const char **err)
 		n += i / (numpoints+1); /* fail on overflow */
 		i = i % (numpoints+1);
 
-		if (!insert(out, len, n, i))
+		if (!insert(out, len, n, i, err))
 			return 0;
 		numpoints++;
 		++i;
