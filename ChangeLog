@@ -1,3 +1,8 @@
+2021-01-29  Omar Polo  <op@omarpolo.com>
+
+	* iri.c (parse_authority): accept a wider range of unicode
+	codepoints while parsing the host name.
+
 2021-01-26  Omar Polo  <op@omarpolo.com>
 
 	* puny.c (puny_decode): initial punycode support!
