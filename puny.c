@@ -91,26 +91,34 @@ digit_value(char c)
 }
 
 static int
-insert(char *out, size_t len, int codepoint, size_t i)
+insert(char *out, size_t len, int codepoint, size_t i, char **err)
 {
 	int l;
 	char *t;
 
-	if (codepoint <= 0x7F)
+	if (codepoint <= 0x7F) {
+		*err = "puny: invalid decoded character (ASCII range)";
 		return 0;
-	else if (codepoint <= 0x7FF)
+	} else if (codepoint <= 0x7FF) {
 		l = 2;
-	else if (codepoint <= 0xFFFF)
+	} else if (codepoint <= 0xFFFF) {
 		l = 3;
-	else if (codepoint <= 0x10FFFF)
+	} else if (codepoint <= 0x10FFFF) {
 		l = 4;
-	else
+	} else {
+		*err = "puny: invalid decoded character";
 		return 0;
+	}
 
-	if ((t = utf8_nth(out, i)) == NULL)
+	if ((t = utf8_nth(out, i)) == NULL) {
+		*err = "puny: invalid insert position";
 		return 0;
-	if (t + l >= out + len)
+	}
+
+	if (t + l >= out + len) {
+		*err = "puny: insert would overflow";
 		return 0;
+	}
 
 	memmove(t + l, t, strlen(t));
 
@@ -135,7 +143,7 @@ insert(char *out, size_t len, int codepoint, size_t i)
 }
 
 static int
-decode(const char *str, char *out, size_t len)
+decode(const char *str, char *out, size_t len, const char **err)
 {
 	size_t i;
 	uint32_t n;
@@ -152,8 +160,10 @@ decode(const char *str, char *out, size_t len)
 	str += 4;
 
 	if (strchr(str, '-') != NULL) {
-		if ((s = copy_label(str, out, len)) == NULL)
+		if ((s = copy_label(str, out, len)) == NULL) {
+			*err = "puny: invalid label";
 			return 0;
+		}
 		if (*s == '-')
 			s++;
 	} else
@@ -170,8 +180,10 @@ decode(const char *str, char *out, size_t len)
 		w = 1;
 
 		for (k = BASE; ; k += BASE) {
-			if (*s == '\0')
+			if (*s == '\0') {
+				*err = "puny: label truncated?";
 				return 0;
+			}
 			/* fail eventually? */
 			digit = digit_value(*s);
 			s++;
@@ -213,7 +225,7 @@ end_of_label(const char *hostname)
 }
 
 int
-puny_decode(const char *hostname, char *out, size_t len)
+puny_decode(const char *hostname, char *out, size_t len, const char **err)
 {
 	char label[LABEL_LEN];
 	const char *s, *end;
@@ -227,24 +239,30 @@ puny_decode(const char *hostname, char *out, size_t len)
 	for (;;) {
 		end = end_of_label(s);
 		l = end - s;
-		if (l >= sizeof(label))
+		if (l >= sizeof(label)) {
+			*err = "label too long";
 			return 0;
+		}
 
 		memcpy(label, s, l);
 		label[l] = '\0';
 
-		if (!decode(label, out, len))
+		if (!decode(label, out, len, err))
 			return 0;
 
 		if (*end == '\0')
 			return 1;
 
-		if (strlcat(out, ".", len) >= len)
+		if (strlcat(out, ".", len) >= len) {
+			*err = "domain name too long";
 			return 0;
+		}
 
 		l = strlen(out);
-		if (l >= len)
+		if (l >= len) {
+			*err = "domain name too long";
 			return 0;
+		}
 		out += l;
 		len -= l;
 

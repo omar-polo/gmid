@@ -320,13 +320,12 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	}
 
 	if (!trim_req_iri(c->req, &parse_err)
-	    || !parse_iri(c->req, &c->iri, &parse_err)) {
+	    || !parse_iri(c->req, &c->iri, &parse_err)
+	    || !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
 		LOGI(c, "iri parse error: %s", parse_err);
 		start_reply(fds, c, BAD_REQUEST, "invalid request");
 		return;
 	}
-
-	puny_decode(c->iri.host, decoded, sizeof(decoded));
 
 	if (c->iri.port_no != conf.port
 	    || strcmp(c->iri.schema, "gemini")
