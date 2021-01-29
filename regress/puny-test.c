@@ -50,12 +50,14 @@ main(int argc, char **argv)
 	struct suite *i;
 	int failed;
 	char buf[64];		/* name len */
+	char *parse_err;
 
 	failed = 0;
 	for (i = t; i->src != NULL; ++i) {
 		memset(buf, 0, sizeof(buf));
-		if (!puny_decode(i->src, buf, sizeof(buf))) {
-                        printf("decode: failure with %s\n", i->src);
+		if (!puny_decode(i->src, buf, sizeof(buf), &parse_err)) {
+                        printf("decode: failure with %s: %s\n",
+			    i->src, parse_err);
                         failed = 1;
 			continue;
 		}
