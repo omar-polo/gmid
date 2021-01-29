@@ -251,6 +251,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 {
 	struct vhost *h;
 	const char *servname;
+	const char *parse_err = "unknown error";
 
 	switch (tls_handshake(c->ctx)) {
 	case 0:  /* success */
@@ -268,7 +269,10 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	}
 
 	servname = tls_conn_servername(c->ctx);
-	puny_decode(servname, c->domain, sizeof(c->domain));
+	if (!puny_decode(servname, c->domain, sizeof(c->domain), &parse_err)) {
+		LOGI(c, "%s", parse_err);
+		goto err;
+	}
 
 	for (h = hosts; h->domain != NULL; ++h) {
 		if (!fnmatch(h->domain, c->domain, 0))
@@ -287,12 +291,13 @@ handle_handshake(struct pollfd *fds, struct client *c)
 		return;
 	}
 
+err:
 	if (servname != NULL)
 		strncpy(c->req, servname, sizeof(c->req));
 	else
 		strncpy(c->req, "null", sizeof(c->req));
 
-	start_reply(fds, c, BAD_REQUEST, "Wrong host or missing SNI");
+	start_reply(fds, c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
 
 void
