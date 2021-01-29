@@ -56,7 +56,7 @@ in this regard, I do think these are important things, so I tried to
 implement them in the most user-friendly way I could think of.
 
 For starters, gmid has full support for IRI (RFC3987 --
-Internationalized Resource Identifiers).  IRIs are a superset of URI,
+Internationalized Resource Identifiers).  IRIs are a superset of URIs,
 so there aren't incompatibilities with URI-only clients.
 
 There is full support also for punycode.  In theory, the users doesn't
