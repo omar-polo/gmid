@@ -45,4 +45,4 @@ install: gmid
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	${INSTALL_PROGRAM} gmid ${DESTDIR}${BINDIR}
-	${INSTALL_MAN} gmid.1 ${DESTDIR}${BINDIR}
+	${INSTALL_MAN} gmid.1 ${DESTDIR}${MANDIR}/man1
