@@ -1,36 +1,25 @@
 # gmid
 
-> dead simple, zero configuration Gemini server
+gmid is a Gemini server written with security in mind.  I initially
+wrote it to serve static files, but it has grown into a featureful
+server that can be used from either the command line to serve local
+directories
 
-gmid is a simple and minimal Gemini server.  It can run without
-configuration, so it's well suited for local development, but at the
-same time has a configuration file flexible enough to meet the
-requirements of most capsules.
+    gmid docs  # serve the directory docs over gemini
 
-It was initially written to serve static files, but can also
-optionally execute CGI scripts.  It was also written with security in
-mind: on Linux, FreeBSD and OpenBSD is sandboxed via `seccomp(2)`,
-`capsicum(4)`and `pledge(2)`+`unveil(2)` respectively.
-
-gmid can be used from the command line to serve local directories
-
-    # serve the directory docs
-    gmid docs
-
-or you can pass a configuration file and have access to all the
-features
+or as a traditional daemon
 
     gmid -c /etc/gmid.conf
-
-Please consult the [manpage](gmid.1) for more information.
 
 
 ## Features
 
+(random order)
+
  - IRI support (RFC3987)
  - punycode support
- - dual stack: can serve over both IPv4 and IPv6
- - automatic certificate generation (in config-less mode)
+ - dual stack (IPv4 and IPv6)
+ - automatic certificate generation for config-less mode
  - CGI scripts
  - (very) low memory footprint
  - small codebase, easily hackable
@@ -52,20 +41,20 @@ Please consult the [manpage](gmid.1) for more information.
 ## Internationalisation (IRIs, UNICODE, punycode, all that stuff)
 
 Even thought the current Gemini specification doesn't mention anything
-in this regard, I do think these are important things, so I tried to
-implement them in the most user-friendly way I could think of.
+in this regard, I do think these are important things and so I tried
+to implement them in the most user-friendly way I could think of.
 
-For starters, gmid has full support for IRI (RFC3987 --
+For starters, gmid has full support for IRI (RFC3987 —
 Internationalized Resource Identifiers).  IRIs are a superset of URIs,
 so there aren't incompatibilities with URI-only clients.
 
-There is full support also for punycode.  In theory, the users doesn't
+There is full support also for punycode.  In theory, the user doesn't
 even need to know that punycode is a thing.  The hostname in the
-configuration file can (and must be) written with proper UNICODE, gmid
-will do the rest.
+configuration file can (and must be) in the decoded form (e.g. `naïve`
+and not `xn--nave-6pa`), gmid will do the rest.
 
-The only missing piece is UNICODE normalisation.  gmid doesn't
-do that (yet).
+The only missing piece is UNICODE normalisation of the IRI path: gmid
+doesn't do that (yet).
 
 
 ## Building
@@ -76,6 +65,7 @@ bison) are also needed.
 
 The build is as simple as
 
+    ./configure
     make
 
 If the configure scripts fails to pick up something, please open an
@@ -85,9 +75,10 @@ To install execute:
 
     make install
 
-If you have trouble installing LibreSSL or libretls, as they aren't
-available as package on various Linux distribution, you can use Docker
-to build a `gmid` image with:
+### Docker
+
+If you have trouble installing LibreSSL or libretls, you can use
+Docker to build a `gmid` image with:
 
     docker build -t gmid .
 
@@ -98,15 +89,15 @@ and then run it with something along the lines of
         -v /path/to/docs:/var/gemini \
         gmid -c .../gmid.conf
 
-ellipses for brevity.
+(ellipses used for brevity)
 
 ### Local libretls
 
 This is **NOT** recommended, please try to port LibreSSL/LibreTLS to
 your distribution of choice or use docker instead.
 
-However, it's possible to link `gmid` to locally-installed libtls
-quite easily.  (It's how I test gmid on Fedora, for instance)
+However, it's possible to statically-link `gmid` to locally-installed
+libretls quite easily.  (It's how I test gmid on Fedora, for instance)
 
 Let's say you have compiled and installed libretls in `$LIBRETLS`,
 then you can build `gmid` with
@@ -121,8 +112,8 @@ Execute
 
     make regress
 
-to start the suite.  Keep in mind that the suite will create files
-inside the `regress` directory and bind the 10965 port.
+to start the suite.  Keep in mind that the regression tests will
+create files inside the `regress` directory and bind the 10965 port.
 
 
 ## Architecture/Security considerations
@@ -133,17 +124,17 @@ sandboxed.  When a CGI script needs to be executed, the executor
 (outside of the sandbox) sets up a pipe and gives one end to the
 listener, while the other is bound to the CGI script standard output.
 This way, is still possible to execute CGI scripts without
-restrictions even in the presence of a sandbox.
+restrictions even in the presence of a sandboxed network process.
 
-On OpenBSD, the listener process runs with the `stdio recvfd rpath
-inet` pledges, the executor has `stdio sendfd proc exec` as pledges;
-both have unveiled only the served directories.
+On OpenBSD, the listener runs with the `stdio recvfd rpath inet`
+pledges, while the executor has `stdio sendfd proc exec`; both have
+unveiled only the served directories.
 
 On FreeBSD, the executor process is sandboxed with `capsicum(4)`.
 
-On Linux, a `seccomp(2)` filter is installed to allow only certain
-syscalls, see [sandbox.c](sandbox.c) for more information on the BPF
-program.
+On Linux, a `seccomp(2)` filter is installed in the listener to allow
+only certain syscalls, see [sandbox.c](sandbox.c) for more information
+on the BPF program.
 
 In any case, you are invited to run gmid inside some sort of
 container/jail/chroot.
