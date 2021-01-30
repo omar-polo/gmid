@@ -33,19 +33,18 @@ const char *
 vhost_lang(struct vhost *v, const char *path)
 {
 	struct location *loc;
-	const char *lang = NULL;
 
 	if (v == NULL || path == NULL)
-		return lang;
+		return NULL;
 
-	for (loc = v->locations; loc->match != NULL; ++loc) {
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
 			if (loc->lang != NULL)
-				lang = loc->lang;
+				return loc->lang;
 		}
 	}
 
-	return lang;
+	return v->locations[0].lang;
 }
 
 const char *
@@ -57,13 +56,15 @@ vhost_default_mime(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return default_mime;
 
-	for (loc = v->locations; loc->match != NULL; ++loc) {
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
 			if (loc->default_mime != NULL)
-				default_mime = loc->default_mime;
+				return loc->default_mime;
 		}
 	}
 
+	if (v->locations[0].default_mime != NULL)
+		return v->locations[0].default_mime;
 	return default_mime;
 }
 
@@ -76,13 +77,15 @@ vhost_index(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return index;
 
-	for (loc = v->locations; loc->match != NULL; ++loc) {
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
 			if (loc->index != NULL)
-				index = loc->index;
+				return loc->index;
 		}
 	}
 
+	if (v->locations[0].default_mime != NULL)
+		return v->locations[0].default_mime;
 	return index;
 }
 
@@ -90,16 +93,18 @@ int
 vhost_auto_index(struct vhost *v, const char *path)
 {
 	struct location *loc;
-	int auto_index = 0;
+
+	if (v == NULL || path == NULL)
+		return 0;
 
 	for (loc = v->locations; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
-			if (loc->auto_index)
-				auto_index = loc->auto_index;
+			if (loc->auto_index != 0)
+				return loc->auto_index == 1;
 		}
 	}
 
-	return auto_index == 1;
+	return v->locations[0].auto_index == 1;
 }
 
 int

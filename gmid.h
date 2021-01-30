@@ -76,6 +76,10 @@ struct vhost {
 	const char	*dir;
 	const char	*cgi;
 	int		 dirfd;
+
+	/* the first location rule is always '*' and holds the default
+	 * settings for the vhost, from locations[1] onwards there are
+	 * the "real" location rules specified in the configuration. */
 	struct location	 locations[LOCLEN];
 };
 
