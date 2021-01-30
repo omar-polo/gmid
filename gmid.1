@@ -16,7 +16,7 @@
 .Os
 .Sh NAME
 .Nm gmid
-.Nd dead simple zero configuration gemini server
+.Nd simple and secure Gemini server
 .Sh SYNOPSIS
 .Nm
 .Bk -words
@@ -41,10 +41,6 @@ except for
 .Fl f
 and
 .Fl n .
-.Pp
-.Nm
-fully supports IRIs (Internationalized Resource Identifiers, see
-RFC3987).
 .Pp
 The options are as follows:
 .Bl -tag -width 14m
@@ -78,12 +74,12 @@ are searched inside the
 directory given with the
 .Fl d
 option.
-The have the form
+They have the form
 .Pa hostname.cert.pem
 and
 .Pa hostname.key.pem .
 If a certificate and key doesn't exists for a given hostname they
-would be automatically generated.
+will be automatically generated.
 .It Fl h
 Print the usage and exit.
 .It Fl p Ar port
@@ -94,7 +90,6 @@ Increase the verbosity of the logs.
 Enable execution of CGI scripts.
 See the description of the
 .Ic cgi
-.Ic server
 option in the section
 .Sq Servers
 below to learn how
@@ -138,7 +133,7 @@ Specify the TLS protocols to enable.
 Refer to
 .Xr tls_config_parse_protocols 3
 for the valid protocol string values.
-By default, both TLSv1.3 and TLSv1.2 are used.
+By default, both TLSv1.3 and TLSv1.2 are enabled.
 Use
 .Dq tlsv1.3
 to enable only TLSv1.3.
@@ -154,11 +149,12 @@ the process to the given
 .Pa path .
 The daemon has to be run with root privileges and thus the option
 .Ic user
-needs to be provided, so
+needs to be provided, so privileges can be dropped.
+Note that
 .Nm
-can drop the privileges.
-Note that they are dropped after loading the TLS keys, so it's
-recommended to put those outside the chroot.
+will enter the chroot after loading the TLS keys, but before opening
+the virtual host root directories.
+It's recommended to keep the TLS keys outside the chroot.
 Future version of
 .Nm
 may require this.
@@ -418,7 +414,7 @@ user "_gmid"
 server "example.com" {
 	cert "/path/to/cert.pem"
 	key  "/path/to/key.pem"
-	root "/var/gemini/example.com"
+	root "/example.com" # in the /var/gemini chroot
 
 	location "/static/" {
 		auto index on
@@ -432,6 +428,12 @@ uses the
 .Dq Flexible and Economical
 UTF-8 decoder written by
 .An Bjoern Hoehrmann .
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+program was written by
+.An Omar Polo Aq Mt op@omarpolo.com .
 .Sh CAVEATS
 .Bl -bullet
 .It
@@ -442,9 +444,8 @@ re-created,
 won't be able to serve files inside that directory until a restart.
 This restriction applies only to the root directories and not their content.
 .It
-a %2F sequence in the path part is indistinguishable from a literal
-slash: this is not RFC3986-compliant.
+a %2F sequence is indistinguishable from a literal slash: this is not
+RFC3986-compliant.
 .It
-a %00 sequence either in the path or in the query part is treated as
-invalid character and thus rejected.
+a %00 sequence is treated as invalid character and thus rejected.
 .El
