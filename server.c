@@ -84,8 +84,8 @@ vhost_index(struct vhost *v, const char *path)
 		}
 	}
 
-	if (v->locations[0].default_mime != NULL)
-		return v->locations[0].default_mime;
+	if (v->locations[0].index != NULL)
+		return v->locations[0].index;
 	return index;
 }
 
