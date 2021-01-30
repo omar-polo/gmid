@@ -41,15 +41,6 @@ iri_test: iri_test.o iri.o utf8.o
 regress: gmid gg
 	make -C regress all
 
-test: gmid iri_test
-	@echo "IRI tests"
-	@echo "=============================="
-	./iri_test
-	@echo
-	@echo "server tests"
-	@echo "=============================="
-	cd test && ./test.sh
-
 install: gmid
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
