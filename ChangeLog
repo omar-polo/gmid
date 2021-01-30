@@ -1,3 +1,7 @@
+2021-01-30  Omar Polo  <op@omarpolo.com>
+
+	* server.c: change precedence of location rules
+
 2021-01-29  Omar Polo  <op@omarpolo.com>
 
 	* iri.c (parse_authority): accept a wider range of unicode
