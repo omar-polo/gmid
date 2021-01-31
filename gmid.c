@@ -582,7 +582,8 @@ main(int argc, char **argv)
 			fatal("daemon: %s", strerror(errno));
 	}
 
-	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
+	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
+	    PF_UNSPEC, p) == -1)
 		fatal("socketpair: %s", strerror(errno));
 
 	switch (fork()) {
