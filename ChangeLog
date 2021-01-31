@@ -1,3 +1,7 @@
+2021-01-31  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): cgi scripts now have only std{in,out,err} open
+
 2021-01-30  Omar Polo  <op@omarpolo.com>
 
 	* server.c: change precedence of location rules
