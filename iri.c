@@ -350,6 +350,7 @@ parse_iri(char *iri, struct iri *ret, const char **err_ret)
 
 	/* initialize optional stuff to the empty string */
 	end = iri + strlen(iri);
+	p.parsed->host = end;
 	p.parsed->port = end;
 	p.parsed->path = end;
 	p.parsed->query = end;
