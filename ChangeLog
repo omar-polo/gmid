@@ -8,6 +8,7 @@
 
 2021-01-30  Omar Polo  <op@omarpolo.com>
 
+	* 1.5 tagged
 	* server.c: change precedence of location rules
 
 2021-01-29  Omar Polo  <op@omarpolo.com>
