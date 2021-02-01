@@ -36,9 +36,6 @@ clean:
 	rm -f compile_flags.txt
 	make -C regress clean
 
-iri_test: iri_test.o iri.o utf8.o
-	${CC} iri_test.o iri.o utf8.o -o iri_test ${LDFLAGS}
-
 regress: gmid gg
 	make -C regress all
 
