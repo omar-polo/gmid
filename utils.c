@@ -62,3 +62,21 @@ filesize(int fd)
 		return -1;
 	return len;
 }
+
+char *
+absolutify_path(const char *path)
+{
+	char *wd, *r;
+
+	if (*path == '/') {
+		if ((r = strdup(path)) == NULL)
+			err(1, "strdup");
+		return r;
+	}
+
+	wd = getcwd(NULL, 0);
+	if (asprintf(&r, "%s/%s", wd, path) == -1)
+		err(1, "asprintf");
+	free(wd);
+	return r;
+}

@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <limits.h>
 #include <netdb.h>
 #include <pwd.h>
 #include <signal.h>
@@ -544,11 +545,14 @@ main(int argc, char **argv)
 		hosts[0].locations[0].match = "*";
 
                 switch (argc) {
-		case 0:
-			hosts[0].dir = ".";
+		case 0: {
+			char path[PATH_MAX];
+
+			hosts[0].dir = getcwd(path, sizeof(path));
 			break;
+		}
 		case 1:
-			hosts[0].dir = argv[0];
+			hosts[0].dir = absolutify_path(argv[0]);
 			break;
 		default:
 			usage(getprogname());
