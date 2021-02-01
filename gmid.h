@@ -124,22 +124,16 @@ struct parser {
 	const char	*err;
 };
 
-enum {
-	S_HANDSHAKE,
-	S_OPEN,
-	S_INITIALIZING,
-	S_SENDING_FILE,
-	S_SENDING_DIR,
-	S_SENDING_CGI,
-	S_CLOSING,
-};
+struct client;
+
+typedef void (*statefn)(struct pollfd*, struct client*);
 
 struct client {
 	struct tls	*ctx;
 	char		 req[GEMINI_URL_LEN];
 	struct iri	 iri;
 	char		 domain[DOMAIN_NAME_LEN];
-	int		 state, next;
+	statefn		 state, next;
 	int		 code;
 	const char	*meta;
 	int		 fd, waiting_on_child;
@@ -209,6 +203,7 @@ void		 mark_nonblock(int);
 void		 handle_handshake(struct pollfd*, struct client*);
 void		 handle_open_conn(struct pollfd*, struct client*);
 void		 start_reply(struct pollfd*, struct client*, int, const char*);
+void		 handle_start_reply(struct pollfd*, struct client*);
 void		 start_cgi(const char*, const char*, struct pollfd*, struct client*);
 void		 send_file(struct pollfd*, struct client*);
 void		 open_dir(struct pollfd*, struct client*);
@@ -220,7 +215,6 @@ void		 cgi_poll_on_client(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
 void		 close_conn(struct pollfd*, struct client*);
 void		 do_accept(int, struct tls*, struct pollfd*, struct client*);
-void		 handle(struct pollfd*, struct client*);
 void		 loop(struct tls*, int, int);
 
 /* ex.c */
