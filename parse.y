@@ -40,6 +40,7 @@ const char *config_path;
 void		 yyerror(const char*);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
+char		*ensure_absolute_path(char*);
 
 %}
 
@@ -111,9 +112,9 @@ servopts	: /* empty */
 		| servopts servopt
 		;
 
-servopt		: TCERT TSTRING		{ host->cert = $2; }
-		| TKEY TSTRING		{ host->key = $2; }
-		| TROOT TSTRING		{ host->dir = $2; }
+servopt		: TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
+		| TKEY TSTRING		{ host->key  = ensure_absolute_path($2); }
+		| TROOT TSTRING		{ host->dir  = ensure_absolute_path($2); }
 		| TCGI TSTRING		{
 			host->cgi = $2;
 			/* drop the starting '/', if any */
@@ -190,4 +191,12 @@ parse_conf(const char *path)
 
 	if (goterror)
 		exit(1);
+}
+
+char *
+ensure_absolute_path(char *path)
+{
+	if (path == NULL || *path != '/')
+		yyerror("not an absolute path");
+	return path;
 }
