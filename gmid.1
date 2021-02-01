@@ -234,47 +234,58 @@ except
 .Ic cert , Ic key , Ic root , Ic location No and Ic cgi .
 .El
 .Sh CGI
-When CGI scripts are enabled for a directory, a request for an
-executable file will execute it and fed its output to the client.
+When CGI scripts are enabled, a matching request for an executable
+file will execute it and fed its output to the client.
 .Pp
-The CGI scripts are executed in the root directory of the virtual
-host, or in the served directory if run without config, and inherits
+The CGI scripts are executed in the directory they reside and inherit
 the environment from
 .Nm
 with these additional variables set:
-.Bl -tag -width 18m
+.Bl -tag -width 24m
 .It Ev GATEWAY_INTERFACE
-"CGI/1.1"
-.It Ev SERVER_PROTOCOL
-"GEMINI"
-.It Ev SERVER_SOFTWARE
-"gmid"
-.It Ev SERVER_PORT
-"1965"
-.It Ev SERVER_NAME
-The vhost.
-This variable is not available when operating without a configuration.
-.It Ev SCRIPT_NAME
-The (public) path to the script, e.g.
-.Pa "/cgi-bin/example.cgi"
-.It Ev SCRIPT_EXECUTABLE
-The full path to the executable.
-.It Ev REQUEST_URI
-The user request (without the query parameters.)
-.It Ev REQUEST_RELATIVE
-The request relative to the script.
-.It Ev QUERY_STRING
-The query parameters.
-.It Ev REMOTE_HOST
-The remote IP address.
-.It Ev REMOTE_ADDR
-The remote IP address.
-.It Ev DOCUMENT_ROOT
-The root directory being served, the one provided with the
-.Ar d
-parameter to
+.Dq CGI/1.1
+.It Ev GEMINI_DOCUMENT_ROOT
+The root directory of the virtual host.
+.It Ev GEMINI_SCRIPT_FILENAME
+Full path to the CGI script being executed.
+.It Ev GEMINI_URL
+The full IRI of the request.
+.It Ev GEMINI_URL_PATH
+The path of the request.
+.It Ev PATH_INFO
+The portion of the requested path that is derived from the the IRI
+path hierarchy following the part that identifies the script itself.
+Can be unset.
+.It Ev PATH_TRANSLATED
+Present if and only if
+.Ev PATH_INFO
+is set.
+It represent the translation of the
+.Ev PATH_INFO .
 .Nm
-or the root directory of the virtual host.
+builds this by appending the
+.Ev PATH_INFO
+to the virtual host directory root.
+.It Ev QUERY_STRING
+The decoded query string.
+.It Ev REMOTE_ADDR , Ev REMOTE_HOST
+Textual representation of the client IP.
+.It Ev REQUEST_METHOD
+This is present only for RFC3875 (CGI) compliance.
+It's always set to the empty string.
+.It Ev SCRIPT_NAME
+The part of the
+.Ev GEMINI_URL_PATH
+that identifies the current CGI script.
+.It Ev SERVER_NAME
+The name of the server
+.It Ev SERVER_PORT
+The port the server is listening on.
+.It Ev SERVER_PROTOCOL
+.Dq GEMINI
+.It Ev SERVER_SOFTWARE
+The name and version of the server, i.e.
+.Dq gmid/1.5
 .It Ev AUTH_TYPE
 The string "Certificate" if the client used a certificate, otherwise
 unset.
@@ -285,30 +296,10 @@ The is the issuer of the client certificate if provided, otherwise
 unset.
 .It Ev TLS_CLIENT_HASH
 The hash of the client certificate if provided, otherwise unset.
-The format is "ALGO:HASH".
+The format is
+.Dq ALGO:HASH .
 .El
 .Pp
-Let's say you have a script in
-.Pa /cgi-bin/script
-and the user request is
-.Pa /cgi-bin/script/foo/bar?quux .
-Then
-.Ev SCRIPT_NAME
-will be
-.Pa cgi-bin/script ,
-.Ev SCRIPT_EXECUTABLE
-will be
-.Pa $DOCUMENT_ROOT/cgi-bin/script ,
-.Ev REQUEST_URI
-will be
-.Pa cgi-bin/script/foo/bar ,
-.Ev REQUEST_RELATIVE
-will be
-.Pa foo/bar
-and
-.Ev QUERY_STRING
-will be
-.Ar quux .
 .Sh MIME
 To auto-detect the MIME type of the response
 .Nm
