@@ -298,12 +298,14 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 		safe_setenv("SERVER_PROTOCOL", "GEMINI");
 		safe_setenv("SERVER_SOFTWARE", "gmid/1.5");
 
-		if (ruser != NULL) {
+		if (ruser != NULL)
 			safe_setenv("AUTH_TYPE", "Certificate");
-			safe_setenv("REMOTE_USER", ruser);
-			safe_setenv("TLS_CLIENT_ISSUER", cissuer);
-			safe_setenv("TLS_CLIENT_HASH", chash);
-		}
+		else
+			safe_setenv("AUTH_TYPE", "");
+
+		safe_setenv("REMOTE_USER", ruser);
+		safe_setenv("TLS_CLIENT_ISSUER", cissuer);
+		safe_setenv("TLS_CLIENT_HASH", chash);
 
 		strlcpy(path, argv[0], sizeof(path));
 		pwd = dirname(path);
