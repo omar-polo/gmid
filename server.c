@@ -294,9 +294,9 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	/*     h->domain != NULL ? h->domain : "(null)"); */
 
 	if (h->domain != NULL) {
-		c->state = handle_open_conn;
 		c->host = h;
-		handle_open_conn(fds, c);
+		c->state = handle_open_conn;
+		c->state(fds, c);
 		return;
 	}
 
