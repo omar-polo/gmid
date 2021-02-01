@@ -10,9 +10,9 @@ ipv6 off
 port 10965
 $1
 server "localhost" {
-	cert "cert.pem"
-	key  "key.pem"
-	root "testdata"
+	cert "$PWD/cert.pem"
+	key  "$PWD/key.pem"
+	root "$PWD/testdata"
 	$2
 }
 EOF
