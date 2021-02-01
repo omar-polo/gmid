@@ -246,7 +246,7 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 		return -1;
 
 	case 0: {		/* child */
-		char *argv[] = {NULL, NULL, NULL};
+		char *argv[] = {NULL, NULL};
 		char *ex, *pwd;
 		char iribuf[GEMINI_URL_LEN];
 		char path[PATH_MAX];
@@ -257,7 +257,6 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 
 		ex = xasprintf("%s/%s", vhost->dir, spath);
 		argv[0] = ex;
-		argv[1] = iri->query;
 
 		serialize_iri(iri, iribuf, sizeof(iribuf));
 
