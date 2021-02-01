@@ -128,6 +128,23 @@ struct client;
 
 typedef void (*statefn)(struct pollfd*, struct client*);
 
+/*
+ * DFA: handle_handshake is the initial state, close_conn the final.
+ *
+ * handle_handshake -> handle_open_conn
+ * handle_handshake -> close_conn		// on err
+ *
+ * handle_open_conn -> handle_cgi		// via open_file/dir/...
+ * handle_open_conn -> send_directory_listing	// ...same
+ * handle_open_conn -> send_file		// ...same
+ * handle_open_conn -> close_conn		// on error
+ *
+ * handle_cgi -> close_conn
+ *
+ * send_directory_listing -> close_conn
+ *
+ * send_file -> close_conn
+ */
 struct client {
 	struct tls	*ctx;
 	char		 req[GEMINI_URL_LEN];
