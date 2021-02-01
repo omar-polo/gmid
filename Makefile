@@ -1,6 +1,6 @@
 .PHONY: all static clean regress install
 
-all: Makefile.local gmid TAGS
+all: Makefile.local gmid TAGS compile_flags.txt
 
 Makefile.local: configure
 	./configure
@@ -33,6 +33,7 @@ TAGS: ${SRCS}
 
 clean:
 	rm -f *.o lex.yy.c y.tab.c y.tab.h y.output gmid gg
+	rm -f compile_flags.txt
 	make -C regress clean
 
 iri_test: iri_test.o iri.o utf8.o
@@ -46,3 +47,6 @@ install: gmid
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	${INSTALL_PROGRAM} gmid ${DESTDIR}${BINDIR}
 	${INSTALL_MAN} gmid.1 ${DESTDIR}${MANDIR}/man1
+
+compile_flags.txt:
+	printf "%s\n" ${CFLAGS} > compile_flags.txt
