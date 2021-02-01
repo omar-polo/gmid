@@ -444,10 +444,9 @@ start_cgi(const char *spath, const char *relpath,
 		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return;
 	}
-	c->state = handle_cgi;
+
 	cgi_poll_on_child(fds, c);
-	c->code = -1;
-	/* handle_cgi(fds, c); */
+	c->state = handle_cgi_reply;
 	return;
 
 err:
@@ -671,41 +670,37 @@ cgi_poll_on_client(struct pollfd *fds, struct client *c)
 	c->fd = fd;
 }
 
-/* handle the read from the child process.  Return like read(2) */
-static ssize_t
-read_from_cgi(struct client *c)
+/* accumulate the meta line from the cgi script. */
+void
+handle_cgi_reply(struct pollfd *fds, struct client *c)
 {
-	void	*buf;
+	void	*buf, *e;
 	size_t	 len;
 	ssize_t	 r;
 
-	/* if we haven't read a whole response line, we want to
-	 * continue reading. */
+	buf = c->sbuf + c->len;
+	len = sizeof(c->sbuf) - c->len;
 
-	if (c->code == -1) {
-		buf = c->sbuf + c->len;
-		len = sizeof(c->sbuf) - c->len;
-	} else {
-		buf = c->sbuf;
-		len = sizeof(c->sbuf);
+	/* we're polling on the child! */
+	r = read(fds->fd, buf, len);
+	if (r == 0 || r == -1) {
+		cgi_poll_on_client(fds, c);
+		start_reply(fds, c, CGI_ERROR, "CGI error");
+		return;
 	}
-
-	r = read(c->fd, buf, len);
-	if (r == 0 || r == -1)
-		return r;
 
 	c->len += r;
-	c->off = 0;
 
-	if (c->code != -1)
-		return r;
-
-	if (strchr(c->sbuf, '\n') || c->len == sizeof(c->sbuf)) {
-		c->code = 0;
+	/* TODO: error if the CGI script don't reply correctly */
+	e = strchr(c->sbuf, '\n');
+	if (e != NULL || c->len == sizeof(c->sbuf)) {
 		log_request(c, c->sbuf, c->len);
-	}
 
-	return r;
+		c->off = 0;
+		c->state = handle_cgi;
+		c->state(fds, c);
+		return;
+	}
 }
 
 void
@@ -717,23 +712,20 @@ handle_cgi(struct pollfd *fds, struct client *c)
 	cgi_poll_on_client(fds, c);
 
 	while (1) {
-		if (c->code == -1 || c->len == 0) {
-			switch (r = read_from_cgi(c)) {
+		if (c->len == 0) {
+			switch (r = read(c->fd, c->sbuf, sizeof(c->sbuf))) {
 			case 0:
 				goto end;
-
 			case -1:
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
 					cgi_poll_on_child(fds, c);
 					return;
 				}
 				goto end;
+			default:
+				c->len = r;
+				c->off = 0;
 			}
-		}
-
-		if (c->code == -1) {
-			cgi_poll_on_child(fds, c);
-			return;
 		}
 
 		while (c->len > 0) {

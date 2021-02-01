@@ -42,6 +42,7 @@
 #define SUCCESS		20
 #define TEMP_REDIRECT	30
 #define TEMP_FAILURE	40
+#define CGI_ERROR	42
 #define NOT_FOUND	51
 #define PROXY_REFUSED	53
 #define BAD_REQUEST	59
@@ -134,10 +135,13 @@ typedef void (*statefn)(struct pollfd*, struct client*);
  * handle_handshake -> handle_open_conn
  * handle_handshake -> close_conn		// on err
  *
- * handle_open_conn -> handle_cgi		// via open_file/dir/...
+ * handle_open_conn -> handle_cgi_reply		// via open_file/dir/...
  * handle_open_conn -> send_directory_listing	// ...same
  * handle_open_conn -> send_file		// ...same
- * handle_open_conn -> close_conn		// on error
+ * handle_open_conn -> start_reply		// on error
+ *
+ * handle_cgi_reply -> handle_cgi	// after logging the CGI reply
+ * handle_cgi_reply -> start_reply	// on error
  *
  * handle_cgi -> close_conn
  *
@@ -229,6 +233,7 @@ int		 read_next_dir_entry(struct client*);
 void		 send_directory_listing(struct pollfd*, struct client*);
 void		 cgi_poll_on_child(struct pollfd*, struct client*);
 void		 cgi_poll_on_client(struct pollfd*, struct client*);
+void		 handle_cgi_reply(struct pollfd*, struct client*);
 void		 handle_cgi(struct pollfd*, struct client*);
 void		 close_conn(struct pollfd*, struct client*);
 void		 do_accept(int, struct tls*, struct pollfd*, struct client*);

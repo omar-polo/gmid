@@ -163,7 +163,7 @@ eq "$(head /slow)"	"20 text/gemini"		"Unexpected head for /slow"
 eq "$(get  /slow)"	"# hello world$ln"		"Unexpected body for /slow"
 echo OK GET /slow with cgi
 
-eq "$(head /err)"	""		"Unexpected head for /err"
+eq "$(head /err)"	"42 CGI error"	"Unexpected head for /err"
 eq "$(get  /err)"	""		"Unexpected body for /err"
 echo OK GET /err with cgi
 
