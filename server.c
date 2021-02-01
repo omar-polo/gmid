@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fnmatch.h>
+#include <limits.h>
 #include <string.h>
 
 #include "gmid.h"
@@ -150,7 +151,7 @@ open_file(struct pollfd *fds, struct client *c)
 	switch (check_path(c, c->iri.path, &c->fd)) {
 	case FILE_EXECUTABLE:
 		if (starts_with(c->iri.path, c->host->cgi)) {
-			start_cgi(c->iri.path, "", c->iri.query, fds, c);
+			start_cgi(c->iri.path, "", fds, c);
 			return;
 		}
 
@@ -166,7 +167,7 @@ open_file(struct pollfd *fds, struct client *c)
 
 	case FILE_MISSING:
 		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi)) {
-			check_for_cgi(c->iri.path, c->iri.query, fds, c);
+			check_for_cgi(fds, c);
 			return;
 		}
 		start_reply(fds, c, NOT_FOUND, "not found");
@@ -206,9 +207,12 @@ load_file(struct pollfd *fds, struct client *c)
  * executable is found or we emptied the path.
  */
 void
-check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
+check_for_cgi(struct pollfd *fds, struct client *c)
 {
+	char path[PATH_MAX];
 	char *end;
+
+	strlcpy(path, c->iri.path, sizeof(path));
 	end = strchr(path, '\0');
 
 	/* NB: assume CGI is enabled and path matches cgi */
@@ -223,7 +227,7 @@ check_for_cgi(char *path, char *query, struct pollfd *fds, struct client *c)
 
 		switch (check_path(c, path, &c->fd)) {
 		case FILE_EXECUTABLE:
-			start_cgi(path, end+1, query, fds,c);
+			start_cgi(path, end+1, fds, c);
 			return;
 		case FILE_MISSING:
 			break;
@@ -396,7 +400,7 @@ start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 }
 
 void
-start_cgi(const char *spath, const char *relpath, const char *query,
+start_cgi(const char *spath, const char *relpath,
     struct pollfd *fds, struct client *c)
 {
 	char addr[NI_MAXHOST];
@@ -420,9 +424,9 @@ start_cgi(const char *spath, const char *relpath, const char *query,
 		chash = NULL;
 	}
 
-	if (!send_string(exfd, spath)
+	if (!send_iri(exfd, &c->iri)
+	    || !send_string(exfd, spath)
 	    || !send_string(exfd, relpath)
-	    || !send_string(exfd, query)
 	    || !send_string(exfd, addr)
 	    || !send_string(exfd, ruser)
 	    || !send_string(exfd, cissuer)
@@ -515,7 +519,7 @@ open_dir(struct pollfd *fds, struct client *c)
 	switch (check_path(c, c->iri.path, &c->fd)) {
 	case FILE_EXECUTABLE:
 		if (starts_with(c->iri.path, c->host->cgi)) {
-			start_cgi(c->iri.path, "", c->iri.query, fds, c);
+			start_cgi(c->iri.path, "", fds, c);
 			break;
 		}
 

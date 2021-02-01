@@ -18,7 +18,10 @@
 #include <errno.h>
 
 #include <fcntl.h>
+#include <libgen.h>
+#include <limits.h>
 #include <signal.h>
+#include <stdarg.h>
 #include <string.h>
 
 #include "gmid.h"
@@ -62,6 +65,41 @@ recv_string(int fd, char **ret)
 	if (read(fd, *ret, len) != len)
 		return 0;
 	return 1;
+}
+
+int
+send_iri(int fd, struct iri *i)
+{
+	return send_string(fd, i->schema)
+		&& send_string(fd, i->host)
+		&& send_string(fd, i->port)
+		&& send_string(fd, i->path)
+		&& send_string(fd, i->query);
+}
+
+int
+recv_iri(int fd, struct iri *i)
+{
+	memset(i, 0, sizeof(*i));
+
+	if (!recv_string(fd, &i->schema)
+	    || !recv_string(fd, &i->host)
+	    || !recv_string(fd, &i->port)
+	    || !recv_string(fd, &i->path)
+	    || !recv_string(fd, &i->query))
+		return 0;
+
+	return 1;
+}
+
+void
+free_recvd_iri(struct iri *i)
+{
+	free(i->schema);
+	free(i->host);
+	free(i->port);
+	free(i->path);
+	free(i->query);
 }
 
 int
@@ -178,11 +216,25 @@ safe_setenv(const char *name, const char *val)
 	setenv(name, val, 1);
 }
 
+static char *
+xasprintf(const char *fmt, ...)
+{
+	va_list ap;
+	char *s;
+
+	va_start(ap, fmt);
+	if (vasprintf(&s, fmt, ap) == -1)
+		s = NULL;
+	va_end(ap);
+
+	return s;
+}
+
 /* fd or -1 on error */
 static int
-launch_cgi(const char *spath, const char *relpath, const char *query,
-    const char *addr, const char *ruser, const char *cissuer, const char *chash,
-    struct vhost *vhost)
+launch_cgi(struct iri *iri, const char *spath, char *relpath,
+    const char *addr, const char *ruser, const char *cissuer,
+    const char *chash, struct vhost *vhost)
 {
 	int p[2];		/* read end, write end */
 
@@ -194,42 +246,58 @@ launch_cgi(const char *spath, const char *relpath, const char *query,
 		return -1;
 
 	case 0: {		/* child */
-		char *portno, *ex, *requri;
-		char *argv[] = { NULL, NULL, NULL };
+		char *argv[] = {NULL, NULL, NULL};
+		char *ex, *pwd;
+		char iribuf[GEMINI_URL_LEN];
+		char path[PATH_MAX];
 
 		close(p[0]);
 		if (dup2(p[1], 1) == -1)
 			goto childerr;
 
-		if (asprintf(&portno, "%d", conf.port) == -1)
-			goto childerr;
+		ex = xasprintf("%s/%s", vhost->dir, spath);
+		argv[0] = ex;
+		argv[1] = iri->query;
 
-		if (asprintf(&ex, "%s/%s", vhost->dir, spath) == -1)
-			goto childerr;
-
-		if (asprintf(&requri, "%s%s%s", spath,
-		    (relpath != NULL && *relpath == '\0') ? "" : "/",
-		    (relpath != NULL ? relpath : "")) == -1)
-			goto childerr;
-
-		argv[0] = argv[1] = ex;
+		serialize_iri(iri, iribuf, sizeof(iribuf));
 
 		safe_setenv("GATEWAY_INTERFACE", "CGI/1.1");
-		safe_setenv("SERVER_PROTOCOL", "GEMINI");
-		safe_setenv("SERVER_SOFTWARE", "gmid");
-		safe_setenv("SERVER_PORT", portno);
+		safe_setenv("GEMINI_DOCUMENT_ROOT", vhost->dir);
+		safe_setenv("GEMINI_SCRIPT_FILENAME",
+		    xasprintf("%s/%s", vhost->dir, spath));
+		safe_setenv("GEMINI_URL", iribuf);
 
-		if (!strcmp(vhost->domain, "*"))
-			safe_setenv("SERVER_NAME", vhost->domain);
+		strlcpy(path, "/", sizeof(path));
+		strlcat(path, spath, sizeof(path));
+		safe_setenv("GEMINI_URL_PATH", path);
 
-		safe_setenv("SCRIPT_NAME", spath);
-		safe_setenv("SCRIPT_EXECUTABLE", ex);
-		safe_setenv("REQUEST_URI", requri);
-		safe_setenv("REQUEST_RELATIVE", relpath);
-		safe_setenv("QUERY_STRING", query);
-		safe_setenv("REMOTE_HOST", addr);
+		if (relpath != NULL) {
+			strlcpy(path, "/", sizeof(path));
+			strlcat(path, relpath, sizeof(path));
+			safe_setenv("PATH_INFO", path);
+
+			strlcpy(path, vhost->dir, sizeof(path));
+			strlcat(path, "/", sizeof(path));
+			strlcat(path, relpath, sizeof(path));
+			safe_setenv("PATH_TRANSLATED", path);
+		}
+
+		safe_setenv("QUERY_STRING", iri->query);
 		safe_setenv("REMOTE_ADDR", addr);
-		safe_setenv("DOCUMENT_ROOT", vhost->dir);
+		safe_setenv("REMOTE_HOST", addr);
+		safe_setenv("REQUEST_METHOD", "");
+
+		strlcpy(path, "/", sizeof(path));
+		strlcat(path, spath, sizeof(path));
+		safe_setenv("SCRIPT_NAME", path);
+
+		safe_setenv("SERVER_NAME", iri->host);
+
+		snprintf(path, sizeof(path), "%d", conf.port);
+		safe_setenv("SERVER_PORT", path);
+
+		safe_setenv("SERVER_PROTOCOL", "GEMINI");
+		safe_setenv("SERVER_SOFTWARE", "gmid/1.5");
 
 		if (ruser != NULL) {
 			safe_setenv("AUTH_TYPE", "Certificate");
@@ -238,9 +306,15 @@ launch_cgi(const char *spath, const char *relpath, const char *query,
 			safe_setenv("TLS_CLIENT_HASH", chash);
 		}
 
-		fchdir(vhost->dirfd);
+		strlcpy(path, argv[0], sizeof(path));
+		pwd = dirname(path);
+		if (chdir(pwd)) {
+			warn("chdir");
+			goto childerr;
+		}
 
-		execvp(ex, argv);
+		execvp(argv[0], argv);
+		warn("execvp: %s", argv[0]);
 		goto childerr;
 	}
 
@@ -257,25 +331,28 @@ childerr:
 int
 executor_main(int fd)
 {
-	char *spath, *relpath, *query, *addr, *ruser, *cissuer, *chash;
+	char *spath, *relpath, *addr, *ruser, *cissuer, *chash;
         struct vhost *vhost;
+	struct iri iri;
 	int d;
 
 #ifdef __OpenBSD__
 	for (vhost = hosts; vhost->domain != NULL; ++vhost) {
-		if (unveil(vhost->dir, "x") == -1)
+		/* r so we can chdir into the correct directory */
+		if (unveil(vhost->dir, "rx") == -1)
 			err(1, "unveil %s for domain %s",
 			    vhost->dir, vhost->domain);
 	}
 
-	if (pledge("stdio sendfd proc exec", NULL))
+	/* rpath to chdir into the correct directory */
+	if (pledge("stdio rpath sendfd proc exec", NULL))
 		err(1, "pledge");
 #endif
 
 	for (;;) {
-		if (!recv_string(fd, &spath)
+		if (!recv_iri(fd, &iri)
+		    || !recv_string(fd, &spath)
 		    || !recv_string(fd, &relpath)
-		    || !recv_string(fd, &query)
 		    || !recv_string(fd, &addr)
 		    || !recv_string(fd, &ruser)
 		    || !recv_string(fd, &cissuer)
@@ -283,15 +360,15 @@ executor_main(int fd)
 		    || !recv_vhost(fd, &vhost))
 			break;
 
-		d = launch_cgi(spath, relpath, query,
-		    addr, ruser, cissuer, chash, vhost);
+		d = launch_cgi(&iri, spath, relpath, addr, ruser, cissuer, chash,
+		    vhost);
 		if (!send_fd(fd, d))
 			break;
 		close(d);
 
+		free_recvd_iri(&iri);
 		free(spath);
 		free(relpath);
-		free(query);
 		free(addr);
 		free(ruser);
 		free(cissuer);

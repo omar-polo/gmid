@@ -204,12 +204,12 @@ int		 vhost_auto_index(struct vhost*, const char*);
 int		 check_path(struct client*, const char*, int*);
 void		 open_file(struct pollfd*, struct client*);
 void		 load_file(struct pollfd*, struct client*);
-void		 check_for_cgi(char *, char*, struct pollfd*, struct client*);
+void		 check_for_cgi(struct pollfd*, struct client*);
 void		 mark_nonblock(int);
 void		 handle_handshake(struct pollfd*, struct client*);
 void		 handle_open_conn(struct pollfd*, struct client*);
 void		 start_reply(struct pollfd*, struct client*, int, const char*);
-void		 start_cgi(const char*, const char*, const char*, struct pollfd*, struct client*);
+void		 start_cgi(const char*, const char*, struct pollfd*, struct client*);
 void		 send_file(struct pollfd*, struct client*);
 void		 open_dir(struct pollfd*, struct client*);
 void		 redirect_canonical_dir(struct pollfd*, struct client*);
@@ -226,6 +226,9 @@ void		 loop(struct tls*, int, int);
 /* ex.c */
 int		 send_string(int, const char*);
 int		 recv_string(int, char**);
+int		 send_iri(int, struct iri*);
+int		 recv_iri(int, struct iri*);
+void		 free_recvd_iri(struct iri*);
 int		 send_vhost(int, struct vhost*);
 int		 recv_vhost(int, struct vhost**);
 int		 send_fd(int, int);
@@ -242,6 +245,7 @@ char		*utf8_nth(char*, size_t);
 /* iri.c */
 int		 parse_iri(char*, struct iri*, const char**);
 int		 trim_req_iri(char*, const char **);
+int		 serialize_iri(struct iri*, char*, size_t);
 
 /* puny.c */
 int		 puny_decode(const char*, char*, size_t, const char**);
@@ -250,5 +254,6 @@ int		 puny_decode(const char*, char*, size_t, const char**);
 int		 starts_with(const char*, const char*);
 int		 ends_with(const char*, const char*);
 ssize_t		 filesize(int);
+char		*absolutify_path(const char*);
 
 #endif

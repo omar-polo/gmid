@@ -377,3 +377,31 @@ trim_req_iri(char *iri, const char **err)
 	*i = '\0';
 	return 1;
 }
+
+
+int
+serialize_iri(struct iri *i, char *buf, size_t len)
+{
+	size_t l;
+
+	/* in ex.c we receive empty "" strings as NULL */
+	if (i->schema == NULL || i->host == NULL) {
+		memset(buf, 0, len);
+		return 0;
+	}
+
+	strlcpy(buf, i->schema, len);
+	strlcat(buf, "://", len);
+        strlcat(buf, i->host, len);
+	strlcat(buf, "/", len);
+
+	if (i->path != NULL)
+		l = strlcat(buf, i->path, len);
+
+	if (i->query != NULL && *i->query != '\0') {
+		strlcat(buf, "?", len);
+		l = strlcat(buf, i->query, len);
+	}
+
+	return l < len;
+}
