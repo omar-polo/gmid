@@ -72,7 +72,7 @@ send_vhost(int fd, struct vhost *vhost)
 	if (vhost < hosts || vhost > hosts + HOSTSLEN)
 		return 0;
 
-	n = hosts - vhost;
+	n = vhost - hosts;
 	return write(fd, &n, sizeof(n)) == sizeof(n);
 }
 
