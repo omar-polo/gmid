@@ -50,7 +50,7 @@ main(int argc, char **argv)
 	struct suite *i;
 	int failed;
 	char buf[64];		/* name len */
-	char *parse_err;
+	const char *parse_err;
 
 	failed = 0;
 	for (i = t; i->src != NULL; ++i) {
