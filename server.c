@@ -543,7 +543,7 @@ open_dir(struct pollfd *fds, struct client *c)
 		}
 
 		c->fd = dirfd;
-		c->next = send_directory_listing;
+		c->next = enter_handle_dirlist;
 
 		if ((c->dir = fdopendir(c->fd)) == NULL) {
 			LOGE(c, "can't fdopendir(%d) (vhost:%s) %s: %s",
@@ -579,6 +579,55 @@ redirect_canonical_dir(struct pollfd *fds, struct client *c)
 	}
 
 	start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
+}
+
+void
+enter_handle_dirlist(struct pollfd *fds, struct client *c)
+{
+	char b[PATH_MAX];
+	size_t l;
+
+	strlcpy(b, c->iri.path, sizeof(b));
+	l = snprintf(c->sbuf, sizeof(c->sbuf),
+	    "# Index of %s\n\n", b);
+	if (l >= sizeof(c->sbuf)) {
+		/* this is impossible, given that we have enough space
+		 * in c->sbuf to hold the ancilliary string plus the
+		 * full path; but it wouldn't read nice without some
+		 * error checking, and I'd like to avoid a strlen. */
+		close_conn(fds, c);
+		return;
+	}
+	c->len = l;
+
+	c->state = handle_dirlist;
+	handle_dirlist(fds, c);
+}
+
+void
+handle_dirlist(struct pollfd *fds, struct client *c)
+{
+	ssize_t r;
+
+	while (c->len > 0) {
+		switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
+		case -1:
+			close_conn(fds, c);
+			return;
+		case TLS_WANT_POLLOUT:
+			fds->events = POLLOUT;
+			return;
+		case TLS_WANT_POLLIN:
+			fds->events = POLLIN;
+			return;
+		default:
+			c->off += r;
+			c->len -= r;
+		}
+	}
+
+	c->state = send_directory_listing;
+	send_directory_listing(fds, c);
 }
 
 int

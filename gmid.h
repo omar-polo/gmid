@@ -131,12 +131,13 @@ typedef void (*statefn)(struct pollfd*, struct client*);
 
 /*
  * DFA: handle_handshake is the initial state, close_conn the final.
+ * Sometimes we have an enter_* function to handle the state switch.
  *
  * handle_handshake -> handle_open_conn
  * handle_handshake -> close_conn		// on err
  *
  * handle_open_conn -> handle_cgi_reply		// via open_file/dir/...
- * handle_open_conn -> send_directory_listing	// ...same
+ * handle_open_conn -> handle_dirlist		// ...same
  * handle_open_conn -> send_file		// ...same
  * handle_open_conn -> start_reply		// on error
  *
@@ -144,6 +145,9 @@ typedef void (*statefn)(struct pollfd*, struct client*);
  * handle_cgi_reply -> start_reply	// on error
  *
  * handle_cgi -> close_conn
+ *
+ * handle_dirlist -> send_directory_listing
+ * handle_dirlist -> close_conn			// on error
  *
  * send_directory_listing -> close_conn
  *
@@ -229,6 +233,8 @@ void		 start_cgi(const char*, const char*, struct pollfd*, struct client*);
 void		 send_file(struct pollfd*, struct client*);
 void		 open_dir(struct pollfd*, struct client*);
 void		 redirect_canonical_dir(struct pollfd*, struct client*);
+void		 enter_handle_dirlist(struct pollfd*, struct client*);
+void		 handle_dirlist(struct pollfd*, struct client*);
 int		 read_next_dir_entry(struct client*);
 void		 send_directory_listing(struct pollfd*, struct client*);
 void		 cgi_poll_on_child(struct pollfd*, struct client*);

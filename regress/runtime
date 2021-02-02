@@ -215,7 +215,7 @@ echo OK GET / with auto index
 
 eq "$(head /dir)"		"30 /dir/"		"Unexpected head for /dir"
 eq "$(head /dir/)"		"20 text/gemini"	"Unexpected head for /dir/"
-eq "$(get /dir/|wc -l|xargs)"	"3"			"Unexpected body for /dir/"
+eq "$(get /dir/|wc -l|xargs)"	"5"			"Unexpected body for /dir/"
 echo OK GET /dir/ with auto index on
 
 check "should be running"

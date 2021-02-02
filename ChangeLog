@@ -1,3 +1,7 @@
+2021-02-02  Omar Polo  <op@omarpolo.com>
+
+	* server.c (handle_dirlist_head): print the header in the directory listing
+
 2021-02-01  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (servopt): require absolute paths in config file
