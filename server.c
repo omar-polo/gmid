@@ -30,6 +30,29 @@
 
 int connected_clients;
 
+static int	 check_path(struct client*, const char*, int*);
+static void	 open_file(struct pollfd*, struct client*);
+static void	 load_file(struct pollfd*, struct client*);
+static void	 check_for_cgi(struct pollfd*, struct client*);
+static void	 handle_handshake(struct pollfd*, struct client*);
+static void	 handle_open_conn(struct pollfd*, struct client*);
+static void	 start_reply(struct pollfd*, struct client*, int, const char*);
+static void	 handle_start_reply(struct pollfd*, struct client*);
+static void	 start_cgi(const char*, const char*, struct pollfd*, struct client*);
+static void	 send_file(struct pollfd*, struct client*);
+static void	 open_dir(struct pollfd*, struct client*);
+static void	 redirect_canonical_dir(struct pollfd*, struct client*);
+static void	 enter_handle_dirlist(struct pollfd*, struct client*);
+static void	 handle_dirlist(struct pollfd*, struct client*);
+static int 	 read_next_dir_entry(struct client*);
+static void	 send_directory_listing(struct pollfd*, struct client*);
+static void	 cgi_poll_on_child(struct pollfd*, struct client*);
+static void	 cgi_poll_on_client(struct pollfd*, struct client*);
+static void	 handle_cgi_reply(struct pollfd*, struct client*);
+static void	 handle_cgi(struct pollfd*, struct client*);
+static void	 close_conn(struct pollfd*, struct client*);
+static void	 do_accept(int, struct tls*, struct pollfd*, struct client*);
+
 const char *
 vhost_lang(struct vhost *v, const char *path)
 {
@@ -108,7 +131,7 @@ vhost_auto_index(struct vhost *v, const char *path)
 	return v->locations[0].auto_index == 1;
 }
 
-int
+static int
 check_path(struct client *c, const char *path, int *fd)
 {
 	struct stat sb;
@@ -145,7 +168,7 @@ check_path(struct client *c, const char *path, int *fd)
 	return FILE_EXISTS;
 }
 
-void
+static void
 open_file(struct pollfd *fds, struct client *c)
 {
 	switch (check_path(c, c->iri.path, &c->fd)) {
@@ -179,7 +202,7 @@ open_file(struct pollfd *fds, struct client *c)
 	}
 }
 
-void
+static void
 load_file(struct pollfd *fds, struct client *c)
 {
 	if ((c->len = filesize(c->fd)) == -1) {
@@ -207,7 +230,7 @@ load_file(struct pollfd *fds, struct client *c)
  * from the end and strip one component at a time, until either an
  * executable is found or we emptied the path.
  */
-void
+static void
 check_for_cgi(struct pollfd *fds, struct client *c)
 {
 	char path[PATH_MAX];
@@ -256,7 +279,7 @@ mark_nonblock(int fd)
 		fatal("fcntl(F_SETFL): %s", strerror(errno));
 }
 
-void
+static void
 handle_handshake(struct pollfd *fds, struct client *c)
 {
 	struct vhost *h;
@@ -310,7 +333,7 @@ err:
 	start_reply(fds, c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
 
-void
+static void
 handle_open_conn(struct pollfd *fds, struct client *c)
 {
 	const char *parse_err = "invalid request";
@@ -352,16 +375,16 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	open_file(fds, c);
 }
 
-void
+static void
 start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
 {
 	c->code = code;
 	c->meta = meta;
 	c->state = handle_start_reply;
-	c->state(pfd, c);
+	handle_start_reply(pfd, c);
 }
 
-void
+static void
 handle_start_reply(struct pollfd *pfd, struct client *c)
 {
 	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
@@ -405,7 +428,7 @@ handle_start_reply(struct pollfd *pfd, struct client *c)
 	c->state(pfd, c);
 }
 
-void
+static void
 start_cgi(const char *spath, const char *relpath,
     struct pollfd *fds, struct client *c)
 {
@@ -455,7 +478,7 @@ err:
 	fatal("cannot talk to the executor process");
 }
 
-void
+static void
 send_file(struct pollfd *fds, struct client *c)
 {
 	ssize_t ret, len;
@@ -487,7 +510,7 @@ send_file(struct pollfd *fds, struct client *c)
 	close_conn(fds, c);
 }
 
-void
+static void
 open_dir(struct pollfd *fds, struct client *c)
 {
 	size_t len;
@@ -565,7 +588,7 @@ open_dir(struct pollfd *fds, struct client *c)
 	close(dirfd);
 }
 
-void
+static void
 redirect_canonical_dir(struct pollfd *fds, struct client *c)
 {
 	size_t len;
@@ -582,7 +605,7 @@ redirect_canonical_dir(struct pollfd *fds, struct client *c)
 	start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
 }
 
-void
+static void
 enter_handle_dirlist(struct pollfd *fds, struct client *c)
 {
 	char b[PATH_MAX];
@@ -605,7 +628,7 @@ enter_handle_dirlist(struct pollfd *fds, struct client *c)
 	handle_dirlist(fds, c);
 }
 
-void
+static void
 handle_dirlist(struct pollfd *fds, struct client *c)
 {
 	ssize_t r;
@@ -631,7 +654,7 @@ handle_dirlist(struct pollfd *fds, struct client *c)
 	send_directory_listing(fds, c);
 }
 
-int
+static int
 read_next_dir_entry(struct client *c)
 {
 	struct dirent *d;
@@ -654,7 +677,7 @@ read_next_dir_entry(struct client *c)
 	return 1;
 }
 
-void
+static void
 send_directory_listing(struct pollfd *fds, struct client *c)
 {
 	ssize_t r;
@@ -690,7 +713,7 @@ end:
 	close_conn(fds, c);
 }
 
-void
+static inline void
 cgi_poll_on_child(struct pollfd *fds, struct client *c)
 {
 	int fd;
@@ -706,7 +729,7 @@ cgi_poll_on_child(struct pollfd *fds, struct client *c)
 	c->fd = fd;
 }
 
-void
+static inline void
 cgi_poll_on_client(struct pollfd *fds, struct client *c)
 {
 	int fd;
@@ -721,7 +744,7 @@ cgi_poll_on_client(struct pollfd *fds, struct client *c)
 }
 
 /* accumulate the meta line from the cgi script. */
-void
+static void
 handle_cgi_reply(struct pollfd *fds, struct client *c)
 {
 	void	*buf, *e;
@@ -753,7 +776,7 @@ handle_cgi_reply(struct pollfd *fds, struct client *c)
 	}
 }
 
-void
+static void
 handle_cgi(struct pollfd *fds, struct client *c)
 {
 	ssize_t r;
@@ -803,7 +826,7 @@ end:
 	close_conn(fds, c);
 }
 
-void
+static void
 close_conn(struct pollfd *pfd, struct client *c)
 {
 	c->state = close_conn;
@@ -835,7 +858,7 @@ close_conn(struct pollfd *pfd, struct client *c)
 	pfd->fd = -1;
 }
 
-void
+static void
 do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 {
 	int i, fd;
