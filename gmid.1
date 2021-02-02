@@ -193,11 +193,9 @@ Specify the root directory for this server.
 This option is mandatory.
 It's relative to the chroot, if enabled.
 .It Ic cgi Pa path
-Enable the execution of CGI scripts if
+Execute CGI scripts that matches
 .Pa path
-is a prefix of the user request string.
-An empty path "" will effectively enable the execution of any file
-with the executable bit set inside the root directory.
+using shell globbing rules.
 .It Ic default type Ar string
 Set the default media type that is used if the media type for a
 specified extension is not found.
@@ -234,8 +232,9 @@ except
 .Ic cert , Ic key , Ic root , Ic location No and Ic cgi .
 .El
 .Sh CGI
-When CGI scripts are enabled, a matching request for an executable
-file will execute it and fed its output to the client.
+When a request for an executable file matches the
+.Ic cgi
+rule, that file will be execute and its output fed to the client.
 .Pp
 The CGI scripts are executed in the directory they reside and inherit
 the environment from
@@ -360,14 +359,6 @@ $ chmod +x docs/cgi/hello
 $ gmid -x cgi docs
 .Ed
 .Pp
-Note that the argument to the
-.Fl x
-option is
-.Pa cgi
-and not
-.Pa docs/cgi ,
-since it's relative to the document root.
-.Pp
 The following is an example of a possible configuration for a site
 that enables only TLSv1.3, adds a mime type for the file extension
 "rtf" and defines two virtual host:
@@ -388,7 +379,7 @@ server "it.example.com" {
 	cert "/path/to/cert.pem"
 	key  "/path/to/key.pem"
 	root "/var/gemini/it.example.com"
-	cgi  "/cgi-bin"
+	cgi  "/cgi-bin/*"
 	lang "it"
 }
 .Ed

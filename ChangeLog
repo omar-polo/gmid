@@ -1,6 +1,7 @@
 2021-02-02  Omar Polo  <op@omarpolo.com>
 
 	* server.c (handle_dirlist_head): print the header in the directory listing
+	(open_file): cgi follows globbing rules, just like location and hostname matching
 
 2021-02-01  Omar Polo  <op@omarpolo.com>
 

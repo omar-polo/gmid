@@ -150,7 +150,7 @@ open_file(struct pollfd *fds, struct client *c)
 {
 	switch (check_path(c, c->iri.path, &c->fd)) {
 	case FILE_EXECUTABLE:
-		if (starts_with(c->iri.path, c->host->cgi)) {
+		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
 			start_cgi(c->iri.path, "", fds, c);
 			return;
 		}
@@ -166,7 +166,7 @@ open_file(struct pollfd *fds, struct client *c)
 		return;
 
 	case FILE_MISSING:
-		if (c->host->cgi != NULL && starts_with(c->iri.path, c->host->cgi)) {
+		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
 			check_for_cgi(fds, c);
 			return;
 		}
@@ -183,7 +183,8 @@ void
 load_file(struct pollfd *fds, struct client *c)
 {
 	if ((c->len = filesize(c->fd)) == -1) {
-		LOGE(c, "failed to get file size for %s", c->iri.path);
+		LOGE(c, "failed to get file size for %s: %s",
+		    c->iri.path, strerror(errno));
 		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return;
 	}
@@ -519,7 +520,7 @@ open_dir(struct pollfd *fds, struct client *c)
 
 	switch (check_path(c, c->iri.path, &c->fd)) {
 	case FILE_EXECUTABLE:
-		if (starts_with(c->iri.path, c->host->cgi)) {
+		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
 			start_cgi(c->iri.path, "", fds, c);
 			break;
 		}

@@ -151,7 +151,7 @@ check "should be running"
 quit
 
 # finally try with CGI scripts
-config '' 'cgi ""'
+config '' 'cgi "*"'
 checkconf
 run
 
