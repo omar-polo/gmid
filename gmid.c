@@ -462,6 +462,7 @@ int
 main(int argc, char **argv)
 {
 	int ch, p[2];
+	char path[PATH_MAX];
 	const char *config_path = NULL, *certs_dir = NULL, *hostname = NULL;
 	int conftest = 0, configless = 0;
 
@@ -545,12 +546,9 @@ main(int argc, char **argv)
 		hosts[0].locations[0].match = "*";
 
                 switch (argc) {
-		case 0: {
-			char path[PATH_MAX];
-
+		case 0:
 			hosts[0].dir = getcwd(path, sizeof(path));
 			break;
-		}
 		case 1:
 			hosts[0].dir = absolutify_path(argv[0]);
 			break;
