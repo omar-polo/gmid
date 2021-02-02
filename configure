@@ -82,7 +82,6 @@ which ${LEX} 2>/dev/null 1>&2 || {
 	which ${LEX} 2>/dev/null 1>&2 || {
 		echo "${LEX} not found: giving up" 1>&2
 		echo "${LEX} not found: giving up" 1>&3
-		exit 1
 	}
 }
 
@@ -94,7 +93,6 @@ which ${YACC} 2>/dev/null 1>&2 || {
 	which ${YACC} 2>/dev/null 1>&2 || {
 		echo "${YACC} not found: giving up" 1>&2
 		echo "${YACC} not found: giving up" 1>&3
-		exit 1
 	}
 }
 
