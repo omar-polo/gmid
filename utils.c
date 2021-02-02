@@ -15,6 +15,7 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <string.h>
 
 #include "gmid.h"
@@ -61,6 +62,17 @@ filesize(int fd)
 	if (lseek(fd, 0, SEEK_SET) == -1)
 		return -1;
 	return len;
+}
+
+void
+mark_nonblock(int fd)
+{
+	int flags;
+
+	if ((flags = fcntl(fd, F_GETFL)) == -1)
+		fatal("fcntl(F_GETFL): %s", strerror(errno));
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		fatal("fcntl(F_SETFL): %s", strerror(errno));
 }
 
 char *

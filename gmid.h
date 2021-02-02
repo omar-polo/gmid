@@ -220,7 +220,6 @@ const char	*vhost_lang(struct vhost*, const char*);
 const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
-void		 mark_nonblock(int);
 void		 loop(struct tls*, int, int);
 
 /* ex.c */
@@ -254,6 +253,7 @@ int		 puny_decode(const char*, char*, size_t, const char**);
 int		 starts_with(const char*, const char*);
 int		 ends_with(const char*, const char*);
 ssize_t		 filesize(int);
+void		 mark_nonblock(int);
 char		*absolutify_path(const char*);
 
 #endif
