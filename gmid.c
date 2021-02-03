@@ -490,20 +490,14 @@ serve(int argc, char **argv, int *p)
 		fatal("fork: %s", strerror(errno));
 
 	case 0:			/* child */
-		if (p[0] != -1) {
-			close(p[0]);
-			p[0] = -1;
-		}
+		close(p[0]);
 		exfd = p[1];
 		drop_priv();
 		listener_main();
 		_exit(0);
 
 	default:		/* parent */
-		if (p[1] != -1) {
-			close(p[1]);
-			p[1] = -1;
-		}
+		close(p[1]);
 		exfd = p[0];
 		drop_priv();
 		return executor_main();
