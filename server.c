@@ -268,6 +268,17 @@ err:
 	return;
 }
 
+void
+mark_nonblock(int fd)
+{
+	int flags;
+
+	if ((flags = fcntl(fd, F_GETFL)) == -1)
+		fatal("fcntl(F_GETFL): %s", strerror(errno));
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		fatal("fcntl(F_SETFL): %s", strerror(errno));
+}
+
 static void
 handle_handshake(struct pollfd *fds, struct client *c)
 {
