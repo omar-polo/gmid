@@ -33,7 +33,9 @@
 
 struct vhost hosts[HOSTSLEN];
 
-int exfd, foreground, verbose;
+int exfd, foreground, verbose, sock4, sock6;
+
+const char *config_path, *certs_dir, *hostname;
 
 struct conf conf;
 
@@ -381,23 +383,13 @@ setup_tls(void)
 		fatal("tls_configure: %s", tls_error(ctx));
 }
 
-int
+static int
 listener_main(void)
 {
-	int sock4, sock6;
-
 	load_default_mime(&conf.mime);
-
-	sock4 = make_socket(conf.port, AF_INET);
-	sock6 = -1;
-	if (conf.ipv6)
-		sock6 = make_socket(conf.port, AF_INET6);
-
 	load_vhosts();
-
 	sandbox();
 	loop(ctx, sock4, sock6);
-
 	return 0;
 }
 
@@ -458,12 +450,69 @@ usage(const char *me)
 	    me);
 }
 
+static int
+serve(int argc, char **argv, int *p)
+{
+	char path[PATH_MAX];
+
+	if (config_path == NULL) {
+		if (hostname == NULL)
+			hostname = "localhost";
+		if (certs_dir == NULL)
+			certs_dir = data_dir();
+		load_local_cert(hostname, certs_dir);
+
+		hosts[0].domain = "*";
+		hosts[0].locations[0].auto_index = 1;
+		hosts[0].locations[0].match = "*";
+
+		switch (argc) {
+		case 0:
+			hosts[0].dir = getcwd(path, sizeof(path));
+			break;
+		case 1:
+			hosts[0].dir = absolutify_path(argv[0]);
+			break;
+		default:
+			usage(getprogname());
+			return 1;
+		}
+
+		LOGN(NULL, "serving %s on port %d", hosts[0].dir, conf.port);
+	}
+
+	/* setup tls before dropping privileges: we don't want user
+	 * to put private certs inside the chroot. */
+	setup_tls();
+
+	switch (fork()) {
+	case -1:
+		fatal("fork: %s", strerror(errno));
+
+	case 0:			/* child */
+		if (p[0] != -1) {
+			close(p[0]);
+			p[0] = -1;
+		}
+		exfd = p[1];
+		drop_priv();
+		listener_main();
+		_exit(0);
+
+	default:		/* parent */
+		if (p[1] != -1) {
+			close(p[1]);
+			p[1] = -1;
+		}
+		drop_priv();
+		return executor_main(p[0]);
+	}
+}
+
 int
 main(int argc, char **argv)
 {
 	int ch, p[2];
-	char path[PATH_MAX];
-	const char *config_path = NULL, *certs_dir = NULL, *hostname = NULL;
 	int conftest = 0, configless = 0;
 
 	init_config();
@@ -526,48 +575,19 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (config_path != NULL) {
-		if (argc > 0 || configless)
-			fatal("can't specify options is config mode.");
-
-		parse_conf(config_path);
-	} else {
+	if (config_path == NULL) {
 		configless = 1;
 		foreground = 1;
-
-		if (hostname == NULL)
-			hostname = "localhost";
-		if (certs_dir == NULL)
-			certs_dir = data_dir();
-		load_local_cert(hostname, certs_dir);
-
-		hosts[0].domain = "*";
-		hosts[0].locations[0].auto_index = 1;
-		hosts[0].locations[0].match = "*";
-
-                switch (argc) {
-		case 0:
-			hosts[0].dir = getcwd(path, sizeof(path));
-			break;
-		case 1:
-			hosts[0].dir = absolutify_path(argv[0]);
-			break;
-		default:
-			usage(getprogname());
-			return 1;
-		}
-
-		LOGN(NULL, "serving %s on port %d", hosts[0].dir, conf.port);
 	}
 
+	if (config_path != NULL && (argc > 0 || configless))
+		err(1, "can't specify options in config mode.");
+
 	if (conftest) {
+		parse_conf(config_path);
 		puts("config OK");
 		return 0;
 	}
-
-	/* setup tls before dropping privileges: we don't want user
-	 * to put private certs inside the chroot. */
-	setup_tls();
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
@@ -587,20 +607,13 @@ main(int argc, char **argv)
 	    PF_UNSPEC, p) == -1)
 		fatal("socketpair: %s", strerror(errno));
 
-	switch (fork()) {
-	case -1:
-		fatal("fork: %s", strerror(errno));
+	if (config_path != NULL)
+		parse_conf(config_path);
 
-	case 0:			/* child */
-		close(p[0]);
-		exfd = p[1];
-		drop_priv();
-		listener_main();
-		_exit(0);
+	sock4 = make_socket(conf.port, AF_INET);
+	sock6 = -1;
+	if (conf.ipv6)
+		sock6 = make_socket(conf.port, AF_INET6);
 
-	default:		/* parent */
-		close(p[1]);
-		drop_priv();
-		return executor_main(p[0]);
-	}
+	return serve(argc, argv, p);
 }

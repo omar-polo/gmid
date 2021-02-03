@@ -194,7 +194,6 @@ void		 load_local_cert(const char*, const char*);
 void		 load_vhosts(void);
 int		 make_socket(int, int);
 void		 setup_tls(void);
-int		 listener_main(void);
 void		 init_config(void);
 void		 drop_priv(void);
 void		 usage(const char*);
