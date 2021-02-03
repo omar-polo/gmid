@@ -232,7 +232,7 @@ int		 send_vhost(int, struct vhost*);
 int		 recv_vhost(int, struct vhost**);
 int		 send_fd(int, int);
 int		 recv_fd(int);
-int		 executor_main(int);
+int		 executor_main(void);
 
 /* sandbox.c */
 void		 sandbox(void);

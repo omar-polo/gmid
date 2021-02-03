@@ -330,7 +330,7 @@ childerr:
 }
 
 int
-executor_main(int fd)
+executor_main()
 {
 	char *spath, *relpath, *addr, *ruser, *cissuer, *chash;
         struct vhost *vhost;
@@ -351,19 +351,19 @@ executor_main(int fd)
 #endif
 
 	for (;;) {
-		if (!recv_iri(fd, &iri)
-		    || !recv_string(fd, &spath)
-		    || !recv_string(fd, &relpath)
-		    || !recv_string(fd, &addr)
-		    || !recv_string(fd, &ruser)
-		    || !recv_string(fd, &cissuer)
-		    || !recv_string(fd, &chash)
-		    || !recv_vhost(fd, &vhost))
+		if (!recv_iri(exfd, &iri)
+		    || !recv_string(exfd, &spath)
+		    || !recv_string(exfd, &relpath)
+		    || !recv_string(exfd, &addr)
+		    || !recv_string(exfd, &ruser)
+		    || !recv_string(exfd, &cissuer)
+		    || !recv_string(exfd, &chash)
+		    || !recv_vhost(exfd, &vhost))
 			break;
 
 		d = launch_cgi(&iri, spath, relpath, addr, ruser, cissuer, chash,
 		    vhost);
-		if (!send_fd(fd, d))
+		if (!send_fd(exfd, d))
 			break;
 		close(d);
 

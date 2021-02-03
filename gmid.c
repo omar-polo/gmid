@@ -504,8 +504,9 @@ serve(int argc, char **argv, int *p)
 			close(p[1]);
 			p[1] = -1;
 		}
+		exfd = p[0];
 		drop_priv();
-		return executor_main(p[0]);
+		return executor_main();
 	}
 }
 
