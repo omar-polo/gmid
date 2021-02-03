@@ -398,7 +398,7 @@ server "example.com" {
 	key  "/path/to/key.pem"
 	root "/example.com" # in the /var/gemini chroot
 
-	location "/static/" {
+	location "/static/*" {
 		auto index on
 		index "index.gemini"
 	}
