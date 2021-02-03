@@ -568,7 +568,6 @@ main(int argc, char **argv)
 	/* setup tls before dropping privileges: we don't want user
 	 * to put private certs inside the chroot. */
 	setup_tls();
-	drop_priv();
 
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
@@ -595,11 +594,13 @@ main(int argc, char **argv)
 	case 0:			/* child */
 		close(p[0]);
 		exfd = p[1];
+		drop_priv();
 		listener_main();
 		_exit(0);
 
 	default:		/* parent */
 		close(p[1]);
+		drop_priv();
 		return executor_main(p[0]);
 	}
 }
