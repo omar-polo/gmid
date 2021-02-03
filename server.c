@@ -902,7 +902,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 void
 loop(struct tls *ctx, int sock4, int sock6)
 {
-	int i;
+	int i, n;
 	struct client clients[MAX_USERS];
 	struct pollfd fds[MAX_USERS];
 
@@ -918,22 +918,23 @@ loop(struct tls *ctx, int sock4, int sock6)
 	fds[1].fd = sock6;
 
 	for (;;) {
-		if (poll(fds, MAX_USERS, INFTIM) == -1) {
+		if ((n = poll(fds, MAX_USERS, INFTIM)) == -1) {
 			if (errno == EINTR) {
-                                fprintf(stderr, "connected clients: %d\n",
+				fprintf(stderr, "connected clients: %d\n",
 				    connected_clients);
-				continue;
-			}
-			fatal("poll: %s", strerror(errno));
+			} else
+				fatal("poll: %s", strerror(errno));
 		}
 
-		for (i = 0; i < MAX_USERS; i++) {
+		for (i = 0; i < MAX_USERS && n > 0; i++) {
 			if (fds[i].revents == 0)
 				continue;
 
 			if (fds[i].revents & (POLLERR|POLLNVAL))
 				fatal("bad fd %d: %s", fds[i].fd,
 				    strerror(errno));
+
+			n--;
 
 			if (fds[i].revents & POLLHUP) {
 				/* fds[i] may be the fd of the stdin
