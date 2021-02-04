@@ -28,11 +28,10 @@
  * int yydebug = 1;
  */
 
-struct vhost *host = &hosts[0];
-size_t ihost = 0;
-
-struct location *loc = &hosts[0].locations[0];
-size_t iloc = 0;
+struct vhost *host;
+size_t ihost;
+struct location *loc;
+size_t iloc;
 
 int goterror = 0;
 const char *config_path;
@@ -85,7 +84,7 @@ vhosts		: /* empty */
 		;
 
 vhost		: TSERVER TSTRING '{' servopts locations '}' {
-			host->locations[0].match = (char*)"*";
+			host->locations[0].match = xstrdup("*");
 			host->domain = $2;
 
 			if (strstr($2, "xn--") != NULL) {
@@ -183,6 +182,11 @@ parse_portno(const char *p)
 void
 parse_conf(const char *path)
 {
+	host = &hosts[0];
+	ihost = 0;
+	loc = &hosts[0].locations[0];
+	iloc = 0;
+
 	config_path = path;
 	if ((yyin = fopen(path, "r")) == NULL)
 		fatal("cannot open config %s", path);

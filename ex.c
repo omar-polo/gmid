@@ -350,7 +350,7 @@ executor_main()
 		err(1, "pledge");
 #endif
 
-	for (;;) {
+	while (!hupped) {
 		if (!recv_iri(exfd, &iri)
 		    || !recv_string(exfd, &spath)
 		    || !recv_string(exfd, &relpath)
@@ -375,6 +375,9 @@ executor_main()
 		free(cissuer);
 		free(chash);
 	}
+
+	if (hupped)
+		_exit(0);
 
 	/* kill all process in my group.  This means the listener and
 	 * every pending CGI script. */

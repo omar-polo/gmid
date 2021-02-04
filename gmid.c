@@ -31,6 +31,8 @@
 
 #include "gmid.h"
 
+volatile sig_atomic_t hupped;
+
 struct vhost hosts[HOSTSLEN];
 
 int exfd, foreground, verbose, sock4, sock6;
@@ -39,6 +41,7 @@ const char *config_path, *certs_dir, *hostname;
 
 struct conf conf;
 
+struct tls_config *tlsconf;
 struct tls *ctx;
 
 void
@@ -170,6 +173,8 @@ void
 sig_handler(int sig)
 {
 	(void)sig;
+
+	hupped = sig == SIGHUP;
 }
 
 void
@@ -353,7 +358,6 @@ make_socket(int port, int family)
 void
 setup_tls(void)
 {
-	struct tls_config *tlsconf;
 	struct vhost *h;
 
 	if ((tlsconf = tls_config_new()) == NULL)
@@ -371,7 +375,8 @@ setup_tls(void)
 
 	/* we need to set something, then we can add how many key we want */
 	if (tls_config_set_keypair_file(tlsconf, hosts->cert, hosts->key))
-		fatal("tls_config_set_keypair_file failed");
+		fatal("tls_config_set_keypair_file failed for (%s, %s)",
+		    hosts->cert, hosts->key);
 
 	for (h = &hosts[1]; h->domain != NULL; ++h) {
 		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
@@ -410,6 +415,47 @@ init_config(void)
 
 	conf.chroot = NULL;
 	conf.user = NULL;
+}
+
+void
+free_config(void)
+{
+	struct vhost *h;
+	struct location *l;
+
+	free(conf.chroot);
+	free(conf.user);
+	memset(&conf, 0, sizeof(conf));
+
+	for (h = hosts; h->domain != NULL; ++h) {
+		free((char*)h->domain);
+		free((char*)h->cert);
+		free((char*)h->key);
+		free((char*)h->dir);
+		free((char*)h->cgi);
+
+		for (l = h->locations; l->match != NULL; ++l) {
+			free((char*)l->match);
+			free((char*)l->lang);
+			free((char*)l->default_mime);
+			free((char*)l->index);
+		}
+	}
+	memset(hosts, 0, sizeof(hosts));
+
+	tls_free(ctx);
+	tls_config_free(tlsconf);
+}
+
+static void
+wait_sighup(void)
+{
+	sigset_t mask;
+	int signo;
+
+	sigemptyset(&mask);
+	sigaddset(&mask, SIGHUP);
+	sigwait(&mask, &signo);
 }
 
 void
@@ -490,16 +536,20 @@ serve(int argc, char **argv, int *p)
 		fatal("fork: %s", strerror(errno));
 
 	case 0:			/* child */
+		setproctitle("listener");
 		close(p[0]);
 		exfd = p[1];
 		drop_priv();
+		unblock_signals();
 		listener_main();
 		_exit(0);
 
 	default:		/* parent */
+		setproctitle("executor");
 		close(p[1]);
 		exfd = p[0];
 		drop_priv();
+		unblock_signals();
 		return executor_main();
 	}
 }
@@ -509,6 +559,7 @@ main(int argc, char **argv)
 {
 	int ch, p[2];
 	int conftest = 0, configless = 0;
+	int old_ipv6, old_port;
 
 	init_config();
 
@@ -520,7 +571,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'c':
-			config_path = optarg;
+			config_path = absolutify_path(optarg);
 			break;
 
 		case 'd':
@@ -591,7 +642,7 @@ main(int argc, char **argv)
 	signal(SIGINFO, sig_handler);
 #endif
 	signal(SIGUSR2, sig_handler);
-	signal(SIGHUP, SIG_IGN);
+	signal(SIGHUP, sig_handler);
 
 	if (!foreground && !configless) {
 		if (daemon(1, 1) == -1)
@@ -610,5 +661,54 @@ main(int argc, char **argv)
 	if (conf.ipv6)
 		sock6 = make_socket(conf.port, AF_INET6);
 
-	return serve(argc, argv, p);
+	if (configless)
+		return serve(argc, argv, p);
+
+	/* wait a sighup and reload the daemon */
+	for (;;) {
+		block_signals();
+
+		hupped = 0;
+		switch (fork()) {
+		case -1:
+			fatal("fork: %s", strerror(errno));
+		case 0:
+			return serve(argc, argv, p);
+		}
+
+		close(p[0]);
+		close(p[1]);
+
+		unblock_signals();
+		wait_sighup();
+		LOGI("reloading configuration %s", config_path);
+
+		old_ipv6 = conf.ipv6;
+		old_port = conf.port;
+
+		free_config();
+		init_config();
+		parse_conf(config_path);
+
+		if (old_port != conf.port) {
+			close(sock4);
+			close(sock6);
+			sock4 = -1;
+			sock6 = -1;
+		}
+
+		if (sock6 != -1 && old_ipv6 != conf.ipv6) {
+			close(sock6);
+			sock6 = -1;
+		}
+
+		if (sock4 == -1)
+			sock4 = make_socket(conf.port, AF_INET);
+		if (sock6 == -1 && conf.ipv6)
+			sock6 = make_socket(conf.port, AF_INET6);
+
+		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
+		    PF_UNSPEC, p) == -1)
+			fatal("socketpair: %s", strerror(errno));
+	}
 }

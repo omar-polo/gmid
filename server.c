@@ -906,8 +906,6 @@ loop(struct tls *ctx, int sock4, int sock6)
 	struct client clients[MAX_USERS];
 	struct pollfd fds[MAX_USERS];
 
-	connected_clients = 0;
-
 	for (i = 0; i < MAX_USERS; ++i) {
 		fds[i].fd = -1;
 		fds[i].events = POLLIN;
@@ -951,6 +949,15 @@ loop(struct tls *ctx, int sock4, int sock6)
 				do_accept(sock6, ctx, fds, clients);
 			else
 				clients[i].state(&fds[i], &clients[i]);
+		}
+
+		if (hupped) {
+			if (connected_clients == 0)
+				return;
+
+			fds[0].fd = -1;
+			if (sock6 != -1)
+				fds[1].fd = -1;
 		}
 	}
 }

@@ -25,6 +25,7 @@
 
 #include <dirent.h>
 #include <poll.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <syslog.h>
@@ -108,6 +109,8 @@ struct conf {
 
 extern struct conf conf;
 extern int exfd;
+
+extern volatile sig_atomic_t hupped;
 
 struct iri {
 	char		*schema;
@@ -195,6 +198,7 @@ void		 load_vhosts(void);
 int		 make_socket(int, int);
 void		 setup_tls(void);
 void		 init_config(void);
+void		 free_config(void);
 void		 drop_priv(void);
 void		 usage(const char*);
 
@@ -250,9 +254,12 @@ int		 serialize_iri(struct iri*, char*, size_t);
 int		 puny_decode(const char*, char*, size_t, const char**);
 
 /* utils.c */
+void		 block_signals(void);
+void		 unblock_signals(void);
 int		 starts_with(const char*, const char*);
 int		 ends_with(const char*, const char*);
 ssize_t		 filesize(int);
 char		*absolutify_path(const char*);
+char		*xstrdup(const char*);
 
 #endif

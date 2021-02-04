@@ -19,6 +19,24 @@
 
 #include "gmid.h"
 
+static sigset_t set;
+
+void
+block_signals(void)
+{
+	sigset_t new;
+
+	sigemptyset(&new);
+	sigaddset(&new, SIGHUP);
+	sigprocmask(SIG_BLOCK, &new, &set);
+}
+
+void
+unblock_signals(void)
+{
+	sigprocmask(SIG_SETMASK, &set, NULL);
+}
+
 int
 starts_with(const char *str, const char *prefix)
 {
@@ -79,4 +97,14 @@ absolutify_path(const char *path)
 		err(1, "asprintf");
 	free(wd);
 	return r;
+}
+
+char *
+xstrdup(const char *s)
+{
+	char *d;
+
+	if ((d = strdup(s)) == NULL)
+		err(1, "strdup");
+	return d;
 }

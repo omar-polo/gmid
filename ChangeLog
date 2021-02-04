@@ -1,3 +1,7 @@
+2021-02-04  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): reload configuration on SIGHUP, without disconnecting the clients
+
 2021-02-02  Omar Polo  <op@omarpolo.com>
 
 	* server.c (handle_dirlist_head): print the header in the directory listing
