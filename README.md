@@ -16,6 +16,8 @@ or as a traditional daemon
 
 (random order)
 
+ - reconfiguration: reload the running configuration without interruption
+ - sandboxed by default on OpenBSD, Linux and FreeBSD
  - IRI support (RFC3987)
  - punycode support
  - dual stack (IPv4 and IPv6)
@@ -27,7 +29,6 @@ or as a traditional daemon
  - per-location rules
  - optional directory listings
  - configurable mime types
- - sandboxed by default on OpenBSD, Linux and FreeBSD
  - chroot support
 
 
