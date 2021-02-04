@@ -20,9 +20,11 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl fn
+.Op Fl fnv
 .Op Fl c Ar config
-|
+.Ek
+.Nm
+.Bk -words
 .Op Fl 6hv
 .Op Fl d Pa certs-dir
 .Op Fl H Ar hostname
@@ -36,11 +38,6 @@ is a simple and minimal gemini server that can serve static files and
 execute CGI scripts.
 It can run without a configuration file with a limited set of features
 available.
-If a configuration file is given, no other flags shall be given,
-except for
-.Fl f
-and
-.Fl n .
 .Pp
 .Nm
 rereads the configuration file when it receives
