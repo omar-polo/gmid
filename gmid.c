@@ -679,8 +679,8 @@ main(int argc, char **argv)
 		close(p[0]);
 		close(p[1]);
 
-		unblock_signals();
 		wait_sighup();
+		unblock_signals();
 		LOGI("reloading configuration %s", config_path);
 
 		old_ipv6 = conf.ipv6;
