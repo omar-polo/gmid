@@ -681,7 +681,7 @@ main(int argc, char **argv)
 
 		wait_sighup();
 		unblock_signals();
-		LOGI("reloading configuration %s", config_path);
+		LOGI(NULL, "reloading configuration %s", config_path);
 
 		old_ipv6 = conf.ipv6;
 		old_port = conf.port;
