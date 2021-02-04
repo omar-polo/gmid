@@ -115,10 +115,10 @@ servopt		: TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
 		| TKEY TSTRING		{ host->key  = ensure_absolute_path($2); }
 		| TROOT TSTRING		{ host->dir  = ensure_absolute_path($2); }
 		| TCGI TSTRING		{
-			host->cgi = $2;
 			/* drop the starting '/', if any */
-			if (*host->cgi == '/')
-				host->cgi++;
+			if (*$2 == '/')
+				memmove($2, $2+1, strlen($2));
+			host->cgi = $2;
 		}
 		| locopt
 		;
