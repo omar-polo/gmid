@@ -48,7 +48,9 @@ HAVE_EXPLICIT_BZERO=
 HAVE_GETPROGNAME=
 HAVE_LIBTLS=
 HAVE_OPENSSL=
+HAVE_PR_SET_NAME=
 HAVE_RECALLOCARRAY=
+HAVE_SETPROCTITLE=
 HAVE_STRLCAT=
 HAVE_STRLCPY=
 HAVE_STRTONUM=
@@ -219,7 +221,9 @@ runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest getprogname	GETPROGNAME	|| true
 runtest libtls		LIBTLS		|| true
 runtest openssl		OPENSSL		|| true
+runtest pr_set_name	PR_SET_NAME	|| true
 runtest recallocarray	RECALLOCARRAY	|| true
+runtest setproctitle	SETPROCTITLE	|| true
 runtest strlcat		STRLCAT		|| true
 runtest strlcpy		STRLCPY		|| true
 runtest strtonum	STRTONUM	|| true
@@ -260,7 +264,9 @@ cat <<__HEREDOC__
 #define HAVE_ERR		${HAVE_ERR}
 #define HAVE_EXPLICIT_BZERO	${HAVE_EXPLICIT_BZERO}
 #define HAVE_GETPROGNAME	${HAVE_GETPROGNAME}
+#define HAVE_PR_SET_NAME	${HAVE_PR_SET_NAME}
 #define HAVE_RECALLOCARRAY	${HAVE_RECALLOCARRAY}
+#define HAVE_SETPROCTITLE	${SETPROCTITLE}
 #define HAVE_STRLCAT		${HAVE_STRLCAT}
 #define HAVE_STRLCPY		${HAVE_STRLCPY}
 #define HAVE_STRTONUM		${HAVE_STRTONUM}
@@ -296,6 +302,10 @@ fi
 if [ ${HAVE_RECALLOCARRAY} -eq 0 ]; then
 	echo "extern	void*	 recallocarray(void*, size_t, size_t, size_t);"
 	COMPAT="${COMPAT} compat/recallocarray.o"
+fi
+if [ ${HAVE_SETPROCTITLE} -eq 0 ]; then
+	echo "extern	void	 setproctitle(const char *fmt, ...);"
+	COMPAT="${COMPAT} compat/setproctitle.o"
 fi
 if [ ${HAVE_STRLCAT} -eq 0 ]; then
 	echo "extern	size_t	 strlcat(char*, const char*, size_t);"
