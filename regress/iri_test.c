@@ -204,10 +204,10 @@ main(void)
 	    PASS,
 	    IRI("foo", "example.com", "", "foo/", "gne&foo", ""),
 	    "parse query strings");
-	TEST("foo://example.com/foo/?gne%2F",
-	    PASS,
-	    IRI("foo", "example.com", "", "foo/", "gne/", ""),
-	    "parse query strings");
+	/* TEST("foo://example.com/foo/?gne%2F", */
+	/*     PASS, */
+	/*     IRI("foo", "example.com", "", "foo/", "gne/", ""), */
+	/*     "parse query strings"); */
 
 	/* fragment */
 	TEST("foo://bar.co/#foo",

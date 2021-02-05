@@ -46,12 +46,42 @@ sub_delimiters(int p)
 }
 
 static int
+valid_pct_enc_string(char *s)
+{
+	if (*s != '%')
+		return 1;
+
+	if (!isxdigit(s[1]) || !isxdigit(s[2]))
+		return 0;
+
+	if (s[1] == '0' && s[2] == '0')
+		return 0;
+
+	return 1;
+}
+
+static int
+valid_pct_encoded(struct parser *p)
+{
+	if (p->iri[0] != '%')
+		return 0;
+
+	if (!valid_pct_enc_string(p->iri)) {
+		p->err = "illegal percent-encoding";
+		return 0;
+	}
+
+	p->iri += 2;
+	return 1;
+}
+
+static int
 parse_pct_encoded(struct parser *p)
 {
 	if (p->iri[0] != '%')
 		return 0;
 
-	if (!isxdigit(p->iri[1]) || !isxdigit(p->iri[2])) {
+	if (!valid_pct_enc_string(p->iri)) {
 		p->err = "illegal percent-encoding";
 		return 0;
 	}
@@ -259,7 +289,7 @@ parse_query(struct parser *p)
 	    || sub_delimiters(*p->iri)
 	    || *p->iri == '/'
 	    || *p->iri == '?'
-	    || parse_pct_encoded(p)
+	    || valid_pct_encoded(p)
 	    || valid_multibyte_utf8(p))
 		p->iri++;
 
