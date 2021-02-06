@@ -121,7 +121,7 @@ vhost_auto_index(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return 0;
 
-	for (loc = v->locations; loc->match != NULL; ++loc) {
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (!fnmatch(loc->match, path, 0)) {
 			if (loc->auto_index != 0)
 				return loc->auto_index == 1;
