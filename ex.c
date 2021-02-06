@@ -238,7 +238,7 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 {
 	int p[2];		/* read end, write end */
 
-	if (pipe2(p, O_NONBLOCK) == -1)
+	if (pipe(p) == -1)
 		return -1;
 
 	switch (fork()) {
@@ -321,6 +321,7 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 
 	default:
 		close(p[1]);
+		mark_nonblock(p[0]);
 		return p[0];
 	}
 
