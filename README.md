@@ -58,6 +58,50 @@ The only missing piece is UNICODE normalisation of the IRI path: gmid
 doesn't do that (yet).
 
 
+## Configuration
+
+gmid has a rich configuration file, heavily inspired by OpenBSD'
+httpd.  While you should definitely check the manpage because it
+documents every option in depth, here's an example of what gmid can
+do.
+
+```conf
+ipv6 on     # enable ipv6
+
+server "example.com" {
+    cert "/path/to/cert.pem"
+    key  "/path/to/key.pem"
+    root "/var/gemini/example.com"
+    lang "it"
+    cgi  "/cgi/*"
+
+    location "/files/*" {
+        auto index on
+    }
+
+    location "/repo/*" {
+        # change the index file name
+        index "README.gmi"
+    }
+
+    # redirect /cgi/man/... to man.example.com/...
+    location "/cgi/man*" {
+        strip 2
+        block return 31 "gemini://man.example.com%p"
+    }
+}
+
+server "man.example.com" {
+    cert "..."
+    key  "..."
+    root "/var/gemini/man.example.com"
+
+    # handle every request with the CGI script `man'
+    entrypoint "man"
+}
+```
+
+
 ## Building
 
 gmid depends on a POSIX libc, OpenSSL/LibreSSL and libtls (provided
