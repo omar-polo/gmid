@@ -1,0 +1,60 @@
+#!/bin/sh
+
+printf "20 text/plain; lang=en\r\n"
+
+cat <<EOF
+               The Common Gateway Interface for Gemini
+
+  It really seems that the Common Gateway Interface (CGI, RFC-3875)
+can be adapted for the Gemini protocol easily!
+
+  This is a test page for the CGI implementation in gmid[0], a small
+and secure Gemini server.  When in doubt, I'm trying to follow the
+GLV-1.12556[1] behaviour.  Sean Conner provides a similar page at [2].
+
+
+                      CGI Environment Variables
+
+<unspec> means "not set".
+
+EOF
+
+echo GATEWAY_INTERFACE=$GATEWAY_INTERFACE
+echo GEMINI_DOCUMENT_ROOT=$GEMINI_DOCUMENT_ROOT
+echo GEMINI_SCRIPT_FILENAME=$GEMINI_SCRIPT_FILENAME
+echo GEMINI_URL=$GEMINI_URL
+echo GEMINI_URL_PATH=$GEMINI_URL_PATH
+echo PWD=$PWD
+echo PATH_INFO=${PATH_INFO:-"<unspec>"}
+echo PATH_TRANSLATED=${PATH_TRANSLATED:-"<unspec>"}
+echo QUERY_STRING=$QUERY_STRING
+echo REMOTE_ADDR=$REMOTE_ADDR
+echo REMOTE_HOST=$REMOTE_HOST
+echo REQUEST_METHOD=$REQUEST_METHOD
+echo SCRIPT_NAME=$SCRIPT_NAME
+echo SERVER_NAME=$SERVER_NAME
+echo SERVER_PORT=$SERVER_PORT
+echo SERVER_PROTOCOL=$SERVER_PROTOCOL
+echo SERVER_SOFTWARE=$SERVER_SOFTWARE
+echo AUTH_TYPE=$AUTH_TYPE
+echo REMOTE_USER=$REMOTE_USER
+echo TLS_CLIENT_ISSUER=$TLS_CLIENT_ISSUER
+echo TLS_CLIENT_HASH=$TLS_CLIENT_HASH
+echo
+echo
+echo "                          CGI Argument List"
+echo
+echo "- $0"
+for i in "$@"; do
+	echo "- $i"
+done
+
+cat <<EOF
+
+
+                                notes
+
+[0]: https://github.com/omar-polo/gmid
+[1]: https://github.com/spc476/GLV-1.12556
+[2]: gemini://gemini.conman.org/cgi
+EOF
