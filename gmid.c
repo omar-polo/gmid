@@ -433,6 +433,7 @@ free_config(void)
 		free((char*)h->key);
 		free((char*)h->dir);
 		free((char*)h->cgi);
+		free((char*)h->entrypoint);
 
 		for (l = h->locations; l->match != NULL; ++l) {
 			free((char*)l->match);

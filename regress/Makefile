@@ -38,7 +38,7 @@ testdata: fill-file
 	./sha testdata/bigfile testdata/bigfile.sha
 	printf "# hello world\n" > testdata/index.gmi
 	./sha testdata/index.gmi testdata/index.gmi.sha
-	cp hello slow err invalid serve-bigfile testdata/
+	cp hello slow err invalid serve-bigfile env testdata/
 	mkdir testdata/dir
 	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi

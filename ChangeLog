@@ -1,6 +1,7 @@
 2021-02-06  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (locopt): added ``block return'' and ``strip'' options
+	(servopt): add the ``entrypoint'' option
 
 2021-02-05  Omar Polo  <op@omarpolo.com>
 

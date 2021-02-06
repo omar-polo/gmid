@@ -255,4 +255,14 @@ echo OK GET /bigfile with strip and block
 
 check "should be running"
 
+# test the entrypoint
+
+config '' 'entrypoint "/env"'
+checkconf
+restart
+
+eq "$(head /foo/bar)"	"20 text/plain; lang=en"	"Unknown head for /foo/bar"
+eq "$(get /foo/bar|grep PATH_INFO)" "PATH_INFO=/foo/bar" "Unexpected PATH_INFO"
+echo OK GET /foo/bar with entrypoint
+
 quit

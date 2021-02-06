@@ -230,7 +230,8 @@ A
 .Ic location
 section may include most of the server configuration rules
 except
-.Ic cert , Ic key , Ic root , Ic location No and Ic cgi .
+.Ic cert , Ic key , Ic root , Ic location No ,
+.Ic entrypoint No and Ic cgi .
 .It Ic block Op Ic return Ar code Op Ar meta
 Send a reply and close the connection;
 .Ar code
@@ -269,6 +270,11 @@ It's only considered for the
 .Ar meta
 parameter in the scope of a matching
 .Ic block return .
+.It Ic entrypoint Pa path
+Make the CGI script at
+.Pa path
+.Pq relative to the Ic root No directory
+handle all the requests for the current virtual host
 .El
 .Sh CGI
 When a request for an executable file matches the

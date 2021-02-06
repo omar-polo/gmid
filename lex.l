@@ -72,6 +72,7 @@ auto		return TAUTO;
 strip		return TSTRIP;
 block		return TBLOCK;
 return		return TRETURN;
+entrypoint	return TENTRYPOINT;
 
 [{}]		return *yytext;
 

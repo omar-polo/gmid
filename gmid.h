@@ -80,6 +80,7 @@ struct vhost {
 	const char	*key;
 	const char	*dir;
 	const char	*cgi;
+	const char	*entrypoint;
 	int		 dirfd;
 
 	/* the first location rule is always '*' and holds the default

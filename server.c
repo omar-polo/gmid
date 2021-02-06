@@ -481,8 +481,15 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-	if (!apply_block_return(fds, c))
-		open_file(fds, c);
+	if (apply_block_return(fds, c))
+		return;
+
+	if (c->host->entrypoint != NULL) {
+		start_cgi(c->host->entrypoint, c->iri.path, fds, c);
+		return;
+	}
+
+	open_file(fds, c);
 }
 
 static void

@@ -125,6 +125,13 @@ servopt		: TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
 				memmove($2, $2+1, strlen($2));
 			host->cgi = $2;
 		}
+		| TENTRYPOINT TSTRING {
+			if (host->entrypoint != NULL)
+				yyerror("`entrypoint' specified more than once");
+			while (*$2 == '/')
+				memmove($2, $2+1, strlen($2));
+			host->entrypoint = $2;
+		}
 		| locopt
 		;
 
