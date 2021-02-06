@@ -289,6 +289,8 @@ parse_query(struct parser *p)
 	    || sub_delimiters(*p->iri)
 	    || *p->iri == '/'
 	    || *p->iri == '?'
+	    || *p->iri == ':'
+	    || *p->iri == '@'
 	    || valid_pct_encoded(p)
 	    || valid_multibyte_utf8(p))
 		p->iri++;
