@@ -439,6 +439,7 @@ free_config(void)
 			free((char*)l->lang);
 			free((char*)l->default_mime);
 			free((char*)l->index);
+			free((char*)l->block_fmt);
 		}
 	}
 	memset(hosts, 0, sizeof(hosts));

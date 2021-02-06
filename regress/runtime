@@ -220,3 +220,41 @@ echo OK GET /dir/ with auto index on
 
 check "should be running"
 quit
+
+# test block return and strip
+
+config '' 'location "*" { block }'
+checkconf
+run
+
+eq "$(head /)"		"40 temporary failure"		"Unexpected head for /"
+eq "$(get /)"		""				"Unexpected body for /"
+echo OK GET / with block
+
+eq "$(head /nonexists)"	"40 temporary failure"		"Unexpected head for /nonexists"
+eq "$(get /nonexists)"	""				"Unexpected body for /nonexists"
+echo OK GET /nonexists with block
+
+check "should be running"
+quit
+
+config '' '
+location "/dir" {
+	strip 1
+	block return 40 "%% %p %q %P %N test"
+}
+location "*" {
+	strip 99
+	block return 40 "%% %p %q %P %N test"
+}'
+checkconf
+run
+
+eq "$(head /dir/foo.gmi)"	"40 % /foo.gmi  10965 localhost test"
+echo OK GET /dir/foo.gmi with strip and block
+
+eq "$(head /bigfile)"		"40 %   10965 localhost test"
+echo OK GET /bigfile with strip and block
+
+check "should be running"
+quit

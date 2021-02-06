@@ -18,6 +18,7 @@
  */
 
 #include <err.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -36,10 +37,13 @@ size_t iloc;
 int goterror = 0;
 const char *config_path;
 
-void		 yyerror(const char*);
+void		 yyerror(const char*, ...);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
 char		*ensure_absolute_path(char*);
+int		 check_block_code(int);
+char		*check_block_fmt(char*);
+int		 check_strip_no(int);
 
 %}
 
@@ -54,6 +58,7 @@ char		*ensure_absolute_path(char*);
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
 %token TCHROOT TUSER TSERVER
 %token TLOCATION TCERT TKEY TROOT TCGI TLANG TINDEX TAUTO
+%token TSTRIP TBLOCK TRETURN
 %token TERR
 
 %token <str>	TSTRING
@@ -156,15 +161,42 @@ locopt		: TDEFAULT TTYPE TSTRING {
 			loc->index = $2;
 		}
 		| TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
+		| TBLOCK TRETURN TNUM TSTRING {
+			if (loc->block_fmt != NULL)
+				yyerror("`block' rule specified more than once");
+			loc->block_fmt = check_block_fmt($4);
+			loc->block_code = check_block_code($3);
+		}
+		| TBLOCK TRETURN TNUM {
+			if (loc->block_fmt != NULL)
+				yyerror("`block' rule specified more than once");
+			loc->block_fmt = xstrdup("temporary failure");
+			loc->block_code = check_block_code($3);
+			if ($3 >= 30 && $3 < 40)
+				yyerror("missing `meta' for block return %d", $3);
+		}
+		| TBLOCK {
+			if (loc->block_fmt != NULL)
+				yyerror("`block' rule specified more than once");
+			loc->block_fmt = xstrdup("temporary failure");
+			loc->block_code = 40;
+		}
+		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
 		;
 
 %%
 
 void
-yyerror(const char *msg)
+yyerror(const char *msg, ...)
 {
+	va_list ap;
+
 	goterror = 1;
-	fprintf(stderr, "%s:%d: %s\n", config_path, yylineno, msg);
+
+	va_start(ap, msg);
+	fprintf(stderr, "%s:%d: ", config_path, yylineno);
+	vfprintf(stderr, msg, ap);
+	va_end(ap);
 }
 
 int
@@ -203,4 +235,43 @@ ensure_absolute_path(char *path)
 	if (path == NULL || *path != '/')
 		yyerror("not an absolute path");
 	return path;
+}
+
+int
+check_block_code(int n)
+{
+	if (n < 10 || n >= 70 || (n >= 20 && n <= 29))
+		yyerror("invalid block code %d", n);
+	return n;
+}
+
+char *
+check_block_fmt(char *fmt)
+{
+	char *s;
+
+	for (s = fmt; *s; ++s) {
+		if (*s != '%')
+			continue;
+		switch (*++s) {
+		case '%':
+		case 'p':
+		case 'q':
+		case 'P':
+		case 'N':
+			break;
+		default:
+			yyerror("invalid format specifier %%%c", *s);
+		}
+	}
+
+	return fmt;
+}
+
+int
+check_strip_no(int n)
+{
+	if (n <= 0)
+		yyerror("invalid strip number %d", n);
+	return n;
 }

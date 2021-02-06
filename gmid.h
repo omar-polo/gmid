@@ -69,6 +69,9 @@ struct location {
 	const char	*default_mime;
 	const char	*index;
 	int		 auto_index; /* 0 auto, -1 off, 1 on */
+	int		 block_code;
+	const char	*block_fmt;
+	int		 strip;
 };
 
 struct vhost {
@@ -208,7 +211,7 @@ extern int yylineno;
 extern int yyparse(void);
 extern int yylex(void);
 
-void		 yyerror(const char*);
+void		 yyerror(const char*, ...);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
 
@@ -223,6 +226,8 @@ const char	*vhost_lang(struct vhost*, const char*);
 const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
+int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
+int		 vhost_strip(struct vhost*, const char*);
 void		 mark_nonblock(int);
 void		 loop(struct tls*, int, int);
 

@@ -231,6 +231,44 @@ A
 section may include most of the server configuration rules
 except
 .Ic cert , Ic key , Ic root , Ic location No and Ic cgi .
+.It Ic block Op Ic return Ar code Op Ar meta
+Send a reply and close the connection;
+.Ar code
+is 40
+and
+.Ar meta
+is
+.Dq temporary failure
+by default.
+If
+.Ar code
+is in the 3x range, then
+.Ar meta
+must be provided.
+Inside
+.Ar meta ,
+the following special sequences are replaced:
+.Bl -tag -compact
+.It %%
+is replaced with a single
+.Sq % .
+.It %p
+is replaced with the request path.
+.It %q
+is replaced with the query string of the request.
+.It %P
+is replaced with the server port.
+.It %N
+is replaced with the server name.
+.El
+.It Ic strip Ar number
+Strip
+.Ar number
+components from the beginning of the path.
+It's only considered for the
+.Ar meta
+parameter in the scope of a matching
+.Ic block return .
 .El
 .Sh CGI
 When a request for an executable file matches the

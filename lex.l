@@ -69,6 +69,9 @@ cgi		return TCGI;
 lang		return TLANG;
 index		return TINDEX;
 auto		return TAUTO;
+strip		return TSTRIP;
+block		return TBLOCK;
+return		return TRETURN;
 
 [{}]		return *yytext;
 

@@ -1,3 +1,7 @@
+2021-02-06  Omar Polo  <op@omarpolo.com>
+
+	* parse.y (locopt): added ``block return'' and ``strip'' options
+
 2021-02-05  Omar Polo  <op@omarpolo.com>
 
 	* iri.c (parse_query): don't %-decode the query part.  This affects the value of QUERY_STRING for CGI scripts too, since that must be %-encoded and we're currently shipping it decoded.

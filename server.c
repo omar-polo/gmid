@@ -35,6 +35,7 @@ static void	 open_file(struct pollfd*, struct client*);
 static void	 load_file(struct pollfd*, struct client*);
 static void	 check_for_cgi(struct pollfd*, struct client*);
 static void	 handle_handshake(struct pollfd*, struct client*);
+static int	 apply_block_return(struct pollfd*, struct client*);
 static void	 handle_open_conn(struct pollfd*, struct client*);
 static void	 start_reply(struct pollfd*, struct client*, int, const char*);
 static void	 handle_start_reply(struct pollfd*, struct client*);
@@ -129,6 +130,47 @@ vhost_auto_index(struct vhost *v, const char *path)
 	}
 
 	return v->locations[0].auto_index == 1;
+}
+
+int
+vhost_block_return(struct vhost *v, const char *path, int *code, const char **fmt)
+{
+	struct location *loc;
+
+	if (v == NULL || path == NULL)
+		return 0;
+
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+		if (!fnmatch(loc->match, path, 0)) {
+			if (loc->block_code != 0) {
+				*code = loc->block_code;
+				*fmt = loc->block_fmt;
+				return 1;
+			}
+		}
+	}
+
+	*code = v->locations[0].block_code;
+	*fmt = v->locations[0].block_fmt;
+	return v->locations[0].block_code != 0;
+}
+
+int
+vhost_strip(struct vhost *v, const char *path)
+{
+	struct location *loc;
+
+	if (v == NULL || path == NULL)
+		return 0;
+
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+		if (!fnmatch(loc->match, path, 0)) {
+			if (loc->strip != 0)
+				return loc->strip;
+		}
+	}
+
+	return v->locations[0].strip;
 }
 
 static int
@@ -333,6 +375,73 @@ err:
 	start_reply(fds, c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
 
+/* 1 if a matching `block return' (and apply it), 0 otherwise */
+static int
+apply_block_return(struct pollfd *fds, struct client *c)
+{
+	char *t, *path, buf[32];
+	const char *fmt;
+	int strip, code;
+	size_t i;
+
+	if (!vhost_block_return(c->host, c->iri.path, &code, &fmt))
+		return 0;
+
+	strip = vhost_strip(c->host, c->iri.path);
+	path = c->iri.path;
+	while (strip > 0) {
+		if ((t = strchr(path, '/')) == NULL) {
+			path = strchr(path, '\0');
+			break;
+		}
+		path = t;
+		strip--;
+	}
+
+	memset(buf, 0, sizeof(buf));
+	for (i = 0; *fmt; ++fmt) {
+		if (i == sizeof(buf)-1 || *fmt == '%') {
+			strlcat(c->sbuf, buf, sizeof(c->sbuf));
+			memset(buf, 0, sizeof(buf));
+			i = 0;
+		}
+
+		if (*fmt != '%') {
+			buf[i++] = *fmt;
+			continue;
+		}
+
+		switch (*++fmt) {
+		case '%':
+			strlcat(c->sbuf, "%", sizeof(c->sbuf));
+			break;
+		case 'p':
+			strlcat(c->sbuf, path, sizeof(c->sbuf));
+			break;
+		case 'q':
+			strlcat(c->sbuf, c->iri.query, sizeof(c->sbuf));
+			break;
+		case 'P':
+			snprintf(buf, sizeof(buf), "%d", conf.port);
+			strlcat(c->sbuf, buf, sizeof(c->sbuf));
+			memset(buf, 0, sizeof(buf));
+			break;
+		case 'N':
+			strlcat(c->sbuf, c->domain, sizeof(c->sbuf));
+			break;
+		default:
+			fatal("%s: unknown fmt specifier %c",
+			    __func__, *fmt);
+		}
+	}
+
+	if (i != 0)
+		strlcat(c->sbuf, buf, sizeof(c->sbuf));
+
+	start_reply(fds, c, code, c->sbuf);
+	return 1;
+}
+
 static void
 handle_open_conn(struct pollfd *fds, struct client *c)
 {
@@ -372,7 +481,8 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 		return;
 	}
 
-	open_file(fds, c);
+	if (!apply_block_return(fds, c))
+		open_file(fds, c);
 }
 
 static void
