@@ -58,6 +58,11 @@ check() {
 	fi
 }
 
+restart() {
+	pkill -SIGHUP gmid
+	sleep 1
+}
+
 # quit gmid
 quit() {
 	pkill gmid || true
@@ -123,12 +128,11 @@ eq "$(head /hello)"	"20 application/octet-stream" "Unexpected head for /hello"
 echo OK GET /hello
 
 check "should be running"
-quit
 
 # try with custom mime
 config 'mime "text/x-funny-text" "gmi"' 'default type "application/x-trash"'
 checkconf
-run
+restart
 
 eq "$(head /)"		"20 text/x-funny-text"		"Unexpected head for /"
 echo OK GET / with custom mime
@@ -137,23 +141,21 @@ eq "$(head /hello)"	"20 application/x-trash"	"Unexpected head for /hello"
 echo OK GET /hello with custom mime
 
 check "should be running"
-quit
 
 # try with custom lang
 config '' 'lang "it"'
 checkconf
-run
+restart
 
 eq "$(head /)"		"20 text/gemini; lang=it"	"Unexpected head for /"
 echo OK GET / with custom lang
 
 check "should be running"
-quit
 
 # finally try with CGI scripts
 config '' 'cgi "*"'
 checkconf
-run
+restart
 
 eq "$(head /hello)"	"20 text/gemini"		"Unexpected head for /hello"
 eq "$(get  /hello)"	"# hello world$ln"		"Unexpected body for /hello"
@@ -178,22 +180,20 @@ eq "$(cat bigfile.sha)"	"$(cat testdata/bigfile.sha)" "Unexpected sha for /serve
 echo OK GET /serve-bigfile with cgi
 
 check "should be running"
-quit
 
 config '' 'index "foo.gmi"'
 checkconf
-run
+restart
 
 eq "$(head /dir/)"	"20 text/gemini"	"Unexpected head for /"
 eq "$(get  /dir/)"	"# hello world$ln"	"Unexpected body for error"
 echo OK GET /dir/ with custom index
 
 check "should be running"
-quit
 
 config '' 'location "/dir/" { default type "text/plain" index "hello" }'
 checkconf
-run
+restart
 
 eq "$(head /dir/hello)"	"20 text/plain"			"Unexpected head for /"
 echo OK GET /dir/hello with location and default type
@@ -203,11 +203,10 @@ eq "$(get  /dir/|tail -1)" 'echo "# hello world"'	"Unexpected body for /dir/"
 echo OK GET /dir/ with location and custom index
 
 check "should be running"
-quit
 
 config '' 'location "/dir/" { auto index on }'
 checkconf
-run
+restart
 
 eq "$(head /)"		"20 text/gemini"		"Unexpected head for /"
 eq "$(get  /)"		"# hello world$ln"		"Unexpected body for /"
@@ -219,13 +218,12 @@ eq "$(get /dir/|wc -l|xargs)"	"5"			"Unexpected body for /dir/"
 echo OK GET /dir/ with auto index on
 
 check "should be running"
-quit
 
 # test block return and strip
 
 config '' 'location "*" { block }'
 checkconf
-run
+restart
 
 eq "$(head /)"		"40 temporary failure"		"Unexpected head for /"
 eq "$(get /)"		""				"Unexpected body for /"
@@ -236,7 +234,6 @@ eq "$(get /nonexists)"	""				"Unexpected body for /nonexists"
 echo OK GET /nonexists with block
 
 check "should be running"
-quit
 
 config '' '
 location "/dir" {
@@ -248,7 +245,7 @@ location "*" {
 	block return 40 "%% %p %q %P %N test"
 }'
 checkconf
-run
+restart
 
 eq "$(head /dir/foo.gmi)"	"40 % /foo.gmi  10965 localhost test"
 echo OK GET /dir/foo.gmi with strip and block
@@ -257,4 +254,5 @@ eq "$(head /bigfile)"		"40 %   10965 localhost test"
 echo OK GET /bigfile with strip and block
 
 check "should be running"
+
 quit
