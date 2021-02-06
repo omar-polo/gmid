@@ -63,8 +63,8 @@ vhost_lang(struct vhost *v, const char *path)
 		return NULL;
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
-		if (!fnmatch(loc->match, path, 0)) {
-			if (loc->lang != NULL)
+		if (loc->lang != NULL) {
+			if (!fnmatch(loc->match, path, 0))
 				return loc->lang;
 		}
 	}
@@ -82,8 +82,8 @@ vhost_default_mime(struct vhost *v, const char *path)
 		return default_mime;
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
-		if (!fnmatch(loc->match, path, 0)) {
-			if (loc->default_mime != NULL)
+		if (loc->default_mime != NULL) {
+			if (!fnmatch(loc->match, path, 0))
 				return loc->default_mime;
 		}
 	}
@@ -103,8 +103,8 @@ vhost_index(struct vhost *v, const char *path)
 		return index;
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
-		if (!fnmatch(loc->match, path, 0)) {
-			if (loc->index != NULL)
+		if (loc->index != NULL) {
+			if (!fnmatch(loc->match, path, 0))
 				return loc->index;
 		}
 	}
@@ -123,8 +123,8 @@ vhost_auto_index(struct vhost *v, const char *path)
 		return 0;
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
-		if (!fnmatch(loc->match, path, 0)) {
-			if (loc->auto_index != 0)
+		if (loc->auto_index != 0) {
+			if (!fnmatch(loc->match, path, 0))
 				return loc->auto_index == 1;
 		}
 	}
@@ -141,8 +141,8 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 		return 0;
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
-		if (!fnmatch(loc->match, path, 0)) {
-			if (loc->block_code != 0) {
+		if (loc->block_code != 0) {
+			if (!fnmatch(loc->match, path, 0)) {
 				*code = loc->block_code;
 				*fmt = loc->block_fmt;
 				return 1;
@@ -164,8 +164,8 @@ vhost_strip(struct vhost *v, const char *path)
 		return 0;
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
-		if (!fnmatch(loc->match, path, 0)) {
-			if (loc->strip != 0)
+		if (loc->strip != 0) {
+			if (!fnmatch(loc->match, path, 0))
 				return loc->strip;
 		}
 	}
