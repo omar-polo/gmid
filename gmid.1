@@ -123,27 +123,6 @@ A string is a sequence of characters wrapped in double quotes,
 .Dq like this .
 .Ss Global Options
 .Bl -tag -width 12m
-.It Ic ipv6 Ar bool
-Enable or disable IPv6 support.
-By default is off.
-.It Ic port Ar portno
-The port to listen on.
-By default is 1965.
-.It Ic protocols Ar string
-Specify the TLS protocols to enable.
-Refer to
-.Xr tls_config_parse_protocols 3
-for the valid protocol string values.
-By default, both TLSv1.3 and TLSv1.2 are enabled.
-Use
-.Dq tlsv1.3
-to enable only TLSv1.3.
-.It Ic mime Ar mime-type Ar file-extension
-Add a mapping for the given
-.Ar file-extension
-to the given
-.Ar mime-type .
-Both argument are strings.
 .It Ic chroot Pa path
 .Xr chroot 2
 the process to the given
@@ -159,6 +138,27 @@ It's recommended to keep the TLS keys outside the chroot.
 Future version of
 .Nm
 may require this.
+.It Ic ipv6 Ar bool
+Enable or disable IPv6 support.
+By default is off.
+.It Ic mime Ar mime-type Ar file-extension
+Add a mapping for the given
+.Ar file-extension
+to the given
+.Ar mime-type .
+Both argument are strings.
+.It Ic port Ar portno
+The port to listen on.
+By default is 1965.
+.It Ic protocols Ar string
+Specify the TLS protocols to enable.
+Refer to
+.Xr tls_config_parse_protocols 3
+for the valid protocol string values.
+By default, both TLSv1.3 and TLSv1.2 are enabled.
+Use
+.Dq tlsv1.3
+to enable only TLSv1.3.
 .It Ic user Ar string
 Run the daemon as the given user.
 .El
@@ -177,61 +177,9 @@ or a name including a wildcards,
 .Pp
 Followed by a block of options that is enclosed in curly brackets:
 .Bl -tag -width Ds
-.It Ic cert Pa file
-Path to the certificate to use for this server.
-The
-.Pa file
-should contain a PEM encoded certificate.
-This option is mandatory.
-.It Ic key Pa file
-Specify the private key to use for this server.
-The
-.Pa file
-should contain a PEM encoded private key.
-This option is mandatory.
-.It Ic root Pa directory
-Specify the root directory for this server.
-This option is mandatory.
-It's relative to the chroot, if enabled.
-.It Ic cgi Pa path
-Execute CGI scripts that matches
-.Pa path
-using shell globbing rules.
-.It Ic default type Ar string
-Set the default media type that is used if the media type for a
-specified extension is not found.
-If not specified, the
-.Ic default type
-is set to
-.Dq application/octet-stream .
-.It Ic lang Ar string
-Specify the language tag for the text/gemini content served.
-If not specified, no
-.Dq lang
-parameter will be added in the response.
-.It Ic index Ar string
-Set the directory index file.
-If not specified, it defaults to
-.Pa index.gmi .
 .It Ic auto Ic index Ar bool
 If no index file is found, automatically generate a directory listing.
 It's disabled by default.
-.It Ic location Pa path Brq ...
-Specify server configuration rules for a specific location.
-The
-.Pa path
-argument will be matched against the request path with shell globbing
-rules.
-In case of multiple location statements in the same context, the first
-matching location will be put into effect and the later ones ignored.
-Therefore is advisable to match for more specific paths first and for
-generic ones later on.
-A
-.Ic location
-section may include most of the server configuration rules
-except
-.Ic cert , Ic key , Ic root , Ic location No ,
-.Ic entrypoint No and Ic cgi .
 .It Ic block Op Ic return Ar code Op Ar meta
 Send a reply and close the connection;
 .Ar code
@@ -262,19 +210,71 @@ is replaced with the server port.
 .It \&%N
 is replaced with the server name.
 .El
+.It Ic cert Pa file
+Path to the certificate to use for this server.
+The
+.Pa file
+should contain a PEM encoded certificate.
+This option is mandatory.
+.It Ic cgi Pa path
+Execute CGI scripts that matches
+.Pa path
+using shell globbing rules.
+.It Ic default type Ar string
+Set the default media type that is used if the media type for a
+specified extension is not found.
+If not specified, the
+.Ic default type
+is set to
+.Dq application/octet-stream .
+.It Ic entrypoint Pa path
+Make the CGI script at
+.Pa path
+.Pq relative to the Ic root No directory
+handle all the requests for the current virtual host
+.It Ic index Ar string
+Set the directory index file.
+If not specified, it defaults to
+.Pa index.gmi .
+.It Ic key Pa file
+Specify the private key to use for this server.
+The
+.Pa file
+should contain a PEM encoded private key.
+This option is mandatory.
+.It Ic lang Ar string
+Specify the language tag for the text/gemini content served.
+If not specified, no
+.Dq lang
+parameter will be added in the response.
+.It Ic location Pa path Brq ...
+Specify server configuration rules for a specific location.
+The
+.Pa path
+argument will be matched against the request path with shell globbing
+rules.
+In case of multiple location statements in the same context, the first
+matching location will be put into effect and the later ones ignored.
+Therefore is advisable to match for more specific paths first and for
+generic ones later on.
+A
+.Ic location
+section may include most of the server configuration rules
+except
+.Ic cert , Ic key , Ic root , Ic location ,
+.Ic entrypoint No and Ic cgi .
+.It Ic root Pa directory
+Specify the root directory for this server.
+This option is mandatory.
+It's relative to the chroot, if enabled.
 .It Ic strip Ar number
 Strip
 .Ar number
 components from the beginning of the path.
 It's only considered for the
 .Ar meta
-parameter in the scope of a matching
+parameter in the scope of a
 .Ic block return .
-.It Ic entrypoint Pa path
-Make the CGI script at
-.Pa path
-.Pq relative to the Ic root No directory
-handle all the requests for the current virtual host
 .El
 .Sh CGI
 When a request for an executable file matches the
