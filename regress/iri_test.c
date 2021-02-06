@@ -208,6 +208,14 @@ main(void)
 	/*     PASS, */
 	/*     IRI("foo", "example.com", "", "foo/", "gne/", ""), */
 	/*     "parse query strings"); */
+	TEST("foo://ex.com/robots.txt?name=foobar&url=https://foo.com",
+	    PASS,
+	    IRI("foo", "ex.com", "", "robots.txt", "name=foobar&url=https://foo.com", ""),
+	    "Accepts : in queries");
+	TEST("foo://ex.com/foo?email=foo@bar.com#quuz",
+	    PASS,
+	    IRI("foo", "ex.com", "", "foo", "email=foo@bar.com", "quuz"),
+	    "Accepts @ in queries");
 
 	/* fragment */
 	TEST("foo://bar.co/#foo",
