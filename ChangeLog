@@ -1,3 +1,7 @@
+2021-02-07  Omar Polo  <op@omarpolo.com>
+
+	* parse.y (option): added prefork option
+
 2021-02-06  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (locopt): added ``block return'' and ``strip'' options

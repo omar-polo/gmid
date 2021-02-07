@@ -150,6 +150,12 @@ Both argument are strings.
 .It Ic port Ar portno
 The port to listen on.
 By default is 1965.
+.It Ic prefork Ar number
+Run the specified number of server processes.
+This increases the performance and prevents delays when connecting to
+a server.
+.Nm
+runs 3 server processes by default, when not in config-less mode.
 .It Ic protocols Ar string
 Specify the TLS protocols to enable.
 Refer to

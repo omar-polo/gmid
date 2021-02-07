@@ -44,6 +44,7 @@ char		*ensure_absolute_path(char*);
 int		 check_block_code(int);
 char		*check_block_fmt(char*);
 int		 check_strip_no(int);
+int		 check_prefork_num(int);
 
 %}
 
@@ -56,7 +57,7 @@ int		 check_strip_no(int);
 }
 
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
-%token TCHROOT TUSER TSERVER
+%token TCHROOT TUSER TSERVER TPREFORK
 %token TLOCATION TCERT TKEY TROOT TCGI TLANG TINDEX TAUTO
 %token TSTRIP TBLOCK TRETURN TENTRYPOINT
 %token TERR
@@ -82,6 +83,7 @@ option		: TIPV6 TBOOL		{ conf.ipv6 = $2; }
 		| TMIME TSTRING TSTRING	{ add_mime(&conf.mime, $2, $3); }
 		| TCHROOT TSTRING	{ conf.chroot = $2; }
 		| TUSER TSTRING		{ conf.user = $2; }
+		| TPREFORK TNUM		{ conf.prefork = check_prefork_num($2); }
 		;
 
 vhosts		: /* empty */
@@ -280,5 +282,13 @@ check_strip_no(int n)
 {
 	if (n <= 0)
 		yyerror("invalid strip number %d", n);
+	return n;
+}
+
+int
+check_prefork_num(int n)
+{
+	if (n <= 0)
+		yyerror("invalid prefork number %d", n);
 	return n;
 }

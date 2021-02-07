@@ -109,6 +109,7 @@ struct conf {
 	struct mime	 mime;
 	char		*chroot;
 	char		*user;
+	int		 prefork;
 };
 
 extern struct conf conf;

@@ -60,6 +60,7 @@ type		return TTYPE;
 chroot		return TCHROOT;
 user		return TUSER;
 server		return TSERVER;
+prefork		return TPREFORK;
 
 location	return TLOCATION;
 cert		return TCERT;

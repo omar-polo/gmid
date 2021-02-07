@@ -391,6 +391,8 @@ setup_tls(void)
 static int
 listener_main(void)
 {
+	drop_priv();
+	unblock_signals();
 	load_default_mime(&conf.mime);
 	load_vhosts();
 	sandbox();
@@ -415,6 +417,9 @@ init_config(void)
 
 	conf.chroot = NULL;
 	conf.user = NULL;
+
+	/* we'll change this to 0 when running without config. */
+	conf.prefork = 3;
 }
 
 void
@@ -499,6 +504,31 @@ usage(const char *me)
 }
 
 static int
+spawn_listeners(int *p)
+{
+	int i;
+
+	close(p[0]);
+	exfd = p[1];
+
+	for (i = 0; i < conf.prefork -1; ++i) {
+		switch (fork()) {
+		case -1:
+			fatal("fork: %s", strerror(errno));
+		case 0:		/* child */
+			setproctitle("server(%d)", i+1);
+			return listener_main();
+		}
+	}
+
+	if (conf.prefork == 0)
+		setproctitle("server");
+	else
+		setproctitle("server(%d)", conf.prefork);
+	return listener_main();
+}
+
+static int
 serve(int argc, char **argv, int *p)
 {
 	char path[PATH_MAX];
@@ -538,13 +568,7 @@ serve(int argc, char **argv, int *p)
 		fatal("fork: %s", strerror(errno));
 
 	case 0:			/* child */
-		setproctitle("listener");
-		close(p[0]);
-		exfd = p[1];
-		drop_priv();
-		unblock_signals();
-		listener_main();
-		_exit(0);
+		return spawn_listeners(p);
 
 	default:		/* parent */
 		setproctitle("executor");
@@ -663,8 +687,10 @@ main(int argc, char **argv)
 	if (conf.ipv6)
 		sock6 = make_socket(conf.port, AF_INET6);
 
-	if (configless)
+	if (configless) {
+		conf.prefork = 0;
 		return serve(argc, argv, p);
+	}
 
 	/* wait a sighup and reload the daemon */
 	for (;;) {
