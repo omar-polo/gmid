@@ -984,7 +984,7 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 
 	len = sizeof(addr);
 	if ((fd = accept(sock, (struct sockaddr*)&addr, &len)) == -1) {
-		if (errno == EWOULDBLOCK)
+		if (errno == EWOULDBLOCK || errno == EAGAIN)
 			return;
 		fatal("accept: %s", strerror(errno));
 	}
