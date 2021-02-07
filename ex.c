@@ -165,7 +165,7 @@ send_fd(int fd, int d)
 	msg.msg_iovlen = 1;
 
 	if ((n = sendmsg(fd, &msg, 0)) == -1 || n != sizeof(int)) {
-                fprintf(stderr, "sendmsg: got %zu but wanted %zu: (errno) %s",
+                log_err(NULL, "sendmsg: got %zu but wanted %zu: (errno) %s",
 		    n, sizeof(int), strerror(errno));
 		return 0;
 	}
@@ -195,7 +195,7 @@ recv_fd(int fd)
 	msg.msg_controllen = sizeof(cmsgbuf.buf);
 
 	if ((n = recvmsg(fd, &msg, 0)) != sizeof(int)) {
-		fprintf(stderr, "read %zu bytes bu wanted %zu\n", n, sizeof(int));
+		log_err(NULL, "read %zu bytes bu wanted %zu\n", n, sizeof(int));
 		return -1;
 	}
 
