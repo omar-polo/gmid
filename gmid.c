@@ -19,15 +19,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
-#include <limits.h>
-#include <netdb.h>
 #include <pwd.h>
 #include <signal.h>
-#include <stdarg.h>
 #include <string.h>
-
-#include <openssl/pem.h>
-#include <openssl/x509.h>
 
 #include "gmid.h"
 
@@ -35,7 +29,7 @@ volatile sig_atomic_t hupped;
 
 struct vhost hosts[HOSTSLEN];
 
-int exfd, foreground, verbose, sock4, sock6;
+int exfd, sock4, sock6;
 
 const char *config_path, *certs_dir, *hostname;
 
@@ -45,200 +39,11 @@ struct tls_config *tlsconf;
 struct tls *ctx;
 
 void
-fatal(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-
-	if (foreground) {
-		vfprintf(stderr, fmt, ap);
-		fprintf(stderr, "\n");
-	} else
-		vsyslog(LOG_DAEMON | LOG_CRIT, fmt, ap);
-
-	va_end(ap);
-	exit(1);
-}
-
-void
-logs(int priority, struct client *c,
-    const char *fmt, ...)
-{
-	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-	char *fmted, *s;
-	size_t len;
-	int ec;
-	va_list ap;
-
-	if (foreground && !verbose) {
-		if (priority == LOG_DEBUG || priority == LOG_INFO)
-			return;
-	}
-
-	va_start(ap, fmt);
-
-	if (c == NULL) {
-		strncpy(hbuf, "<internal>", sizeof(hbuf));
-		sbuf[0] = '\0';
-	} else {
-		len = sizeof(c->addr);
-		ec = getnameinfo((struct sockaddr*)&c->addr, len,
-		    hbuf, sizeof(hbuf),
-		    sbuf, sizeof(sbuf),
-		    NI_NUMERICHOST | NI_NUMERICSERV);
-		if (ec != 0)
-			fatal("getnameinfo: %s", gai_strerror(ec));
-	}
-
-	if (vasprintf(&fmted, fmt, ap) == -1)
-		fatal("vasprintf: %s", strerror(errno));
-
-	if (foreground)
-		fprintf(stderr, "%s:%s %s\n", hbuf, sbuf, fmted);
-	else {
-		if (asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted) == -1)
-			fatal("asprintf: %s", strerror(errno));
-		syslog(priority | LOG_DAEMON, "%s", s);
-		free(s);
-	}
-
-	free(fmted);
-
-	va_end(ap);
-}
-
-/* strchr, but with a bound */
-static char *
-gmid_strnchr(char *s, int c, size_t len)
-{
-	size_t i;
-
-	for (i = 0; i < len; ++i)
-		if (s[i] == c)
-			return &s[i];
-	return NULL;
-}
-
-void
-log_request(struct client *c, char *meta, size_t l)
-{
-	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
-	char *t;
-	size_t len;
-	int ec;
-
-	len = sizeof(c->addr);
-	ec = getnameinfo((struct sockaddr*)&c->addr, len,
-	    hbuf, sizeof(hbuf),
-	    sbuf, sizeof(sbuf),
-	    NI_NUMERICHOST | NI_NUMERICSERV);
-	if (ec != 0)
-		fatal("getnameinfo: %s", gai_strerror(ec));
-
-	if (c->iri.schema != NULL) {
-		/* serialize the IRI */
-		strlcpy(b, c->iri.schema, sizeof(b));
-		strlcat(b, "://", sizeof(b));
-
-		/* log the decoded host name, but if it was invalid
-		 * use the raw one. */
-		if (*c->domain != '\0')
-			strlcat(b, c->domain, sizeof(b));
-		else
-			strlcat(b, c->iri.host, sizeof(b));
-
-		strlcat(b, "/", sizeof(b));
-		strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
-		if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */
-			strlcat(b, "?", sizeof(b));
-			strlcat(b, c->iri.query, sizeof(b));
-		}
-	} else {
-		strlcpy(b, c->req, sizeof(b));
-	}
-
-	if ((t = gmid_strnchr(meta, '\r', l)) == NULL)
-		t = meta + len;
-
-	if (foreground)
-		fprintf(stderr, "%s:%s GET %s %.*s\n", hbuf, sbuf, b,
-		    (int)(t - meta), meta);
-	else
-		syslog(LOG_INFO | LOG_DAEMON, "%s:%s GET %s %.*s",
-		    hbuf, sbuf, b, (int)(t - meta), meta);
-}
-
-void
 sig_handler(int sig)
 {
 	(void)sig;
 
 	hupped = sig == SIGHUP;
-}
-
-void
-gen_certificate(const char *host, const char *certpath, const char *keypath)
-{
-	BIGNUM		e;
-	EVP_PKEY	*pkey;
-	RSA		*rsa;
-	X509		*x509;
-	X509_NAME	*name;
-	FILE		*f;
-	const char	*org = "gmid";
-
-	LOGN(NULL, "generating new certificate for %s (it could take a while)",
-	    host);
-
-	if ((pkey = EVP_PKEY_new()) == NULL)
-                fatal("couldn't create a new private key");
-
-	if ((rsa = RSA_new()) == NULL)
-		fatal("could'nt generate rsa");
-
-	BN_init(&e);
-	BN_set_word(&e, 17);
-	if (!RSA_generate_key_ex(rsa, 4096, &e, NULL))
-		fatal("couldn't generate a rsa key");
-
-	if (!EVP_PKEY_assign_RSA(pkey, rsa))
-		fatal("couldn't assign the key");
-
-	if ((x509 = X509_new()) == NULL)
-		fatal("couldn't generate the X509 certificate");
-
-	ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
-	X509_gmtime_adj(X509_get_notBefore(x509), 0);
-	X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 years */
-
-	if (!X509_set_pubkey(x509, pkey))
-		fatal("couldn't set the public key");
-
-	name = X509_get_subject_name(x509);
-	if (!X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, org, -1, -1, 0))
-		fatal("couldn't add N to cert");
-	if (!X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, host, -1, -1, 0))
-		fatal("couldn't add CN to cert");
-	X509_set_issuer_name(x509, name);
-
-	if (!X509_sign(x509, pkey, EVP_sha256()))
-                fatal("couldn't sign the certificate");
-
-	if ((f = fopen(keypath, "w")) == NULL)
-		fatal("fopen(%s): %s", keypath, strerror(errno));
-	if (!PEM_write_PrivateKey(f, pkey, NULL, NULL, 0, NULL, NULL))
-		fatal("couldn't write private key");
-	fclose(f);
-
-	if ((f = fopen(certpath, "w")) == NULL)
-		fatal("fopen(%s): %s", certpath, strerror(errno));
-	if (!PEM_write_X509(f, x509))
-		fatal("couldn't write cert");
-	fclose(f);
-
-	X509_free(x509);
-	RSA_free(rsa);
 }
 
 /* XXX: create recursively */
@@ -490,17 +295,7 @@ drop_priv(void)
 	}
 
 	if (getuid() == 0)
-		LOGW(NULL, "%s",
-		    "not a good idea to run a network daemon as root");
-}
-
-void
-usage(const char *me)
-{
-	fprintf(stderr,
-	    "USAGE: %s [-fn] [-c config] | [-6h] [-d certs-dir] [-H host]"
-	    "       [-p port] [-x cgi] [dir]",
-	    me);
+		log_warn(NULL, "not a good idea to run a network daemon as root");
 }
 
 static int
@@ -526,6 +321,15 @@ spawn_listeners(int *p)
 	else
 		setproctitle("server(%d)", conf.prefork);
 	return listener_main();
+}
+
+static void
+usage(const char *me)
+{
+	fprintf(stderr,
+	    "USAGE: %s [-fn] [-c config] | [-6h] [-d certs-dir] [-H host]"
+	    "       [-p port] [-x cgi] [dir]",
+	    me);
 }
 
 static int
@@ -556,7 +360,7 @@ serve(int argc, char **argv, int *p)
 			return 1;
 		}
 
-		LOGN(NULL, "serving %s on port %d", hosts[0].dir, conf.port);
+		log_notice(NULL, "serving %s on port %d", hosts[0].dir, conf.port);
 	}
 
 	/* setup tls before dropping privileges: we don't want user
@@ -606,7 +410,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'f':
-			foreground = 1;
+			conf.foreground = 1;
 			break;
 
 		case 'H':
@@ -628,7 +432,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'v':
-			verbose = 1;
+			conf.verbose++;
 			break;
 
 		case 'x':
@@ -649,7 +453,9 @@ main(int argc, char **argv)
 
 	if (config_path == NULL) {
 		configless = 1;
-		foreground = 1;
+		conf.foreground = 1;
+		conf.prefork = 0;
+		conf.verbose++;
 	}
 
 	if (config_path != NULL && (argc > 0 || configless))
@@ -670,7 +476,7 @@ main(int argc, char **argv)
 	signal(SIGUSR2, sig_handler);
 	signal(SIGHUP, sig_handler);
 
-	if (!foreground && !configless) {
+	if (!conf.foreground && !configless) {
 		if (daemon(1, 1) == -1)
 			fatal("daemon: %s", strerror(errno));
 	}
@@ -687,10 +493,8 @@ main(int argc, char **argv)
 	if (conf.ipv6)
 		sock6 = make_socket(conf.port, AF_INET6);
 
-	if (configless) {
-		conf.prefork = 0;
+	if (configless)
 		return serve(argc, argv, p);
-	}
 
 	/* wait a sighup and reload the daemon */
 	for (;;) {
@@ -709,7 +513,7 @@ main(int argc, char **argv)
 
 		wait_sighup();
 		unblock_signals();
-		LOGI(NULL, "reloading configuration %s", config_path);
+		log_info(NULL, "reloading configuration %s", config_path);
 
 		old_ipv6 = conf.ipv6;
 		old_port = conf.port;

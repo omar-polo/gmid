@@ -28,6 +28,9 @@
 #define IBIAS	72
 #define IN	128
 
+/* to make the linker happy */
+struct conf conf;
+
 static int
 adapt(int delta, int numpoints, int firsttime)
 {

@@ -17,6 +17,9 @@
 #include <errno.h>
 #include <string.h>
 
+#include <openssl/pem.h>
+#include <openssl/x509.h>
+
 #include "gmid.h"
 
 static sigset_t set;
@@ -107,4 +110,69 @@ xstrdup(const char *s)
 	if ((d = strdup(s)) == NULL)
 		err(1, "strdup");
 	return d;
+}
+
+void
+gen_certificate(const char *host, const char *certpath, const char *keypath)
+{
+	BIGNUM		e;
+	EVP_PKEY	*pkey;
+	RSA		*rsa;
+	X509		*x509;
+	X509_NAME	*name;
+	FILE		*f;
+	const char	*org = "gmid";
+
+	log_notice(NULL,
+	    "generating new certificate for %s (it could take a while)",
+	    host);
+
+	if ((pkey = EVP_PKEY_new()) == NULL)
+                fatal("couldn't create a new private key");
+
+	if ((rsa = RSA_new()) == NULL)
+		fatal("could'nt generate rsa");
+
+	BN_init(&e);
+	BN_set_word(&e, 17);
+	if (!RSA_generate_key_ex(rsa, 4096, &e, NULL))
+		fatal("couldn't generate a rsa key");
+
+	if (!EVP_PKEY_assign_RSA(pkey, rsa))
+		fatal("couldn't assign the key");
+
+	if ((x509 = X509_new()) == NULL)
+		fatal("couldn't generate the X509 certificate");
+
+	ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+	X509_gmtime_adj(X509_get_notBefore(x509), 0);
+	X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 years */
+
+	if (!X509_set_pubkey(x509, pkey))
+		fatal("couldn't set the public key");
+
+	name = X509_get_subject_name(x509);
+	if (!X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, org, -1, -1, 0))
+		fatal("couldn't add N to cert");
+	if (!X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, host, -1, -1, 0))
+		fatal("couldn't add CN to cert");
+	X509_set_issuer_name(x509, name);
+
+	if (!X509_sign(x509, pkey, EVP_sha256()))
+                fatal("couldn't sign the certificate");
+
+	if ((f = fopen(keypath, "w")) == NULL)
+		fatal("fopen(%s): %s", keypath, strerror(errno));
+	if (!PEM_write_PrivateKey(f, pkey, NULL, NULL, 0, NULL, NULL))
+		fatal("couldn't write private key");
+	fclose(f);
+
+	if ((f = fopen(certpath, "w")) == NULL)
+		fatal("fopen(%s): %s", certpath, strerror(errno));
+	if (!PEM_write_X509(f, x509))
+		fatal("couldn't write cert");
+	fclose(f);
+
+	X509_free(x509);
+	RSA_free(rsa);
 }

@@ -197,7 +197,7 @@ check_path(struct client *c, const char *path, int *fd)
 		return FILE_MISSING;
 
 	if (fstat(*fd, &sb) == -1) {
-		LOGN(c, "failed stat for %s: %s", path, strerror(errno));
+		log_notice(c, "failed stat for %s: %s", path, strerror(errno));
 		return FILE_MISSING;
 	}
 
@@ -248,7 +248,7 @@ static void
 load_file(struct pollfd *fds, struct client *c)
 {
 	if ((c->len = filesize(c->fd)) == -1) {
-		LOGE(c, "failed to get file size for %s: %s",
+		log_err(c, "failed to get file size for %s: %s",
 		    c->iri.path, strerror(errno));
 		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return;
@@ -256,7 +256,7 @@ load_file(struct pollfd *fds, struct client *c)
 
 	if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
 		    c->fd, 0)) == MAP_FAILED) {
-		LOGW(c, "mmap: %s: %s", c->iri.path, strerror(errno));
+		log_err(c, "mmap: %s: %s", c->iri.path, strerror(errno));
 		start_reply(fds, c, TEMP_FAILURE, "internal server error");
 		return;
 	}
@@ -345,7 +345,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 
 	servname = tls_conn_servername(c->ctx);
 	if (!puny_decode(servname, c->domain, sizeof(c->domain), &parse_err)) {
-		LOGI(c, "%s", parse_err);
+		log_info(c, "puny_decode: %s", parse_err);
 		goto err;
 	}
 
@@ -354,10 +354,10 @@ handle_handshake(struct pollfd *fds, struct client *c)
 			break;
 	}
 
-	/* LOGD(c, "handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"", */
-	/*     servname != NULL ? servname : "(null)", */
-	/*     c->domain, */
-	/*     h->domain != NULL ? h->domain : "(null)"); */
+	log_debug(c, "handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
+	    servname != NULL ? servname : "(null)",
+	    c->domain,
+	    h->domain != NULL ? h->domain : "(null)");
 
 	if (h->domain != NULL) {
 		c->host = h;
@@ -453,7 +453,7 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 
 	switch (tls_read(c->ctx, c->req, sizeof(c->req)-1)) {
 	case -1:
-		LOGE(c, "tls_read: %s", tls_error(c->ctx));
+		log_err(c, "tls_read: %s", tls_error(c->ctx));
 		close_conn(fds, c);
 		return;
 
@@ -469,7 +469,7 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	if (!trim_req_iri(c->req, &parse_err)
 	    || !parse_iri(c->req, &c->iri, &parse_err)
 	    || !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
-		LOGI(c, "iri parse error: %s", parse_err);
+		log_info(c, "iri parse error: %s", parse_err);
 		start_reply(fds, c, BAD_REQUEST, "invalid request");
 		return;
 	}
@@ -605,7 +605,7 @@ send_file(struct pollfd *fds, struct client *c)
 	while (len > 0) {
 		switch (ret = tls_write(c->ctx, c->i, len)) {
 		case -1:
-			LOGE(c, "tls_write: %s", tls_error(c->ctx));
+			log_err(c, "tls_write: %s", tls_error(c->ctx));
 			close_conn(fds, c);
 			return;
 
@@ -687,7 +687,7 @@ open_dir(struct pollfd *fds, struct client *c)
 		c->next = enter_handle_dirlist;
 
 		if ((c->dir = fdopendir(c->fd)) == NULL) {
-			LOGE(c, "can't fdopendir(%d) (vhost:%s) %s: %s",
+			log_err(c, "fdopendir(%d) (vhost:%s) %s: %s",
 			    c->fd, c->host->domain, c->iri.path, strerror(errno));
 			start_reply(fds, c, TEMP_FAILURE, "internal server error");
 			return;
@@ -780,7 +780,7 @@ read_next_dir_entry(struct client *c)
 		errno = 0;
 		if ((d = readdir(c->dir)) == NULL) {
 			if (errno != 0)
-				LOGE(c, "readdir: %s", strerror(errno));
+				log_err(c, "readdir: %s", strerror(errno));
 			return 0;
 		}
 	} while (!strcmp(d->d_name, "."));

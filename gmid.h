@@ -28,7 +28,6 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <syslog.h>
 #include <tls.h>
 #include <unistd.h>
 
@@ -56,12 +55,6 @@
 /* maximum hostname and label length, +1 for the NUL-terminator */
 #define DOMAIN_NAME_LEN	(253+1)
 #define LABEL_LEN	(63+1)
-
-#define LOGE(c, fmt, ...) logs(LOG_ERR,     c, fmt, __VA_ARGS__)
-#define LOGW(c, fmt, ...) logs(LOG_WARNING, c, fmt, __VA_ARGS__)
-#define LOGN(c, fmt, ...) logs(LOG_NOTICE,  c, fmt, __VA_ARGS__)
-#define LOGI(c, fmt, ...) logs(LOG_INFO,    c, fmt, __VA_ARGS__)
-#define LOGD(c, fmt, ...) logs(LOG_DEBUG,   c, fmt, __VA_ARGS__)
 
 struct location {
 	const char	*match;
@@ -103,6 +96,11 @@ struct mime {
 };
 
 struct conf {
+	/* from command line */
+	int		 foreground;
+	int		 verbose;
+
+	/* in the config */
 	int		 port;
 	int		 ipv6;
 	uint32_t	 protos;
@@ -186,16 +184,7 @@ enum {
 };
 
 /* gmid.c */
-__attribute__((format (printf, 1, 2)))
-__attribute__((__noreturn__))
-void fatal(const char*, ...);
-
-__attribute__((format (printf, 3, 4)))
-void logs(int, struct client*, const char*, ...);
-void log_request(struct client*, char*, size_t);
-
 void		 sig_handler(int);
-void		 gen_certificate(const char*, const char*, const char*);
 void		 mkdirs(const char*);
 char		*data_dir(void);
 void		 load_local_cert(const char*, const char*);
@@ -205,7 +194,6 @@ void		 setup_tls(void);
 void		 init_config(void);
 void		 free_config(void);
 void		 drop_priv(void);
-void		 usage(const char*);
 
 /* provided by lex/yacc */
 extern FILE *yyin;
@@ -216,6 +204,19 @@ extern int yylex(void);
 void		 yyerror(const char*, ...);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
+
+/* log.c */
+void		 fatal(const char*, ...)
+	__attribute__((format (printf, 1, 2)))
+	__attribute__((__noreturn__));
+
+#define LOG_ATTR_FMT __attribute__((format (printf, 2, 3)))
+void		 log_err(struct client*, const char*, ...)	LOG_ATTR_FMT;
+void		 log_warn(struct client*, const char*, ...)	LOG_ATTR_FMT;
+void		 log_notice(struct client*, const char*, ...)	LOG_ATTR_FMT;
+void		 log_info(struct client*, const char*, ...)	LOG_ATTR_FMT;
+void		 log_debug(struct client*, const char*, ...)	LOG_ATTR_FMT;
+void		 log_request(struct client*, char*, size_t);
 
 /* mime.c */
 void		 init_mime(struct mime*);
@@ -268,5 +269,6 @@ int		 ends_with(const char*, const char*);
 ssize_t		 filesize(int);
 char		*absolutify_path(const char*);
 char		*xstrdup(const char*);
+void		 gen_certificate(const char*, const char*, const char*);
 
 #endif
