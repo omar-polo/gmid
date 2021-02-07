@@ -205,6 +205,7 @@ yyerror(const char *msg, ...)
 	va_start(ap, msg);
 	fprintf(stderr, "%s:%d: ", config_path, yylineno);
 	vfprintf(stderr, msg, ap);
+	fprintf(stderr, "\n");
 	va_end(ap);
 }
 
