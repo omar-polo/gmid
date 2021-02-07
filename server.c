@@ -1035,7 +1035,7 @@ loop(struct tls *ctx, int sock4, int sock6)
 	for (;;) {
 		if ((n = poll(fds, MAX_USERS, INFTIM)) == -1) {
 			if (errno == EINTR) {
-				fprintf(stderr, "connected clients: %d\n",
+				log_info(NULL, "%d connected clients",
 				    connected_clients);
 			} else
 				fatal("poll: %s", strerror(errno));
