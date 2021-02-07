@@ -550,7 +550,6 @@ start_cgi(const char *spath, const char *relpath,
     struct pollfd *fds, struct client *c)
 {
 	char addr[NI_MAXHOST];
-	const char *ruser, *cissuer, *chash;
 	int e;
 
 	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
@@ -560,23 +559,15 @@ start_cgi(const char *spath, const char *relpath,
 	if (e != 0)
 		goto err;
 
-	if (tls_peer_cert_provided(c->ctx)) {
-		ruser = tls_peer_cert_subject(c->ctx);
-		cissuer = tls_peer_cert_issuer(c->ctx);
-		chash = tls_peer_cert_hash(c->ctx);
-	} else {
-		ruser = NULL;
-		cissuer = NULL;
-		chash = NULL;
-	}
-
 	if (!send_iri(exfd, &c->iri)
 	    || !send_string(exfd, spath)
 	    || !send_string(exfd, relpath)
 	    || !send_string(exfd, addr)
-	    || !send_string(exfd, ruser)
-	    || !send_string(exfd, cissuer)
-	    || !send_string(exfd, chash)
+	    || !send_string(exfd, tls_peer_cert_subject(c->ctx))
+	    || !send_string(exfd, tls_peer_cert_issuer(c->ctx))
+	    || !send_string(exfd, tls_peer_cert_hash(c->ctx))
+	    || !send_time(exfd, tls_peer_cert_notbefore(c->ctx))
+	    || !send_time(exfd, tls_peer_cert_notafter(c->ctx))
 	    || !send_vhost(exfd, c->host))
 		goto err;
 

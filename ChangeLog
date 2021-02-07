@@ -1,6 +1,7 @@
 2021-02-07  Omar Polo  <op@omarpolo.com>
 
 	* ex.c (do_exec): [cgi] split the query in words if needed and add them to the argv
+	(launch_cgi): define TLS_CLIENT_NOT_BEFORE/NOT_AFTER in CGI scripts
 
 	* parse.y (option): added prefork option
 

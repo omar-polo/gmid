@@ -351,6 +351,13 @@ unset.
 The hash of the client certificate if provided, otherwise unset.
 The format is
 .Dq ALGO:HASH .
+.It Ev TLS_CLIENT_NOT_AFTER
+The time corresponding to the end of the validity period of the peer
+certificate in the ISO 8601 format
+.Pq e.g. Dq 2021-02-07T20:17:41Z .
+.It Ev TLS_CLIENT_NOT_BEFORE
+The time corresponding to the start of the validity period of the peer
+certificate in the ISO 8601 format.
 .El
 .Pp
 .Sh MIME

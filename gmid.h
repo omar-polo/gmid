@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <tls.h>
 #include <unistd.h>
 
@@ -242,6 +243,8 @@ int		 recv_iri(int, struct iri*);
 void		 free_recvd_iri(struct iri*);
 int		 send_vhost(int, struct vhost*);
 int		 recv_vhost(int, struct vhost**);
+int		 send_time(int, time_t);
+int		 recv_time(int, time_t*);
 int		 send_fd(int, int);
 int		 recv_fd(int);
 int		 executor_main(void);

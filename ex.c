@@ -131,6 +131,18 @@ recv_vhost(int fd, struct vhost **vhost)
 	return 1;
 }
 
+int
+send_time(int fd, time_t t)
+{
+	return write(fd, &t, sizeof(t)) == sizeof(t);
+}
+
+int
+recv_time(int fd, time_t *t)
+{
+	return read(fd, t, sizeof(*t)) == sizeof(*t);
+}
+
 /* send d though fd. see /usr/src/usr.sbin/syslogd/privsep_fdpass.c
  * for an example */
 int
@@ -270,11 +282,26 @@ do_exec(const char *ex, const char *spath, char *query)
 	warn("execvp: %s", argv[0]);
 }
 
+static inline void
+setenv_time(const char *var, time_t t)
+{
+	char timebuf[21];
+	struct tm tminfo;
+
+	if (t == -1)
+		return;
+
+	strftime(timebuf, sizeof(timebuf), "%FT%TZ",
+	    gmtime_r(&t, &tminfo));
+	setenv(var, timebuf, 1);
+}
+
 /* fd or -1 on error */
 static int
 launch_cgi(struct iri *iri, const char *spath, char *relpath,
     const char *addr, const char *ruser, const char *cissuer,
-    const char *chash, struct vhost *vhost)
+    const char *chash, time_t notbefore, time_t notafter,
+    struct vhost *vhost)
 {
 	int p[2];		/* read end, write end */
 
@@ -344,6 +371,8 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 		safe_setenv("REMOTE_USER", ruser);
 		safe_setenv("TLS_CLIENT_ISSUER", cissuer);
 		safe_setenv("TLS_CLIENT_HASH", chash);
+		setenv_time("TLS_CLIENT_NOT_AFTER", notafter);
+		setenv_time("TLS_CLIENT_NOT_BEFORE", notbefore);
 
 		strlcpy(path, ex, sizeof(path));
 
@@ -374,6 +403,7 @@ executor_main()
 	char *spath, *relpath, *addr, *ruser, *cissuer, *chash;
         struct vhost *vhost;
 	struct iri iri;
+	time_t notbefore, notafter;
 	int d;
 
 #ifdef __OpenBSD__
@@ -397,11 +427,13 @@ executor_main()
 		    || !recv_string(exfd, &ruser)
 		    || !recv_string(exfd, &cissuer)
 		    || !recv_string(exfd, &chash)
+		    || !recv_time(exfd, &notbefore)
+		    || !recv_time(exfd, &notafter)
 		    || !recv_vhost(exfd, &vhost))
 			break;
 
 		d = launch_cgi(&iri, spath, relpath, addr, ruser, cissuer, chash,
-		    vhost);
+		    notbefore, notafter, vhost);
 		if (!send_fd(exfd, d))
 			break;
 		close(d);
