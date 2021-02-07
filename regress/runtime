@@ -69,6 +69,10 @@ quit() {
 	wait || true
 }
 
+count() {
+	wc -l | xargs
+}
+
 # usage: eq a b errmsg
 # if a and b aren't equal strings, exit with errmsg
 eq() {
@@ -152,7 +156,7 @@ echo OK GET / with custom lang
 
 check "should be running"
 
-# finally try with CGI scripts
+# try with CGI scripts
 config '' 'cgi "*"'
 checkconf
 restart
@@ -178,6 +182,13 @@ get /bigfile > bigfile
 ./sha bigfile bigfile.sha
 eq "$(cat bigfile.sha)"	"$(cat testdata/bigfile.sha)" "Unexpected sha for /serve-bigfile"
 echo OK GET /serve-bigfile with cgi
+
+# ensure we split the query correctly
+eq "$(get /env | awk /^-/ | count)"		1	"Unexpected number of arguments"
+eq "$(get /env?foo | awk /^-/ | count)"		2	"Unexpected number of arguments"
+eq "$(get /env?foo+bar | awk /^-/ | count)"	3	"Unexpected number of arguments"
+eq "$(get /env?foo+bar=5 | awk /^-/ | count)"	1	"Unexpected number of arguments"
+eq "$(get /env?foo+bar%3d5 | awk /^-/ | count)"	3	"Unexpected number of arguments"
 
 check "should be running"
 

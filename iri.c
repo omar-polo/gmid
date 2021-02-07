@@ -75,6 +75,13 @@ valid_pct_encoded(struct parser *p)
 	return 1;
 }
 
+static void
+pct_decode(char *s)
+{
+	sscanf(s+1, "%2hhx", s);
+	memmove(s+1, s+3, strlen(s+3)+1);
+}
+
 static int
 parse_pct_encoded(struct parser *p)
 {
@@ -86,8 +93,7 @@ parse_pct_encoded(struct parser *p)
 		return 0;
 	}
 
-	sscanf(p->iri+1, "%2hhx", p->iri);
-	memmove(p->iri+1, p->iri+3, strlen(p->iri+3)+1);
+	pct_decode(p->iri);
 	if (*p->iri == '\0') {
 		p->err = "illegal percent-encoding";
 		return 0;
@@ -436,4 +442,17 @@ serialize_iri(struct iri *i, char *buf, size_t len)
 	}
 
 	return l < len;
+}
+
+char *
+pct_decode_str(char *s)
+{
+	char *t;
+
+	for (t = s; *t; ++t) {
+		if (*t == '%' && valid_pct_enc_string(t))
+			pct_decode(t);
+	}
+
+	return s;
 }

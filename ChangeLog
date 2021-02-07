@@ -1,5 +1,7 @@
 2021-02-07  Omar Polo  <op@omarpolo.com>
 
+	* ex.c (do_exec): [cgi] split the query in words if needed and add them to the argv
+
 	* parse.y (option): added prefork option
 
 2021-02-06  Omar Polo  <op@omarpolo.com>

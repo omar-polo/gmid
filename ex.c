@@ -230,6 +230,46 @@ xasprintf(const char *fmt, ...)
 	return s;
 }
 
+static void
+do_exec(const char *ex, const char *spath, char *query)
+{
+	char **argv, buf[PATH_MAX], *sname, *t;
+	size_t i, n;
+
+	strlcpy(buf, spath, sizeof(buf));
+	sname = basename(buf);
+
+	if (query == NULL || strchr(query, '=') != NULL) {
+		if ((argv = calloc(2, sizeof(char*))) == NULL)
+			err(1, "calloc");
+		argv[0] = sname;
+		execvp(ex, argv);
+		warn("execvp: %s", argv[0]);
+		return;
+	}
+
+	n = 1;
+	for (t = query ;; t++, n++) {
+		if ((t = strchr(t, '+')) == NULL)
+			break;
+	}
+
+	if ((argv = calloc(n+2, sizeof(char*))) == NULL)
+		err(1, "calloc");
+
+	argv[0] = sname;
+	for (i = 0; i < n; ++i) {
+		t = strchr(query, '+');
+		if (t != NULL)
+			*t = '\0';
+		argv[i+1] = pct_decode_str(query);
+		query = t+1;
+	}
+
+	execvp(ex, argv);
+	warn("execvp: %s", argv[0]);
+}
+
 /* fd or -1 on error */
 static int
 launch_cgi(struct iri *iri, const char *spath, char *relpath,
@@ -246,7 +286,6 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 		return -1;
 
 	case 0: {		/* child */
-		char *argv[] = {NULL, NULL};
 		char *ex, *pwd;
 		char iribuf[GEMINI_URL_LEN];
 		char path[PATH_MAX];
@@ -256,7 +295,6 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 			goto childerr;
 
 		ex = xasprintf("%s/%s", vhost->dir, spath);
-		argv[0] = ex;
 
 		serialize_iri(iri, iribuf, sizeof(iribuf));
 
@@ -307,15 +345,15 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 		safe_setenv("TLS_CLIENT_ISSUER", cissuer);
 		safe_setenv("TLS_CLIENT_HASH", chash);
 
-		strlcpy(path, argv[0], sizeof(path));
+		strlcpy(path, ex, sizeof(path));
+
 		pwd = dirname(path);
 		if (chdir(pwd)) {
 			warn("chdir");
 			goto childerr;
 		}
 
-		execvp(argv[0], argv);
-		warn("execvp: %s", argv[0]);
+		do_exec(ex, spath, iri->query);
 		goto childerr;
 	}
 
