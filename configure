@@ -67,7 +67,7 @@ INSTALL="install"
 # try to auto detect CFLAGS and LDFLAGS
 if which pkg-config 2>/dev/null 1>&2; then
 	if pkg-config libtls; then
-		CFLAGS="$(pkg-config --cflags libtls)"
+		CFLAGS="${CFLAGS} $(pkg-config --cflags libtls)"
 		LDFLAGS="$(pkg-config --libs libtls)"
 	fi
 	if pkg-config openssl; then
