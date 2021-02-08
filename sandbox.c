@@ -162,6 +162,10 @@ sandbox()
 		SC_ALLOW(mmap),
 		SC_ALLOW(munmap),
 
+		/* needed for signal handling */
+		SC_ALLOW(rt_sigreturn),
+		SC_ALLOW(rt_sigaction),
+
 		/* we need recvmsg to receive fd */
 		SC_ALLOW(recvmsg),
 
@@ -187,7 +191,7 @@ sandbox()
 		SC_ALLOW(sendto),
 		SC_ALLOW(connect),
 
-		/* allow only F_GETFL and F_SETFL fcntl */
+		/* allow only F_GETFL, F_SETFL & F_SETFD fcntl */
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fcntl, 0, 8),
 		BPF_STMT(BPF_LD  | BPF_W | BPF_ABS,
 		    (offsetof(struct seccomp_data, args[1]))),
