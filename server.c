@@ -1059,5 +1059,7 @@ loop(struct tls *ctx, int sock4, int sock6)
 
 	server.ctx = ctx;
 
+	sandbox();
 	event_dispatch();
+	_exit(0);
 }

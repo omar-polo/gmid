@@ -150,16 +150,9 @@ sandbox()
 
 		/* these are used to serve the files.  note how we
 		 * allow openat but not open. */
-
-#ifdef __aarch64__
-		/* it seems that on aarch64 there isn't a poll(2)
-		 * syscall, but instead it's implemented on top of
-		 * ppoll(2). */
-		SC_ALLOW(ppoll),
-#else
-		SC_ALLOW(poll),
-#endif
-		SC_ALLOW(accept),
+		SC_ALLOW(epoll_pwait),
+		SC_ALLOW(epoll_ctl),
+		SC_ALLOW(accept4),
 		SC_ALLOW(read),
 		SC_ALLOW(openat),
 		SC_ALLOW(fstat),
@@ -175,8 +168,9 @@ sandbox()
 		/* XXX: ??? */
 		SC_ALLOW(getpid),
 
-		/* alpine on amd64 does a clock_gettime(2) */
+		/* alpine on amd64 */
 		SC_ALLOW(clock_gettime),
+		SC_ALLOW(madvise),
 
 		/* void on aarch64 does a gettrandom */
 		SC_ALLOW(getrandom),
@@ -186,6 +180,12 @@ sandbox()
 
 		SC_ALLOW(exit),
 		SC_ALLOW(exit_group),
+
+		/* stuff used by syslog.  revisit once we move
+		 * logging in its own process */
+		SC_ALLOW(socket),
+		SC_ALLOW(sendto),
+		SC_ALLOW(connect),
 
 		/* allow only F_GETFL and F_SETFL fcntl */
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fcntl, 0, 8),

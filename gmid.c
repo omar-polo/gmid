@@ -200,7 +200,6 @@ listener_main(void)
 	unblock_signals();
 	load_default_mime(&conf.mime);
 	load_vhosts();
-	sandbox();
 	loop(ctx, sock4, sock6);
 	return 0;
 }
