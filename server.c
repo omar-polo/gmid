@@ -51,6 +51,8 @@ static void	 open_file(struct client*);
 static void	 load_file(struct client*);
 static void	 check_for_cgi(struct client*);
 static void	 handle_handshake(int, short, void*);
+static char	*strip_path(char*, int);
+static void	 fmt_sbuf(const char*, struct client*, const char*);
 static int	 apply_block_return(struct client*);
 static void	 handle_open_conn(int, short, void*);
 static void	 start_reply(struct client*, int, const char*);
@@ -400,20 +402,11 @@ err:
 	start_reply(c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
 
-/* 1 if a matching `block return' (and apply it), 0 otherwise */
-static int
-apply_block_return(struct client *c)
+static char *
+strip_path(char *path, int strip)
 {
-	char *t, *path, buf[32];
-	const char *fmt;
-	int strip, code;
-	size_t i;
+	char *t;
 
-	if (!vhost_block_return(c->host, c->iri.path, &code, &fmt))
-		return 0;
-
-	strip = vhost_strip(c->host, c->iri.path);
-	path = c->iri.path;
 	while (strip > 0) {
 		if ((t = strchr(path, '/')) == NULL) {
 			path = strchr(path, '\0');
@@ -422,6 +415,15 @@ apply_block_return(struct client *c)
 		path = t;
 		strip--;
 	}
+
+	return path;
+}
+
+static void
+fmt_sbuf(const char *fmt, struct client *c, const char *path)
+{
+	size_t i;
+        char buf[32];
 
 	memset(buf, 0, sizeof(buf));
 	for (i = 0; *fmt; ++fmt) {
@@ -462,6 +464,20 @@ apply_block_return(struct client *c)
 
 	if (i != 0)
 		strlcat(c->sbuf, buf, sizeof(c->sbuf));
+}
+
+/* 1 if a matching `block return' (and apply it), 0 otherwise */
+static int
+apply_block_return(struct client *c)
+{
+	const char *fmt, *path;
+	int code;
+
+	if (!vhost_block_return(c->host, c->iri.path, &code, &fmt))
+		return 0;
+
+	path = strip_path(c->iri.path, vhost_strip(c->host, c->iri.path));
+	fmt_sbuf(fmt, c, path);
 
 	start_reply(c, code, c->sbuf);
 	return 1;
