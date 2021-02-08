@@ -1,9 +1,9 @@
 # gmid
 
-gmid is a Gemini server written with security in mind.  I initially
-wrote it to serve static files, but it has grown into a featureful
-server that can be used from either the command line to serve local
-directories
+gmid is a fast Gemini server written with security in mind.  I
+initially wrote it to serve static files, but it has grown into a
+featureful server that can be used from either the command line to
+serve local directories
 
     gmid docs  # serve the directory docs over gemini
 
@@ -24,19 +24,13 @@ or as a traditional daemon
  - automatic certificate generation for config-less mode
  - CGI scripts
  - (very) low memory footprint
+ - event-based asynchronous I/O model
  - small codebase, easily hackable
  - virtual hosts
  - per-location rules
  - optional directory listings
  - configurable mime types
  - chroot support
-
-
-## Drawbacks
-
- - not suited for very busy hosts.  If you receive an high number of
-   connection per-second you'd probably want to run multiple gmid
-   instances behind relayd/haproxy or a different server.
 
 
 ## Internationalisation (IRIs, UNICODE, punycode, all that stuff)
@@ -104,9 +98,9 @@ server "man.example.com" {
 
 ## Building
 
-gmid depends on a POSIX libc, OpenSSL/LibreSSL and libtls (provided
-either by LibreSSL or libretls).  At build time, flex and yacc (or GNU
-bison) are also needed.
+gmid depends on a POSIX libc, libevent2, OpenSSL/LibreSSL and libtls
+(provided either by LibreSSL or libretls).  At build time, flex and
+yacc (or GNU bison) are also needed.
 
 The build is as simple as
 
