@@ -38,7 +38,7 @@ CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
 CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
 CFLAGS="${CFLAGS} -g -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
 CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
-LDFLAGS=-ltls
+LDFLAGS="-ltls -levent"
 YACC=yacc
 LEX=lex
 STATIC=
@@ -46,6 +46,7 @@ STATIC=
 HAVE_ERR=
 HAVE_EXPLICIT_BZERO=
 HAVE_GETPROGNAME=
+HAVE_LIBEVENT=
 HAVE_LIBTLS=
 HAVE_OPENSSL=
 HAVE_PR_SET_NAME=
@@ -73,6 +74,13 @@ if which pkg-config 2>/dev/null 1>&2; then
 	if pkg-config openssl; then
 		CFLAGS="${CFLAGS} $(pkg-config --cflags openssl)"
 		LDFLAGS="${LDFLAGS} $(pkg-config --libs openssl)"
+	fi
+
+	if ! [ "$(uname)" = "OpenBSD" ]; then
+		if pkg-config libevent; then
+			CFLAGS="${CFLAGS} $(pkg-config --cflags openssl)"
+			LDFLAGS="${LDFLAGS} $(pkg-config --libs openssl)"
+		fi
 	fi
 fi
 
@@ -219,6 +227,7 @@ fi
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest getprogname	GETPROGNAME	|| true
+runtest libevent	LIBEVENT	|| true
 runtest libtls		LIBTLS		|| true
 runtest openssl		OPENSSL		|| true
 runtest pr_set_name	PR_SET_NAME	|| true
@@ -238,6 +247,12 @@ fi
 if [ ${HAVE_OPENSSL} -eq 0 ]; then
 	echo "FATAL: openssl not found" 1>&2
 	echo "FATAL: openssl not found" 1>&3
+	exit 1
+fi
+
+if [ ${HAVE_LIBEVENT} -eq 0 ]; then
+	echo "FATAL: libevent not found" 1>&2
+	echo "FATAL: libevent not found" 1>&3
 	exit 1
 fi
 
@@ -264,6 +279,7 @@ cat <<__HEREDOC__
 #define HAVE_ERR		${HAVE_ERR}
 #define HAVE_EXPLICIT_BZERO	${HAVE_EXPLICIT_BZERO}
 #define HAVE_GETPROGNAME	${HAVE_GETPROGNAME}
+#define HAVE_LIBEVENT		${HAVE_LIBEVENT}
 #define HAVE_PR_SET_NAME	${HAVE_PR_SET_NAME}
 #define HAVE_RECALLOCARRAY	${HAVE_RECALLOCARRAY}
 #define HAVE_SETPROCTITLE	${SETPROCTITLE}
