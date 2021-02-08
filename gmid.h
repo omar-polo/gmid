@@ -106,6 +106,7 @@ struct conf {
 	int		 prefork;
 };
 
+extern const char *config_path;
 extern struct conf conf;
 extern int exfd;
 

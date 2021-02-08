@@ -35,7 +35,6 @@ struct location *loc;
 size_t iloc;
 
 int goterror = 0;
-const char *config_path;
 
 void		 yyerror(const char*, ...);
 int		 parse_portno(const char*);
