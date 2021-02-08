@@ -24,7 +24,6 @@
 #include <netinet/in.h>
 
 #include <dirent.h>
-#include <poll.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,10 +32,6 @@
 #include <unistd.h>
 
 #include "config.h"
-
-#ifndef INFTIM
-# define INFTIM -1
-#endif
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
@@ -134,7 +129,7 @@ struct parser {
 
 struct client;
 
-typedef void (*statefn)(struct pollfd*, struct client*);
+typedef void (*statefn)(int, short, void*);
 
 /*
  * DFA: handle_handshake is the initial state, close_conn the final.
@@ -165,14 +160,14 @@ struct client {
 	char		 req[GEMINI_URL_LEN];
 	struct iri	 iri;
 	char		 domain[DOMAIN_NAME_LEN];
-	statefn		 state, next;
+	statefn		 next;
 	int		 code;
 	const char	*meta;
-	int		 fd, waiting_on_child;
+	int		 fd, pfd;
+	DIR		*dir;
 	char		 sbuf[1024];	  /* static buffer */
 	void		*buf, *i;	  /* mmap buffer */
 	ssize_t		 len, off;	  /* mmap/static buffer  */
-	DIR		*dir;
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host she's talking to */
 };

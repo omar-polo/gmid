@@ -21,6 +21,7 @@
 
 #include <assert.h>
 #include <errno.h>
+#include <event.h>
 #include <fcntl.h>
 #include <fnmatch.h>
 #include <limits.h>
@@ -28,31 +29,57 @@
 
 #include "gmid.h"
 
+struct server {
+	struct client	 clients[MAX_USERS];
+	struct tls	*ctx;
+};
+
+struct server_events {
+	struct event	e4;
+	int		has_ipv6;
+	struct event	e6;
+	struct event	sighup;
+};
+
 int connected_clients;
 
+static inline void reschedule_read(int, struct client*, statefn);
+static inline void reschedule_write(int, struct client*, statefn);
+
 static int	 check_path(struct client*, const char*, int*);
-static void	 open_file(struct pollfd*, struct client*);
-static void	 load_file(struct pollfd*, struct client*);
-static void	 check_for_cgi(struct pollfd*, struct client*);
-static void	 handle_handshake(struct pollfd*, struct client*);
-static int	 apply_block_return(struct pollfd*, struct client*);
-static void	 handle_open_conn(struct pollfd*, struct client*);
-static void	 start_reply(struct pollfd*, struct client*, int, const char*);
-static void	 handle_start_reply(struct pollfd*, struct client*);
-static void	 start_cgi(const char*, const char*, struct pollfd*, struct client*);
-static void	 send_file(struct pollfd*, struct client*);
-static void	 open_dir(struct pollfd*, struct client*);
-static void	 redirect_canonical_dir(struct pollfd*, struct client*);
-static void	 enter_handle_dirlist(struct pollfd*, struct client*);
-static void	 handle_dirlist(struct pollfd*, struct client*);
+static void	 open_file(struct client*);
+static void	 load_file(struct client*);
+static void	 check_for_cgi(struct client*);
+static void	 handle_handshake(int, short, void*);
+static int	 apply_block_return(struct client*);
+static void	 handle_open_conn(int, short, void*);
+static void	 start_reply(struct client*, int, const char*);
+static void	 handle_start_reply(int, short, void*);
+static void	 start_cgi(const char*, const char*, struct client*);
+static void	 send_file(int, short, void*);
+static void	 open_dir(struct client*);
+static void	 redirect_canonical_dir(struct client*);
+static void	 enter_handle_dirlist(int, short, void*);
+static void	 handle_dirlist(int, short, void*);
 static int 	 read_next_dir_entry(struct client*);
-static void	 send_directory_listing(struct pollfd*, struct client*);
-static void	 cgi_poll_on_child(struct pollfd*, struct client*);
-static void	 cgi_poll_on_client(struct pollfd*, struct client*);
-static void	 handle_cgi_reply(struct pollfd*, struct client*);
-static void	 handle_cgi(struct pollfd*, struct client*);
-static void	 close_conn(struct pollfd*, struct client*);
-static void	 do_accept(int, struct tls*, struct pollfd*, struct client*);
+static void	 send_directory_listing(int, short, void*);
+static void	 handle_cgi_reply(int, short, void*);
+static void	 handle_cgi(int, short, void*);
+static void	 close_conn(int, short, void*);
+static void	 do_accept(int, short, void*);
+static void	 handle_sighup(int, short, void*);
+
+static inline void
+reschedule_read(int fd, struct client *c, statefn fn)
+{
+	event_once(fd, EV_READ, fn, c, NULL);
+}
+
+void
+reschedule_write(int fd, struct client *c, statefn fn)
+{
+	event_once(fd, EV_WRITE, fn, c, NULL);
+}
 
 const char *
 vhost_lang(struct vhost *v, const char *path)
@@ -211,31 +238,31 @@ check_path(struct client *c, const char *path, int *fd)
 }
 
 static void
-open_file(struct pollfd *fds, struct client *c)
+open_file(struct client *c)
 {
-	switch (check_path(c, c->iri.path, &c->fd)) {
+	switch (check_path(c, c->iri.path, &c->pfd)) {
 	case FILE_EXECUTABLE:
 		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
-			start_cgi(c->iri.path, "", fds, c);
+			start_cgi(c->iri.path, "", c);
 			return;
 		}
 
 		/* fallthrough */
 
 	case FILE_EXISTS:
-		load_file(fds, c);
+		load_file(c);
 		return;
 
 	case FILE_DIRECTORY:
-		open_dir(fds, c);
+		open_dir(c);
 		return;
 
 	case FILE_MISSING:
 		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
-			check_for_cgi(fds, c);
+			check_for_cgi(c);
 			return;
 		}
-		start_reply(fds, c, NOT_FOUND, "not found");
+		start_reply(c, NOT_FOUND, "not found");
 		return;
 
 	default:
@@ -245,24 +272,24 @@ open_file(struct pollfd *fds, struct client *c)
 }
 
 static void
-load_file(struct pollfd *fds, struct client *c)
+load_file(struct client *c)
 {
-	if ((c->len = filesize(c->fd)) == -1) {
+	if ((c->len = filesize(c->pfd)) == -1) {
 		log_err(c, "failed to get file size for %s: %s",
 		    c->iri.path, strerror(errno));
-		start_reply(fds, c, TEMP_FAILURE, "internal server error");
+		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
 	if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
-		    c->fd, 0)) == MAP_FAILED) {
+		    c->pfd, 0)) == MAP_FAILED) {
 		log_err(c, "mmap: %s: %s", c->iri.path, strerror(errno));
-		start_reply(fds, c, TEMP_FAILURE, "internal server error");
+		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 	c->i = c->buf;
 	c->next = send_file;
-	start_reply(fds, c, SUCCESS, mime(c->host, c->iri.path));
+	start_reply(c, SUCCESS, mime(c->host, c->iri.path));
 }
 
 /*
@@ -273,15 +300,13 @@ load_file(struct pollfd *fds, struct client *c)
  * executable is found or we emptied the path.
  */
 static void
-check_for_cgi(struct pollfd *fds, struct client *c)
+check_for_cgi(struct client *c)
 {
 	char path[PATH_MAX];
 	char *end;
 
 	strlcpy(path, c->iri.path, sizeof(path));
 	end = strchr(path, '\0');
-
-	/* NB: assume CGI is enabled and path matches cgi */
 
 	while (end > path) {
 		/* go up one level.  UNIX paths are simple and POSIX
@@ -291,9 +316,9 @@ check_for_cgi(struct pollfd *fds, struct client *c)
 			end--;
 		*end = '\0';
 
-		switch (check_path(c, path, &c->fd)) {
+		switch (check_path(c, path, &c->pfd)) {
 		case FILE_EXECUTABLE:
-			start_cgi(path, end+1, fds, c);
+			start_cgi(path, end+1, c);
 			return;
 		case FILE_MISSING:
 			break;
@@ -306,7 +331,7 @@ check_for_cgi(struct pollfd *fds, struct client *c)
 	}
 
 err:
-	start_reply(fds, c, NOT_FOUND, "not found");
+	start_reply(c, NOT_FOUND, "not found");
 	return;
 }
 
@@ -322,8 +347,9 @@ mark_nonblock(int fd)
 }
 
 static void
-handle_handshake(struct pollfd *fds, struct client *c)
+handle_handshake(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	struct vhost *h;
 	const char *servname;
 	const char *parse_err = "unknown error";
@@ -333,10 +359,10 @@ handle_handshake(struct pollfd *fds, struct client *c)
 	case -1: /* already handshaked */
 		break;
 	case TLS_WANT_POLLIN:
-		fds->events = POLLIN;
+		reschedule_read(fd, c, &handle_handshake);
 		return;
 	case TLS_WANT_POLLOUT:
-		fds->events = POLLOUT;
+		reschedule_write(fd, c, &handle_handshake);
 		return;
 	default:
 		/* unreachable */
@@ -361,8 +387,7 @@ handle_handshake(struct pollfd *fds, struct client *c)
 
 	if (h->domain != NULL) {
 		c->host = h;
-		c->state = handle_open_conn;
-		c->state(fds, c);
+		handle_open_conn(fd, ev, c);
 		return;
 	}
 
@@ -372,12 +397,12 @@ err:
 	else
 		strncpy(c->req, "null", sizeof(c->req));
 
-	start_reply(fds, c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
+	start_reply(c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
 
 /* 1 if a matching `block return' (and apply it), 0 otherwise */
 static int
-apply_block_return(struct pollfd *fds, struct client *c)
+apply_block_return(struct client *c)
 {
 	char *t, *path, buf[32];
 	const char *fmt;
@@ -438,13 +463,14 @@ apply_block_return(struct pollfd *fds, struct client *c)
 	if (i != 0)
 		strlcat(c->sbuf, buf, sizeof(c->sbuf));
 
-	start_reply(fds, c, code, c->sbuf);
+	start_reply(c, code, c->sbuf);
 	return 1;
 }
 
 static void
-handle_open_conn(struct pollfd *fds, struct client *c)
+handle_open_conn(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	const char *parse_err = "invalid request";
 	char decoded[DOMAIN_NAME_LEN];
 
@@ -454,15 +480,15 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	switch (tls_read(c->ctx, c->req, sizeof(c->req)-1)) {
 	case -1:
 		log_err(c, "tls_read: %s", tls_error(c->ctx));
-		close_conn(fds, c);
+		close_conn(fd, ev, c);
 		return;
 
 	case TLS_WANT_POLLIN:
-		fds->events = POLLIN;
+		reschedule_read(fd, c, &handle_open_conn);
 		return;
 
 	case TLS_WANT_POLLOUT:
-		fds->events = POLLOUT;
+		reschedule_write(fd, c, &handle_open_conn);
 		return;
 	}
 
@@ -470,40 +496,40 @@ handle_open_conn(struct pollfd *fds, struct client *c)
 	    || !parse_iri(c->req, &c->iri, &parse_err)
 	    || !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
 		log_info(c, "iri parse error: %s", parse_err);
-		start_reply(fds, c, BAD_REQUEST, "invalid request");
+		start_reply(c, BAD_REQUEST, "invalid request");
 		return;
 	}
 
 	if (c->iri.port_no != conf.port
 	    || strcmp(c->iri.schema, "gemini")
 	    || strcmp(decoded, c->domain)) {
-		start_reply(fds, c, PROXY_REFUSED, "won't proxy request");
+		start_reply(c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}
 
-	if (apply_block_return(fds, c))
+	if (apply_block_return(c))
 		return;
 
 	if (c->host->entrypoint != NULL) {
-		start_cgi(c->host->entrypoint, c->iri.path, fds, c);
+		start_cgi(c->host->entrypoint, c->iri.path, c);
 		return;
 	}
 
-	open_file(fds, c);
+	open_file(c);
 }
 
 static void
-start_reply(struct pollfd *pfd, struct client *c, int code, const char *meta)
+start_reply(struct client *c, int code, const char *meta)
 {
 	c->code = code;
 	c->meta = meta;
-	c->state = handle_start_reply;
-	handle_start_reply(pfd, c);
+	handle_start_reply(c->fd, 0, c);
 }
 
 static void
-handle_start_reply(struct pollfd *pfd, struct client *c)
+handle_start_reply(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
 	const char *lang;
 	size_t len;
@@ -522,32 +548,26 @@ handle_start_reply(struct pollfd *pfd, struct client *c)
 
 	switch (tls_write(c->ctx, buf, len)) {
 	case -1:
-		close_conn(pfd, c);
+		close_conn(fd, ev, c);
 		return;
 	case TLS_WANT_POLLIN:
-		pfd->events = POLLIN;
+		reschedule_read(fd, c, &handle_start_reply);
 		return;
 	case TLS_WANT_POLLOUT:
-		pfd->events = POLLOUT;
+		reschedule_write(fd, c, &handle_start_reply);
 		return;
 	}
 
 	log_request(c, buf, sizeof(buf));
 
-	/* we don't need a body */
-	if (c->code != SUCCESS) {
-		close_conn(pfd, c);
-		return;
-	}
-
-	/* advance the state machine */
-	c->state = c->next;
-	c->state(pfd, c);
+	if (c->code != SUCCESS)
+		close_conn(fd, ev, c);
+	else
+		c->next(fd, ev, c);
 }
 
 static void
-start_cgi(const char *spath, const char *relpath,
-    struct pollfd *fds, struct client *c)
+start_cgi(const char *spath, const char *relpath, struct client *c)
 {
 	char addr[NI_MAXHOST];
 	int e;
@@ -571,14 +591,13 @@ start_cgi(const char *spath, const char *relpath,
 	    || !send_vhost(exfd, c->host))
 		goto err;
 
-	close(c->fd);
-	if ((c->fd = recv_fd(exfd)) == -1) {
-		start_reply(fds, c, TEMP_FAILURE, "internal server error");
+	close(c->pfd);
+	if ((c->pfd = recv_fd(exfd)) == -1) {
+		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
-	cgi_poll_on_child(fds, c);
-	c->state = handle_cgi_reply;
+	reschedule_read(c->pfd, c, &handle_cgi_reply);
 	return;
 
 err:
@@ -587,8 +606,9 @@ err:
 }
 
 static void
-send_file(struct pollfd *fds, struct client *c)
+send_file(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	ssize_t ret, len;
 
 	len = (c->buf + c->len) - c->i;
@@ -597,15 +617,15 @@ send_file(struct pollfd *fds, struct client *c)
 		switch (ret = tls_write(c->ctx, c->i, len)) {
 		case -1:
 			log_err(c, "tls_write: %s", tls_error(c->ctx));
-			close_conn(fds, c);
+			close_conn(fd, ev, c);
 			return;
 
 		case TLS_WANT_POLLIN:
-			fds->events = POLLIN;
+			reschedule_read(fd, c, &send_file);
 			return;
 
 		case TLS_WANT_POLLOUT:
-			fds->events = POLLOUT;
+			reschedule_write(fd, c, &send_file);
 			return;
 
 		default:
@@ -615,11 +635,11 @@ send_file(struct pollfd *fds, struct client *c)
 		}
 	}
 
-	close_conn(fds, c);
+	close_conn(fd, ev, c);
 }
 
 static void
-open_dir(struct pollfd *fds, struct client *c)
+open_dir(struct client *c)
 {
 	size_t len;
 	int dirfd;
@@ -627,7 +647,7 @@ open_dir(struct pollfd *fds, struct client *c)
 
 	len = strlen(c->iri.path);
 	if (len > 0 && !ends_with(c->iri.path, "/")) {
-		redirect_canonical_dir(fds, c);
+		redirect_canonical_dir(c);
 		return;
 	}
 
@@ -639,53 +659,53 @@ open_dir(struct pollfd *fds, struct client *c)
 	len = strlcat(c->sbuf, vhost_index(c->host, c->iri.path),
 	    sizeof(c->sbuf));
 	if (len >= sizeof(c->sbuf)) {
-		start_reply(fds, c, TEMP_FAILURE, "internal server error");
+		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
 	c->iri.path = c->sbuf;
 
 	/* close later unless we have to generate the dir listing */
-	dirfd = c->fd;
-	c->fd = -1;
+	dirfd = c->pfd;
+	c->pfd = -1;
 
-	switch (check_path(c, c->iri.path, &c->fd)) {
+	switch (check_path(c, c->iri.path, &c->pfd)) {
 	case FILE_EXECUTABLE:
 		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
-			start_cgi(c->iri.path, "", fds, c);
+			start_cgi(c->iri.path, "", c);
 			break;
 		}
 
 		/* fallthrough */
 
 	case FILE_EXISTS:
-                load_file(fds, c);
+                load_file(c);
 		break;
 
 	case FILE_DIRECTORY:
-		start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
+		start_reply(c, TEMP_REDIRECT, c->sbuf);
 		break;
 
 	case FILE_MISSING:
 		*before_file = '\0';
 
 		if (!vhost_auto_index(c->host, c->iri.path)) {
-			start_reply(fds, c, NOT_FOUND, "not found");
+			start_reply(c, NOT_FOUND, "not found");
 			break;
 		}
 
-		c->fd = dirfd;
+		c->pfd = dirfd;
 		c->next = enter_handle_dirlist;
 
-		if ((c->dir = fdopendir(c->fd)) == NULL) {
+		if ((c->dir = fdopendir(c->pfd)) == NULL) {
 			log_err(c, "fdopendir(%d) (vhost:%s) %s: %s",
-			    c->fd, c->host->domain, c->iri.path, strerror(errno));
-			start_reply(fds, c, TEMP_FAILURE, "internal server error");
+			    c->pfd, c->host->domain, c->iri.path, strerror(errno));
+			start_reply(c, TEMP_FAILURE, "internal server error");
 			return;
 		}
 		c->off = 0;
 
-                start_reply(fds, c, SUCCESS, "text/gemini");
+                start_reply(c, SUCCESS, "text/gemini");
 		return;
 
 	default:
@@ -697,7 +717,7 @@ open_dir(struct pollfd *fds, struct client *c)
 }
 
 static void
-redirect_canonical_dir(struct pollfd *fds, struct client *c)
+redirect_canonical_dir(struct client *c)
 {
 	size_t len;
 
@@ -706,16 +726,17 @@ redirect_canonical_dir(struct pollfd *fds, struct client *c)
 	len = strlcat(c->sbuf, "/", sizeof(c->sbuf));
 
 	if (len >= sizeof(c->sbuf)) {
-		start_reply(fds, c, TEMP_FAILURE, "internal server error");
+		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
-	start_reply(fds, c, TEMP_REDIRECT, c->sbuf);
+	start_reply(c, TEMP_REDIRECT, c->sbuf);
 }
 
 static void
-enter_handle_dirlist(struct pollfd *fds, struct client *c)
+enter_handle_dirlist(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	char b[PATH_MAX];
 	size_t l;
 
@@ -727,30 +748,30 @@ enter_handle_dirlist(struct pollfd *fds, struct client *c)
 		 * in c->sbuf to hold the ancilliary string plus the
 		 * full path; but it wouldn't read nice without some
 		 * error checking, and I'd like to avoid a strlen. */
-		close_conn(fds, c);
+		close_conn(fd, ev, c);
 		return;
 	}
-	c->len = l;
 
-	c->state = handle_dirlist;
-	handle_dirlist(fds, c);
+	c->len = l;
+	handle_dirlist(fd, ev, c);
 }
 
 static void
-handle_dirlist(struct pollfd *fds, struct client *c)
+handle_dirlist(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	ssize_t r;
 
 	while (c->len > 0) {
 		switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
 		case -1:
-			close_conn(fds, c);
+			close_conn(fd, ev, c);
 			return;
 		case TLS_WANT_POLLOUT:
-			fds->events = POLLOUT;
+			reschedule_read(fd, c, &handle_dirlist);
 			return;
 		case TLS_WANT_POLLIN:
-			fds->events = POLLIN;
+			reschedule_write(fd, c, &handle_dirlist);
 			return;
 		default:
 			c->off += r;
@@ -758,8 +779,7 @@ handle_dirlist(struct pollfd *fds, struct client *c)
 		}
 	}
 
-	c->state = send_directory_listing;
-	send_directory_listing(fds, c);
+	send_directory_listing(fd, ev, c);
 }
 
 static int
@@ -786,8 +806,9 @@ read_next_dir_entry(struct client *c)
 }
 
 static void
-send_directory_listing(struct pollfd *fds, struct client *c)
+send_directory_listing(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	ssize_t r;
 
 	while (1) {
@@ -802,11 +823,11 @@ send_directory_listing(struct pollfd *fds, struct client *c)
 				goto end;
 
 			case TLS_WANT_POLLOUT:
-				fds->events = POLLOUT;
+				reschedule_read(fd, c, &send_directory_listing);
 				return;
 
 			case TLS_WANT_POLLIN:
-				fds->events = POLLIN;
+				reschedule_write(fd, c, &send_directory_listing);
 				return;
 
 			default:
@@ -818,55 +839,25 @@ send_directory_listing(struct pollfd *fds, struct client *c)
 	}
 
 end:
-	close_conn(fds, c);
-}
-
-static inline void
-cgi_poll_on_child(struct pollfd *fds, struct client *c)
-{
-	int fd;
-
-	if (c->waiting_on_child)
-		return;
-	c->waiting_on_child = 1;
-
-	fds->events = POLLIN;
-
-	fd = fds->fd;
-	fds->fd = c->fd;
-	c->fd = fd;
-}
-
-static inline void
-cgi_poll_on_client(struct pollfd *fds, struct client *c)
-{
-	int fd;
-
-	if (!c->waiting_on_child)
-		return;
-	c->waiting_on_child = 0;
-
-	fd = fds->fd;
-	fds->fd = c->fd;
-	c->fd = fd;
+	close_conn(fd, ev, d);
 }
 
 /* accumulate the meta line from the cgi script. */
 static void
-handle_cgi_reply(struct pollfd *fds, struct client *c)
+handle_cgi_reply(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	void	*buf, *e;
 	size_t	 len;
 	ssize_t	 r;
 
+
 	buf = c->sbuf + c->len;
 	len = sizeof(c->sbuf) - c->len;
 
-	/* we're polling on the child! */
-	r = read(fds->fd, buf, len);
+	r = read(c->pfd, buf, len);
 	if (r == 0 || r == -1) {
-		cgi_poll_on_client(fds, c);
-		start_reply(fds, c, CGI_ERROR, "CGI error");
+		start_reply(c, CGI_ERROR, "CGI error");
 		return;
 	}
 
@@ -878,28 +869,27 @@ handle_cgi_reply(struct pollfd *fds, struct client *c)
 		log_request(c, c->sbuf, c->len);
 
 		c->off = 0;
-		c->state = handle_cgi;
-		c->state(fds, c);
+		handle_cgi(fd, ev, c);
 		return;
 	}
+
+	reschedule_read(fd, c, &handle_cgi_reply);
 }
 
 static void
-handle_cgi(struct pollfd *fds, struct client *c)
+handle_cgi(int fd, short ev, void *d)
 {
+	struct client *c = d;
 	ssize_t r;
-
-	/* ensure c->fd is the child and fds->fd the client */
-	cgi_poll_on_client(fds, c);
 
 	while (1) {
 		if (c->len == 0) {
-			switch (r = read(c->fd, c->sbuf, sizeof(c->sbuf))) {
+			switch (r = read(c->pfd, c->sbuf, sizeof(c->sbuf))) {
 			case 0:
 				goto end;
 			case -1:
 				if (errno == EAGAIN || errno == EWOULDBLOCK) {
-					cgi_poll_on_child(fds, c);
+					reschedule_read(c->pfd, c, &handle_cgi);
 					return;
 				}
 				goto end;
@@ -915,11 +905,11 @@ handle_cgi(struct pollfd *fds, struct client *c)
 				goto end;
 
 			case TLS_WANT_POLLOUT:
-				fds->events = POLLOUT;
+				reschedule_read(c->fd, c, &handle_cgi);
 				return;
 
 			case TLS_WANT_POLLIN:
-				fds->events = POLLIN;
+				reschedule_write(c->fd, c, &handle_cgi);
 				return;
 
 			default:
@@ -931,20 +921,20 @@ handle_cgi(struct pollfd *fds, struct client *c)
 	}
 
 end:
-	close_conn(fds, c);
+	close_conn(c->fd, ev, d);
 }
 
 static void
-close_conn(struct pollfd *pfd, struct client *c)
+close_conn(int fd, short ev, void *d)
 {
-	c->state = close_conn;
+	struct client *c = d;
 
 	switch (tls_close(c->ctx)) {
 	case TLS_WANT_POLLIN:
-		pfd->events = POLLIN;
+		reschedule_read(fd, c, &close_conn);
 		return;
 	case TLS_WANT_POLLOUT:
-		pfd->events = POLLOUT;
+		reschedule_read(fd, c, &close_conn);
 		return;
 	}
 
@@ -956,49 +946,51 @@ close_conn(struct pollfd *pfd, struct client *c)
 	if (c->buf != MAP_FAILED)
 		munmap(c->buf, c->len);
 
-	if (c->fd != -1)
-		close(c->fd);
+	if (c->pfd != -1)
+		close(c->pfd);
 
 	if (c->dir != NULL)
 		closedir(c->dir);
 
-	close(pfd->fd);
-	pfd->fd = -1;
+	close(c->fd);
+	c->fd = -1;
 }
 
 static void
-do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
+do_accept(int sock, short et, void *d)
 {
-	int i, fd;
+	struct client *c;
+	struct server *s = d;
 	struct sockaddr_storage addr;
+	struct sockaddr *saddr;
 	socklen_t len;
+	int i, fd;
 
+	(void)et;
+
+
+	saddr = (struct sockaddr*)&addr;
 	len = sizeof(addr);
-	if ((fd = accept(sock, (struct sockaddr*)&addr, &len)) == -1) {
+	if ((fd = accept4(sock, saddr, &len, SOCK_NONBLOCK)) == -1) {
 		if (errno == EWOULDBLOCK || errno == EAGAIN)
 			return;
 		fatal("accept: %s", strerror(errno));
 	}
 
-	mark_nonblock(fd);
-
 	for (i = 0; i < MAX_USERS; ++i) {
-		if (fds[i].fd == -1) {
-			bzero(&clients[i], sizeof(struct client));
-			if (tls_accept_socket(ctx, &clients[i].ctx, fd) == -1)
+		c = &s->clients[i];
+		if (c->fd == -1) {
+			memset(c, 0, sizeof(*c));
+			if (tls_accept_socket(s->ctx, &c->ctx, fd) == -1)
 				break; /* goodbye fd! */
 
-			fds[i].fd = fd;
-			fds[i].events = POLLIN;
+			c->fd = fd;
+			c->pfd = -1;
+			c->buf = MAP_FAILED;
+			c->dir = NULL;
+			c->addr = addr;
 
-			clients[i].state = handle_handshake;
-			clients[i].next = send_file;
-			clients[i].fd = -1;
-			clients[i].waiting_on_child = 0;
-			clients[i].buf = MAP_FAILED;
-			clients[i].dir = NULL;
-			clients[i].addr = addr;
-
+			reschedule_read(fd, c, &handle_handshake);
 			connected_clients++;
 			return;
 		}
@@ -1007,65 +999,65 @@ do_accept(int sock, struct tls *ctx, struct pollfd *fds, struct client *clients)
 	close(fd);
 }
 
+static void
+handle_sighup(int fd, short ev, void *d)
+{
+	struct server_events *events = d;
+
+	(void)fd;
+	(void)ev;
+
+	event_del(&events->e4);
+	if (events->has_ipv6)
+		event_del(&events->e6);
+	signal_del(&events->sighup);
+}
+
+static void
+handle_siginfo(int fd, short ev, void *d)
+{
+	(void)fd;
+	(void)ev;
+	(void)d;
+
+	log_info(NULL, "%d connected clients", connected_clients);
+}
+
 void
 loop(struct tls *ctx, int sock4, int sock6)
 {
-	int i, n;
-	struct client clients[MAX_USERS];
-	struct pollfd fds[MAX_USERS];
+	struct server_events events;
+	struct server server;
+	struct event info;
+	size_t i;
 
-	for (i = 0; i < MAX_USERS; ++i) {
-		fds[i].fd = -1;
-		fds[i].events = POLLIN;
-		bzero(&clients[i], sizeof(struct client));
+	event_init();
+
+	memset(&events, 0, sizeof(events));
+	memset(&server, 0, sizeof(server));
+	for (i = 0; i < MAX_USERS; ++i)
+		server.clients[i].fd = -1;
+
+	event_set(&events.e4, sock4, EV_READ | EV_PERSIST, &do_accept, &server);
+	event_add(&events.e4, NULL);
+
+	if (sock6 != -1) {
+		events.has_ipv6 = 1;
+		event_set(&events.e6, sock6, EV_READ | EV_PERSIST, &do_accept, &server);
+		event_add(&events.e6, NULL);
 	}
 
-	fds[0].fd = sock4;
-	fds[1].fd = sock6;
+	signal_set(&events.sighup, SIGHUP, &handle_sighup, &events);
+	signal_add(&events.sighup, NULL);
 
-	for (;;) {
-		if ((n = poll(fds, MAX_USERS, INFTIM)) == -1) {
-			if (errno == EINTR) {
-				log_info(NULL, "%d connected clients",
-				    connected_clients);
-			} else
-				fatal("poll: %s", strerror(errno));
-		}
+#ifdef SIGINFO
+	signal_set(&info, SIGINFO, &handle_siginfo, NULL);
+	signal_add(&info, NULL);
+#endif
+	signal_set(&info, SIGUSR2, &handle_siginfo, NULL);
+	signal_add(&info, NULL);
 
-		for (i = 0; i < MAX_USERS && n > 0; i++) {
-			if (fds[i].revents == 0)
-				continue;
+	server.ctx = ctx;
 
-			if (fds[i].revents & (POLLERR|POLLNVAL))
-				fatal("bad fd %d: %s", fds[i].fd,
-				    strerror(errno));
-
-			n--;
-
-			if (fds[i].revents & POLLHUP) {
-				/* fds[i] may be the fd of the stdin
-				 * of a cgi script that has exited. */
-				if (!clients[i].waiting_on_child) {
-					close_conn(&fds[i], &clients[i]);
-					continue;
-				}
-			}
-
-			if (fds[i].fd == sock4)
-				do_accept(sock4, ctx, fds, clients);
-			else if (fds[i].fd == sock6)
-				do_accept(sock6, ctx, fds, clients);
-			else
-				clients[i].state(&fds[i], &clients[i]);
-		}
-
-		if (hupped) {
-			if (connected_clients == 0)
-				return;
-
-			fds[0].fd = -1;
-			if (sock6 != -1)
-				fds[1].fd = -1;
-		}
-	}
+	event_dispatch();
 }
