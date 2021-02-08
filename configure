@@ -76,12 +76,15 @@ if which pkg-config 2>/dev/null 1>&2; then
 		LDFLAGS="${LDFLAGS} $(pkg-config --libs openssl)"
 	fi
 
-	if ! [ "$(uname)" = "OpenBSD" ]; then
-		if pkg-config libevent; then
-			CFLAGS="${CFLAGS} $(pkg-config --cflags openssl)"
-			LDFLAGS="${LDFLAGS} $(pkg-config --libs openssl)"
-		fi
-	fi
+	case "$(uname)" in
+		OpenBSD) ;;
+		*)
+			if pkg-config libevent; then
+				CFLAGS="${CFLAGS} $(pkg-config --cflags libevent)"
+				LDFLAGS="${LDFLAGS} $(pkg-config --libs libevent)"
+			fi
+			;;
+	esac
 fi
 
 # auto detect lex/flex
