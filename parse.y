@@ -73,16 +73,16 @@ options		: /* empty */
 		| options option
 		;
 
-option		: TIPV6 TBOOL		{ conf.ipv6 = $2; }
+option		: TCHROOT TSTRING	{ conf.chroot = $2; }
+		| TIPV6 TBOOL		{ conf.ipv6 = $2; }
+		| TMIME TSTRING TSTRING	{ add_mime(&conf.mime, $2, $3); }
 		| TPORT TNUM		{ conf.port = $2; }
+		| TPREFORK TNUM		{ conf.prefork = check_prefork_num($2); }
 		| TPROTOCOLS TSTRING {
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
 				errx(1, "invalid protocols string \"%s\"", $2);
 		}
-		| TMIME TSTRING TSTRING	{ add_mime(&conf.mime, $2, $3); }
-		| TCHROOT TSTRING	{ conf.chroot = $2; }
 		| TUSER TSTRING		{ conf.user = $2; }
-		| TPREFORK TNUM		{ conf.prefork = check_prefork_num($2); }
 		;
 
 vhosts		: /* empty */
@@ -118,8 +118,6 @@ servopts	: /* empty */
 		;
 
 servopt		: TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
-		| TKEY TSTRING		{ host->key  = ensure_absolute_path($2); }
-		| TROOT TSTRING		{ host->dir  = ensure_absolute_path($2); }
 		| TCGI TSTRING		{
 			/* drop the starting '/', if any */
 			if (*$2 == '/')
@@ -133,6 +131,8 @@ servopt		: TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
 				memmove($2, $2+1, strlen($2));
 			host->entrypoint = $2;
 		}
+		| TKEY TSTRING		{ host->key  = ensure_absolute_path($2); }
+		| TROOT TSTRING		{ host->dir  = ensure_absolute_path($2); }
 		| locopt
 		;
 
@@ -153,22 +153,7 @@ locopts		: /* empty */
 		| locopts locopt
 		;
 
-locopt		: TDEFAULT TTYPE TSTRING {
-			if (loc->default_mime != NULL)
-				yyerror("`default type' specified more than once");
-			loc->default_mime = $3;
-		}
-		| TLANG TSTRING {
-			if (loc->lang != NULL)
-				yyerror("`lang' specified more than once");
-			loc->lang = $2;
-		}
-		| TINDEX TSTRING {
-			if (loc->index != NULL)
-				yyerror("`index' specified more than once");
-			loc->index = $2;
-		}
-		| TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
+locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 		| TBLOCK TRETURN TNUM TSTRING {
 			if (loc->block_fmt != NULL)
 				yyerror("`block' rule specified more than once");
@@ -189,7 +174,21 @@ locopt		: TDEFAULT TTYPE TSTRING {
 			loc->block_fmt = xstrdup("temporary failure");
 			loc->block_code = 40;
 		}
-		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
+		| TDEFAULT TTYPE TSTRING {
+			if (loc->default_mime != NULL)
+				yyerror("`default type' specified more than once");
+			loc->default_mime = $3;
+		}
+		| TINDEX TSTRING {
+			if (loc->index != NULL)
+				yyerror("`index' specified more than once");
+			loc->index = $2;
+		}
+		| TLANG TSTRING {
+			if (loc->lang != NULL)
+				yyerror("`lang' specified more than once");
+			loc->lang = $2;
+		}
 		| TREQUIRE TCLIENT TCA TSTRING {
 			if (loc->reqca != NULL)
 				yyerror("`require client ca' specified more than once");
@@ -199,6 +198,7 @@ locopt		: TDEFAULT TTYPE TSTRING {
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
+		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
 		;
 
 %%

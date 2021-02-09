@@ -48,35 +48,34 @@
 	return TNUM;
 }
 
-on		yylval.num = 1; return TBOOL;
 off		yylval.num = 0; return TBOOL;
+on		yylval.num = 1; return TBOOL;
 
-ipv6		return TIPV6;
-port		return TPORT;
-protocols	return TPROTOCOLS;
-mime		return TMIME;
-default		return TDEFAULT;
-type		return TTYPE;
-chroot		return TCHROOT;
-user		return TUSER;
-server		return TSERVER;
-prefork		return TPREFORK;
-
-location	return TLOCATION;
-cert		return TCERT;
-key		return TKEY;
-root		return TROOT;
-cgi		return TCGI;
-lang		return TLANG;
-index		return TINDEX;
 auto		return TAUTO;
-strip		return TSTRIP;
 block		return TBLOCK;
-return		return TRETURN;
-entrypoint	return TENTRYPOINT;
-require		return TREQUIRE;
-client		return TCLIENT;
 ca		return TCA;
+cert		return TCERT;
+cgi		return TCGI;
+chroot		return TCHROOT;
+client		return TCLIENT;
+default		return TDEFAULT;
+entrypoint	return TENTRYPOINT;
+index		return TINDEX;
+ipv6		return TIPV6;
+key		return TKEY;
+lang		return TLANG;
+location	return TLOCATION;
+mime		return TMIME;
+port		return TPORT;
+prefork		return TPREFORK;
+protocols	return TPROTOCOLS;
+require		return TREQUIRE;
+return		return TRETURN;
+root		return TROOT;
+server		return TSERVER;
+strip		return TSTRIP;
+type		return TTYPE;
+user		return TUSER;
 
 [{}]		return *yytext;
 
