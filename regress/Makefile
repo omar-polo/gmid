@@ -58,7 +58,7 @@ invalid.cert.pem: cert.pem
 
 clean:
 	rm -f *.o iri_test cert.pem key.pem
-	rm -f testca.* valid.* invalid.*pem
+	rm -f testca.* valid.csr valid.key invalid.*pem
 	rm -rf testdata fill-file puny-test
 
 testdata: fill-file
