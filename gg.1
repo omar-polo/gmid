@@ -21,6 +21,7 @@
 .Nm
 .Bk -words
 .Op Fl 23bchNVv
+.Op Fl C Pa cert.pem Fl K Pa key.pem
 .Op Fl H Ar hostname
 .Ar IRI
 .Ek
@@ -37,6 +38,8 @@ Use only TLSv1.2.
 Use only TLSv1.3.
 .It Fl b
 Print only the body of the response.
+.It Fl C Pa cert.pem
+Load the client certificate, must be in PEM format.
 .It Fl c
 Print only the response code.
 .It Fl H Ar hostname
@@ -46,6 +49,8 @@ for SNI, instead of the one extracted from the IRI.
 The IRI hostname will still be used for the DNS resolution.
 .It Fl h
 Print only the response header.
+.It Fl K Pa key.pem
+Load the client certificate key, must be in PEM format.
 .It Fl N
 Don't check whether the peer certificate name matches the requested
 hostname.

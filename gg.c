@@ -19,6 +19,7 @@
 #include "gmid.h"
 
 int flag2, flag3, bflag, cflag, hflag, Nflag, Vflag, vflag;
+const char *cert, *key;
 
 int
 main(int argc, char **argv)
@@ -35,7 +36,7 @@ main(int argc, char **argv)
 	ssize_t len;
 
 	hostname = NULL;
-	while ((ch = getopt(argc, argv, "23cbH:hNVv")) != -1) {
+	while ((ch = getopt(argc, argv, "23C:cbH:hK:NVv")) != -1) {
 		switch (ch) {
 		case '2':
 			flag2 = 1;
@@ -46,6 +47,9 @@ main(int argc, char **argv)
 		case 'b':
 			bflag = 1;
 			break;
+		case 'C':
+			cert = optarg;
+			break;
 		case 'c':
 			cflag = 1;
 			break;
@@ -54,6 +58,9 @@ main(int argc, char **argv)
 			break;
 		case 'h':
 			hflag = 1;
+			break;
+		case 'K':
+			key = optarg;
 			break;
 		case 'N':
 			Nflag = 1;
@@ -78,6 +85,9 @@ main(int argc, char **argv)
 
 	if (flag2 + flag3 > 1)
 		errx(1, "only -2 or -3 can be specified at the same time.");
+
+	if ((cert != NULL && key == NULL) || (cert == NULL && key != NULL))
+		errx(1, "missing certificate or key");
 
 	if (argc != 1)
 		errx(1, "missing IRI");
@@ -106,6 +116,9 @@ main(int argc, char **argv)
 		errx(1, "cannot set TLSv1.2");
 	if (flag3 && tls_config_set_protocols(conf, TLS_PROTOCOL_TLSv1_3) == -1)
 		errx(1, "cannot set TLSv1.3");
+
+	if (cert != NULL && tls_config_set_keypair_file(conf, cert, key))
+		errx(1, "couldn't load cert: %s", cert);
 
 	if ((ctx = tls_client()) == NULL)
 		errx(1, "tls_client creation failed");
