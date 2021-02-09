@@ -54,6 +54,7 @@ static void	 handle_handshake(int, short, void*);
 static char	*strip_path(char*, int);
 static void	 fmt_sbuf(const char*, struct client*, const char*);
 static int	 apply_block_return(struct client*);
+static int	 apply_require_ca(struct client*);
 static void	 handle_open_conn(int, short, void*);
 static void	 start_reply(struct client*, int, const char*);
 static void	 handle_start_reply(int, short, void*);
@@ -200,6 +201,24 @@ vhost_strip(struct vhost *v, const char *path)
 	}
 
 	return v->locations[0].strip;
+}
+
+X509_STORE *
+vhost_require_ca(struct vhost *v, const char *path)
+{
+	struct location *loc;
+
+	if (v == NULL || path == NULL)
+		return NULL;
+
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+		if (loc->reqca != NULL) {
+			if (!fnmatch(loc->match, path, 0))
+				return loc->reqca;
+		}
+	}
+
+	return v->locations[0].reqca;
 }
 
 static int
@@ -483,6 +502,31 @@ apply_block_return(struct client *c)
 	return 1;
 }
 
+/* 1 if matching `require client ca' fails (and apply it), 0 otherwise */
+static int
+apply_require_ca(struct client *c)
+{
+	X509_STORE	*store;
+	const uint8_t	*cert;
+	size_t		 len;
+
+	if ((store = vhost_require_ca(c->host, c->iri.path)) == NULL)
+		return 0;
+
+	if (!tls_peer_cert_provided(c->ctx)) {
+		start_reply(c, CLIENT_CERT_REQ, "client certificate required");
+		return 1;
+	}
+
+	cert = tls_peer_cert_chain_pem(c->ctx, &len);
+	if (!validate_against_ca(store, cert, len)) {
+		start_reply(c, CERT_NOT_AUTH, "certificate not authorised");
+		return 1;
+	}
+
+	return 0;
+}
+
 static void
 handle_open_conn(int fd, short ev, void *d)
 {
@@ -522,6 +566,9 @@ handle_open_conn(int fd, short ev, void *d)
 		start_reply(c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}
+
+	if (apply_require_ca(c))
+		return;
 
 	if (apply_block_return(c))
 		return;

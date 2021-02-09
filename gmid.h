@@ -31,6 +31,8 @@
 #include <tls.h>
 #include <unistd.h>
 
+#include <openssl/x509.h>
+
 #include "config.h"
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
@@ -42,6 +44,8 @@
 #define NOT_FOUND	51
 #define PROXY_REFUSED	53
 #define BAD_REQUEST	59
+#define CLIENT_CERT_REQ	60
+#define CERT_NOT_AUTH	61
 
 #define MAX_USERS	64
 
@@ -61,6 +65,7 @@ struct location {
 	int		 block_code;
 	const char	*block_fmt;
 	int		 strip;
+	X509_STORE	*reqca;
 };
 
 struct vhost {
@@ -228,6 +233,7 @@ const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
 int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
 int		 vhost_strip(struct vhost*, const char*);
+X509_STORE	*vhost_require_ca(struct vhost*, const char*);
 void		 mark_nonblock(int);
 void		 loop(struct tls*, int, int);
 
@@ -270,5 +276,7 @@ ssize_t		 filesize(int);
 char		*absolutify_path(const char*);
 char		*xstrdup(const char*);
 void		 gen_certificate(const char*, const char*, const char*);
+X509_STORE	*load_ca(const char*);
+int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);
 
 #endif

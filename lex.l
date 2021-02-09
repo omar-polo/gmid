@@ -74,6 +74,9 @@ strip		return TSTRIP;
 block		return TBLOCK;
 return		return TRETURN;
 entrypoint	return TENTRYPOINT;
+require		return TREQUIRE;
+client		return TCLIENT;
+ca		return TCA;
 
 [{}]		return *yytext;
 

@@ -2,7 +2,7 @@ include ../Makefile.local
 
 .PHONY: all clean runtime
 
-all: puny-test testdata iri_test cert.pem
+all: puny-test testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
 	./puny-test
 	./runtime
 	./iri_test
@@ -28,9 +28,38 @@ cert.pem:
 			-days 365 -nodes
 	@echo
 
+testca.pem:
+	openssl genrsa -out testca.key 2048
+	printf ".\n.\n.\n.\n.\ntestca\n.\n" |	\
+		openssl req -x509 -new -sha256		\
+			-key testca.key			\
+			-out cert.pem			\
+			-days 365 -nodes		\
+			-out testca.pem
+	@echo
+
+valid.crt: testca.pem
+	openssl genrsa -out valid.key 2048
+	printf ".\n.\n.\n.\n.\nvalid\n.\n\n" |	\
+		openssl req -new -key valid.key	\
+			-out valid.csr
+	@echo
+	openssl x509 -req -in valid.csr		\
+		-CA testca.pem			\
+		-CAkey testca.key		\
+		-CAcreateserial			\
+		-out valid.crt			\
+		-days 365			\
+		-sha256 -extfile valid.ext
+
+invalid.cert.pem: cert.pem
+	cp cert.pem invalid.cert.pem
+	cp key.pem invalid.key.pem
+
 clean:
 	rm -f *.o iri_test cert.pem key.pem
-	rm -rf testdata
+	rm -f testca.* valid.* invalid.*pem
+	rm -rf testdata fill-file puny-test
 
 testdata: fill-file
 	mkdir testdata

@@ -15,6 +15,10 @@ config.log.old
 configure.local
 regress/testdata
 regress/*.pem
+regress/*.key
+regress/*.crt
+regress/*.csr
+regress/*.srl
 regress/reg.conf
 regress/fill-file
 regress/iri_test

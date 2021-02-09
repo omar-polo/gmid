@@ -58,7 +58,7 @@ int		 check_prefork_num(int);
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
 %token TCHROOT TUSER TSERVER TPREFORK
 %token TLOCATION TCERT TKEY TROOT TCGI TLANG TINDEX TAUTO
-%token TSTRIP TBLOCK TRETURN TENTRYPOINT
+%token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA
 %token TERR
 
 %token <str>	TSTRING
@@ -190,6 +190,15 @@ locopt		: TDEFAULT TTYPE TSTRING {
 			loc->block_code = 40;
 		}
 		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
+		| TREQUIRE TCLIENT TCA TSTRING {
+			if (loc->reqca != NULL)
+				yyerror("`require client ca' specified more than once");
+			if (*$4 != '/')
+				yyerror("path to certificate must be absolute: %s", $4);
+			if ((loc->reqca = load_ca($4)) == NULL)
+				yyerror("couldn't load ca cert: %s", $4);
+			free($4);
+		}
 		;
 
 %%

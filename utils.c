@@ -18,7 +18,8 @@
 #include <string.h>
 
 #include <openssl/pem.h>
-#include <openssl/x509.h>
+#include <openssl/x509_vfy.h>
+#include <openssl/x509v3.h>
 
 #include "gmid.h"
 
@@ -175,4 +176,71 @@ gen_certificate(const char *host, const char *certpath, const char *keypath)
 
 	X509_free(x509);
 	RSA_free(rsa);
+}
+
+X509_STORE *
+load_ca(const char *path)
+{
+	FILE		*f = NULL;
+	X509		*x = NULL;
+	X509_STORE	*store;
+
+	if ((store = X509_STORE_new()) == NULL)
+		return NULL;
+
+	if ((f = fopen(path, "r")) == NULL)
+		goto err;
+
+	if ((x = PEM_read_X509(f, NULL, NULL, NULL)) == NULL)
+		goto err;
+
+	if (X509_check_ca(x) == 0)
+		goto err;
+
+	if (!X509_STORE_add_cert(store, x))
+		goto err;
+
+	X509_free(x);
+	fclose(f);
+	return store;
+
+err:
+	X509_STORE_free(store);
+	if (x != NULL)
+		X509_free(x);
+	if (f != NULL)
+		fclose(f);
+	return NULL;
+}
+
+int
+validate_against_ca(X509_STORE *ca, const uint8_t *chain, size_t len)
+{
+	X509		*client;
+	BIO		*m;
+	X509_STORE_CTX	*ctx = NULL;
+	int		 ret = 0;
+
+	if ((m = BIO_new_mem_buf(chain, len)) == NULL)
+		return 0;
+
+	if ((client = PEM_read_bio_X509(m, NULL, NULL, NULL)) == NULL)
+		goto end;
+
+	if ((ctx = X509_STORE_CTX_new()) == NULL)
+		goto end;
+
+	if (!X509_STORE_CTX_init(ctx, ca, client, NULL))
+		goto end;
+
+	ret = X509_verify_cert(ctx);
+	fprintf(stderr, "openssl x509_verify_cert: %d\n", ret);
+
+end:
+	BIO_free(m);
+	if (client != NULL)
+		X509_free(client);
+	if (ctx != NULL)
+		X509_STORE_CTX_free(ctx);
+	return ret;
 }

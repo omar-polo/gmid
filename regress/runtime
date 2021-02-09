@@ -2,6 +2,8 @@
 
 set -e
 
+ggflags=
+
 # usage: config <global config> <stuff for localhost>
 # generates a configuration file reg.conf
 config() {
@@ -25,19 +27,19 @@ checkconf() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	./../gg -b "gemini://localhost:10965/$1"
+	./../gg -b $ggflags "gemini://localhost:10965/$1"
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	./../gg -h "gemini://localhost:10965/$1"
+	./../gg -h $ggflags "gemini://localhost:10965/$1"
 }
 
 # usage: raw <path>
 # return both header and body
 raw() {
-	./../gg "gemini://localhost:10965/$1"
+	./../gg $ggflags "gemini://localhost:10965/$1"
 }
 
 run() {
@@ -275,5 +277,24 @@ restart
 eq "$(head /foo/bar)"	"20 text/plain; lang=en"	"Unknown head for /foo/bar"
 eq "$(get /foo/bar|grep PATH_INFO)" "PATH_INFO=/foo/bar" "Unexpected PATH_INFO"
 echo OK GET /foo/bar with entrypoint
+
+# test with require ca
+
+config '' 'require client ca "'$PWD'/testca.pem"'
+checkconf
+restart
+
+eq "$(head /)"		"60 client certificate required" "Unexpected head for /"
+echo OK GET / without client certificate
+
+ggflags="-C valid.crt -K valid.key"
+eq "$(head /)"		"20 text/gemini"		"Unexpected head for /"
+echo OK GET / with valid client certificate
+
+ggflags="-C invalid.cert.pem -K invalid.key.pem"
+eq "$(head /)"		"61 certificate not authorised"	"Unexpected head for /"
+echo OK GET / with invalid client certificate
+
+ggflags=''
 
 quit

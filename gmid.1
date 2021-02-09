@@ -276,6 +276,12 @@ except
 Specify the root directory for this server.
 This option is mandatory.
 It's relative to the chroot, if enabled.
+.It Ic require Ic client Ic ca Pa path
+Allow requests only from clients that provide a certificate signed by
+the CA certificate in
+.Pa path .
+It needs to be a PEM-encoded certificate and it's not relative to the
+chroot.
 .It Ic strip Ar number
 Strip
 .Ar number

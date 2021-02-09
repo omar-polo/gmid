@@ -1,3 +1,7 @@
+2021-02-09  Omar Polo  <op@omarpolo.com>
+
+	* parse.y (locopt): add `require client ca' rule to require client certs signed by a specified CA
+
 2021-02-07  Omar Polo  <op@omarpolo.com>
 
 	* ex.c (do_exec): [cgi] split the query in words if needed and add them to the argv
