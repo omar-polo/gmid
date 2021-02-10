@@ -40,7 +40,7 @@ testca.pem:
 
 valid.crt: testca.pem
 	openssl genrsa -out valid.key 2048
-	printf ".\n.\n.\n.\n.\nvalid\n.\n\n" |	\
+	printf ".\n.\n.\n.\n.\nvalid\n.\n\n\n"|	\
 		openssl req -new -key valid.key	\
 			-out valid.csr
 	@echo
