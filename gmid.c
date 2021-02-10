@@ -327,7 +327,7 @@ usage(const char *me)
 {
 	fprintf(stderr,
 	    "USAGE: %s [-fn] [-c config] | [-6h] [-d certs-dir] [-H host]"
-	    "       [-p port] [-x cgi] [dir]",
+	    "       [-p port] [-x cgi] [dir]\n",
 	    me);
 }
 
