@@ -160,6 +160,7 @@ sandbox()
 		SC_ALLOW(read),
 		SC_ALLOW(openat),
 		SC_ALLOW(fstat),
+		SC_ALLOW(newfstatat),
 		SC_ALLOW(close),
 		SC_ALLOW(lseek),
 		SC_ALLOW(brk),
@@ -182,6 +183,9 @@ sandbox()
 
 		/* void on aarch64 does a gettrandom */
 		SC_ALLOW(getrandom),
+
+		/* arch on amd64 */
+		SC_ALLOW(gettimeofday),
 
 		/* for directory listing */
 		SC_ALLOW(getdents64),
