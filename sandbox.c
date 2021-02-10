@@ -150,6 +150,7 @@ sandbox()
 
 		/* these are used to serve the files.  note how we
 		 * allow openat but not open. */
+		SC_ALLOW(epoll_wait),
 		SC_ALLOW(epoll_pwait),
 		SC_ALLOW(epoll_ctl),
 		SC_ALLOW(accept4),
