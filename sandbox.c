@@ -150,7 +150,10 @@ sandbox()
 
 		/* these are used to serve the files.  note how we
 		 * allow openat but not open. */
+#ifdef __NR_epoll_wait
+		/* epoll_wait(2) isn't present on aarch64, at least */
 		SC_ALLOW(epoll_wait),
+#endif
 		SC_ALLOW(epoll_pwait),
 		SC_ALLOW(epoll_ctl),
 		SC_ALLOW(accept4),
