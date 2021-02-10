@@ -225,7 +225,7 @@ parse_portno(const char *p)
 
 	n = strtonum(p, 0, UINT16_MAX, &errstr);
 	if (errstr != NULL)
-		yylineno("port number is %s: %s", errstr, p);
+		yyerror("port number is %s: %s", errstr, p);
 	return n;
 }
 
