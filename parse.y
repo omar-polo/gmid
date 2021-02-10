@@ -44,6 +44,7 @@ int		 check_block_code(int);
 char		*check_block_fmt(char*);
 int		 check_strip_no(int);
 int		 check_prefork_num(int);
+void		 advance_loc(void);
 
 %}
 
@@ -140,11 +141,11 @@ locations	: /* empty */
 		| locations location
 		;
 
-location	: TLOCATION TSTRING '{' locopts '}' {
-			loc->match = $2;
-			if (++iloc == LOCLEN)
-				errx(1, "too much location rules defined");
-			loc++;
+location	: TLOCATION { advance_loc(); } TSTRING '{' locopts '}'	{
+			/* drop the starting '/' if any */
+			if (*$3 == '/')
+				memmove($3, $3+1, strlen($3));
+			loc->match = $3;
 		}
 		| error '}'
 		;
@@ -300,4 +301,12 @@ check_prefork_num(int n)
 	if (n <= 0)
 		yyerror("invalid prefork number %d", n);
 	return n;
+}
+
+void
+advance_loc(void)
+{
+	if (++iloc == LOCLEN)
+		errx(1, "too much location rules defined");
+	loc++;
 }

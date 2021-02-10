@@ -43,6 +43,8 @@ struct server_events {
 
 int connected_clients;
 
+static inline int matches(const char*, const char*);
+
 static inline void reschedule_read(int, struct client*, statefn);
 static inline void reschedule_write(int, struct client*, statefn);
 
@@ -72,6 +74,14 @@ static void	 close_conn(int, short, void*);
 static void	 do_accept(int, short, void*);
 static void	 handle_sighup(int, short, void*);
 
+static inline int
+matches(const char *pattern, const char *path)
+{
+	if (*path == '/')
+		path++;
+	return !fnmatch(pattern, path, 0);
+}
+
 static inline void
 reschedule_read(int fd, struct client *c, statefn fn)
 {
@@ -94,7 +104,7 @@ vhost_lang(struct vhost *v, const char *path)
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (loc->lang != NULL) {
-			if (!fnmatch(loc->match, path, 0))
+			if (matches(loc->match, path))
 				return loc->lang;
 		}
 	}
@@ -113,7 +123,7 @@ vhost_default_mime(struct vhost *v, const char *path)
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (loc->default_mime != NULL) {
-			if (!fnmatch(loc->match, path, 0))
+			if (matches(loc->match, path))
 				return loc->default_mime;
 		}
 	}
@@ -134,7 +144,7 @@ vhost_index(struct vhost *v, const char *path)
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (loc->index != NULL) {
-			if (!fnmatch(loc->match, path, 0))
+			if (matches(loc->match, path))
 				return loc->index;
 		}
 	}
@@ -154,7 +164,7 @@ vhost_auto_index(struct vhost *v, const char *path)
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (loc->auto_index != 0) {
-			if (!fnmatch(loc->match, path, 0))
+			if (matches(loc->match, path))
 				return loc->auto_index == 1;
 		}
 	}
@@ -172,7 +182,7 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (loc->block_code != 0) {
-			if (!fnmatch(loc->match, path, 0)) {
+			if (matches(loc->match, path)) {
 				*code = loc->block_code;
 				*fmt = loc->block_fmt;
 				return 1;
@@ -195,7 +205,7 @@ vhost_strip(struct vhost *v, const char *path)
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (loc->strip != 0) {
-			if (!fnmatch(loc->match, path, 0))
+			if (matches(loc->match, path))
 				return loc->strip;
 		}
 	}
@@ -213,7 +223,7 @@ vhost_require_ca(struct vhost *v, const char *path)
 
 	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
 		if (loc->reqca != NULL) {
-			if (!fnmatch(loc->match, path, 0))
+			if (matches(loc->match, path))
 				return loc->reqca;
 		}
 	}

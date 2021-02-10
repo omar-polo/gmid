@@ -158,6 +158,11 @@ echo OK GET / with custom lang
 
 check "should be running"
 
+# make sure we can use different lang in different location rules
+config '' 'lang "it" location "/en/*" { lang "en" } location "/de/*" { lang "de" }'
+checkconf
+restart
+
 # try with CGI scripts
 config '' 'cgi "*"'
 checkconf
@@ -204,7 +209,7 @@ echo OK GET /dir/ with custom index
 
 check "should be running"
 
-config '' 'location "/dir/" { default type "text/plain" index "hello" }'
+config '' 'location "/dir/*" { default type "text/plain" index "hello" }'
 checkconf
 restart
 
@@ -217,7 +222,7 @@ echo OK GET /dir/ with location and custom index
 
 check "should be running"
 
-config '' 'location "/dir/" { auto index on }'
+config '' 'location "/dir/*" { auto index on }'
 checkconf
 restart
 
