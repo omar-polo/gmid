@@ -81,9 +81,9 @@ user		return TUSER;
 
 \n		yylineno++;
 
-[ \t]+		;
+[ \f\r\t\v]+	;
 
-.		yyerror("unexpected character"); exit(1);
+.		yyerror("unexpected character: %c", *yytext); exit(1);
 
 %%
 

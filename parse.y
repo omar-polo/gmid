@@ -17,7 +17,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <err.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -80,7 +80,7 @@ option		: TCHROOT TSTRING	{ conf.chroot = $2; }
 		| TPREFORK TNUM		{ conf.prefork = check_prefork_num($2); }
 		| TPROTOCOLS TSTRING {
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
-				errx(1, "invalid protocols string \"%s\"", $2);
+				yyerror("invalid protocols string \"%s\"", $2);
 		}
 		| TUSER TSTRING		{ conf.user = $2; }
 		;
@@ -101,7 +101,7 @@ vhost		: TSERVER TSTRING '{' servopts locations '}' {
 
 			if (host->cert == NULL || host->key == NULL ||
 			    host->dir == NULL)
-				errx(1, "invalid vhost definition: %s", $2);
+				yyerror("invalid vhost definition: %s", $2);
 
 			if (++ihost == HOSTSLEN)
 				errx(1, "too much vhosts defined");
@@ -225,7 +225,7 @@ parse_portno(const char *p)
 
 	n = strtonum(p, 0, UINT16_MAX, &errstr);
 	if (errstr != NULL)
-		errx(1, "port number is %s: %s", errstr, p);
+		yylineno("port number is %s: %s", errstr, p);
 	return n;
 }
 
@@ -239,7 +239,7 @@ parse_conf(const char *path)
 
 	config_path = path;
 	if ((yyin = fopen(path, "r")) == NULL)
-		fatal("cannot open config %s", path);
+		fatal("cannot open config: %s: %s", path, strerror(errno));
 	yyparse();
 	fclose(yyin);
 
