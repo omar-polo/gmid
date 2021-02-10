@@ -17,6 +17,7 @@
 #include <errno.h>
 #include <string.h>
 
+#include <openssl/bn.h>
 #include <openssl/pem.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
@@ -116,7 +117,7 @@ xstrdup(const char *s)
 void
 gen_certificate(const char *host, const char *certpath, const char *keypath)
 {
-	BIGNUM		e;
+	BIGNUM		*e;
 	EVP_PKEY	*pkey;
 	RSA		*rsa;
 	X509		*x509;
@@ -132,11 +133,13 @@ gen_certificate(const char *host, const char *certpath, const char *keypath)
                 fatal("couldn't create a new private key");
 
 	if ((rsa = RSA_new()) == NULL)
-		fatal("could'nt generate rsa");
+		fatal("couldn't generate rsa");
 
-	BN_init(&e);
-	BN_set_word(&e, 17);
-	if (!RSA_generate_key_ex(rsa, 4096, &e, NULL))
+	if ((e = BN_new()) == NULL)
+		fatal("couldn't allocate a bignum");
+
+	BN_set_word(e, 17);
+	if (!RSA_generate_key_ex(rsa, 4096, e, NULL))
 		fatal("couldn't generate a rsa key");
 
 	if (!EVP_PKEY_assign_RSA(pkey, rsa))
@@ -174,6 +177,7 @@ gen_certificate(const char *host, const char *certpath, const char *keypath)
 		fatal("couldn't write cert");
 	fclose(f);
 
+	BN_free(e);
 	X509_free(x509);
 	RSA_free(rsa);
 }
