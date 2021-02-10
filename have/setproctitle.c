@@ -14,7 +14,14 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+/*
+ * FreeBSD has setproctitle in a different header than OpenBSD.
+ */
+
+#include <sys/types.h>
+
 #include <stdlib.h>
+#include <unistd.h>
 
 int
 main(void)
