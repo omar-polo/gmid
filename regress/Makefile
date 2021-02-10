@@ -7,11 +7,12 @@ all: puny-test testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
 	./runtime
 	./iri_test
 
-puny-test: puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o
-	${CC} puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o -o puny-test ${LDFLAGS}
+puny-test: puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT}
+	${CC} puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT} \
+		-o puny-test ${LDFLAGS}
 
-iri_test: iri_test.o ../iri.o ../utf8.o
-	${CC} iri_test.o ../iri.o ../utf8.o -o iri_test
+iri_test: iri_test.o ../iri.o ../utf8.o ${COMPAT}
+	${CC} iri_test.o ../iri.o ../utf8.o ${COMPAT} -o iri_test
 
 fill-file: fill-file.o
 	${CC} fill-file.o -o fill-file

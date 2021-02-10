@@ -364,7 +364,6 @@ CFLAGS		= ${CFLAGS}
 LDFLAGS		= ${LDFLAGS}
 YACC		= ${YACC}
 LEX		= ${LEX}
-COMPAT		= ${COMPAT}
 STATIC		= ${STATIC}
 PREFIX		= ${PREFIX}
 BINDIR		= ${BINDIR}
@@ -375,7 +374,14 @@ INSTALL_PROGRAM	= ${INSTALL_PROGRAM}
 INSTALL_LIB	= ${INSTALL_LIB}
 INSTALL_MAN	= ${INSTALL_MAN}
 INSTALL_DATA	= ${INSTALL_DATA}
+
 __HEREDOC__
+
+printf "COMPAT ="
+for comp in ${COMPAT}; do
+	printf " %s/%s" "$PWD" "$comp"
+done
+printf "\n"
 
 echo "file Makefile.local: written" 1>&2
 echo "file Makefile.local: written" 1>&3
