@@ -16,8 +16,24 @@
 
 #include "../config.h"
 
+#ifdef HAVE_PROGRAM_INVOCATION_SHORT_NAME
+
+#include <errno.h>
+
+extern char *program_invocation_short_name;
+
+const char *
+getprogname(void)
+{
+	return program_invocation_short_name;
+}
+
+#else
+
 const char *
 getprogname(void)
 {
 	return "gmid";
 }
+
+#endif
