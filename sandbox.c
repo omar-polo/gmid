@@ -271,7 +271,7 @@ sandbox()
 void
 sandbox()
 {
-        LOGN(NULL, "%s", "no sandbox method known for this OS");
+	log_notice(NULL, "no sandbox method known for this OS");
 }
 
 #endif
