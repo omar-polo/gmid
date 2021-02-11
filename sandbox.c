@@ -24,7 +24,7 @@ void
 sandbox()
 {
 	if (cap_enter() == -1)
-		err(1, "cap_enter");
+		fatal("cap_enter");
 }
 
 #elif defined(__linux__)
@@ -113,16 +113,13 @@ sandbox_seccomp_catch_sigsys(void)
 
 	act.sa_sigaction = &sandbox_seccomp_violation;
 	act.sa_flags = SA_SIGINFO;
-	if (sigaction(SIGSYS, &act, NULL) == -1) {
-		fprintf(stderr, "%s: sigaction(SIGSYS): %s\n",
+	if (sigaction(SIGSYS, &act, NULL) == -1)
+		fatal("%s: sigaction(SIGSYS): %s",
 		    __func__, strerror(errno));
-		exit(1);
-	}
-	if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1) {
-		fprintf(stderr, "%s: sigprocmask(SIGSYS): %s\n",
+
+	if (sigprocmask(SIG_UNBLOCK, &mask, NULL) == -1)
+		fatal("%s: sigprocmask(SIGSYS): %s\n",
 		    __func__, strerror(errno));
-		exit(1);
-	}
 }
 #endif	/* SC_DEBUG */
 
@@ -235,17 +232,13 @@ sandbox()
 	sandbox_seccomp_catch_sigsys();
 #endif
 
-	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1) {
-		fprintf(stderr, "%s: prctl(PR_SET_NO_NEW_PRIVS): %s\n",
+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1)
+		fatal("%s: prctl(PR_SET_NO_NEW_PRIVS): %s",
 		    __func__, strerror(errno));
-		exit(1);
-	}
 
-	if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) == -1) {
-		fprintf(stderr, "%s: prctl(PR_SET_SECCOMP): %s\n",
+	if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) == -1)
+		fatal("%s: prctl(PR_SET_SECCOMP): %s\n",
 		    __func__, strerror(errno));
-		exit(1);
-	}
 }
 
 #elif defined(__OpenBSD__)
@@ -259,11 +252,11 @@ sandbox()
 
 	for (h = hosts; h->domain != NULL; ++h) {
 		if (unveil(h->dir, "r") == -1)
-			err(1, "unveil %s for domain %s", h->dir, h->domain);
+			fatal("unveil %s for domain %s", h->dir, h->domain);
 	}
 
 	if (pledge("stdio recvfd rpath inet", NULL) == -1)
-		err(1, "pledge");
+		fatal("pledge");
 }
 
 #else
