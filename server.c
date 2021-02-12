@@ -81,7 +81,7 @@ reschedule_read(int fd, struct client *c, statefn fn)
 	event_once(fd, EV_READ, fn, c, NULL);
 }
 
-void
+static inline void
 reschedule_write(int fd, struct client *c, statefn fn)
 {
 	event_once(fd, EV_WRITE, fn, c, NULL);
