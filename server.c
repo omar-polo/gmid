@@ -1061,7 +1061,7 @@ loop(struct tls *ctx, int sock4, int sock6)
 	signal_set(&siginfo, SIGINFO, &handle_siginfo, NULL);
 	signal_add(&siginfo, NULL);
 #endif
-	signal_set(&sigusr2, SIGINFO, &handle_siginfo, NULL);
+	signal_set(&sigusr2, SIGUSR2, &handle_siginfo, NULL);
 	signal_add(&sigusr2, NULL);
 
 	server.ctx = ctx;
