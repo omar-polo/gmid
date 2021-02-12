@@ -14,7 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <sys/mman.h>
 #include <sys/stat.h>
 
 #include <netdb.h>
@@ -46,7 +45,6 @@ static inline void reschedule_write(int, struct client*, statefn);
 
 static int	 check_path(struct client*, const char*, int*);
 static void	 open_file(struct client*);
-static void	 load_file(struct client*);
 static void	 check_for_cgi(struct client*);
 static void	 handle_handshake(int, short, void*);
 static char	*strip_path(char*, int);
@@ -57,7 +55,6 @@ static void	 handle_open_conn(int, short, void*);
 static void	 start_reply(struct client*, int, const char*);
 static void	 handle_start_reply(int, short, void*);
 static void	 start_cgi(const char*, const char*, struct client*);
-static void	 send_file(int, short, void*);
 static void	 open_dir(struct client*);
 static void	 redirect_canonical_dir(struct client*);
 static void	 enter_handle_dirlist(int, short, void*);
@@ -65,7 +62,7 @@ static void	 handle_dirlist(int, short, void*);
 static int 	 read_next_dir_entry(struct client*);
 static void	 send_directory_listing(int, short, void*);
 static void	 handle_cgi_reply(int, short, void*);
-static void	 handle_cgi(int, short, void*);
+static void	 handle_copy(int, short, void*);
 static void	 close_conn(int, short, void*);
 static void	 do_accept(int, short, void*);
 static void	 handle_sighup(int, short, void*);
@@ -277,7 +274,8 @@ open_file(struct client *c)
 		/* fallthrough */
 
 	case FILE_EXISTS:
-		load_file(c);
+		c->next = handle_copy;
+		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
 		return;
 
 	case FILE_DIRECTORY:
@@ -296,27 +294,6 @@ open_file(struct client *c)
 		/* unreachable */
 		abort();
 	}
-}
-
-static void
-load_file(struct client *c)
-{
-	if ((c->len = filesize(c->pfd)) == -1) {
-		log_err(c, "failed to get file size for %s: %s",
-		    c->iri.path, strerror(errno));
-		start_reply(c, TEMP_FAILURE, "internal server error");
-		return;
-	}
-
-	if ((c->buf = mmap(NULL, c->len, PROT_READ, MAP_PRIVATE,
-		    c->pfd, 0)) == MAP_FAILED) {
-		log_err(c, "mmap: %s: %s", c->iri.path, strerror(errno));
-		start_reply(c, TEMP_FAILURE, "internal server error");
-		return;
-	}
-	c->i = c->buf;
-	c->next = send_file;
-	start_reply(c, SUCCESS, mime(c->host, c->iri.path));
 }
 
 /*
@@ -675,39 +652,6 @@ err:
 }
 
 static void
-send_file(int fd, short ev, void *d)
-{
-	struct client *c = d;
-	ssize_t ret, len;
-
-	len = (c->buf + c->len) - c->i;
-
-	while (len > 0) {
-		switch (ret = tls_write(c->ctx, c->i, len)) {
-		case -1:
-			log_err(c, "tls_write: %s", tls_error(c->ctx));
-			close_conn(fd, ev, c);
-			return;
-
-		case TLS_WANT_POLLIN:
-			reschedule_read(fd, c, &send_file);
-			return;
-
-		case TLS_WANT_POLLOUT:
-			reschedule_write(fd, c, &send_file);
-			return;
-
-		default:
-			c->i += ret;
-			len -= ret;
-			break;
-		}
-	}
-
-	close_conn(fd, ev, c);
-}
-
-static void
 open_dir(struct client *c)
 {
 	size_t len;
@@ -938,7 +882,7 @@ handle_cgi_reply(int fd, short ev, void *d)
 		log_request(c, c->sbuf, c->len);
 
 		c->off = 0;
-		handle_cgi(fd, ev, c);
+		handle_copy(fd, ev, c);
 		return;
 	}
 
@@ -946,39 +890,23 @@ handle_cgi_reply(int fd, short ev, void *d)
 }
 
 static void
-handle_cgi(int fd, short ev, void *d)
+handle_copy(int fd, short ev, void *d)
 {
 	struct client *c = d;
 	ssize_t r;
 
 	while (1) {
-		if (c->len == 0) {
-			switch (r = read(c->pfd, c->sbuf, sizeof(c->sbuf))) {
-			case 0:
-				goto end;
-			case -1:
-				if (errno == EAGAIN || errno == EWOULDBLOCK) {
-					reschedule_read(c->pfd, c, &handle_cgi);
-					return;
-				}
-				goto end;
-			default:
-				c->len = r;
-				c->off = 0;
-			}
-		}
-
 		while (c->len > 0) {
 			switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
 			case -1:
 				goto end;
 
 			case TLS_WANT_POLLOUT:
-				reschedule_read(c->fd, c, &handle_cgi);
+				reschedule_write(c->fd, c, &handle_copy);
 				return;
 
 			case TLS_WANT_POLLIN:
-				reschedule_write(c->fd, c, &handle_cgi);
+				reschedule_read(c->fd, c, &handle_copy);
 				return;
 
 			default:
@@ -986,6 +914,20 @@ handle_cgi(int fd, short ev, void *d)
 				c->len -= r;
 				break;
 			}
+		}
+
+		switch (r = read(c->pfd, c->sbuf, sizeof(c->sbuf))) {
+		case 0:
+			goto end;
+		case -1:
+			if (errno == EAGAIN || errno == EWOULDBLOCK) {
+				reschedule_read(c->pfd, c, &handle_copy);
+				return;
+			}
+			goto end;
+		default:
+			c->len = r;
+			c->off = 0;
 		}
 	}
 
@@ -1011,9 +953,6 @@ close_conn(int fd, short ev, void *d)
 
 	tls_free(c->ctx);
 	c->ctx = NULL;
-
-	if (c->buf != MAP_FAILED)
-		munmap(c->buf, c->len);
 
 	if (c->pfd != -1)
 		close(c->pfd);
@@ -1055,7 +994,6 @@ do_accept(int sock, short et, void *d)
 
 			c->fd = fd;
 			c->pfd = -1;
-			c->buf = MAP_FAILED;
 			c->dir = NULL;
 			c->addr = addr;
 

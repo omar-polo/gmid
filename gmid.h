@@ -171,9 +171,8 @@ struct client {
 	const char	*meta;
 	int		 fd, pfd;
 	DIR		*dir;
-	char		 sbuf[1024];	  /* static buffer */
-	void		*buf, *i;	  /* mmap buffer */
-	ssize_t		 len, off;	  /* mmap/static buffer  */
+	char		 sbuf[BUFSIZ];
+	ssize_t		 len, off;
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host she's talking to */
 };
