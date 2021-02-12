@@ -34,7 +34,6 @@ testca.pem:
 	printf ".\n.\n.\n.\n.\ntestca\n.\n" |	\
 		openssl req -x509 -new -sha256		\
 			-key testca.key			\
-			-out cert.pem			\
 			-days 365 -nodes		\
 			-out testca.pem
 	@echo
