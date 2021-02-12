@@ -34,12 +34,8 @@ struct server {
 	struct tls	*ctx;
 };
 
-struct server_events {
-	struct event	e4;
-	int		has_ipv6;
-	struct event	e6;
-	struct event	sighup;
-};
+struct event e4, e6, sighup, siginfo, sigusr2;
+int has_ipv6, has_siginfo;
 
 int connected_clients;
 
@@ -1075,15 +1071,16 @@ do_accept(int sock, short et, void *d)
 static void
 handle_sighup(int fd, short ev, void *d)
 {
-	struct server_events *events = d;
-
 	(void)fd;
 	(void)ev;
 
-	event_del(&events->e4);
-	if (events->has_ipv6)
-		event_del(&events->e6);
-	signal_del(&events->sighup);
+	event_del(&e4);
+	if (has_ipv6)
+		event_del(&e6);
+	if (has_siginfo)
+		signal_del(&siginfo);
+	signal_del(&sigusr2);
+	signal_del(&sighup);
 }
 
 static void
@@ -1099,36 +1096,34 @@ handle_siginfo(int fd, short ev, void *d)
 void
 loop(struct tls *ctx, int sock4, int sock6)
 {
-	struct server_events events;
 	struct server server;
-	struct event info;
 	size_t i;
 
 	event_init();
 
-	memset(&events, 0, sizeof(events));
 	memset(&server, 0, sizeof(server));
 	for (i = 0; i < MAX_USERS; ++i)
 		server.clients[i].fd = -1;
 
-	event_set(&events.e4, sock4, EV_READ | EV_PERSIST, &do_accept, &server);
-	event_add(&events.e4, NULL);
+	event_set(&e4, sock4, EV_READ | EV_PERSIST, &do_accept, &server);
+	event_add(&e4, NULL);
 
 	if (sock6 != -1) {
-		events.has_ipv6 = 1;
-		event_set(&events.e6, sock6, EV_READ | EV_PERSIST, &do_accept, &server);
-		event_add(&events.e6, NULL);
+		has_ipv6 = 1;
+		event_set(&e6, sock6, EV_READ | EV_PERSIST, &do_accept, &server);
+		event_add(&e6, NULL);
 	}
 
-	signal_set(&events.sighup, SIGHUP, &handle_sighup, &events);
-	signal_add(&events.sighup, NULL);
+	signal_set(&sighup, SIGHUP, &handle_sighup, NULL);
+	signal_add(&sighup, NULL);
 
 #ifdef SIGINFO
-	signal_set(&info, SIGINFO, &handle_siginfo, NULL);
-	signal_add(&info, NULL);
+	has_siginfo = 1;
+	signal_set(&siginfo, SIGINFO, &handle_siginfo, NULL);
+	signal_add(&siginfo, NULL);
 #endif
-	signal_set(&info, SIGUSR2, &handle_siginfo, NULL);
-	signal_add(&info, NULL);
+	signal_set(&sigusr2, SIGINFO, &handle_siginfo, NULL);
+	signal_add(&sigusr2, NULL);
 
 	server.ctx = ctx;
 
