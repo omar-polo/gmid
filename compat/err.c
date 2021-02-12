@@ -14,11 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "../config.h"
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>
-
-#include "../config.h"
 
 static void vwarn_impl(const char*, va_list);
 static void vwarnx_impl(const char*, va_list);

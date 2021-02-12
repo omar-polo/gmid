@@ -21,11 +21,11 @@
  * of another portable solution.
  */
 
+#include "../config.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include "../config.h"
 
 int
 vasprintf(char **ret, const char *format, va_list ap)

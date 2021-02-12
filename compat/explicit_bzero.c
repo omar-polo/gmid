@@ -3,9 +3,9 @@
  * Written by Matthew Dempsky.
  */
 
-#include <string.h>
-
 #include "../config.h"
+
+#include <string.h>
 
 void
 explicit_bzero(void *buf, size_t len)
