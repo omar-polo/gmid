@@ -153,6 +153,7 @@ sandbox()
 #endif
 		SC_ALLOW(epoll_pwait),
 		SC_ALLOW(epoll_ctl),
+		SC_ALLOW(accept),
 		SC_ALLOW(accept4),
 		SC_ALLOW(read),
 		SC_ALLOW(openat),

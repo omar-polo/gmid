@@ -980,11 +980,13 @@ do_accept(int sock, short et, void *d)
 
 	saddr = (struct sockaddr*)&addr;
 	len = sizeof(addr);
-	if ((fd = accept4(sock, saddr, &len, SOCK_NONBLOCK)) == -1) {
+	if ((fd = accept(sock, saddr, &len)) == -1) {
 		if (errno == EWOULDBLOCK || errno == EAGAIN)
 			return;
 		fatal("accept: %s", strerror(errno));
 	}
+
+	mark_nonblock(fd);
 
 	for (i = 0; i < MAX_USERS; ++i) {
 		c = &s->clients[i];
