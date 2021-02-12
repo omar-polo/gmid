@@ -692,7 +692,8 @@ open_dir(struct client *c)
 		/* fallthrough */
 
 	case FILE_EXISTS:
-                load_file(c);
+		c->next = handle_copy;
+		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
 		break;
 
 	case FILE_DIRECTORY:
