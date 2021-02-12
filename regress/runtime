@@ -161,6 +161,7 @@ check "should be running"
 # make sure we can use different lang in different location rules
 config '' 'lang "it" location "/en/*" { lang "en" } location "/de/*" { lang "de" }'
 checkconf
+echo OK parse multiple locations correctly
 restart
 
 # try with CGI scripts
