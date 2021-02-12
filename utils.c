@@ -239,7 +239,6 @@ validate_against_ca(X509_STORE *ca, const uint8_t *chain, size_t len)
 		goto end;
 
 	ret = X509_verify_cert(ctx);
-	fprintf(stderr, "openssl x509_verify_cert: %d\n", ret);
 
 end:
 	BIO_free(m);
