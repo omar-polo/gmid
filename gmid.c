@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <sys/stat.h>
 
 #include <errno.h>
@@ -22,8 +24,6 @@
 #include <pwd.h>
 #include <signal.h>
 #include <string.h>
-
-#include "gmid.h"
 
 volatile sig_atomic_t hupped;
 

@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <sys/stat.h>
 
 #include <netdb.h>
@@ -25,8 +27,6 @@
 #include <fnmatch.h>
 #include <limits.h>
 #include <string.h>
-
-#include "gmid.h"
 
 struct server {
 	struct client	 clients[MAX_USERS];

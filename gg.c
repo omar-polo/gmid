@@ -14,9 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <string.h>
-
 #include "gmid.h"
+
+#include <string.h>
 
 int flag2, flag3, bflag, cflag, hflag, Nflag, Vflag, vflag;
 const char *cert, *key;

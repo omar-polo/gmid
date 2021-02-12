@@ -21,10 +21,10 @@
  * SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <stddef.h>
 #include <stdint.h>
-
-#include "gmid.h"
 
 #define UTF8_ACCEPT 0
 #define UTF8_REJECT 1

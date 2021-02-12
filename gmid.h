@@ -17,6 +17,8 @@
 #ifndef GMID_H
 #define GMID_H
 
+#include "config.h"
+
 #include <sys/socket.h>
 #include <sys/types.h>
 
@@ -32,8 +34,6 @@
 #include <unistd.h>
 
 #include <openssl/x509.h>
-
-#include "config.h"
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 

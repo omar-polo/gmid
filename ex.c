@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <err.h>
 #include <errno.h>
 
@@ -23,8 +25,6 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <string.h>
-
-#include "gmid.h"
 
 int
 send_string(int fd, const char *str)

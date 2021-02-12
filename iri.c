@@ -14,10 +14,10 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <ctype.h>
 #include <string.h>
-
-#include "gmid.h"
 
 static inline int
 unreserved(int p)

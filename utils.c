@@ -14,6 +14,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <errno.h>
 #include <string.h>
 
@@ -21,8 +23,6 @@
 #include <openssl/pem.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
-
-#include "gmid.h"
 
 static sigset_t set;
 
@@ -115,7 +115,7 @@ xstrdup(const char *s)
 }
 
 void
-gen_certificate(const char *host, const char *certpath, const char *keypath)
+gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 {
 	BIGNUM		*e;
 	EVP_PKEY	*pkey;
@@ -123,7 +123,8 @@ gen_certificate(const char *host, const char *certpath, const char *keypath)
 	X509		*x509;
 	X509_NAME	*name;
 	FILE		*f;
-	const char	*org = "gmid";
+	const unsigned char *org = (const unsigned char*)"gmid";
+	const unsigned char *host = (const unsigned char*)hostname;
 
 	log_notice(NULL,
 	    "generating new certificate for %s (it could take a while)",

@@ -14,11 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
-
-#include "gmid.h"
 
 #define BASE	36
 #define TMIN	1

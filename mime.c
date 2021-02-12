@@ -14,11 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include "gmid.h"
 
 void
 init_mime(struct mime *mime)
