@@ -266,7 +266,7 @@ open_file(struct client *c)
 {
 	switch (check_path(c, c->iri.path, &c->pfd)) {
 	case FILE_EXECUTABLE:
-		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
+		if (c->host->cgi != NULL && matches(c->host->cgi, c->iri.path)) {
 			start_cgi(c->iri.path, "", c);
 			return;
 		}
@@ -283,7 +283,7 @@ open_file(struct client *c)
 		return;
 
 	case FILE_MISSING:
-		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
+		if (c->host->cgi != NULL && matches(c->host->cgi, c->iri.path)) {
 			check_for_cgi(c);
 			return;
 		}
@@ -380,7 +380,7 @@ handle_handshake(int fd, short ev, void *d)
 	}
 
 	for (h = hosts; h->domain != NULL; ++h) {
-		if (!fnmatch(h->domain, c->domain, 0))
+		if (matches(h->domain, c->domain))
 			break;
 	}
 
@@ -684,7 +684,7 @@ open_dir(struct client *c)
 
 	switch (check_path(c, c->iri.path, &c->pfd)) {
 	case FILE_EXECUTABLE:
-		if (c->host->cgi != NULL && !fnmatch(c->host->cgi, c->iri.path, 0)) {
+		if (c->host->cgi != NULL && matches(c->host->cgi, c->iri.path)) {
 			start_cgi(c->iri.path, "", c);
 			break;
 		}
