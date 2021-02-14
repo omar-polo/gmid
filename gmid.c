@@ -477,15 +477,17 @@ main(int argc, char **argv)
 
 	if (!conf.foreground && !configless) {
 		if (daemon(1, 1) == -1)
-			fatal("daemon: %s", strerror(errno));
+			err(1, "daemon");
 	}
 
 	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
 	    PF_UNSPEC, p) == -1)
-		fatal("socketpair: %s", strerror(errno));
+		err(1, "socketpair");
 
 	if (config_path != NULL)
 		parse_conf(config_path);
+
+	logger_init();
 
 	sock4 = make_socket(conf.port, AF_INET);
 	sock6 = -1;

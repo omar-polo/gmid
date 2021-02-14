@@ -218,6 +218,7 @@ void		 log_notice(struct client*, const char*, ...)	LOG_ATTR_FMT;
 void		 log_info(struct client*, const char*, ...)	LOG_ATTR_FMT;
 void		 log_debug(struct client*, const char*, ...)	LOG_ATTR_FMT;
 void		 log_request(struct client*, char*, size_t);
+void		 logger_init(void);
 
 /* mime.c */
 void		 init_mime(struct mime*);

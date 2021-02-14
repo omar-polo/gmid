@@ -16,12 +16,25 @@
 
 #include "gmid.h"
 
+#include <sys/types.h>
+#include <sys/queue.h>
+#include <sys/uio.h>
+
 #include <errno.h>
+#include <event.h>
+#include <imsg.h>
 #include <netdb.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+
+struct imsgbuf parent_ibuf, child_ibuf;
+struct event sigusr2, inlog;
+int logfd;
+
+static void handle_log(int, short, void*);
+static int logger_main(int, struct imsgbuf*);
 
 void
 fatal(const char *fmt, ...)
@@ -59,8 +72,16 @@ should_log(int priority)
 	}
 }
 
-static void
-do_log(int priority, struct client *c,
+static inline void
+send_log(const char *msg, size_t len)
+{
+	imsg_compose(&parent_ibuf, 0, 0, 0, -1, msg, len);
+	/* XXX: use event_once() */
+	imsg_flush(&parent_ibuf);
+}
+
+static inline void
+vlog(int priority, struct client *c,
     const char *fmt, va_list ap)
 {
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
@@ -71,10 +92,7 @@ do_log(int priority, struct client *c,
 	if (!should_log(priority))
 		return;
 
-	if (c == NULL) {
-		strncpy(hbuf, "<internal>", sizeof(hbuf));
-		sbuf[0] = '\0';
-	} else {
+	if (c != NULL) {
 		len = sizeof(c->addr);
 		ec = getnameinfo((struct sockaddr*)&c->addr, len,
 		    hbuf, sizeof(hbuf),
@@ -87,16 +105,18 @@ do_log(int priority, struct client *c,
 	if (vasprintf(&fmted, fmt, ap) == -1)
 		fatal("vasprintf: %s", strerror(errno));
 
-	if (conf.foreground)
-		fprintf(stderr, "%s:%s %s\n", hbuf, sbuf, fmted);
-	else {
-		if (asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted) == -1)
-			fatal("asprintf: %s", strerror(errno));
-		syslog(priority | LOG_DAEMON, "%s", s);
-		free(s);
-	}
+        if (c == NULL)
+		ec = asprintf(&s, "internal: %s", fmted);
+	else
+		ec = asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted);
+
+	if (ec < 0)
+		fatal("asprintf: %s", strerror(errno));
+
+	send_log(s, ec+1);
 
 	free(fmted);
+	free(s);
 }
 
 void
@@ -105,7 +125,7 @@ log_err(struct client *c, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	do_log(LOG_ERR, c, fmt, ap);
+	vlog(LOG_ERR, c, fmt, ap);
 	va_end(ap);
 }
 
@@ -115,7 +135,7 @@ log_warn(struct client *c, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	do_log(LOG_WARNING, c, fmt, ap);
+	vlog(LOG_WARNING, c, fmt, ap);
 	va_end(ap);
 }
 
@@ -125,7 +145,7 @@ log_notice(struct client *c, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	do_log(LOG_NOTICE, c, fmt, ap);
+	vlog(LOG_NOTICE, c, fmt, ap);
 	va_end(ap);
 }
 
@@ -135,7 +155,7 @@ log_info(struct client *c, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	do_log(LOG_INFO, c, fmt, ap);
+	vlog(LOG_INFO, c, fmt, ap);
 	va_end(ap);
 }
 
@@ -145,7 +165,7 @@ log_debug(struct client *c, const char *fmt, ...)
 	va_list ap;
 
 	va_start(ap, fmt);
-	do_log(LOG_DEBUG, c, fmt, ap);
+	vlog(LOG_DEBUG, c, fmt, ap);
 	va_end(ap);
 }
 
@@ -165,7 +185,7 @@ void
 log_request(struct client *c, char *meta, size_t l)
 {
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
-	char *t;
+	char *t, *fmted;
 	size_t len;
 	int ec;
 
@@ -202,10 +222,92 @@ log_request(struct client *c, char *meta, size_t l)
 	if ((t = gmid_strnchr(meta, '\r', l)) == NULL)
 		t = meta + len;
 
-	if (conf.foreground)
-		fprintf(stderr, "%s:%s GET %s %.*s\n", hbuf, sbuf, b,
-		    (int)(t - meta), meta);
-	else
-		syslog(LOG_INFO | LOG_DAEMON, "%s:%s GET %s %.*s",
-		    hbuf, sbuf, b, (int)(t - meta), meta);
+	ec = asprintf(&fmted, "%s:%s GET %s %.*s", hbuf, sbuf, b,
+	    (int)(t-meta), meta);
+	if (ec < 0)
+		err(1, "asprintf");
+	send_log(fmted, ec+1);
+	free(fmted);
+}
+
+
+
+static void
+handle_log(int fd, short ev, void *d)
+{
+	struct imsgbuf	*ibuf = d;
+	struct imsg	 imsg;
+	ssize_t		 n, datalen;
+	char		*msg;
+
+	if ((n = imsg_read(ibuf)) == -1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return;
+                err(1, "imsg_read");
+	}
+	if (n == 0)
+		errx(1, "connection lost?");
+
+	for (;;) {
+		if ((n = imsg_get(ibuf, &imsg)) == -1)
+			err(1, "read error");
+		if (n == 0)
+			return;
+
+		datalen = imsg.hdr.len - IMSG_HEADER_SIZE;
+		msg = imsg.data;
+		msg[datalen] = '\0';
+
+		/* ignore imsg.hdr.type for now */
+		if (conf.foreground)
+			fprintf(stderr, "%s\n", msg);
+		else
+			syslog(LOG_DAEMON, "%s", msg);
+
+		imsg_free(&imsg);
+	}
+}
+
+static int
+logger_main(int fd, struct imsgbuf *ibuf)
+{
+	event_init();
+
+	event_set(&inlog, fd, EV_READ | EV_PERSIST, &handle_log, ibuf);
+	event_add(&inlog, NULL);
+
+#ifdef __OpenBSD__
+	if (pledge("stdio", NULL) == -1)
+		err(1, "pledge");
+#endif
+
+	event_dispatch();
+
+	return 0;
+}
+
+void
+logger_init(void)
+{
+	int p[2];
+
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
+		err(1, "socketpair");
+
+	switch (fork()) {
+	case -1:
+		err(1, "fork");
+	case 0:
+		logfd = p[1];
+		close(p[0]);
+		setproctitle("logger");
+		imsg_init(&child_ibuf, p[1]);
+		drop_priv();
+		_exit(logger_main(p[1], &child_ibuf));
+	default:
+		logfd = p[0];
+		close(p[1]);
+		imsg_init(&parent_ibuf, p[0]);
+		return;
+	}
 }

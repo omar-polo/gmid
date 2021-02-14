@@ -191,12 +191,6 @@ sandbox()
 		SC_ALLOW(exit),
 		SC_ALLOW(exit_group),
 
-		/* stuff used by syslog.  revisit once we move
-		 * logging in its own process */
-		SC_ALLOW(socket),
-		SC_ALLOW(sendto),
-		SC_ALLOW(connect),
-
 		/* allow only F_GETFL, F_SETFL & F_SETFD fcntl */
 		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fcntl, 0, 8),
 		BPF_STMT(BPF_LD  | BPF_W | BPF_ABS,
