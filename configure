@@ -38,10 +38,11 @@ CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
 CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
 CFLAGS="${CFLAGS} -g -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
 CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
-LDFLAGS="-ltls -levent -lutil"
-YACC=yacc
+LDFLAGS="-ltls -levent"
+LD_IMSG=
 LEX=lex
 STATIC=
+YACC=yacc
 
 HAVE_ERR=
 HAVE_EXPLICIT_BZERO=
@@ -51,6 +52,7 @@ HAVE_LIBTLS=
 HAVE_OPENSSL=
 HAVE_PROGRAM_INVOCATION_SHORT_NAME=
 HAVE_PR_SET_NAME=
+HAVE_QUEUE_H=
 HAVE_RECALLOCARRAY=
 HAVE_SETPROCTITLE=
 HAVE_STRLCAT=
@@ -178,7 +180,7 @@ __HEREDOC__
 		eval HAVE_${2}=1
 		[ "${3}" = "-D_GNU_SOURCE" ] && NEED_GNU_SOURCE=1
 		[ "${3}" = "-D_OPENBSD_SOURCE" ] && NEED_OPENBSD_SOURCE=1
-		[ "${3}" = "-lsocket" ] && LD_RECVMSG="-lsocket"
+		[ "${3}" = "-lutil" ] && LD_IMSG="-lutil"
 		rm "have/${1}"
 		return 0
 	else
@@ -231,11 +233,13 @@ fi
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest getprogname	GETPROGNAME	|| true
+runtest imsg		IMSG		-lutil || true
 runtest libevent	LIBEVENT	|| true
 runtest libtls		LIBTLS		|| true
 runtest openssl		OPENSSL		|| true
-runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME "" -D_GNU_SOURCE || true
 runtest pr_set_name	PR_SET_NAME	|| true
+runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME "" -D_GNU_SOURCE || true
+runtest queue_h		QUEUE_H		|| true
 runtest recallocarray	RECALLOCARRAY	|| true
 runtest setproctitle	SETPROCTITLE	|| true
 runtest strlcat		STRLCAT		|| true
@@ -261,6 +265,10 @@ if [ ${HAVE_LIBEVENT} -eq 0 ]; then
 	exit 1
 fi
 
+if [ ${HAVE_QUEUE_H} -eq 0 -o ${HAVE_IMSG} -eq 0 ]; then
+	CFLAGS="${CFLAGS} -I ${PWD}/compat"
+fi
+
 # --------
 # write config.h
 
@@ -275,18 +283,30 @@ __HEREDOC__
 [ ${NEED_GNU_SOURCE} -eq 0 ] || echo "#define _GNU_SOURCE"
 [ ${NEED_OPENBSD_SOURCE} -eq 0 ] || echo "#define _OPENBSD_SOURCE"
 
-[ ${HAVE_STRLCAT} -eq 0 -o ${HAVE_STRLCPY} -eq 0 ] \
+[ ${HAVE_STRLCAT} -eq 0 -o ${HAVE_STRLCPY} -eq 0 -o ${HAVE_IMSG} -eq 0 ] \
 	&& echo "#include <sys/types.h>"
 [ ${HAVE_VASPRINTF} -eq 0 ] && echo "#include <stdarg.h>"
+
+if [ ${HAVE_QUEUE_H} -eq 1 ]; then
+	echo "#include <sys/queue.h>"
+else
+	echo "#include <queue.h>"
+fi
+
+echo "#include <sys/uio.h>"
+echo "#include <stdint.h>"
+echo "#include <imsg.h>"
 
 cat <<__HEREDOC__
 
 #define HAVE_ERR		${HAVE_ERR}
 #define HAVE_EXPLICIT_BZERO	${HAVE_EXPLICIT_BZERO}
 #define HAVE_GETPROGNAME	${HAVE_GETPROGNAME}
+#define HAVE_IMSG		${HAVE_IMSG}
 #define HAVE_LIBEVENT		${HAVE_LIBEVENT}
 #define HAVE_PROGRAM_INVOCATION_SHORT_NAME ${HAVE_PROGRAM_INVOCATION_SHORT_NAME}
 #define HAVE_PR_SET_NAME	${HAVE_PR_SET_NAME}
+#define HAVE_QUEUE_H		${HAVE_QUEUE_H}
 #define HAVE_RECALLOCARRAY	${HAVE_RECALLOCARRAY}
 #define HAVE_SETPROCTITLE	${HAVE_SETPROCTITLE}
 #define HAVE_STRLCAT		${HAVE_STRLCAT}
@@ -318,6 +338,9 @@ fi
 if [ ${HAVE_GETPROGNAME} -eq 0 ]; then
 	echo "extern	const char *getprogname(void);"
 	COMPAT="${COMPAT} compat/getprogname.o"
+fi
+if [ ${HAVE_IMSG} -eq 0 ]; then
+	COMPAT="${COMPAT} compat/imsg.o compat/imsg-buffer.o"
 fi
 if [ ${HAVE_RECALLOCARRAY} -eq 0 ]; then
 	echo "extern	void*	 recallocarray(void*, size_t, size_t, size_t);"
@@ -362,7 +385,7 @@ exec > Makefile.local
 cat << __HEREDOC__
 CC		= ${CC}
 CFLAGS		= ${CFLAGS}
-LDFLAGS		= ${LDFLAGS}
+LDFLAGS		= ${LDFLAGS} ${LD_IMSG}
 YACC		= ${YACC}
 LEX		= ${LEX}
 STATIC		= ${STATIC}

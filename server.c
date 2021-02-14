@@ -33,8 +33,8 @@ struct server {
 	struct tls	*ctx;
 };
 
-struct event e4, e6, sighup, siginfo, sigusr2;
-int has_ipv6, has_siginfo;
+static struct event e4, e6, sighup, siginfo, sigusr2;
+static int has_ipv6, has_siginfo;
 
 int connected_clients;
 

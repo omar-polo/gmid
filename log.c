@@ -29,9 +29,9 @@
 #include <string.h>
 #include <syslog.h>
 
-struct imsgbuf parent_ibuf, child_ibuf;
-struct event sigusr2, inlog;
-int logfd;
+static struct imsgbuf parent_ibuf, child_ibuf;
+static struct event inlog;
+static int logfd;
 
 static void handle_log(int, short, void*);
 static int logger_main(int, struct imsgbuf*);
