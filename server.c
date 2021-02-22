@@ -620,7 +620,8 @@ handle_start_reply(int fd, short ev, void *d)
 		return;
 	}
 
-	log_request(c, buf, sizeof(buf));
+	if (!vhost_disable_log(c->host, c->iri.path))
+		log_request(c, buf, sizeof(buf));
 
 	if (c->code != SUCCESS)
 		close_conn(fd, ev, c);

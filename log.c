@@ -188,9 +188,6 @@ log_request(struct client *c, char *meta, size_t l)
 	size_t len;
 	int ec;
 
-	if (vhost_disable_log(c->host, c->iri.path))
-		return;
-
 	len = sizeof(c->addr);
 	ec = getnameinfo((struct sockaddr*)&c->addr, len,
 	    hbuf, sizeof(hbuf),
