@@ -66,6 +66,7 @@ struct location {
 	const char	*block_fmt;
 	int		 strip;
 	X509_STORE	*reqca;
+	int		 disable_log;
 };
 
 struct vhost {
@@ -234,6 +235,7 @@ int		 vhost_auto_index(struct vhost*, const char*);
 int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
 int		 vhost_strip(struct vhost*, const char*);
 X509_STORE	*vhost_require_ca(struct vhost*, const char*);
+int		 vhost_disable_log(struct vhost*, const char*);
 void		 mark_nonblock(int);
 void		 loop(struct tls*, int, int);
 

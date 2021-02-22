@@ -1,3 +1,7 @@
+2021-02-22  Omar Polo  <op@omarpolo.com>
+
+	* log.c (log_request): add `log on/off' to enable/disable logs per-server or per-location
+
 2021-02-09  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (locopt): add `require client ca' rule to require client certs signed by a specified CA

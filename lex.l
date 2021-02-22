@@ -65,6 +65,7 @@ ipv6		return TIPV6;
 key		return TKEY;
 lang		return TLANG;
 location	return TLOCATION;
+log		return TLOG;
 mime		return TMIME;
 port		return TPORT;
 prefork		return TPREFORK;

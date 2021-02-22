@@ -224,6 +224,22 @@ vhost_require_ca(struct vhost *v, const char *path)
 	return v->locations[0].reqca;
 }
 
+int
+vhost_disable_log(struct vhost *v, const char *path)
+{
+	struct location *loc;
+
+	if (v == NULL || path == NULL)
+		return 0;
+
+	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+		if (loc->disable_log && matches(loc->match, path))
+				return 1;
+	}
+
+	return v->locations[0].disable_log;
+}
+
 static int
 check_path(struct client *c, const char *path, int *fd)
 {

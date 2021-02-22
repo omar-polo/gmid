@@ -58,7 +58,7 @@ void		 advance_loc(void);
 
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
 %token TCHROOT TUSER TSERVER TPREFORK
-%token TLOCATION TCERT TKEY TROOT TCGI TLANG TINDEX TAUTO
+%token TLOCATION TCERT TKEY TROOT TCGI TLANG TLOG TINDEX TAUTO
 %token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA
 %token TERR
 
@@ -190,6 +190,7 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 				yyerror("`lang' specified more than once");
 			loc->lang = $2;
 		}
+		| TLOG TBOOL	{ loc->disable_log = !$2; }
 		| TREQUIRE TCLIENT TCA TSTRING {
 			if (loc->reqca != NULL)
 				yyerror("`require client ca' specified more than once");
