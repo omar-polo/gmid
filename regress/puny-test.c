@@ -21,6 +21,7 @@
 
 /* to make the linker happy */
 struct conf conf;
+struct imsgbuf logpibuf, logcibuf;
 
 struct suite {
 	const char	*src;
