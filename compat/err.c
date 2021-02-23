@@ -17,8 +17,10 @@
 #include "../config.h"
 
 #include <errno.h>
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 static void vwarn_impl(const char*, va_list);
 static void vwarnx_impl(const char*, va_list);
@@ -45,8 +47,8 @@ err(int ret, const char *fmt, ...)
 	va_list	ap;
 
 	va_start(ap, fmt);
-	vwarn_impl(fmt, va);
-	va_end(ap, fmt);
+	vwarn_impl(fmt, ap);
+	va_end(ap);
 	exit(ret);
 }
 
@@ -56,8 +58,8 @@ errx(int ret, const char *fmt, ...)
 	va_list	ap;
 
 	va_start(ap, fmt);
-	vwarnx_impl(fmt, va);
-	va_end(ap, fmt);
+	vwarnx_impl(fmt, ap);
+	va_end(ap);
 	exit(ret);
 }
 
@@ -67,8 +69,8 @@ warn(const char *fmt, ...)
 	va_list	ap;
 
 	va_start(ap, fmt);
-	vwarn_impl(fmt, va);
-	va_end(ap, fmt);
+	vwarn_impl(fmt, ap);
+	va_end(ap);
 }
 
 void
@@ -77,6 +79,6 @@ warnx(const char *fmt, ...)
 	va_list	ap;
 
 	va_start(ap, fmt);
-	vwarnx_impl(fmt, va);
-	va_end(ap, fmt);
+	vwarnx_impl(fmt, ap);
+	va_end(ap);
 }
