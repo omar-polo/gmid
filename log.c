@@ -28,12 +28,9 @@
 #include <string.h>
 #include <syslog.h>
 
-static struct imsgbuf parent_ibuf, child_ibuf;
 static struct event inlog;
-static int logfd;
 
 static void handle_log(int, short, void*);
-static int logger_main(int, struct imsgbuf*);
 
 void
 fatal(const char *fmt, ...)
@@ -74,9 +71,9 @@ should_log(int priority)
 static inline void
 send_log(const char *msg, size_t len)
 {
-	imsg_compose(&parent_ibuf, 0, 0, 0, -1, msg, len);
+	imsg_compose(&logpibuf, 0, 0, 0, -1, msg, len);
 	/* XXX: use event_once() */
-	imsg_flush(&parent_ibuf);
+	imsg_flush(&logpibuf);
 }
 
 static inline void
@@ -267,7 +264,7 @@ handle_log(int fd, short ev, void *d)
 	}
 }
 
-static int
+int
 logger_main(int fd, struct imsgbuf *ibuf)
 {
 	event_init();
@@ -283,30 +280,4 @@ logger_main(int fd, struct imsgbuf *ibuf)
 	event_dispatch();
 
 	return 0;
-}
-
-void
-logger_init(void)
-{
-	int p[2];
-
-	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
-		err(1, "socketpair");
-
-	switch (fork()) {
-	case -1:
-		err(1, "fork");
-	case 0:
-		logfd = p[1];
-		close(p[0]);
-		setproctitle("logger");
-		imsg_init(&child_ibuf, p[1]);
-		drop_priv();
-		_exit(logger_main(p[1], &child_ibuf));
-	default:
-		logfd = p[0];
-		close(p[1]);
-		imsg_init(&parent_ibuf, p[0]);
-		return;
-	}
 }

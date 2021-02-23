@@ -114,7 +114,9 @@ struct conf {
 
 extern const char *config_path;
 extern struct conf conf;
-extern int exfd;
+extern int exfd, logfd;
+
+extern struct imsgbuf logpibuf, logcibuf;
 
 extern volatile sig_atomic_t hupped;
 
@@ -219,7 +221,7 @@ void		 log_notice(struct client*, const char*, ...)	LOG_ATTR_FMT;
 void		 log_info(struct client*, const char*, ...)	LOG_ATTR_FMT;
 void		 log_debug(struct client*, const char*, ...)	LOG_ATTR_FMT;
 void		 log_request(struct client*, char*, size_t);
-void		 logger_init(void);
+int		 logger_main(int, struct imsgbuf*);
 
 /* mime.c */
 void		 init_mime(struct mime*);

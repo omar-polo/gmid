@@ -29,7 +29,9 @@ volatile sig_atomic_t hupped;
 
 struct vhost hosts[HOSTSLEN];
 
-int exfd, sock4, sock6;
+int exfd, logfd, sock4, sock6;
+
+struct imsgbuf logpibuf, logcibuf;
 
 const char *config_path, *certs_dir, *hostname;
 
@@ -330,6 +332,33 @@ usage(const char *me)
 	    "       [-p port] [-x cgi] [dir]\n",
 	    me);
 }
+
+static void
+logger_init(void)
+{
+	int p[2];
+
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
+		err(1, "socketpair");
+
+	switch (fork()) {
+	case -1:
+		err(1, "fork");
+	case 0:
+		logfd = p[1];
+		close(p[0]);
+		setproctitle("logger");
+		imsg_init(&logcibuf, p[1]);
+		drop_priv();
+		_exit(logger_main(p[1], &logcibuf));
+	default:
+		logfd = p[0];
+		close(p[1]);
+		imsg_init(&logpibuf, p[0]);
+		return;
+	}
+}
+
 
 static int
 serve(int argc, char **argv, int *p)
