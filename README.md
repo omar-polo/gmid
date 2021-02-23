@@ -12,12 +12,13 @@ featureful server.
  - reconfiguration: reload the running configuration without
    interruption
  - sandboxed by default on OpenBSD, Linux and FreeBSD
+ - automatic redirect/error pages (see `block return`)
  - IRI support (RFC3987)
  - punycode support
  - dual stack (IPv4 and IPv6)
  - automatic certificate generation for config-less mode
  - CGI scripts
- - (very) low memory footprint
+ - low memory footprint
  - event-based asynchronous I/O model
  - small codebase, easily hackable
  - virtual hosts
@@ -50,8 +51,8 @@ doesn't do that (yet).
 
 gmid has a rich configuration file, heavily inspired by OpenBSD'
 httpd.  While you should definitely check the manpage because it
-documents every option in depth, here's an example of what gmid can
-do.
+documents every option in depth, here's a small example of how a
+configuration file looks like.
 
 ```conf
 ipv6 on     # enable ipv6
@@ -71,21 +72,6 @@ server "example.com" {
         # change the index file name
         index "README.gmi"
     }
-
-    # redirect /cgi/man/... to man.example.com/...
-    location "/cgi/man*" {
-        strip 2
-        block return 31 "gemini://man.example.com%p"
-    }
-}
-
-server "man.example.com" {
-    cert "..."
-    key  "..."
-    root "/var/gemini/man.example.com"
-
-    # handle every request with the CGI script `man'
-    entrypoint "man"
 }
 ```
 
@@ -151,19 +137,21 @@ create files inside the `regress` directory and bind the 10965 port.
 
 ## Architecture/Security considerations
 
-gmid is composed by two processes: a listener and an executor.  The
-listener process is the only one that needs internet access and is
-sandboxed.  When a CGI script needs to be executed, the executor
-(outside of the sandbox) sets up a pipe and gives one end to the
-listener, while the other is bound to the CGI script standard output.
-This way, is still possible to execute CGI scripts without
-restrictions even in the presence of a sandboxed network process.
+gmid is composed by four processes: the parent process, the logger,
+the listener and the executor.  The parent process is the only one
+that doesn't drop privileges, but all it does is to wait for a SIGHUP
+to reload the configuration and spawn a new generation of children
+process.  The logger processes gather the logs and prints 'em to
+stderr or syslog (for the time being.)  The listener process is the
+only one that needs internet access and is sandboxed by default.  The
+executor process exists only to fork and execute CGI scripts.
 
 On OpenBSD, the listener runs with the `stdio recvfd rpath inet`
 pledges, while the executor has `stdio sendfd proc exec`; both have
-unveiled only the served directories.
+unveiled only the served directories.  The logger process has pledge
+`stdio`.
 
-On FreeBSD, the executor process is sandboxed with `capsicum(4)`.
+On FreeBSD, the listener process is sandboxed with `capsicum(4)`.
 
 On Linux, a `seccomp(2)` filter is installed in the listener to allow
 only certain syscalls, see [sandbox.c](sandbox.c) for more information
