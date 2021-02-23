@@ -47,3 +47,8 @@ install: gmid
 
 compile_flags.txt:
 	printf "%s\n" ${CFLAGS} > compile_flags.txt
+
+# make sure we pass -o to ${CC}.  OpenBSD default suffix rule doesn't
+.SUFFIXES: .c .o
+.c.o:
+	${CC} ${CFLAGS} -c $< -o $@
