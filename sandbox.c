@@ -165,6 +165,9 @@ sandbox()
 		SC_ALLOW(mmap),
 		SC_ALLOW(munmap),
 
+		/* for imsg */
+		SC_ALLOW(sendmsg),
+
 		/* needed for signal handling */
 		SC_ALLOW(rt_sigreturn),
 		SC_ALLOW(rt_sigaction),
