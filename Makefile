@@ -32,7 +32,7 @@ TAGS: ${SRCS}
 	-etags ${SRCS} || true
 
 clean:
-	rm -f *.o lex.yy.c y.tab.c y.tab.h y.output gmid gg
+	rm -f *.o compat/*.o lex.yy.c y.tab.c y.tab.h y.output gmid gg
 	rm -f compile_flags.txt
 	make -C regress clean
 
