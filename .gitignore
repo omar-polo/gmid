@@ -3,6 +3,7 @@ TAGS
 gmid
 gg
 *.o
+compat/*.o
 docs
 lex.yy.c
 y.tab.*
