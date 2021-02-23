@@ -280,6 +280,7 @@ else
 	echo "#include <queue.h>"
 fi
 
+echo "#include <sys/types.h>"
 echo "#include <sys/uio.h>"
 echo "#include <stdint.h>"
 echo "#include <imsg.h>"
