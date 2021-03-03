@@ -303,7 +303,7 @@ static void
 usage(const char *me)
 {
 	fprintf(stderr,
-	    "USAGE: %s [-fn] [-c config] | [-6h] [-d certs-dir] [-H host]"
+	    "USAGE: %s [-fn] [-c config] | [-6h] [-d certs-dir] [-H host]\n"
 	    "       [-p port] [-x cgi] [dir]\n",
 	    me);
 }
