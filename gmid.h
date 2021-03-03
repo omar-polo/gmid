@@ -56,6 +56,8 @@
 #define DOMAIN_NAME_LEN	(253+1)
 #define LABEL_LEN	(63+1)
 
+#define PROC_MAX	16
+
 struct location {
 	const char	*match;
 	const char	*lang;
@@ -119,6 +121,8 @@ extern int exfd, logfd;
 extern struct imsgbuf logpibuf, logcibuf;
 
 extern volatile sig_atomic_t hupped;
+
+extern int servpipes[PROC_MAX];
 
 struct iri {
 	char		*schema;

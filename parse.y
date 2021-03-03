@@ -299,7 +299,7 @@ check_strip_no(int n)
 int
 check_prefork_num(int n)
 {
-	if (n <= 0)
+	if (n <= 0 || n >= PROC_MAX)
 		yyerror("invalid prefork number %d", n);
 	return n;
 }

@@ -29,7 +29,7 @@ volatile sig_atomic_t hupped;
 
 struct vhost hosts[HOSTSLEN];
 
-int exfd, logfd, sock4, sock6;
+int exfd, logfd, sock4, sock6, servpipes[PROC_MAX];
 
 struct imsgbuf logpibuf, logcibuf;
 
@@ -299,31 +299,6 @@ drop_priv(void)
 		log_warn(NULL, "not a good idea to run a network daemon as root");
 }
 
-static int
-spawn_listeners(int *p)
-{
-	int i;
-
-	close(p[0]);
-	exfd = p[1];
-
-	for (i = 0; i < conf.prefork -1; ++i) {
-		switch (fork()) {
-		case -1:
-			fatal("fork: %s", strerror(errno));
-		case 0:		/* child */
-			setproctitle("server(%d)", i+1);
-			return listener_main();
-		}
-	}
-
-	if (conf.prefork == 0)
-		setproctitle("server");
-	else
-		setproctitle("server(%d)", conf.prefork);
-	return listener_main();
-}
-
 static void
 usage(const char *me)
 {
@@ -359,13 +334,13 @@ logger_init(void)
 	}
 }
 
-
 static int
-serve(int argc, char **argv, int *p)
+serve(int argc, char **argv)
 {
-	char path[PATH_MAX];
+	char	path[PATH_MAX];
+	int	i, p[2];
 
-	if (config_path == NULL) {
+        if (config_path == NULL) {
 		if (hostname == NULL)
 			hostname = "localhost";
 		if (certs_dir == NULL)
@@ -395,28 +370,35 @@ serve(int argc, char **argv, int *p)
 	 * to put private certs inside the chroot. */
 	setup_tls();
 
-	switch (fork()) {
-	case -1:
-		fatal("fork: %s", strerror(errno));
+	for (i = 0; i < conf.prefork; ++i) {
+		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
+		    PF_UNSPEC, p) == -1)
+			fatal("socketpair: %s", strerror(errno));
 
-	case 0:			/* child */
-		return spawn_listeners(p);
-
-	default:		/* parent */
-		setproctitle("executor");
-		close(p[1]);
-		exfd = p[0];
-		drop_priv();
-		unblock_signals();
-		return executor_main();
+		switch (fork()) {
+		case -1:
+			fatal("fork: %s", strerror(errno));
+		case 0:		/* child */
+			close(p[0]);
+			exfd = p[1];
+			setproctitle("server");
+			_exit(listener_main());
+		default:
+			servpipes[i] = p[0];
+			close(p[1]);
+		}
 	}
+
+	setproctitle("executor");
+	drop_priv();
+	unblock_signals();
+	_exit(executor_main());
 }
 
 int
 main(int argc, char **argv)
 {
-	int ch, p[2];
-	int conftest = 0, configless = 0;
+	int ch, conftest = 0, configless = 0;
 	int old_ipv6, old_port;
 
 	init_config();
@@ -482,7 +464,7 @@ main(int argc, char **argv)
 	if (config_path == NULL) {
 		configless = 1;
 		conf.foreground = 1;
-		conf.prefork = 0;
+		conf.prefork = 1;
 		conf.verbose++;
 	}
 
@@ -509,10 +491,6 @@ main(int argc, char **argv)
 			err(1, "daemon");
 	}
 
-	if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
-	    PF_UNSPEC, p) == -1)
-		err(1, "socketpair");
-
 	if (config_path != NULL)
 		parse_conf(config_path);
 
@@ -524,7 +502,7 @@ main(int argc, char **argv)
 		sock6 = make_socket(conf.port, AF_INET6);
 
 	if (configless)
-		return serve(argc, argv, p);
+		return serve(argc, argv);
 
 	/* wait a sighup and reload the daemon */
 	for (;;) {
@@ -535,11 +513,8 @@ main(int argc, char **argv)
 		case -1:
 			fatal("fork: %s", strerror(errno));
 		case 0:
-			return serve(argc, argv, p);
+			return serve(argc, argv);
 		}
-
-		close(p[0]);
-		close(p[1]);
 
 		wait_sighup();
 		unblock_signals();
@@ -568,9 +543,5 @@ main(int argc, char **argv)
 			sock4 = make_socket(conf.port, AF_INET);
 		if (sock6 == -1 && conf.ipv6)
 			sock6 = make_socket(conf.port, AF_INET6);
-
-		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
-		    PF_UNSPEC, p) == -1)
-			fatal("socketpair: %s", strerror(errno));
 	}
 }

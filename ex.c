@@ -19,6 +19,7 @@
 #include <err.h>
 #include <errno.h>
 
+#include <event.h>
 #include <fcntl.h>
 #include <libgen.h>
 #include <limits.h>
@@ -397,14 +398,49 @@ childerr:
 	_exit(1);
 }
 
-int
-executor_main()
+static void
+handle_fork_req(int fd, short ev, void *data)
 {
 	char *spath, *relpath, *addr, *ruser, *cissuer, *chash;
-        struct vhost *vhost;
+	struct vhost *vhost;
 	struct iri iri;
 	time_t notbefore, notafter;
 	int d;
+
+	if (!recv_iri(fd, &iri)
+	    || !recv_string(fd, &spath)
+	    || !recv_string(fd, &relpath)
+	    || !recv_string(fd, &addr)
+	    || !recv_string(fd, &ruser)
+	    || !recv_string(fd, &cissuer)
+	    || !recv_string(fd, &chash)
+	    || !recv_time(fd, &notbefore)
+	    || !recv_time(fd, &notafter)
+	    || !recv_vhost(fd, &vhost))
+		fatal("failure in handling fork request");
+
+	d = launch_cgi(&iri, spath, relpath, addr, ruser, cissuer, chash,
+	    notbefore, notafter, vhost);
+	if (!send_fd(fd, d))
+		fatal("failure in sending the fd to the server: %s",
+		    strerror(errno));
+	close(d);
+
+	free_recvd_iri(&iri);
+	free(spath);
+	free(relpath);
+	free(addr);
+	free(ruser);
+	free(cissuer);
+	free(chash);
+}
+
+int
+executor_main(void)
+{
+	struct vhost	*vhost;
+	struct event	 evs[PROC_MAX];
+	int		 i;
 
 #ifdef __OpenBSD__
 	for (vhost = hosts; vhost->domain != NULL; ++vhost) {
@@ -419,39 +455,15 @@ executor_main()
 		err(1, "pledge");
 #endif
 
-	while (!hupped) {
-		if (!recv_iri(exfd, &iri)
-		    || !recv_string(exfd, &spath)
-		    || !recv_string(exfd, &relpath)
-		    || !recv_string(exfd, &addr)
-		    || !recv_string(exfd, &ruser)
-		    || !recv_string(exfd, &cissuer)
-		    || !recv_string(exfd, &chash)
-		    || !recv_time(exfd, &notbefore)
-		    || !recv_time(exfd, &notafter)
-		    || !recv_vhost(exfd, &vhost))
-			break;
+	event_init();
 
-		d = launch_cgi(&iri, spath, relpath, addr, ruser, cissuer, chash,
-		    notbefore, notafter, vhost);
-		if (!send_fd(exfd, d))
-			break;
-		close(d);
-
-		free_recvd_iri(&iri);
-		free(spath);
-		free(relpath);
-		free(addr);
-		free(ruser);
-		free(cissuer);
-		free(chash);
+	for (i = 0; i < conf.prefork; ++i) {
+		event_set(&evs[i], servpipes[i], EV_READ | EV_PERSIST,
+		    handle_fork_req, NULL);
+		event_add(&evs[i], NULL);
 	}
 
-	if (hupped)
-		_exit(0);
+	event_dispatch();
 
-	/* kill all process in my group.  This means the listener and
-	 * every pending CGI script. */
-	kill(0, SIGINT);
 	return 1;
 }
