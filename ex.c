@@ -416,8 +416,13 @@ handle_fork_req(int fd, short ev, void *data)
 	    || !recv_string(fd, &chash)
 	    || !recv_time(fd, &notbefore)
 	    || !recv_time(fd, &notafter)
-	    || !recv_vhost(fd, &vhost))
-		fatal("failure in handling fork request");
+	    || !recv_vhost(fd, &vhost)) {
+		if (errno == EINTR) {
+			event_loopbreak();
+			return;
+		}
+		fatal("failure in handling fork request: %s", strerror(errno));
+	}
 
 	d = launch_cgi(&iri, spath, relpath, addr, ruser, cissuer, chash,
 	    notbefore, notafter, vhost);
