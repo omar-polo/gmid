@@ -252,7 +252,7 @@ handle_log(int fd, short ev, void *d)
 
 		datalen = imsg.hdr.len - IMSG_HEADER_SIZE;
 		msg = imsg.data;
-		msg[datalen] = '\0';
+		msg[datalen-1] = '\0';
 
 		/* ignore imsg.hdr.type for now */
 		if (conf.foreground)
