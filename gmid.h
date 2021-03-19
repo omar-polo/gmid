@@ -26,6 +26,8 @@
 #include <netinet/in.h>
 
 #include <dirent.h>
+#include <limits.h>
+#include <netdb.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -116,11 +118,8 @@ struct conf {
 
 extern const char *config_path;
 extern struct conf conf;
-extern int exfd, logfd;
 
-extern struct imsgbuf logpibuf, logcibuf;
-
-extern volatile sig_atomic_t hupped;
+extern struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
 
 extern int servpipes[PROC_MAX];
 
@@ -141,6 +140,8 @@ struct parser {
 };
 
 struct client;
+
+typedef void (imsg_handlerfn)(struct imsgbuf*, struct imsg*, size_t);
 
 typedef void (*statefn)(int, short, void*);
 
@@ -169,6 +170,7 @@ typedef void (*statefn)(int, short, void*);
  * send_file -> close_conn
  */
 struct client {
+	int		 id;
 	struct tls	*ctx;
 	char		 req[GEMINI_URL_LEN];
 	struct iri	 iri;
@@ -181,7 +183,33 @@ struct client {
 	char		 sbuf[1024];
 	ssize_t		 len, off;
 	struct sockaddr_storage	 addr;
-	struct vhost	*host;	/* host she's talking to */
+	struct vhost	*host;	/* host they're talking to */
+};
+
+struct cgireq {
+	char		buf[GEMINI_URL_LEN];
+
+	size_t		iri_schema_off;
+	size_t		iri_host_off;
+	size_t		iri_port_off;
+	size_t		iri_path_off;
+	size_t		iri_query_off;
+	size_t		iri_fragment_off;
+	int		iri_portno;
+
+	char		spath[PATH_MAX+1];
+	char		relpath[PATH_MAX+1];
+	char		addr[NI_MAXHOST+1];
+
+	/* AFAIK there isn't an upper limit for these two fields. */
+	char		subject[64+1];
+	char		issuer[64+1];
+
+	char		hash[128+1];
+	time_t		notbefore;
+	time_t		notafter;
+
+	size_t		host_off;
 };
 
 enum {
@@ -191,8 +219,14 @@ enum {
 	FILE_MISSING,
 };
 
+enum imsg_type {
+	IMSG_CGI_REQ,
+	IMSG_CGI_RES,
+	IMSG_LOG,
+	IMSG_QUIT,
+};
+
 /* gmid.c */
-void		 sig_handler(int);
 void		 mkdirs(const char*);
 char		*data_dir(void);
 void		 load_local_cert(const char*, const char*);
@@ -243,7 +277,7 @@ int		 vhost_strip(struct vhost*, const char*);
 X509_STORE	*vhost_require_ca(struct vhost*, const char*);
 int		 vhost_disable_log(struct vhost*, const char*);
 void		 mark_nonblock(int);
-void		 loop(struct tls*, int, int);
+void		 loop(struct tls*, int, int, struct imsgbuf*);
 
 /* ex.c */
 int		 send_string(int, const char*);
@@ -257,7 +291,7 @@ int		 send_time(int, time_t);
 int		 recv_time(int, time_t*);
 int		 send_fd(int, int);
 int		 recv_fd(int);
-int		 executor_main(void);
+int		 executor_main(struct imsgbuf*);
 
 /* sandbox.c */
 void		 sandbox(void);
@@ -286,5 +320,6 @@ char		*xstrdup(const char*);
 void		 gen_certificate(const char*, const char*, const char*);
 X509_STORE	*load_ca(const char*);
 int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);
+void		 dispatch_imsg(struct imsgbuf*, imsg_handlerfn**, size_t);
 
 #endif

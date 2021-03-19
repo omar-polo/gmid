@@ -25,13 +25,11 @@
 #include <signal.h>
 #include <string.h>
 
-volatile sig_atomic_t hupped;
-
 struct vhost hosts[HOSTSLEN];
 
-int exfd, logfd, sock4, sock6, servpipes[PROC_MAX];
+int sock4, sock6;
 
-struct imsgbuf logpibuf, logcibuf;
+struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
 
 const char *config_path, *certs_dir, *hostname;
 
@@ -39,14 +37,6 @@ struct conf conf;
 
 struct tls_config *tlsconf;
 struct tls *ctx;
-
-void
-sig_handler(int sig)
-{
-	(void)sig;
-
-	hupped = sig == SIGHUP;
-}
 
 /* XXX: create recursively */
 void
@@ -196,13 +186,12 @@ setup_tls(void)
 }
 
 static int
-listener_main(void)
+listener_main(struct imsgbuf *ibuf)
 {
 	drop_priv();
-	unblock_signals();
 	load_default_mime(&conf.mime);
 	load_vhosts();
-	loop(ctx, sock4, sock6);
+	loop(ctx, sock4, sock6, ibuf);
 	return 0;
 }
 
@@ -320,22 +309,21 @@ logger_init(void)
 	case -1:
 		err(1, "fork");
 	case 0:
-		logfd = p[1];
+		signal(SIGHUP, SIG_IGN);
 		close(p[0]);
 		setproctitle("logger");
-		imsg_init(&logcibuf, p[1]);
+		imsg_init(&logibuf, p[1]);
 		drop_priv();
-		_exit(logger_main(p[1], &logcibuf));
+		_exit(logger_main(p[1], &logibuf));
 	default:
-		logfd = p[0];
 		close(p[1]);
-		imsg_init(&logpibuf, p[0]);
+		imsg_init(&logibuf, p[0]);
 		return;
 	}
 }
 
 static int
-serve(int argc, char **argv)
+serve(int argc, char **argv, struct imsgbuf *ibuf)
 {
 	char	path[PATH_MAX];
 	int	i, p[2];
@@ -380,19 +368,18 @@ serve(int argc, char **argv)
 			fatal("fork: %s", strerror(errno));
 		case 0:		/* child */
 			close(p[0]);
-			exfd = p[1];
+			imsg_init(&exibuf, p[1]);
 			setproctitle("server");
-			_exit(listener_main());
+			_exit(listener_main(&exibuf));
 		default:
-			servpipes[i] = p[0];
 			close(p[1]);
+			imsg_init(&servibuf[i], p[0]);
 		}
 	}
 
 	setproctitle("executor");
 	drop_priv();
-	unblock_signals();
-	_exit(executor_main());
+	_exit(executor_main(ibuf));
 }
 
 int
@@ -480,12 +467,6 @@ main(int argc, char **argv)
 	signal(SIGPIPE, SIG_IGN);
 	signal(SIGCHLD, SIG_IGN);
 
-#ifdef SIGINFO
-	signal(SIGINFO, sig_handler);
-#endif
-	signal(SIGUSR2, sig_handler);
-	signal(SIGHUP, sig_handler);
-
 	if (!conf.foreground && !configless) {
 		if (daemon(1, 1) == -1)
 			err(1, "daemon");
@@ -501,24 +482,42 @@ main(int argc, char **argv)
 	if (conf.ipv6)
 		sock6 = make_socket(conf.port, AF_INET6);
 
-	if (configless)
-		return serve(argc, argv);
+	if (configless) {
+		serve(argc, argv, NULL);
+		imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
+		imsg_flush(&logibuf);
+		return 0;
+	}
 
 	/* wait a sighup and reload the daemon */
 	for (;;) {
-		block_signals();
+		struct imsgbuf exibuf;
+		int p[2];
 
-		hupped = 0;
+		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
+		    PF_UNSPEC, p) == -1)
+			fatal("socketpair: %s", strerror(errno));
+
 		switch (fork()) {
 		case -1:
 			fatal("fork: %s", strerror(errno));
 		case 0:
-			return serve(argc, argv);
+			signal(SIGHUP, SIG_IGN);
+			close(p[0]);
+			imsg_init(&exibuf, p[1]);
+			_exit(serve(argc, argv, &exibuf));
 		}
 
+		close(p[1]);
+		imsg_init(&exibuf, p[0]);
+
 		wait_sighup();
-		unblock_signals();
 		log_info(NULL, "reloading configuration %s", config_path);
+
+		/* close the executor (it'll close the servers too) */
+		imsg_compose(&exibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
+		imsg_flush(&exibuf);
+		close(p[0]);
 
 		old_ipv6 = conf.ipv6;
 		old_port = conf.port;

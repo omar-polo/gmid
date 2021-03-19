@@ -27,199 +27,14 @@
 #include <stdarg.h>
 #include <string.h>
 
-int
-send_string(int fd, const char *str)
-{
-	ssize_t len;
+static void	handle_imsg_cgi_req(struct imsgbuf*, struct imsg*, size_t);
+static void	handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
+static void	handle_dispatch_imsg(int, short, void*);
 
-	if (str == NULL)
-		len = 0;
-	else
-		len = strlen(str);
-
-	if (write(fd, &len, sizeof(len)) != sizeof(len))
-		return 0;
-
-	if (len != 0)
-		if (write(fd, str, len) != len)
-			return 0;
-
-	return 1;
-}
-
-int
-recv_string(int fd, char **ret)
-{
-	ssize_t len;
-
-	if (read(fd, &len, sizeof(len)) != sizeof(len))
-		return 0;
-
-	if (len == 0) {
-		*ret = NULL;
-		return 1;
-	}
-
-	if ((*ret = calloc(1, len+1)) == NULL)
-		return 0;
-
-	if (read(fd, *ret, len) != len)
-		return 0;
-	return 1;
-}
-
-int
-send_iri(int fd, struct iri *i)
-{
-	return send_string(fd, i->schema)
-		&& send_string(fd, i->host)
-		&& send_string(fd, i->port)
-		&& send_string(fd, i->path)
-		&& send_string(fd, i->query);
-}
-
-int
-recv_iri(int fd, struct iri *i)
-{
-	memset(i, 0, sizeof(*i));
-
-	if (!recv_string(fd, &i->schema)
-	    || !recv_string(fd, &i->host)
-	    || !recv_string(fd, &i->port)
-	    || !recv_string(fd, &i->path)
-	    || !recv_string(fd, &i->query))
-		return 0;
-
-	return 1;
-}
-
-void
-free_recvd_iri(struct iri *i)
-{
-	free(i->schema);
-	free(i->host);
-	free(i->port);
-	free(i->path);
-	free(i->query);
-}
-
-int
-send_vhost(int fd, struct vhost *vhost)
-{
-	ssize_t n;
-
-	if (vhost < hosts || vhost > hosts + HOSTSLEN)
-		return 0;
-
-	n = vhost - hosts;
-	return write(fd, &n, sizeof(n)) == sizeof(n);
-}
-
-int
-recv_vhost(int fd, struct vhost **vhost)
-{
-	ssize_t n;
-
-	if (read(fd, &n, sizeof(n)) != sizeof(n))
-		return 0;
-
-	if (n < 0 || n > HOSTSLEN)
-		return 0;
-
-	*vhost = &hosts[n];
-	if ((*vhost)->domain == NULL)
-		return 0;
-	return 1;
-}
-
-int
-send_time(int fd, time_t t)
-{
-	return write(fd, &t, sizeof(t)) == sizeof(t);
-}
-
-int
-recv_time(int fd, time_t *t)
-{
-	return read(fd, t, sizeof(*t)) == sizeof(*t);
-}
-
-/* send d though fd. see /usr/src/usr.sbin/syslogd/privsep_fdpass.c
- * for an example */
-int
-send_fd(int fd, int d)
-{
-	struct msghdr msg;
-	union {
-		struct cmsghdr hdr;
-		unsigned char buf[CMSG_SPACE(sizeof(int))];
-	} cmsgbuf;
-	struct cmsghdr *cmsg;
-	struct iovec vec;
-	int result = 1;
-	ssize_t n;
-
-	memset(&msg, 0, sizeof(msg));
-
-	if (d >= 0) {
-		msg.msg_control = &cmsgbuf.buf;
-		msg.msg_controllen = sizeof(cmsgbuf.buf);
-		cmsg = CMSG_FIRSTHDR(&msg);
-		cmsg->cmsg_len = CMSG_LEN(sizeof(int));
-		cmsg->cmsg_level = SOL_SOCKET;
-		cmsg->cmsg_type = SCM_RIGHTS;
-		*(int*)CMSG_DATA(cmsg) = d;
-	} else
-		result = 0;
-
-	vec.iov_base = &result;
-	vec.iov_len = sizeof(int);
-	msg.msg_iov = &vec;
-	msg.msg_iovlen = 1;
-
-	if ((n = sendmsg(fd, &msg, 0)) == -1 || n != sizeof(int)) {
-                log_err(NULL, "sendmsg: got %zu but wanted %zu: (errno) %s",
-		    n, sizeof(int), strerror(errno));
-		return 0;
-	}
-	return 1;
-}
-
-/* receive a descriptor via fd */
-int
-recv_fd(int fd)
-{
-	struct msghdr msg;
-	union {
-		struct cmsghdr hdr;
-		char buf[CMSG_SPACE(sizeof(int))];
-	} cmsgbuf;
-	struct cmsghdr *cmsg;
-	struct iovec vec;
-	ssize_t n;
-	int result;
-
-	memset(&msg, 0, sizeof(msg));
-	vec.iov_base = &result;
-	vec.iov_len = sizeof(int);
-	msg.msg_iov = &vec;
-	msg.msg_iovlen = 1;
-	msg.msg_control = &cmsgbuf.buf;
-	msg.msg_controllen = sizeof(cmsgbuf.buf);
-
-	if ((n = recvmsg(fd, &msg, 0)) != sizeof(int)) {
-		log_err(NULL, "read %zu bytes bu wanted %zu\n", n, sizeof(int));
-		return -1;
-	}
-
-	if (result) {
-		cmsg = CMSG_FIRSTHDR(&msg);
-		if (cmsg == NULL || cmsg->cmsg_type != SCM_RIGHTS)
-			return -1;
-		return (*(int *)CMSG_DATA(cmsg));
-	} else
-		return -1;
-}
+static imsg_handlerfn *handlers[] = {
+	[IMSG_CGI_REQ] = handle_imsg_cgi_req,
+	[IMSG_QUIT] = handle_imsg_quit,
+};
 
 static inline void
 safe_setenv(const char *name, const char *val)
@@ -299,10 +114,7 @@ setenv_time(const char *var, time_t t)
 
 /* fd or -1 on error */
 static int
-launch_cgi(struct iri *iri, const char *spath, char *relpath,
-    const char *addr, const char *ruser, const char *cissuer,
-    const char *chash, time_t notbefore, time_t notafter,
-    struct vhost *vhost)
+launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost)
 {
 	int p[2];		/* read end, write end */
 
@@ -322,38 +134,38 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 		if (dup2(p[1], 1) == -1)
 			goto childerr;
 
-		ex = xasprintf("%s/%s", vhost->dir, spath);
+		ex = xasprintf("%s/%s", vhost->dir, req->spath);
 
 		serialize_iri(iri, iribuf, sizeof(iribuf));
 
 		safe_setenv("GATEWAY_INTERFACE", "CGI/1.1");
 		safe_setenv("GEMINI_DOCUMENT_ROOT", vhost->dir);
 		safe_setenv("GEMINI_SCRIPT_FILENAME",
-		    xasprintf("%s/%s", vhost->dir, spath));
+		    xasprintf("%s/%s", vhost->dir, req->spath));
 		safe_setenv("GEMINI_URL", iribuf);
 
 		strlcpy(path, "/", sizeof(path));
-		strlcat(path, spath, sizeof(path));
+		strlcat(path, req->spath, sizeof(path));
 		safe_setenv("GEMINI_URL_PATH", path);
 
-		if (relpath != NULL) {
+		if (*req->relpath != '\0') {
 			strlcpy(path, "/", sizeof(path));
-			strlcat(path, relpath, sizeof(path));
+			strlcat(path, req->relpath, sizeof(path));
 			safe_setenv("PATH_INFO", path);
 
 			strlcpy(path, vhost->dir, sizeof(path));
 			strlcat(path, "/", sizeof(path));
-			strlcat(path, relpath, sizeof(path));
+			strlcat(path, req->relpath, sizeof(path));
 			safe_setenv("PATH_TRANSLATED", path);
 		}
 
 		safe_setenv("QUERY_STRING", iri->query);
-		safe_setenv("REMOTE_ADDR", addr);
-		safe_setenv("REMOTE_HOST", addr);
+		safe_setenv("REMOTE_ADDR", req->addr);
+		safe_setenv("REMOTE_HOST", req->addr);
 		safe_setenv("REQUEST_METHOD", "");
 
 		strlcpy(path, "/", sizeof(path));
-		strlcat(path, spath, sizeof(path));
+		strlcat(path, req->spath, sizeof(path));
 		safe_setenv("SCRIPT_NAME", path);
 
 		safe_setenv("SERVER_NAME", iri->host);
@@ -364,16 +176,16 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 		safe_setenv("SERVER_PROTOCOL", "GEMINI");
 		safe_setenv("SERVER_SOFTWARE", "gmid/1.5");
 
-		if (ruser != NULL)
+		if (*req->subject != '\0')
 			safe_setenv("AUTH_TYPE", "Certificate");
 		else
 			safe_setenv("AUTH_TYPE", "");
 
-		safe_setenv("REMOTE_USER", ruser);
-		safe_setenv("TLS_CLIENT_ISSUER", cissuer);
-		safe_setenv("TLS_CLIENT_HASH", chash);
-		setenv_time("TLS_CLIENT_NOT_AFTER", notafter);
-		setenv_time("TLS_CLIENT_NOT_BEFORE", notbefore);
+		safe_setenv("REMOTE_USER", req->subject);
+		safe_setenv("TLS_CLIENT_ISSUER", req->issuer);
+		safe_setenv("TLS_CLIENT_HASH", req->hash);
+		setenv_time("TLS_CLIENT_NOT_AFTER", req->notafter);
+		setenv_time("TLS_CLIENT_NOT_BEFORE", req->notbefore);
 
 		strlcpy(path, ex, sizeof(path));
 
@@ -383,7 +195,7 @@ launch_cgi(struct iri *iri, const char *spath, char *relpath,
 			goto childerr;
 		}
 
-		do_exec(ex, spath, iri->query);
+		do_exec(ex, req->spath, iri->query);
 		goto childerr;
 	}
 
@@ -399,52 +211,67 @@ childerr:
 }
 
 static void
-handle_fork_req(int fd, short ev, void *data)
+handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
-	char *spath, *relpath, *addr, *ruser, *cissuer, *chash;
-	struct vhost *vhost;
-	struct iri iri;
-	time_t notbefore, notafter;
-	int d;
+	struct cgireq	req;
+	struct iri	iri;
+	int		fd;
 
-	if (!recv_iri(fd, &iri)
-	    || !recv_string(fd, &spath)
-	    || !recv_string(fd, &relpath)
-	    || !recv_string(fd, &addr)
-	    || !recv_string(fd, &ruser)
-	    || !recv_string(fd, &cissuer)
-	    || !recv_string(fd, &chash)
-	    || !recv_time(fd, &notbefore)
-	    || !recv_time(fd, &notafter)
-	    || !recv_vhost(fd, &vhost)) {
-		if (errno == EINTR) {
-			event_loopbreak();
-			return;
-		}
-		fatal("failure in handling fork request: %s", strerror(errno));
+	if (datalen != sizeof(req))
+		abort();
+
+	memcpy(&req, imsg->data, datalen);
+
+	iri.schema = req.iri_schema_off + req.buf;
+	iri.host = req.iri_host_off + req.buf;
+	iri.port = req.iri_port_off + req.buf;
+	iri.path = req.iri_path_off + req.buf;
+	iri.query = req.iri_query_off + req.buf;
+	iri.fragment = req.iri_fragment_off + req.buf;
+
+	/* patch the query, otherwise do_exec will always pass "" as
+	 * first argument to the script. */
+	if (*iri.query == '\0')
+		iri.query = NULL;
+
+	if (req.host_off > HOSTSLEN || hosts[req.host_off].domain == NULL)
+		abort();
+
+	fd = launch_cgi(&iri, &req, &hosts[req.host_off]);
+	imsg_compose(ibuf, IMSG_CGI_RES, imsg->hdr.peerid, 0, fd, NULL, 0);
+	imsg_flush(ibuf);
+}
+
+static void
+handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+{
+	int i;
+
+	(void)ibuf;
+	(void)imsg;
+	(void)datalen;
+
+	for (i = 0; i < conf.prefork; ++i) {
+		imsg_compose(&servibuf[i], IMSG_QUIT, 0, 0, -1, NULL, 0);
+		imsg_flush(&exibuf);
+		close(servibuf[i].fd);
 	}
 
-	d = launch_cgi(&iri, spath, relpath, addr, ruser, cissuer, chash,
-	    notbefore, notafter, vhost);
-	if (!send_fd(fd, d))
-		fatal("failure in sending the fd to the server: %s",
-		    strerror(errno));
-	close(d);
+	event_loopbreak();
+}
 
-	free_recvd_iri(&iri);
-	free(spath);
-	free(relpath);
-	free(addr);
-	free(ruser);
-	free(cissuer);
-	free(chash);
+static void
+handle_dispatch_imsg(int fd, short ev, void *d)
+{
+	struct imsgbuf *ibuf = d;
+	dispatch_imsg(ibuf, handlers, sizeof(handlers));
 }
 
 int
-executor_main(void)
+executor_main(struct imsgbuf *ibuf)
 {
 	struct vhost	*vhost;
-	struct event	 evs[PROC_MAX];
+	struct event	 evs[PROC_MAX], imsgev;
 	int		 i;
 
 #ifdef __OpenBSD__
@@ -462,9 +289,15 @@ executor_main(void)
 
 	event_init();
 
+	if (ibuf != NULL) {
+		event_set(&imsgev, ibuf->fd, EV_READ | EV_PERSIST,
+		    handle_dispatch_imsg, ibuf);
+		event_add(&imsgev, NULL);
+	}
+
 	for (i = 0; i < conf.prefork; ++i) {
-		event_set(&evs[i], servpipes[i], EV_READ | EV_PERSIST,
-		    handle_fork_req, NULL);
+		event_set(&evs[i], servibuf[i].fd, EV_READ | EV_PERSIST,
+		    handle_dispatch_imsg, &servibuf[i]);
 		event_add(&evs[i], NULL);
 	}
 

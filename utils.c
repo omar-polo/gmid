@@ -24,24 +24,6 @@
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
-static sigset_t set;
-
-void
-block_signals(void)
-{
-	sigset_t new;
-
-	sigemptyset(&new);
-	sigaddset(&new, SIGHUP);
-	sigprocmask(SIG_BLOCK, &new, &set);
-}
-
-void
-unblock_signals(void)
-{
-	sigprocmask(SIG_SETMASK, &set, NULL);
-}
-
 int
 starts_with(const char *str, const char *prefix)
 {
@@ -247,4 +229,34 @@ end:
 	if (ctx != NULL)
 		X509_STORE_CTX_free(ctx);
 	return ret;
+}
+
+void
+dispatch_imsg(struct imsgbuf *ibuf, imsg_handlerfn **handlers, size_t size)
+{
+	struct imsg	imsg;
+	size_t		datalen, i;
+	ssize_t		n;
+
+	if ((n = imsg_read(ibuf)) == -1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return;
+		_exit(1);
+	}
+
+	if (n == 0)
+		_exit(1);
+
+	for (;;) {
+		if ((n = imsg_get(ibuf, &imsg)) == -1)
+			_exit(1);
+		if (n == 0)
+			return;
+		datalen = imsg.hdr.len - IMSG_HEADER_SIZE;
+		i = imsg.hdr.type;
+		if (i > (size / sizeof(imsg_handlerfn*)) || handlers[i] == NULL)
+			abort();
+		handlers[i](ibuf, &imsg, datalen);
+		imsg_free(&imsg);
+	}
 }

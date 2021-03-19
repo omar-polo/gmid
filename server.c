@@ -18,8 +18,6 @@
 
 #include <sys/stat.h>
 
-#include <netdb.h>
-
 #include <assert.h>
 #include <errno.h>
 #include <event.h>
@@ -28,12 +26,10 @@
 #include <limits.h>
 #include <string.h>
 
-struct server {
-	struct client	 clients[MAX_USERS];
-	struct tls	*ctx;
-};
+static struct client	 clients[MAX_USERS];
+static struct tls	*ctx;
 
-static struct event e4, e6, sighup, siginfo, sigusr2;
+static struct event e4, e6, imsgev, siginfo, sigusr2;
 static int has_ipv6, has_siginfo;
 
 int connected_clients;
@@ -65,7 +61,15 @@ static void	 handle_cgi_reply(int, short, void*);
 static void	 handle_copy(int, short, void*);
 static void	 close_conn(int, short, void*);
 static void	 do_accept(int, short, void*);
-static void	 handle_sighup(int, short, void*);
+struct client	*client_by_id(int);
+static void	 handle_imsg_cgi_res(struct imsgbuf*, struct imsg*, size_t);
+static void	 handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
+static void	 handle_siginfo(int, short, void*);
+
+static imsg_handlerfn *handlers[] = {
+	[IMSG_QUIT] = handle_imsg_quit,
+	[IMSG_CGI_RES] = handle_imsg_cgi_res,
+};
 
 static inline int
 matches(const char *pattern, const char *path)
@@ -633,6 +637,8 @@ static void
 start_cgi(const char *spath, const char *relpath, struct client *c)
 {
 	char addr[NI_MAXHOST];
+	const char *t;
+	struct cgireq req;
 	int e;
 
 	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
@@ -640,32 +646,41 @@ start_cgi(const char *spath, const char *relpath, struct client *c)
 	    NULL, 0,
 	    NI_NUMERICHOST);
 	if (e != 0)
-		goto err;
+		fatal("getnameinfo failed");
 
-	if (!send_iri(exfd, &c->iri)
-	    || !send_string(exfd, spath)
-	    || !send_string(exfd, relpath)
-	    || !send_string(exfd, addr)
-	    || !send_string(exfd, tls_peer_cert_subject(c->ctx))
-	    || !send_string(exfd, tls_peer_cert_issuer(c->ctx))
-	    || !send_string(exfd, tls_peer_cert_hash(c->ctx))
-	    || !send_time(exfd, tls_peer_cert_notbefore(c->ctx))
-	    || !send_time(exfd, tls_peer_cert_notafter(c->ctx))
-	    || !send_vhost(exfd, c->host))
-		goto err;
+	memset(&req, 0, sizeof(req));
+
+	memcpy(req.buf, c->req, sizeof(req.buf));
+
+	req.iri_schema_off = c->iri.schema - c->req;
+	req.iri_host_off = c->iri.host - c->req;
+	req.iri_port_off = c->iri.port - c->req;
+	req.iri_path_off = c->iri.path - c->req;
+	req.iri_query_off = c->iri.query - c->req;
+	req.iri_fragment_off = c->iri.fragment - c->req;
+
+	req.iri_portno = c->iri.port_no;
+
+	strlcpy(req.spath, spath, sizeof(req.spath));
+	strlcpy(req.relpath, relpath, sizeof(req.relpath));
+	strlcpy(req.addr, addr, sizeof(req.addr));
+
+	if ((t = tls_peer_cert_subject(c->ctx)) != NULL)
+		strlcpy(req.subject, t, sizeof(req.subject));
+	if ((t = tls_peer_cert_issuer(c->ctx)) != NULL)
+		strlcpy(req.issuer, t, sizeof(req.issuer));
+	if ((t = tls_peer_cert_hash(c->ctx)) != NULL)
+		strlcpy(req.hash, t, sizeof(req.hash));
+
+	req.notbefore = tls_peer_cert_notbefore(c->ctx);
+	req.notafter = tls_peer_cert_notafter(c->ctx);
+
+	req.host_off = c->host - hosts;
+
+	imsg_compose(&exibuf, IMSG_CGI_REQ, c->id, 0, -1, &req, sizeof(req));
+	imsg_flush(&exibuf);
 
 	close(c->pfd);
-	if ((c->pfd = recv_fd(exfd)) == -1) {
-		start_reply(c, TEMP_FAILURE, "internal server error");
-		return;
-	}
-
-	reschedule_read(c->pfd, c, &handle_cgi_reply);
-	return;
-
-err:
-	/* fatal("cannot talk to the executor process: %s", strerror(errno)); */
-	fatal("cannot talk to the executor process");
 }
 
 static void
@@ -986,14 +1001,12 @@ static void
 do_accept(int sock, short et, void *d)
 {
 	struct client *c;
-	struct server *s = d;
 	struct sockaddr_storage addr;
 	struct sockaddr *saddr;
 	socklen_t len;
 	int i, fd;
 
 	(void)et;
-
 
 	saddr = (struct sockaddr*)&addr;
 	len = sizeof(addr);
@@ -1006,10 +1019,11 @@ do_accept(int sock, short et, void *d)
 	mark_nonblock(fd);
 
 	for (i = 0; i < MAX_USERS; ++i) {
-		c = &s->clients[i];
+		c = &clients[i];
 		if (c->fd == -1) {
 			memset(c, 0, sizeof(*c));
-			if (tls_accept_socket(s->ctx, &c->ctx, fd) == -1)
+			c->id = i;
+			if (tls_accept_socket(ctx, &c->ctx, fd) == -1)
 				break; /* goodbye fd! */
 
 			c->fd = fd;
@@ -1026,19 +1040,50 @@ do_accept(int sock, short et, void *d)
 	close(fd);
 }
 
-static void
-handle_sighup(int fd, short ev, void *d)
+struct client *
+client_by_id(int id)
 {
-	(void)fd;
-	(void)ev;
+	if ((size_t)id > sizeof(clients)/sizeof(clients[0]))
+		fatal("in client_by_id: invalid id %d", id);
+	return &clients[id];
+}
+
+static void
+handle_imsg_cgi_res(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
+{
+	struct client *c;
+
+	c = client_by_id(imsg->hdr.peerid);
+
+	if ((c->pfd = imsg->fd) == -1)
+		start_reply(c, TEMP_FAILURE, "internal server error");
+	else
+		reschedule_read(c->pfd, c, &handle_cgi_reply);
+}
+
+static void
+handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
+{
+	(void)imsg;
+	(void)len;
+
+	/* don't call event_loopbreak since we want to finish to
+	 * handle the ongoing connections. */
 
 	event_del(&e4);
 	if (has_ipv6)
 		event_del(&e6);
 	if (has_siginfo)
 		signal_del(&siginfo);
+	event_del(&imsgev);
 	signal_del(&sigusr2);
-	signal_del(&sighup);
+}
+
+static void
+handle_dispatch_imsg(int fd, short ev, void *d)
+{
+	struct imsgbuf *ibuf = d;
+	dispatch_imsg(ibuf, handlers, sizeof(handlers));
 }
 
 static void
@@ -1052,28 +1097,29 @@ handle_siginfo(int fd, short ev, void *d)
 }
 
 void
-loop(struct tls *ctx, int sock4, int sock6)
+loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 {
-	struct server server;
 	size_t i;
+
+	ctx = ctx_;
 
 	event_init();
 
-	memset(&server, 0, sizeof(server));
+	memset(&clients, 0, sizeof(clients));
 	for (i = 0; i < MAX_USERS; ++i)
-		server.clients[i].fd = -1;
+		clients[i].fd = -1;
 
-	event_set(&e4, sock4, EV_READ | EV_PERSIST, &do_accept, &server);
+	event_set(&e4, sock4, EV_READ | EV_PERSIST, &do_accept, NULL);
 	event_add(&e4, NULL);
 
 	if (sock6 != -1) {
 		has_ipv6 = 1;
-		event_set(&e6, sock6, EV_READ | EV_PERSIST, &do_accept, &server);
+		event_set(&e6, sock6, EV_READ | EV_PERSIST, &do_accept, NULL);
 		event_add(&e6, NULL);
 	}
 
-	signal_set(&sighup, SIGHUP, &handle_sighup, NULL);
-	signal_add(&sighup, NULL);
+	event_set(&imsgev, ibuf->fd, EV_READ | EV_PERSIST, handle_dispatch_imsg, ibuf);
+	event_add(&imsgev, NULL);
 
 #ifdef SIGINFO
 	has_siginfo = 1;
@@ -1082,8 +1128,6 @@ loop(struct tls *ctx, int sock4, int sock6)
 #endif
 	signal_set(&sigusr2, SIGUSR2, &handle_siginfo, NULL);
 	signal_add(&sigusr2, NULL);
-
-	server.ctx = ctx;
 
 	sandbox();
 	event_dispatch();

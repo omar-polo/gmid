@@ -28,9 +28,16 @@
 #include <string.h>
 #include <syslog.h>
 
-static struct event inlog;
+static struct event imsgev;
 
-static void handle_log(int, short, void*);
+static void	handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
+static void	handle_imsg_log(struct imsgbuf*, struct imsg*, size_t);
+static void	handle_dispatch_imsg(int, short, void*);
+
+static imsg_handlerfn *handlers[] = {
+	[IMSG_QUIT] = handle_imsg_quit,
+	[IMSG_LOG] = handle_imsg_log,
+};
 
 void
 fatal(const char *fmt, ...)
@@ -71,9 +78,9 @@ should_log(int priority)
 static inline void
 send_log(const char *msg, size_t len)
 {
-	imsg_compose(&logpibuf, 0, 0, 0, -1, msg, len);
+	imsg_compose(&logibuf, IMSG_LOG, 0, 0, -1, msg, len);
 	/* XXX: use event_once() */
-	imsg_flush(&logpibuf);
+	imsg_flush(&logibuf);
 }
 
 static inline void
@@ -229,39 +236,30 @@ log_request(struct client *c, char *meta, size_t l)
 
 
 static void
-handle_log(int fd, short ev, void *d)
+handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
-	struct imsgbuf	*ibuf = d;
-	struct imsg	 imsg;
-	ssize_t		 n, datalen;
-	char		*msg;
+	event_loopbreak();
+}
 
-	if ((n = imsg_read(ibuf)) == -1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return;
-                err(1, "imsg_read");
-	}
-	if (n == 0)
-		errx(1, "connection lost?");
+static void
+handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+{
+	char *msg;
 
-	for (;;) {
-		if ((n = imsg_get(ibuf, &imsg)) == -1)
-			err(1, "read error");
-		if (n == 0)
-			return;
+	msg = imsg->data;
+	msg[datalen-1] = '\0';
 
-		datalen = imsg.hdr.len - IMSG_HEADER_SIZE;
-		msg = imsg.data;
-		msg[datalen-1] = '\0';
+	if (conf.foreground)
+		fprintf(stderr, "%s\n", msg);
+	else
+		syslog(LOG_DAEMON, "%s", msg);
+}
 
-		/* ignore imsg.hdr.type for now */
-		if (conf.foreground)
-			fprintf(stderr, "%s\n", msg);
-		else
-			syslog(LOG_DAEMON, "%s", msg);
-
-		imsg_free(&imsg);
-	}
+static void
+handle_dispatch_imsg(int fd, short ev, void *d)
+{
+	struct imsgbuf *ibuf = d;
+	dispatch_imsg(ibuf, handlers, sizeof(handlers));
 }
 
 int
@@ -269,8 +267,8 @@ logger_main(int fd, struct imsgbuf *ibuf)
 {
 	event_init();
 
-	event_set(&inlog, fd, EV_READ | EV_PERSIST, &handle_log, ibuf);
-	event_add(&inlog, NULL);
+	event_set(&imsgev, fd, EV_READ | EV_PERSIST, &handle_dispatch_imsg, ibuf);
+	event_add(&imsgev, NULL);
 
 #ifdef __OpenBSD__
 	if (pledge("stdio", NULL) == -1)
