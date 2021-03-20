@@ -48,6 +48,13 @@ struct suite {
 	{NULL, NULL}
 };
 
+void
+sandbox_logger_process(void)
+{
+	/* to make the linker happy! */
+	return;
+}
+
 int
 main(int argc, char **argv)
 {

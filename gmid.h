@@ -294,7 +294,9 @@ int		 recv_fd(int);
 int		 executor_main(struct imsgbuf*);
 
 /* sandbox.c */
-void		 sandbox(void);
+void		 sandbox_server_process(void);
+void		 sandbox_executor_process(void);
+void		 sandbox_logger_process(void);
 
 /* utf8.c */
 int		 valid_multibyte_utf8(struct parser*);

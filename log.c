@@ -270,10 +270,7 @@ logger_main(int fd, struct imsgbuf *ibuf)
 	event_set(&imsgev, fd, EV_READ | EV_PERSIST, &handle_dispatch_imsg, ibuf);
 	event_add(&imsgev, NULL);
 
-#ifdef __OpenBSD__
-	if (pledge("stdio", NULL) == -1)
-		err(1, "pledge");
-#endif
+	sandbox_logger_process();
 
 	event_dispatch();
 

@@ -270,22 +270,8 @@ handle_dispatch_imsg(int fd, short ev, void *d)
 int
 executor_main(struct imsgbuf *ibuf)
 {
-	struct vhost	*vhost;
 	struct event	 evs[PROC_MAX], imsgev;
 	int		 i;
-
-#ifdef __OpenBSD__
-	for (vhost = hosts; vhost->domain != NULL; ++vhost) {
-		/* r so we can chdir into the correct directory */
-		if (unveil(vhost->dir, "rx") == -1)
-			err(1, "unveil %s for domain %s",
-			    vhost->dir, vhost->domain);
-	}
-
-	/* rpath to chdir into the correct directory */
-	if (pledge("stdio rpath sendfd proc exec", NULL))
-		err(1, "pledge");
-#endif
 
 	event_init();
 
@@ -300,6 +286,8 @@ executor_main(struct imsgbuf *ibuf)
 		    handle_dispatch_imsg, &servibuf[i]);
 		event_add(&evs[i], NULL);
 	}
+
+	sandbox_executor_process();
 
 	event_dispatch();
 

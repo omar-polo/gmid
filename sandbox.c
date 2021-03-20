@@ -21,7 +21,22 @@
 #include <sys/capsicum.h>
 
 void
-sandbox()
+sandbox_server_process(void)
+{
+	if (cap_enter() == -1)
+		fatal("cap_enter");
+}
+
+void
+sandbox_executor_process(void)
+{
+	/* We cannot capsicum the executor process because it needs
+	 * to fork(2)+execve(2) cgi scripts */
+	return;
+}
+
+void
+sandbox_logger_process(void)
 {
 	if (cap_enter() == -1)
 		fatal("cap_enter");
@@ -124,7 +139,7 @@ sandbox_seccomp_catch_sigsys(void)
 #endif	/* SC_DEBUG */
 
 void
-sandbox()
+sandbox_server_process(void)
 {
 	struct sock_filter filter[] = {
 		/* load the *current* architecture */
@@ -239,12 +254,30 @@ sandbox()
 		    __func__, strerror(errno));
 }
 
+void
+sandbox_executor_process(void)
+{
+	/* We cannot use seccomp for the executor process because we
+	 * don't know what the child will do.  Also, our filter will
+	 * be inherited so the child cannot set its own seccomp
+	 * policy. */
+	return;
+}
+
+void
+sandbox_logger_process(void)
+{
+	/* To be honest, here we could use a seccomp policy to only
+	 * allow writev(2) and memory allocations. */
+	return;
+}
+
 #elif defined(__OpenBSD__)
 
 #include <unistd.h>
 
 void
-sandbox()
+sandbox_server_process(void)
 {
 	struct vhost *h;
 
@@ -257,12 +290,50 @@ sandbox()
 		fatal("pledge");
 }
 
-#else
+void
+sandbox_executor_process(void)
+{
+	struct vhost	*vhost;
+
+	for (vhost = hosts; vhost->domain != NULL; ++vhost) {
+		/* r so we can chdir into the correct directory */
+		if (unveil(vhost->dir, "rx") == -1)
+			err(1, "unveil %s for domain %s",
+			    vhost->dir, vhost->domain);
+	}
+
+	/* rpath to chdir into the correct directory */
+	if (pledge("stdio rpath sendfd proc exec", NULL))
+		err(1, "pledge");
+}
 
 void
-sandbox()
+sandbox_logger_process(void)
+{
+	if (pledge("stdio", NULL) == -1)
+		err(1, "pledge");
+}
+
+#else
+
+#warning "No sandbox method known for this OS"
+
+void
+sandbox_server_process(void)
+{
+	return;
+}
+
+void
+sandbox_executor_process(void)
 {
 	log_notice(NULL, "no sandbox method known for this OS");
+}
+
+void
+sandbox_logger_process(void)
+{
+	return;
 }
 
 #endif
