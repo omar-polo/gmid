@@ -151,7 +151,7 @@ pledges, while the executor has `stdio sendfd proc exec`; both have
 unveiled only the served directories.  The logger process has pledge
 `stdio`.
 
-On FreeBSD, the listener process is sandboxed with `capsicum(4)`.
+On FreeBSD, the listener and logger process are sandboxed with `capsicum(4)`.
 
 On Linux, a `seccomp(2)` filter is installed in the listener to allow
 only certain syscalls, see [sandbox.c](sandbox.c) for more information
