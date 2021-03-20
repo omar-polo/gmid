@@ -389,6 +389,7 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 int
 main(int argc, char **argv)
 {
+	struct imsgbuf exibuf;
 	int ch, conftest = 0, configless = 0;
 	int old_ipv6, old_port;
 
@@ -495,7 +496,6 @@ main(int argc, char **argv)
 
 	/* wait a sighup and reload the daemon */
 	for (;;) {
-		struct imsgbuf exibuf;
 		int p[2];
 
 		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
