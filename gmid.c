@@ -502,7 +502,7 @@ main(int argc, char **argv)
 
 
 	/* Linux seems to call the event handlers even when we're
-	 * doing a sigwait.  This dummy handlers is here to avoid
+	 * doing a sigwait.  These dummy handlers is here to avoid
 	 * being terminated on SIGHUP, SIGTERM or SIGINFO. */
 	signal(SIGHUP, dummy_handler);
 	signal(SIGINT, dummy_handler);
