@@ -182,6 +182,7 @@ sandbox_server_process(void)
 
 		/* for imsg */
 		SC_ALLOW(sendmsg),
+		SC_ALLOW(prlimit64),
 
 		/* needed for signal handling */
 		SC_ALLOW(rt_sigreturn),
