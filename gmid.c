@@ -38,6 +38,12 @@ struct conf conf;
 struct tls_config *tlsconf;
 struct tls *ctx;
 
+static void
+dummy_handler(int signo)
+{
+	return;
+}
+
 /* XXX: create recursively */
 void
 mkdirs(const char *path)
@@ -494,6 +500,14 @@ main(int argc, char **argv)
 		return 0;
 	}
 
+
+	/* Linux seems to call the event handlers even when we're
+	 * doing a sigwait.  This dummy handlers is here to avoid
+	 * being terminated on SIGHUP, SIGTERM or SIGINFO. */
+	signal(SIGHUP, dummy_handler);
+	signal(SIGINT, dummy_handler);
+	signal(SIGTERM, dummy_handler);
+
 	/* wait a sighup and reload the daemon */
 	for (;;) {
 		int p[2];
@@ -506,7 +520,6 @@ main(int argc, char **argv)
 		case -1:
 			fatal("fork: %s", strerror(errno));
 		case 0:
-			signal(SIGHUP, SIG_IGN);
 			close(p[0]);
 			imsg_init(&exibuf, p[1]);
 			_exit(serve(argc, argv, &exibuf));
