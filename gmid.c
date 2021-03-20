@@ -249,15 +249,19 @@ free_config(void)
 	tls_config_free(tlsconf);
 }
 
-static void
-wait_sighup(void)
+static int
+wait_signal(void)
 {
 	sigset_t mask;
 	int signo;
 
 	sigemptyset(&mask);
 	sigaddset(&mask, SIGHUP);
+	sigaddset(&mask, SIGINT);
+	sigaddset(&mask, SIGTERM);
 	sigwait(&mask, &signo);
+
+	return signo == SIGHUP;
 }
 
 void
@@ -511,7 +515,9 @@ main(int argc, char **argv)
 		close(p[1]);
 		imsg_init(&exibuf, p[0]);
 
-		wait_sighup();
+		if (!wait_signal())
+			break;
+
 		log_info(NULL, "reloading configuration %s", config_path);
 
 		/* close the executor (it'll close the servers too) */
@@ -543,4 +549,12 @@ main(int argc, char **argv)
 		if (sock6 == -1 && conf.ipv6)
 			sock6 = make_socket(conf.port, AF_INET6);
 	}
+
+	imsg_compose(&exibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
+	imsg_flush(&exibuf);
+
+	imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
+	imsg_flush(&logibuf);
+
+	return 0;
 }
