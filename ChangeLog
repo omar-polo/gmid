@@ -1,3 +1,7 @@
+2021-03-20  Omar Polo  <op@omarpolo.com>
+
+	* sandbox.c (sandbox_logger_process): add capsicum to the logger process
+
 2021-03-19  Omar Polo  <op@omarpolo.com>
 
 	* gmid.c (main): use imsg for all IPC; only the main process
