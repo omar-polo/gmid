@@ -1,5 +1,7 @@
 2021-03-20  Omar Polo  <op@omarpolo.com>
 
+	* 1.6 tagged
+
 	* sandbox.c (sandbox_logger_process): add capsicum to the logger process
 
 2021-03-19  Omar Polo  <op@omarpolo.com>
