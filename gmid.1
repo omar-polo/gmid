@@ -424,7 +424,7 @@ printf "20 text/plain\\r\\n"
 echo "hello world"
 EOF
 $ chmod +x docs/cgi/hello
-$ gmid -x cgi docs
+$ gmid -x '/cgi/*' docs
 .Ed
 .Pp
 The following is an example of a possible configuration for a site
