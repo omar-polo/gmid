@@ -1,3 +1,9 @@
+2021-03-19  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): use imsg for all IPC; only the main process
+	listens for SIGHUP: this means that finally the config reload will
+	work with OpenBSD' rc (and probably other service manager too)
+
 2021-02-22  Omar Polo  <op@omarpolo.com>
 
 	* log.c (log_request): add `log on/off' to enable/disable logs per-server or per-location
