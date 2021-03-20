@@ -43,8 +43,7 @@ raw() {
 }
 
 run() {
-	# filter out logs for GET requests
-	(./../gmid -f -c reg.conf 2>&1 | grep -v GET) >&2 &
+	./../gmid -f -c reg.conf &
 	pid=$!
 	# give gmid time to bind the port, otherwise we end up
 	# executing gg when gmid isn't ready yet.
@@ -61,13 +60,13 @@ check() {
 }
 
 restart() {
-	pkill -SIGHUP gmid
+	kill -HUP $pid
 	sleep 1
 }
 
 # quit gmid
 quit() {
-	pkill gmid || true
+	kill $pid || true
 	wait || true
 }
 
@@ -302,5 +301,3 @@ eq "$(head /)"		"61 certificate not authorised"	"Unexpected head for /"
 echo OK GET / with invalid client certificate
 
 ggflags=''
-
-quit
