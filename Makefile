@@ -23,10 +23,7 @@ gg: gg.o iri.o utf8.o ${COMPAT}
 	${CC} gg.o iri.o utf8.o ${COMPAT} -o $@ ${LDFLAGS}
 
 static: ${OBJS}
-	${CC} -static ${OBJS} \
-		${LIBDIR}/libcrypto.a ${LIBDIR}/libtls.a ${LIBDIR}/libssl.a \
-		-o gmid
-	strip gmid
+	${CC} ${OBJS} -o gmid ${LDFLAGS} ${STATIC}
 
 TAGS: ${SRCS}
 	-etags ${SRCS} || true
