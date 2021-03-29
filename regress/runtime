@@ -183,6 +183,9 @@ echo OK GET /err with cgi
 eq "$(raw /invalid | wc -c | xargs)" 2048		"Unexpected body for /invalid"
 echo OK GET /invalid with cgi
 
+eq "$(raw /max-length-reply | wc -c | xargs)" 1029	"Unexpected header for /max-length-reply"
+echo OK GET /max-length-reply with cgi
+
 # try a big file
 eq "$(head /serve-bigfile)"	"20 application/octet-stream" "Unexpected head for /serve-bigfile"
 get /bigfile > bigfile

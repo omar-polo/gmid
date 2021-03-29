@@ -180,8 +180,11 @@ struct client {
 	const char	*meta;
 	int		 fd, pfd;
 	DIR		*dir;
-	char		 sbuf[1024];
+
+	/* big enough to store STATUS + SPACE + META + CRLF */
+	char		 sbuf[1029];
 	ssize_t		 len, off;
+
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host they're talking to */
 };

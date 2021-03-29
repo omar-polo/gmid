@@ -68,6 +68,7 @@ testdata: fill-file
 	printf "# hello world\n" > testdata/index.gmi
 	./sha testdata/index.gmi testdata/index.gmi.sha
 	cp hello slow err invalid serve-bigfile env testdata/
+	cp max-length-reply testdata
 	mkdir testdata/dir
 	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi

@@ -1,3 +1,7 @@
+2021-03-27  Omar Polo  <op@omarpolo.com>
+
+	* gmid.h (struct client): correctly handle CGI scripts that replies with the maximum header length allowed
+
 2021-03-20  Omar Polo  <op@omarpolo.com>
 
 	* 1.6 tagged
