@@ -87,6 +87,8 @@ The build is as simple as
     ./configure
     make
 
+or `make static` to build a statically-linked executable.
+
 If the configure scripts fails to pick up something, please open an
 issue or notify me via email.
 
