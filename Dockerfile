@@ -1,6 +1,6 @@
 FROM alpine as builder
 WORKDIR /build
-RUN apk update && apk upgrade && apk add alpine-sdk linux-headers libressl-dev flex bison
+RUN apk update && apk upgrade && apk add alpine-sdk linux-headers libressl-dev flex bison libevent-dev
 COPY . .
 RUN make clean gmid
 
