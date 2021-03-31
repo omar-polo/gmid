@@ -210,12 +210,27 @@ childerr:
 	_exit(1);
 }
 
+static struct vhost *
+host_nth(size_t n)
+{
+	struct vhost *h;
+
+	TAILQ_FOREACH(h, &hosts, vhosts) {
+		if (n == 0)
+			return h;
+		n--;
+	}
+
+	return NULL;
+}
+
 static void
 handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
-	struct cgireq	req;
-	struct iri	iri;
-	int		fd;
+	struct vhost	*h;
+	struct cgireq	 req;
+	struct iri	 iri;
+	int		 fd;
 
 	if (datalen != sizeof(req))
 		abort();
@@ -234,10 +249,10 @@ handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 	if (*iri.query == '\0')
 		iri.query = NULL;
 
-	if (req.host_off > HOSTSLEN || hosts[req.host_off].domain == NULL)
+	if ((h = host_nth(req.host_off)) == NULL)
 		abort();
 
-	fd = launch_cgi(&iri, &req, &hosts[req.host_off]);
+	fd = launch_cgi(&iri, &req, h);
 	imsg_compose(ibuf, IMSG_CGI_RES, imsg->hdr.peerid, 0, fd, NULL, 0);
 	imsg_flush(ibuf);
 }

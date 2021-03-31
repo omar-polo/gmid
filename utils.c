@@ -96,6 +96,16 @@ xstrdup(const char *s)
 	return d;
 }
 
+void *
+xcalloc(size_t nmemb, size_t size)
+{
+	void *d;
+
+	if ((d = calloc(nmemb, size)) == NULL)
+		err(1, "calloc");
+	return d;
+}
+
 void
 gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 {

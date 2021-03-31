@@ -26,7 +26,7 @@
 #include <signal.h>
 #include <string.h>
 
-struct vhost hosts[HOSTSLEN];
+struct vhosthead hosts;
 
 int sock4, sock6;
 
@@ -95,6 +95,7 @@ void
 load_local_cert(const char *hostname, const char *dir)
 {
 	char *cert, *key;
+	struct vhost *h;
 
 	if (asprintf(&cert, "%s/%s.cert.pem", dir, hostname) == -1)
 		errx(1, "asprintf");
@@ -104,9 +105,10 @@ load_local_cert(const char *hostname, const char *dir)
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
 		gen_certificate(hostname, cert, key);
 
-	hosts[0].cert = cert;
-	hosts[0].key = key;
-	hosts[0].domain = hostname;
+	h = TAILQ_FIRST(&hosts);
+	h->cert = cert;
+	h->key = key;
+	h->domain = hostname;
 }
 
 void
@@ -114,7 +116,7 @@ load_vhosts(void)
 {
 	struct vhost *h;
 
-	for (h = hosts; h->domain != NULL; ++h) {
+	TAILQ_FOREACH(h, &hosts, vhosts) {
 		if ((h->dirfd = open(h->dir, O_RDONLY | O_DIRECTORY)) == -1)
 			fatal("open %s for domain %s", h->dir, h->domain);
 	}
@@ -193,12 +195,14 @@ setup_tls(void)
 	if ((ctx = tls_server()) == NULL)
 		fatal("tls_server failure");
 
-	/* we need to set something, then we can add how many key we want */
-	if (tls_config_set_keypair_file(tlsconf, hosts->cert, hosts->key))
-		fatal("tls_config_set_keypair_file failed for (%s, %s)",
-		    hosts->cert, hosts->key);
+	h = TAILQ_FIRST(&hosts);
 
-	for (h = &hosts[1]; h->domain != NULL; ++h) {
+	/* we need to set something, then we can add how many key we want */
+	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))
+		fatal("tls_config_set_keypair_file failed for (%s, %s)",
+		    h->cert, h->key);
+
+	while ((h = TAILQ_NEXT(h, vhosts)) != NULL) {
 		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
 			fatal("failed to load the keypair (%s, %s)",
 			    h->cert, h->key);
@@ -221,11 +225,7 @@ listener_main(struct imsgbuf *ibuf)
 void
 init_config(void)
 {
-	size_t i;
-
-	bzero(hosts, sizeof(hosts));
-	for (i = 0; i < HOSTSLEN; ++i)
-		hosts[i].dirfd = -1;
+	TAILQ_INIT(&hosts);
 
 	conf.port = 1965;
 	conf.ipv6 = 0;
@@ -236,37 +236,34 @@ init_config(void)
 	conf.chroot = NULL;
 	conf.user = NULL;
 
-	/* we'll change this to 0 when running without config. */
 	conf.prefork = 3;
 }
 
 void
 free_config(void)
 {
-	struct vhost *h;
-	struct location *l;
+	struct vhost *h, *th;
+	struct location *l, *tl;
 
 	free(conf.chroot);
 	free(conf.user);
 	memset(&conf, 0, sizeof(conf));
 
-	for (h = hosts; h->domain != NULL; ++h) {
-		free((char*)h->domain);
-		free((char*)h->cert);
-		free((char*)h->key);
-		free((char*)h->dir);
-		free((char*)h->cgi);
-		free((char*)h->entrypoint);
+	TAILQ_FOREACH_SAFE(h, &hosts, vhosts, th) {
+		TAILQ_FOREACH_SAFE(l, &h->locations, locations, tl) {
+			TAILQ_REMOVE(&h->locations, l, locations);
 
-		for (l = h->locations; l->match != NULL; ++l) {
 			free((char*)l->match);
 			free((char*)l->lang);
 			free((char*)l->default_mime);
 			free((char*)l->index);
 			free((char*)l->block_fmt);
+			free(l);
 		}
+
+		TAILQ_REMOVE(&hosts, h, vhosts);
+		free(h);
 	}
-	memset(hosts, 0, sizeof(hosts));
 
 	tls_free(ctx);
 	tls_config_free(tlsconf);
@@ -352,8 +349,10 @@ logger_init(void)
 static int
 serve(int argc, char **argv, struct imsgbuf *ibuf)
 {
-	char	path[PATH_MAX];
-	int	i, p[2];
+	char		 path[PATH_MAX];
+	int		 i, p[2];
+	struct vhost	*h;
+	struct location	*l;
 
         if (config_path == NULL) {
 		if (hostname == NULL)
@@ -362,23 +361,26 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 			certs_dir = data_dir();
 		load_local_cert(hostname, certs_dir);
 
-		hosts[0].domain = "*";
-		hosts[0].locations[0].auto_index = 1;
-		hosts[0].locations[0].match = "*";
+		h = TAILQ_FIRST(&hosts);
+		h->domain = "*";
+
+		l = TAILQ_FIRST(&h->locations);
+		l->auto_index = 1;
+		l->match = "*";
 
 		switch (argc) {
 		case 0:
-			hosts[0].dir = getcwd(path, sizeof(path));
+			h->dir = getcwd(path, sizeof(path));
 			break;
 		case 1:
-			hosts[0].dir = absolutify_path(argv[0]);
+			h->dir = absolutify_path(argv[0]);
 			break;
 		default:
 			usage(getprogname());
 			return 1;
 		}
 
-		log_notice(NULL, "serving %s on port %d", hosts[0].dir, conf.port);
+		log_notice(NULL, "serving %s on port %d", h->dir, conf.port);
 	}
 
 	/* setup tls before dropping privileges: we don't want user
@@ -409,12 +411,31 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 	_exit(executor_main(ibuf));
 }
 
+static void
+setup_configless(int argc, char **argv, const char *cgi)
+{
+	struct vhost	*host;
+	struct location	*loc;
+
+	host = xcalloc(1, sizeof(*host));
+	host->cgi = cgi;
+	TAILQ_INSERT_HEAD(&hosts, host, vhosts);
+
+	loc = xcalloc(1, sizeof(*loc));
+	TAILQ_INSERT_HEAD(&host->locations, loc, locations);
+
+	serve(argc, argv, NULL);
+	imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
+	imsg_flush(&logibuf);
+}
+
 int
 main(int argc, char **argv)
 {
 	struct imsgbuf exibuf;
 	int ch, conftest = 0, configless = 0;
 	int old_ipv6, old_port;
+	const char *cgi = NULL;
 
 	init_config();
 
@@ -464,7 +485,7 @@ main(int argc, char **argv)
 			/* drop the starting / (if any) */
 			if (*optarg == '/')
 				optarg++;
-			hosts[0].cgi = optarg;
+			cgi = optarg;
 			configless = 1;
 			break;
 
@@ -511,12 +532,9 @@ main(int argc, char **argv)
 		sock6 = make_socket(conf.port, AF_INET6);
 
 	if (configless) {
-		serve(argc, argv, NULL);
-		imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
-		imsg_flush(&logibuf);
+		setup_configless(argc, argv, cgi);
 		return 0;
 	}
-
 
 	/* Linux seems to call the event handlers even when we're
 	 * doing a sigwait.  These dummy handlers is here to avoid

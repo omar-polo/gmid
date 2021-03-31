@@ -30,11 +30,12 @@
  */
 
 struct vhost *host;
-size_t ihost;
 struct location *loc;
-size_t iloc;
 
 int goterror = 0;
+
+static struct vhost	*new_vhost(void);
+static struct location	*new_location(void);
 
 void		 yyerror(const char*, ...);
 int		 parse_portno(const char*);
@@ -90,8 +91,14 @@ vhosts		: /* empty */
 		| vhosts vhost
 		;
 
-vhost		: TSERVER TSTRING '{' servopts locations '}' {
-			host->locations[0].match = xstrdup("*");
+vhost		: TSERVER TSTRING {
+			host = new_vhost();
+			TAILQ_INSERT_HEAD(&hosts, host, vhosts);
+
+			loc = new_location();
+			TAILQ_INSERT_HEAD(&host->locations, loc, locations);
+
+			loc->match = xstrdup("*");
 			host->domain = $2;
 
 			if (strstr($2, "xn--") != NULL) {
@@ -99,17 +106,11 @@ vhost		: TSERVER TSTRING '{' servopts locations '}' {
 				    "you should use the decoded hostname.",
 				    config_path, yylineno, $2);
 			}
+		} '{' servopts locations '}' {
 
 			if (host->cert == NULL || host->key == NULL ||
 			    host->dir == NULL)
 				yyerror("invalid vhost definition: %s", $2);
-
-			if (++ihost == HOSTSLEN)
-				errx(1, "too much vhosts defined");
-
-			host++;
-			loc = &host->locations[0];
-			iloc = 0;
 		}
 		| error '}'		{ yyerror("error in server directive"); }
 		;
@@ -205,6 +206,18 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 
 %%
 
+static struct vhost *
+new_vhost(void)
+{
+	return xcalloc(1, sizeof(struct vhost));
+}
+
+static struct location *
+new_location(void)
+{
+	return xcalloc(1, sizeof(struct location));
+}
+
 void
 yyerror(const char *msg, ...)
 {
@@ -234,11 +247,6 @@ parse_portno(const char *p)
 void
 parse_conf(const char *path)
 {
-	host = &hosts[0];
-	ihost = 0;
-	loc = &hosts[0].locations[0];
-	iloc = 0;
-
 	config_path = path;
 	if ((yyin = fopen(path, "r")) == NULL)
 		fatal("cannot open config: %s: %s", path, strerror(errno));
@@ -247,6 +255,9 @@ parse_conf(const char *path)
 
 	if (goterror)
 		exit(1);
+
+	if (TAILQ_FIRST(&hosts)->domain == NULL)
+		fatal("no vhost defined in %s", path);
 }
 
 char *
@@ -307,7 +318,6 @@ check_prefork_num(int n)
 void
 advance_loc(void)
 {
-	if (++iloc == LOCLEN)
-		errx(1, "too much location rules defined");
-	loc++;
+	loc = new_location();
+	TAILQ_INSERT_TAIL(&host->locations, loc, locations);
 }

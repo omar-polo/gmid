@@ -282,7 +282,7 @@ sandbox_server_process(void)
 {
 	struct vhost *h;
 
-	for (h = hosts; h->domain != NULL; ++h) {
+	TAILQ_FOREACH(h, &hosts, vhosts) {
 		if (unveil(h->dir, "r") == -1)
 			fatal("unveil %s for domain %s", h->dir, h->domain);
 	}
@@ -294,13 +294,13 @@ sandbox_server_process(void)
 void
 sandbox_executor_process(void)
 {
-	struct vhost	*vhost;
+	struct vhost	*h;
 
-	for (vhost = hosts; vhost->domain != NULL; ++vhost) {
+	TAILQ_FOREACH(h, &hosts, vhosts) {
 		/* r so we can chdir into the correct directory */
-		if (unveil(vhost->dir, "rx") == -1)
+		if (unveil(h->dir, "rx") == -1)
 			err(1, "unveil %s for domain %s",
-			    vhost->dir, vhost->domain);
+			    h->dir, h->domain);
 	}
 
 	/* rpath to chdir into the correct directory */

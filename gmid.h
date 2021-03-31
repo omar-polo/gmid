@@ -51,15 +51,13 @@
 
 #define MAX_USERS	64
 
-#define HOSTSLEN	64
-#define LOCLEN		32
-
 /* maximum hostname and label length, +1 for the NUL-terminator */
 #define DOMAIN_NAME_LEN	(253+1)
 #define LABEL_LEN	(63+1)
 
 #define PROC_MAX	16
 
+TAILQ_HEAD(lochead, location);
 struct location {
 	const char	*match;
 	const char	*lang;
@@ -71,8 +69,11 @@ struct location {
 	int		 strip;
 	X509_STORE	*reqca;
 	int		 disable_log;
+
+	TAILQ_ENTRY(location) locations;
 };
 
+extern TAILQ_HEAD(vhosthead, vhost) hosts;
 struct vhost {
 	const char	*domain;
 	const char	*cert;
@@ -82,13 +83,13 @@ struct vhost {
 	const char	*entrypoint;
 	int		 dirfd;
 
-	/* the first location rule is always '*' and holds the default
-	 * settings for the vhost, from locations[1] onwards there are
-	 * the "real" location rules specified in the configuration. */
-	struct location	 locations[LOCLEN];
-};
+	TAILQ_ENTRY(vhost) vhosts;
 
-extern struct vhost hosts[HOSTSLEN];
+	/* the first location rule is always '*' and holds the default
+	 * settings for the vhost, then follows the "real" location
+	 * rules as specified in the configuration. */
+	struct lochead	 locations;
+};
 
 struct etm {			/* extension to mime */
 	const char	*mime;
@@ -321,6 +322,7 @@ int		 ends_with(const char*, const char*);
 ssize_t		 filesize(int);
 char		*absolutify_path(const char*);
 char		*xstrdup(const char*);
+void		*xcalloc(size_t, size_t);
 void		 gen_certificate(const char*, const char*, const char*);
 X509_STORE	*load_ca(const char*);
 int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);

@@ -1,5 +1,7 @@
 2021-03-31  Omar Polo  <op@omarpolo.com>
 
+	* gmid.h (struct vhost): remove limits on the number of vhosts and location blocks
+
 	* gmid.c (mkdirs): fix recursive mkdirs for configless mode
 
 2021-03-29  Omar Polo  <op@omarpolo.com>

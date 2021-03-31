@@ -50,6 +50,7 @@ static int	 apply_require_ca(struct client*);
 static void	 handle_open_conn(int, short, void*);
 static void	 start_reply(struct client*, int, const char*);
 static void	 handle_start_reply(int, short, void*);
+static size_t	 host_nth(struct vhost*);
 static void	 start_cgi(const char*, const char*, struct client*);
 static void	 open_dir(struct client*);
 static void	 redirect_canonical_dir(struct client*);
@@ -99,14 +100,15 @@ vhost_lang(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return NULL;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->lang != NULL) {
 			if (matches(loc->match, path))
 				return loc->lang;
 		}
 	}
 
-	return v->locations[0].lang;
+	return TAILQ_FIRST(&v->locations)->lang;
 }
 
 const char *
@@ -118,15 +120,17 @@ vhost_default_mime(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return default_mime;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->default_mime != NULL) {
 			if (matches(loc->match, path))
 				return loc->default_mime;
 		}
 	}
 
-	if (v->locations[0].default_mime != NULL)
-		return v->locations[0].default_mime;
+	loc = TAILQ_FIRST(&v->locations);
+	if (loc->default_mime != NULL)
+		return loc->default_mime;
 	return default_mime;
 }
 
@@ -139,15 +143,17 @@ vhost_index(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return index;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->index != NULL) {
 			if (matches(loc->match, path))
 				return loc->index;
 		}
 	}
 
-	if (v->locations[0].index != NULL)
-		return v->locations[0].index;
+	loc = TAILQ_FIRST(&v->locations);
+	if (loc->index != NULL)
+		return loc->index;
 	return index;
 }
 
@@ -159,14 +165,16 @@ vhost_auto_index(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return 0;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->auto_index != 0) {
 			if (matches(loc->match, path))
 				return loc->auto_index == 1;
 		}
 	}
 
-	return v->locations[0].auto_index == 1;
+	loc = TAILQ_FIRST(&v->locations);
+	return loc->auto_index == 1;
 }
 
 int
@@ -177,7 +185,8 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 	if (v == NULL || path == NULL)
 		return 0;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->block_code != 0) {
 			if (matches(loc->match, path)) {
 				*code = loc->block_code;
@@ -187,9 +196,10 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 		}
 	}
 
-	*code = v->locations[0].block_code;
-	*fmt = v->locations[0].block_fmt;
-	return v->locations[0].block_code != 0;
+	loc = TAILQ_FIRST(&v->locations);
+	*code = loc->block_code;
+	*fmt = loc->block_fmt;
+	return loc->block_code != 0;
 }
 
 int
@@ -200,14 +210,16 @@ vhost_strip(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return 0;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->strip != 0) {
 			if (matches(loc->match, path))
 				return loc->strip;
 		}
 	}
 
-	return v->locations[0].strip;
+	loc = TAILQ_FIRST(&v->locations);
+	return loc->strip;
 }
 
 X509_STORE *
@@ -218,14 +230,16 @@ vhost_require_ca(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return NULL;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->reqca != NULL) {
 			if (matches(loc->match, path))
 				return loc->reqca;
 		}
 	}
 
-	return v->locations[0].reqca;
+	loc = TAILQ_FIRST(&v->locations);
+	return loc->reqca;
 }
 
 int
@@ -236,12 +250,14 @@ vhost_disable_log(struct vhost *v, const char *path)
 	if (v == NULL || path == NULL)
 		return 0;
 
-	for (loc = &v->locations[1]; loc->match != NULL; ++loc) {
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->disable_log && matches(loc->match, path))
 				return 1;
 	}
 
-	return v->locations[0].disable_log;
+	loc = TAILQ_FIRST(&v->locations);
+	return loc->disable_log;
 }
 
 static int
@@ -399,7 +415,7 @@ handle_handshake(int fd, short ev, void *d)
 		goto err;
 	}
 
-	for (h = hosts; h->domain != NULL; ++h) {
+	TAILQ_FOREACH(h, &hosts, vhosts) {
 		if (matches(h->domain, c->domain))
 			break;
 	}
@@ -407,9 +423,9 @@ handle_handshake(int fd, short ev, void *d)
 	log_debug(c, "handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
 	    servname != NULL ? servname : "(null)",
 	    c->domain,
-	    h->domain != NULL ? h->domain : "(null)");
+	    h != NULL ? h->domain : "(null)");
 
-	if (h->domain != NULL) {
+	if (h != NULL) {
 		c->host = h;
 		handle_open_conn(fd, ev, c);
 		return;
@@ -633,6 +649,21 @@ handle_start_reply(int fd, short ev, void *d)
 		c->next(fd, ev, c);
 }
 
+static size_t
+host_nth(struct vhost *h)
+{
+	struct vhost	*v;
+	size_t		 i = 0;
+
+	TAILQ_FOREACH(v, &hosts, vhosts) {
+		if (v == h)
+			return i;
+		i++;
+	}
+
+	abort();
+}
+
 static void
 start_cgi(const char *spath, const char *relpath, struct client *c)
 {
@@ -675,7 +706,7 @@ start_cgi(const char *spath, const char *relpath, struct client *c)
 	req.notbefore = tls_peer_cert_notbefore(c->ctx);
 	req.notafter = tls_peer_cert_notafter(c->ctx);
 
-	req.host_off = c->host - hosts;
+	req.host_off = host_nth(c->host);
 
 	imsg_compose(&exibuf, IMSG_CGI_REQ, c->id, 0, -1, &req, sizeof(req));
 	imsg_flush(&exibuf);
