@@ -18,12 +18,18 @@
 
 #include <stddef.h>
 
-struct ibuf {
-	TAILQ_ENTRY(ibuf)	 entry;
-};
+TAILQ_HEAD(tailhead, entry) head;
+struct entry {
+	TAILQ_ENTRY(entry) entries;
+} *np, *nt;
 
 int
 main(void)
 {
+	TAILQ_INIT(&head);
+	TAILQ_FOREACH_SAFE(np, &head, entries, nt) {
+		/* nop */;
+	}
+
 	return 0;
 }
