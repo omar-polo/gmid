@@ -230,7 +230,6 @@ enum imsg_type {
 };
 
 /* gmid.c */
-void		 mkdirs(const char*);
 char		*data_dir(void);
 void		 load_local_cert(const char*, const char*);
 void		 load_vhosts(void);

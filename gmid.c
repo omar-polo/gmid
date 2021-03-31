@@ -20,6 +20,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <libgen.h>
 #include <limits.h>
 #include <pwd.h>
 #include <signal.h>
@@ -44,11 +45,28 @@ dummy_handler(int signo)
 	return;
 }
 
-/* XXX: create recursively */
-void
-mkdirs(const char *path)
+/* wrapper around dirname(3).  dn must be PATH_MAX+1 at least. */
+static void
+pdirname(const char *path, char *dn)
 {
-	if (mkdir(path, 0755) == -1 && errno != EEXIST)
+	char	 p[PATH_MAX+1];
+	char	*t;
+
+	strlcpy(p, path, sizeof(p));
+	t = dirname(p);
+	memmove(dn, t, strlen(t)+1);
+}
+
+static void
+mkdirs(const char *path, mode_t mode)
+{
+	char	dname[PATH_MAX+1];
+
+	pdirname(path, dname);
+	if (!strcmp(dname, "/"))
+		return;
+	mkdirs(dname, mode);
+	if (mkdir(path, mode) != 0 && errno != EEXIST)
 		fatal("can't mkdir %s: %s", path, strerror(errno));
 }
 
@@ -64,13 +82,12 @@ data_dir(void)
 			errx(1, "XDG_DATA_HOME and HOME both empty");
 		if (asprintf(&t, "%s/.local/share/gmid", home) == -1)
 			err(1, "asprintf");
-		mkdirs(t);
-		return t;
+	} else {
+		if (asprintf(&t, "%s/gmid", xdg) == -1)
+			err(1, "asprintf");
 	}
 
-	if (asprintf(&t, "%s/gmid", xdg) == -1)
-		err(1, "asprintf");
-	mkdirs(t);
+	mkdirs(t, 0755);
 	return t;
 }
 
