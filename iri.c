@@ -272,9 +272,13 @@ path_clean(char *path)
 	}
 
 	/* 3. eliminate each inner .. along with the preceding non-.. */
-	for (i = strstr(path, "../"); i != NULL; i = strstr(path, ".."))
+	for (i = strstr(path, "../"); i != NULL; i = strstr(path, "..")) {
+		/* break if we've found a trailing .. */
+		if (i[2] == '\0')
+			break;
 		if (!path_elide_dotdot(path, i, 3))
 			return 0;
+	}
 
 	/* 4. eliminate trailing ..*/
 	if ((i = strstr(path, "..")) != NULL)
