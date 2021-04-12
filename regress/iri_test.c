@@ -194,6 +194,10 @@ main(void)
 	    PASS,
             IRI("gemini", "omarpolo.com", "", "foo", "", ""),
 	    "Trim initial slashes (pt. 2)");
+	TEST("http://a/b/c/../..",
+	    PASS,
+	    IRI("http", "a", "", "", "", ""),
+	    "avoid infinite loops (see v1.6.1)");
 
 	/* query */
 	TEST("foo://example.com/foo/?gne",
