@@ -1,3 +1,9 @@
+2021-04-12  Omar Polo  <op@omarpolo.com>
+
+	* 1.6.1 tagged
+
+	* iri.c (path_clean): fix possible infinite loop in the IRI parsing code.
+
 2021-03-31  Omar Polo  <op@omarpolo.com>
 
 	* gmid.h (struct vhost): remove limits on the number of vhosts and location blocks
