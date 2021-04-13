@@ -702,7 +702,12 @@ start_cgi(const char *spath, const char *relpath, struct client *c)
 		strlcpy(req.issuer, t, sizeof(req.issuer));
 	if ((t = tls_peer_cert_hash(c->ctx)) != NULL)
 		strlcpy(req.hash, t, sizeof(req.hash));
+	if ((t = tls_conn_version(c->ctx)) != NULL)
+		strlcpy(req.version, t, sizeof(req.version));
+	if ((t = tls_conn_cipher(c->ctx)) != NULL)
+		strlcpy(req.cipher, t, sizeof(req.cipher));
 
+	req.cipher_strength = tls_conn_cipher_strength(c->ctx);
 	req.notbefore = tls_peer_cert_notbefore(c->ctx);
 	req.notafter = tls_peer_cert_notafter(c->ctx);
 

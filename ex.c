@@ -184,6 +184,12 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost)
 		safe_setenv("REMOTE_USER", req->subject);
 		safe_setenv("TLS_CLIENT_ISSUER", req->issuer);
 		safe_setenv("TLS_CLIENT_HASH", req->hash);
+		safe_setenv("TLS_VERSION", req->version);
+		safe_setenv("TLS_CIPHER", req->cipher);
+
+		snprintf(path, sizeof(path), "%d", req->cipher_strength);
+		safe_setenv("TLS_CIPHER_STRENGTH", path);
+
 		setenv_time("TLS_CLIENT_NOT_AFTER", req->notafter);
 		setenv_time("TLS_CLIENT_NOT_BEFORE", req->notbefore);
 

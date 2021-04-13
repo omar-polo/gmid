@@ -210,6 +210,9 @@ struct cgireq {
 	char		issuer[64+1];
 
 	char		hash[128+1];
+	char		version[8];
+	char		cipher[32];
+	int		cipher_strength;
 	time_t		notbefore;
 	time_t		notafter;
 

@@ -1,3 +1,7 @@
+2021-04-13  Omar Polo  <op@omarpolo.com>
+
+	* ex.c (launch_cgi): define TLS_VERSION, TLS_CIPHER and TLS_CIPHER_STRENGTH for CGI scripts
+
 2021-04-12  Omar Polo  <op@omarpolo.com>
 
 	* 1.6.1 tagged

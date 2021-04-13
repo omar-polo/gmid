@@ -358,6 +358,13 @@ unset.
 The hash of the client certificate if provided, otherwise unset.
 The format is
 .Dq ALGO:HASH .
+.It Ev TLS_VERSION
+The TLS version negotiated with the peer.
+.It Ev TLS_CIPHER
+The cipher suite negotiated with the peer.
+.It Ev TLS_CIPHER_STRENGTH
+The strength in bits for the symmetric cipher that is being used with
+the peer.
 .It Ev TLS_CLIENT_NOT_AFTER
 The time corresponding to the end of the validity period of the peer
 certificate in the ISO 8601 format
