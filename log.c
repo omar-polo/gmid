@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <syslog.h>
+#include <time.h>
 
 static struct event imsgev;
 
@@ -39,6 +40,19 @@ static imsg_handlerfn *handlers[] = {
 	[IMSG_LOG] = handle_imsg_log,
 };
 
+static inline void
+print_date(void)
+{
+	struct tm	tminfo;
+	time_t		t;
+	char		buf[20];
+
+	time(&t);
+	strftime(buf, sizeof(buf), "%F %T",
+	    localtime_r(&t, &tminfo));
+	fprintf(stderr, "[%s] ", buf);
+}
+
 void
 fatal(const char *fmt, ...)
 {
@@ -47,6 +61,7 @@ fatal(const char *fmt, ...)
 	va_start(ap, fmt);
 
 	if (conf.foreground) {
+		print_date();
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
 	} else
@@ -249,9 +264,10 @@ handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 	msg = imsg->data;
 	msg[datalen-1] = '\0';
 
-	if (conf.foreground)
+	if (conf.foreground) {
+		print_date();
 		fprintf(stderr, "%s\n", msg);
-	else
+	} else
 		syslog(LOG_DAEMON, "%s", msg);
 }
 

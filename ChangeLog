@@ -1,3 +1,7 @@
+2021-04-14  Omar Polo  <op@omarpolo.com>
+
+	* log.c (handle_imsg_log): print the datetime when logging to stderr
+
 2021-04-13  Omar Polo  <op@omarpolo.com>
 
 	* ex.c (launch_cgi): define TLS_VERSION, TLS_CIPHER and TLS_CIPHER_STRENGTH for CGI scripts
