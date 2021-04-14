@@ -26,7 +26,7 @@ static: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS} ${STATIC}
 
 TAGS: ${SRCS}
-	-etags ${SRCS} || true
+	@(etags ${SRCS} || true) 2>/dev/null
 
 clean:
 	rm -f *.o compat/*.o lex.yy.c y.tab.c y.tab.h y.output gmid gg
