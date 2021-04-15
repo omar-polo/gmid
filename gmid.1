@@ -79,7 +79,7 @@ They have the form
 .Pa hostname.cert.pem
 and
 .Pa hostname.key.pem .
-If a certificate and key doesn't exists for a given hostname they
+If a certificate or key don't exists for a given hostname they
 will be automatically generated.
 .It Fl h
 Print the usage and exit.
@@ -140,7 +140,7 @@ the virtual host root directories.
 It's recommended to keep the TLS keys outside the chroot.
 Future version of
 .Nm
-may require this.
+may enforce this.
 .It Ic ipv6 Ar bool
 Enable or disable IPv6 support.
 By default is off.
