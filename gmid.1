@@ -238,10 +238,9 @@ If not specified, the
 is set to
 .Dq application/octet-stream .
 .It Ic entrypoint Pa path
-Make the CGI script at
-.Pa path
-.Pq relative to the Ic root No directory
-handle all the requests for the current virtual host
+Handle all the requests for the current virtual host using the
+CGI script at
+.Pa path .
 .It Ic index Ar string
 Set the directory index file.
 If not specified, it defaults to
