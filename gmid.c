@@ -513,9 +513,6 @@ main(int argc, char **argv)
 		return 0;
 	}
 
-	signal(SIGPIPE, SIG_IGN);
-	signal(SIGCHLD, SIG_IGN);
-
 	if (!conf.foreground && !configless) {
 		if (daemon(1, 1) == -1)
 			err(1, "daemon");
@@ -530,6 +527,9 @@ main(int argc, char **argv)
 	sock6 = -1;
 	if (conf.ipv6)
 		sock6 = make_socket(conf.port, AF_INET6);
+
+	signal(SIGPIPE, SIG_IGN);
+	signal(SIGCHLD, SIG_IGN);
 
 	if (configless) {
 		setup_configless(argc, argv, cgi);

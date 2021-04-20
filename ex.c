@@ -64,6 +64,13 @@ do_exec(const char *ex, const char *spath, char *query)
 	char **argv, buf[PATH_MAX], *sname, *t;
 	size_t i, n;
 
+	/* restore the default handlers */
+	signal(SIGPIPE, SIG_DFL);
+	signal(SIGCHLD, SIG_DFL);
+	signal(SIGHUP,  SIG_DFL);
+	signal(SIGINT,  SIG_DFL);
+	signal(SIGTERM, SIG_DFL);
+
 	strlcpy(buf, spath, sizeof(buf));
 	sname = basename(buf);
 
