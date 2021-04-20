@@ -36,8 +36,8 @@ int connected_clients;
 
 static inline int matches(const char*, const char*);
 
-static inline void reschedule_read(int, struct client*, statefn);
-static inline void reschedule_write(int, struct client*, statefn);
+static inline void yield_read(int, struct client*, statefn);
+static inline void yield_write(int, struct client*, statefn);
 
 static int	 check_path(struct client*, const char*, int*);
 static void	 open_file(struct client*);
@@ -81,13 +81,13 @@ matches(const char *pattern, const char *path)
 }
 
 static inline void
-reschedule_read(int fd, struct client *c, statefn fn)
+yield_read(int fd, struct client *c, statefn fn)
 {
 	event_once(fd, EV_READ, fn, c, NULL);
 }
 
 static inline void
-reschedule_write(int fd, struct client *c, statefn fn)
+yield_write(int fd, struct client *c, statefn fn)
 {
 	event_once(fd, EV_WRITE, fn, c, NULL);
 }
@@ -399,10 +399,10 @@ handle_handshake(int fd, short ev, void *d)
 	case -1: /* already handshaked */
 		break;
 	case TLS_WANT_POLLIN:
-		reschedule_read(fd, c, &handle_handshake);
+		yield_read(fd, c, &handle_handshake);
 		return;
 	case TLS_WANT_POLLOUT:
-		reschedule_write(fd, c, &handle_handshake);
+		yield_write(fd, c, &handle_handshake);
 		return;
 	default:
 		/* unreachable */
@@ -563,11 +563,11 @@ handle_open_conn(int fd, short ev, void *d)
 		return;
 
 	case TLS_WANT_POLLIN:
-		reschedule_read(fd, c, &handle_open_conn);
+		yield_read(fd, c, &handle_open_conn);
 		return;
 
 	case TLS_WANT_POLLOUT:
-		reschedule_write(fd, c, &handle_open_conn);
+		yield_write(fd, c, &handle_open_conn);
 		return;
 	}
 
@@ -633,10 +633,10 @@ handle_start_reply(int fd, short ev, void *d)
 		close_conn(fd, ev, c);
 		return;
 	case TLS_WANT_POLLIN:
-		reschedule_read(fd, c, &handle_start_reply);
+		yield_read(fd, c, &handle_start_reply);
 		return;
 	case TLS_WANT_POLLOUT:
-		reschedule_write(fd, c, &handle_start_reply);
+		yield_write(fd, c, &handle_start_reply);
 		return;
 	}
 
@@ -850,10 +850,10 @@ handle_dirlist(int fd, short ev, void *d)
 			close_conn(fd, ev, c);
 			return;
 		case TLS_WANT_POLLOUT:
-			reschedule_read(fd, c, &handle_dirlist);
+			yield_read(fd, c, &handle_dirlist);
 			return;
 		case TLS_WANT_POLLIN:
-			reschedule_write(fd, c, &handle_dirlist);
+			yield_write(fd, c, &handle_dirlist);
 			return;
 		default:
 			c->off += r;
@@ -905,11 +905,11 @@ send_directory_listing(int fd, short ev, void *d)
 				goto end;
 
 			case TLS_WANT_POLLOUT:
-				reschedule_read(fd, c, &send_directory_listing);
+				yield_read(fd, c, &send_directory_listing);
 				return;
 
 			case TLS_WANT_POLLIN:
-				reschedule_write(fd, c, &send_directory_listing);
+				yield_write(fd, c, &send_directory_listing);
 				return;
 
 			default:
@@ -955,7 +955,7 @@ handle_cgi_reply(int fd, short ev, void *d)
 		return;
 	}
 
-	reschedule_read(fd, c, &handle_cgi_reply);
+	yield_read(fd, c, &handle_cgi_reply);
 }
 
 static void
@@ -971,11 +971,11 @@ handle_copy(int fd, short ev, void *d)
 				goto end;
 
 			case TLS_WANT_POLLOUT:
-				reschedule_write(c->fd, c, &handle_copy);
+				yield_write(c->fd, c, &handle_copy);
 				return;
 
 			case TLS_WANT_POLLIN:
-				reschedule_read(c->fd, c, &handle_copy);
+				yield_read(c->fd, c, &handle_copy);
 				return;
 
 			default:
@@ -990,7 +990,7 @@ handle_copy(int fd, short ev, void *d)
 			goto end;
 		case -1:
 			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				reschedule_read(c->pfd, c, &handle_copy);
+				yield_read(c->pfd, c, &handle_copy);
 				return;
 			}
 			goto end;
@@ -1011,10 +1011,10 @@ close_conn(int fd, short ev, void *d)
 
 	switch (tls_close(c->ctx)) {
 	case TLS_WANT_POLLIN:
-		reschedule_read(fd, c, &close_conn);
+		yield_read(fd, c, &close_conn);
 		return;
 	case TLS_WANT_POLLOUT:
-		reschedule_read(fd, c, &close_conn);
+		yield_read(fd, c, &close_conn);
 		return;
 	}
 
@@ -1067,7 +1067,7 @@ do_accept(int sock, short et, void *d)
 			c->dir = NULL;
 			c->addr = addr;
 
-			reschedule_read(fd, c, &handle_handshake);
+			yield_read(fd, c, &handle_handshake);
 			connected_clients++;
 			return;
 		}
@@ -1094,7 +1094,7 @@ handle_imsg_cgi_res(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 	if ((c->pfd = imsg->fd) == -1)
 		start_reply(c, TEMP_FAILURE, "internal server error");
 	else
-		reschedule_read(c->pfd, c, &handle_cgi_reply);
+		yield_read(c->pfd, c, &handle_cgi_reply);
 }
 
 static void
