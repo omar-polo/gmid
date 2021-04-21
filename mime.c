@@ -67,6 +67,8 @@ load_default_mime(struct mime *mime)
 		{"text/markdown",	"markdown"},
 		{"text/markdown",	"md"},
 		{"text/plain",		"txt"},
+		{"text/x-patch",	"diff"}
+		{"text/x-patch",	"patch"},
 		{"text/xml",		"xml"},
 		{NULL, NULL}
 	};

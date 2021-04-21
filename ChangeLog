@@ -1,3 +1,7 @@
+2021-04-21  Omar Polo  <op@omarpolo.com>
+
+	* mime.c (load_default_mime): use `text/x-patch' for .patch and .diff files
+
 2021-04-14  Omar Polo  <op@omarpolo.com>
 
 	* log.c (handle_imsg_log): print the datetime when logging to stderr
