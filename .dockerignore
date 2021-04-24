@@ -1,0 +1,7 @@
+.git
+*.o
+gmid
+gg
+regress
+Makefile.local
+config.h
