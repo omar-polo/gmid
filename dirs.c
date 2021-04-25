@@ -61,9 +61,9 @@
  * (dp->d_namlen + 1), rounded up to a 4 byte boundary.
  */
 #undef DIRSIZ
-#define DIRSIZ(dp)							\
+#define DIRSIZ(dp, namlen)						\
 	((sizeof(struct dirent) - sizeof(dp)->d_name) +			\
-	    (((dp)->d_namlen + 1 + 3) &~ 3))
+	    ((namlen + 1 + 3) &~ 3))
 
 int
 scandir_fd(int fd, struct dirent ***namelist,
@@ -71,8 +71,7 @@ scandir_fd(int fd, struct dirent ***namelist,
     int (*dcomp)(const struct dirent **, const struct dirent **))
 {
 	struct dirent *d, *p, **names = NULL;
-	size_t /* arraysz, */ nitems = 0;
-	long arraysz;
+	size_t arraysz, namlen, nitems = 0;
 	struct stat stb;
 	DIR *dirp;
 
@@ -122,15 +121,15 @@ scandir_fd(int fd, struct dirent ***namelist,
 		/*
 		 * Make a minimum size copy of the data
 		 */
-		p = malloc(DIRSIZ(d));
+		namlen = strlen(d->d_name);
+		p = malloc(DIRSIZ(d, namlen));
 		if (p == NULL)
 			goto fail;
 
 		p->d_ino = d->d_ino;
 		p->d_type = d->d_type;
 		p->d_reclen = d->d_reclen;
-		p->d_namlen = d->d_namlen;
-		bcopy(d->d_name, p->d_name, p->d_namlen + 1);
+		bcopy(d->d_name, p->d_name, namlen + 1);
 		names[nitems++] = p;
 	}
 	closedir(dirp);
