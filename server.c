@@ -778,10 +778,9 @@ open_dir(struct client *c)
 			break;
 		}
 
-		c->pfd = dirfd;
 		c->next = enter_handle_dirlist;
 
-		c->dirlen = scandir_fd(c->pfd, &c->dir,
+		c->dirlen = scandir_fd(dirfd, &c->dir,
 		    root ? select_non_dotdot : select_non_dot,
 		    alphasort);
 		if (c->dirlen == -1) {
