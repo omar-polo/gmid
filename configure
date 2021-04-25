@@ -227,6 +227,7 @@ runtest openssl		OPENSSL		|| true
 runtest pr_set_name	PR_SET_NAME	|| true
 runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME "" -D_GNU_SOURCE || true
 runtest queue_h		QUEUE_H		|| true
+runtest reallocarray	REALLOCARRAY	|| true
 runtest recallocarray	RECALLOCARRAY	|| true
 runtest setproctitle	SETPROCTITLE	|| true
 runtest strlcat		STRLCAT		|| true
@@ -298,6 +299,7 @@ cat <<__HEREDOC__
 #define HAVE_PROGRAM_INVOCATION_SHORT_NAME ${HAVE_PROGRAM_INVOCATION_SHORT_NAME}
 #define HAVE_PR_SET_NAME	${HAVE_PR_SET_NAME}
 #define HAVE_QUEUE_H		${HAVE_QUEUE_H}
+#define HAVE_REALLOCARRAY	${HAVE_REALLOCARRAY}
 #define HAVE_RECALLOCARRAY	${HAVE_RECALLOCARRAY}
 #define HAVE_SETPROCTITLE	${HAVE_SETPROCTITLE}
 #define HAVE_STRLCAT		${HAVE_STRLCAT}
@@ -309,6 +311,7 @@ __HEREDOC__
 
 [ ${HAVE_EXPLICIT_BZERO} -eq 0 -o \
   ${HAVE_FREEZERO} -eq 0 -o \
+  ${HAVE_REALLOCARRAY} -eq 0 -o \
   ${HAVE_RECALLOCARRAY} -eq 0 -o \
   ${HAVE_STRLCAT} -eq 0 -o \
   ${HAVE_STRLCPY} -eq 0 -o \
@@ -346,8 +349,12 @@ fi
 if [ ${HAVE_IMSG} -eq 0 ]; then
 	COMPAT="${COMPAT} compat/imsg.o compat/imsg-buffer.o"
 fi
+if [ ${HAVE_REALLOCARRAY} -eq 0 ]; then
+	echo "extern	void	*reallocarray(void*, size_t, size_t);"
+	COMPAT="${COMPAT} compat/reallocarray.o"
+fi
 if [ ${HAVE_RECALLOCARRAY} -eq 0 ]; then
-	echo "extern	void*	 recallocarray(void*, size_t, size_t, size_t);"
+	echo "extern	void	*recallocarray(void*, size_t, size_t, size_t);"
 	COMPAT="${COMPAT} compat/recallocarray.o"
 fi
 if [ ${HAVE_SETPROCTITLE} -eq 0 ]; then
