@@ -180,7 +180,8 @@ struct client {
 	int		 code;
 	const char	*meta;
 	int		 fd, pfd;
-	DIR		*dir;
+	struct dirent	**dir;
+	int		 dirlen, diroff;
 
 	/* big enough to store STATUS + SPACE + META + CRLF */
 	char		 sbuf[1029];
@@ -284,6 +285,12 @@ X509_STORE	*vhost_require_ca(struct vhost*, const char*);
 int		 vhost_disable_log(struct vhost*, const char*);
 void		 mark_nonblock(int);
 void		 loop(struct tls*, int, int, struct imsgbuf*);
+
+/* dirs.c */
+int		 scandir_fd(int, struct dirent***, int(*)(const struct dirent*),
+		    int(*)(const struct dirent**, const struct dirent**));
+int		 select_non_dot(const struct dirent*);
+int		 select_non_dotdot(const struct dirent*);
 
 /* ex.c */
 int		 send_string(int, const char*);

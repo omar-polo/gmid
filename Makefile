@@ -13,7 +13,8 @@ lex.yy.c: lex.l y.tab.c
 y.tab.c: parse.y
 	${YACC} -b y -d parse.y
 
-SRCS = gmid.c iri.c utf8.c ex.c server.c sandbox.c mime.c puny.c utils.c log.c
+SRCS = gmid.c iri.c utf8.c ex.c server.c sandbox.c mime.c puny.c \
+	utils.c log.c dirs.c
 OBJS = ${SRCS:.c=.o} lex.yy.o y.tab.o ${COMPAT}
 
 gmid: ${OBJS}

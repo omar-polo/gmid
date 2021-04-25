@@ -723,8 +723,10 @@ static void
 open_dir(struct client *c)
 {
 	size_t len;
-	int dirfd;
+	int dirfd, root;
 	char *before_file;
+
+	root = !strcmp(c->iri.path, "/") || *c->iri.path == '\0';
 
 	len = strlen(c->iri.path);
 	if (len > 0 && !ends_with(c->iri.path, "/")) {
@@ -779,12 +781,16 @@ open_dir(struct client *c)
 		c->pfd = dirfd;
 		c->next = enter_handle_dirlist;
 
-		if ((c->dir = fdopendir(c->pfd)) == NULL) {
-			log_err(c, "fdopendir(%d) (vhost:%s) %s: %s",
+		c->dirlen = scandir_fd(c->pfd, &c->dir,
+		    root ? select_non_dotdot : select_non_dot,
+		    alphasort);
+		if (c->dirlen == -1) {
+			log_err(c, "scandir_fd(%d) (vhost:%s) %s: %s",
 			    c->pfd, c->host->domain, c->iri.path, strerror(errno));
 			start_reply(c, TEMP_FAILURE, "internal server error");
 			return;
 		}
+		c->diroff = 0;
 		c->off = 0;
 
                 start_reply(c, SUCCESS, "text/gemini");
@@ -867,23 +873,18 @@ handle_dirlist(int fd, short ev, void *d)
 static int
 read_next_dir_entry(struct client *c)
 {
-	struct dirent *d;
-
-	do {
-		errno = 0;
-		if ((d = readdir(c->dir)) == NULL) {
-			if (errno != 0)
-				log_err(c, "readdir: %s", strerror(errno));
-			return 0;
-		}
-	} while (!strcmp(d->d_name, "."));
+	if (c->diroff == c->dirlen)
+		return 0;
 
 	/* XXX: url escape */
-	snprintf(c->sbuf, sizeof(c->sbuf), "=> %s %s\n",
-	    d->d_name, d->d_name);
+	snprintf(c->sbuf, sizeof(c->sbuf), "=> %s\n",
+	    c->dir[c->diroff]->d_name);
+
+	free(c->dir[c->diroff]);
+	c->diroff++;
+
 	c->len = strlen(c->sbuf);
 	c->off = 0;
-
 	return 1;
 }
 
@@ -1027,7 +1028,7 @@ close_conn(int fd, short ev, void *d)
 		close(c->pfd);
 
 	if (c->dir != NULL)
-		closedir(c->dir);
+		free(c->dir);
 
 	close(c->fd);
 	c->fd = -1;
