@@ -129,7 +129,7 @@ scandir_fd(int fd, struct dirent ***namelist,
 		p->d_ino = d->d_ino;
 		p->d_type = d->d_type;
 		p->d_reclen = d->d_reclen;
-		bcopy(d->d_name, p->d_name, namlen + 1);
+		memcpy(p->d_name, d->d_name, namlen + 1);
 		names[nitems++] = p;
 	}
 	closedir(dirp);
