@@ -241,6 +241,13 @@ is set to
 Handle all the requests for the current virtual host using the
 CGI script at
 .Pa path .
+.It Ic env Ar name Ar value
+Set the environment variable
+.Ar name
+to
+.Ar value
+when executing CGI scripts.
+Can be provided more than once.
 .It Ic index Ar string
 Set the directory index file.
 If not specified, it defaults to
@@ -270,7 +277,7 @@ A
 .Ic location
 section may include most of the server configuration rules
 except
-.Ic cert , Ic key , Ic root , Ic location ,
+.Ic cert , Ic env , Ic key , Ic root , Ic location ,
 .Ic entrypoint No and Ic cgi .
 .It Ic root Pa directory
 Specify the root directory for this server.

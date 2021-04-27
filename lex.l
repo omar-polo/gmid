@@ -60,6 +60,7 @@ chroot		return TCHROOT;
 client		return TCLIENT;
 default		return TDEFAULT;
 entrypoint	return TENTRYPOINT;
+env		return TENV;
 index		return TINDEX;
 ipv6		return TIPV6;
 key		return TKEY;
