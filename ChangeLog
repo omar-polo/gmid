@@ -1,3 +1,7 @@
+2021-04-27  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): pidfile support with `-P pidfile'
+
 2021-04-25  Omar Polo  <op@omarpolo.com>
 
 	* server.c (open_dir): sort the auto index alphabetically

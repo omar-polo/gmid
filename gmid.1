@@ -22,6 +22,7 @@
 .Bk -words
 .Op Fl fnv
 .Op Fl c Ar config
+.Op Fl P Ar pidfile
 .Ek
 .Nm
 .Bk -words
@@ -51,6 +52,10 @@ Specify the configuration file.
 Stays and logs on the foreground.
 .It Fl n
 Check that the configuration is valid, but don't start the server.
+.It Fl P Pa pidfile
+Write
+.Nm
+pid to the given path.
 .El
 .Pp
 If no configuration file is given,
