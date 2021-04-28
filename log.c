@@ -23,6 +23,7 @@
 #include <event.h>
 #include <imsg.h>
 #include <netdb.h>
+#include <poll.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -82,14 +83,20 @@ send_log(int priority, const char *msg, size_t len)
 void
 fatal(const char *fmt, ...)
 {
+	struct pollfd pfd;
 	va_list	 ap;
 	int	 r;
 	char	*fmted;
 
 	va_start(ap, fmt);
 	if ((r = vasprintf(&fmted, fmt, ap)) != -1) {
-		send_log(LOG_ERR, fmted, r+1);
+		send_log(LOG_CRIT, fmted, r+1);
 		free(fmted);
+
+		/* wait for the logger process to shut down */
+		pfd.fd = logibuf.fd;
+		pfd.events = POLLIN;
+		poll(&pfd, 1, 1000);
 	}
 	va_end(ap);
 	exit(1);
@@ -256,16 +263,28 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 static void
 handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
-	char *msg;
+	int	 priority, quit;
+	char	*msg;
 
 	msg = imsg->data;
 	msg[datalen-1] = '\0';
+
+	priority = imsg->hdr.peerid;
+
+	quit = 0;
+	if (priority == LOG_CRIT) {
+		quit = 1;
+		priority = LOG_ERR;
+	}
 
 	if (conf.foreground) {
 		print_date();
 		fprintf(stderr, "%s\n", msg);
 	} else
-		syslog(LOG_DAEMON | imsg->hdr.peerid, "%s", msg);
+		syslog(LOG_DAEMON | priority, "%s", msg);
+
+	if (quit)
+		exit(1);
 }
 
 static void
