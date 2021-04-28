@@ -244,10 +244,15 @@ free_config(void)
 {
 	struct vhost *h, *th;
 	struct location *l, *tl;
+	int v;
+
+	v = conf.verbose;
 
 	free(conf.chroot);
 	free(conf.user);
 	memset(&conf, 0, sizeof(conf));
+
+	conf.verbose = v;
 
 	TAILQ_FOREACH_SAFE(h, &hosts, vhosts, th) {
 		TAILQ_FOREACH_SAFE(l, &h->locations, locations, tl) {
