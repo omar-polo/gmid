@@ -244,10 +244,15 @@ free_config(void)
 {
 	struct vhost *h, *th;
 	struct location *l, *tl;
+	int v;
+
+	v = conf.verbose;
 
 	free(conf.chroot);
 	free(conf.user);
 	memset(&conf, 0, sizeof(conf));
+
+	conf.verbose = v;
 
 	TAILQ_FOREACH_SAFE(h, &hosts, vhosts, th) {
 		TAILQ_FOREACH_SAFE(l, &h->locations, locations, tl) {
@@ -409,6 +414,34 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 	setproctitle("executor");
 	drop_priv();
 	_exit(executor_main(ibuf));
+}
+
+static int
+write_pidfile(const char *pidfile)
+{
+	struct flock	lock;
+	int		fd;
+
+	if (pidfile == NULL)
+		return -1;
+
+	if ((fd = open(pidfile, O_WRONLY|O_CREAT|O_CLOEXEC, 0600)) == -1)
+		fatal("can't open pidfile %s: %s", pidfile, strerror(errno));
+
+	lock.l_start = 0;
+	lock.l_len = 0;
+	lock.l_type = F_WRLCK;
+	lock.l_whence = SEEK_SET;
+
+	if (fcntl(fd, F_SETLK, &lock) == -1)
+		fatal("can't lock %s, gmid is already running?", pidfile);
+
+	if (ftruncate(fd, 0) == -1)
+		fatal("ftruncate: %s: %s", pidfile, strerror(errno));
+
+	dprintf(fd, "%d\n", getpid());
+
+	return fd;
 }
 
 static void
