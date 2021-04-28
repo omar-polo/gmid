@@ -1,3 +1,7 @@
+2021-04-28  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): pidfile support with `-P pidfile'
+
 2021-04-27  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (servopt): added ``env'' option to define environment vars for CGI scripts

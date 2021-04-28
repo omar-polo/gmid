@@ -328,7 +328,7 @@ static void
 usage(const char *me)
 {
 	fprintf(stderr,
-	    "USAGE: %s [-fn] [-c config] | [-6h] [-d certs-dir] [-H host]\n"
+	    "USAGE: %s [-fn] [-c config] [-P pidfile] | [-6h] [-d certs-dir] [-H host]\n"
 	    "       [-p port] [-x cgi] [dir]\n",
 	    me);
 }
@@ -474,12 +474,12 @@ main(int argc, char **argv)
 {
 	struct imsgbuf exibuf;
 	int ch, conftest = 0, configless = 0;
-	int old_ipv6, old_port;
-	const char *cgi = NULL;
+	int pidfd, old_ipv6, old_port;
+	const char *pidfile = NULL, *cgi = NULL;
 
 	init_config();
 
-	while ((ch = getopt(argc, argv, "6c:d:fH:hnp:vx:")) != -1) {
+	while ((ch = getopt(argc, argv, "6c:d:fH:hnP:p:vx:")) != -1) {
 		switch (ch) {
 		case '6':
 			conf.ipv6 = 1;
@@ -510,6 +510,10 @@ main(int argc, char **argv)
 
 		case 'n':
 			conftest = 1;
+			break;
+
+		case 'P':
+			pidfile = optarg;
 			break;
 
 		case 'p':
@@ -575,6 +579,8 @@ main(int argc, char **argv)
 		setup_configless(argc, argv, cgi);
 		return 0;
 	}
+
+	pidfd = write_pidfile(pidfile);
 
 	/* Linux seems to call the event handlers even when we're
 	 * doing a sigwait.  These dummy handlers are here to avoid
@@ -643,6 +649,9 @@ main(int argc, char **argv)
 
 	imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
 	imsg_flush(&logibuf);
+
+	if (pidfd != -1)
+		close(pidfd);
 
 	return 0;
 }
