@@ -136,6 +136,7 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost)
 		char *ex, *pwd;
 		char iribuf[GEMINI_URL_LEN];
 		char path[PATH_MAX];
+		struct envlist *e;
 
 		close(p[0]);
 		if (dup2(p[1], 1) == -1)
@@ -199,6 +200,10 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost)
 
 		setenv_time("TLS_CLIENT_NOT_AFTER", req->notafter);
 		setenv_time("TLS_CLIENT_NOT_BEFORE", req->notbefore);
+
+		TAILQ_FOREACH(e, &vhost->env, envs) {
+			safe_setenv(e->name, e->value);
+		}
 
 		strlcpy(path, ex, sizeof(path));
 

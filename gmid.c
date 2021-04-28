@@ -244,6 +244,7 @@ free_config(void)
 {
 	struct vhost *h, *th;
 	struct location *l, *tl;
+	struct envlist *e, *te;
 	int v;
 
 	v = conf.verbose;
@@ -264,6 +265,12 @@ free_config(void)
 			free((char*)l->index);
 			free((char*)l->block_fmt);
 			free(l);
+		}
+
+		TAILQ_FOREACH_SAFE(e, &h->env, envs, te) {
+			free(e->name);
+			free(e->value);
+			free(e);
 		}
 
 		TAILQ_REMOVE(&hosts, h, vhosts);

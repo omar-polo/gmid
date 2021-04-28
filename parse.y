@@ -59,7 +59,7 @@ void		 advance_loc(void);
 
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
 %token TCHROOT TUSER TSERVER TPREFORK
-%token TLOCATION TCERT TKEY TROOT TCGI TLANG TLOG TINDEX TAUTO
+%token TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
 %token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA
 %token TERR
 
@@ -132,6 +132,17 @@ servopt		: TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
 			while (*$2 == '/')
 				memmove($2, $2+1, strlen($2));
 			host->entrypoint = $2;
+		}
+		| TENV TSTRING TSTRING {
+			struct envlist *e;
+
+			e = xcalloc(1, sizeof(*e));
+			e->name = $2;
+			e->value = $3;
+			if (TAILQ_EMPTY(&host->env))
+				TAILQ_INSERT_HEAD(&host->env, e, envs);
+			else
+				TAILQ_INSERT_TAIL(&host->env, e, envs);
 		}
 		| TKEY TSTRING		{ host->key  = ensure_absolute_path($2); }
 		| TROOT TSTRING		{ host->dir  = ensure_absolute_path($2); }

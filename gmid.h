@@ -73,6 +73,13 @@ struct location {
 	TAILQ_ENTRY(location) locations;
 };
 
+TAILQ_HEAD(envhead, envlist);
+struct envlist {
+	char		*name;
+	char		*value;
+	TAILQ_ENTRY(envlist) envs;
+};
+
 extern TAILQ_HEAD(vhosthead, vhost) hosts;
 struct vhost {
 	const char	*domain;
@@ -89,6 +96,8 @@ struct vhost {
 	 * settings for the vhost, then follows the "real" location
 	 * rules as specified in the configuration. */
 	struct lochead	 locations;
+
+	struct envhead	 env;
 };
 
 struct etm {			/* extension to mime */
