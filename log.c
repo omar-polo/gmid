@@ -65,7 +65,7 @@ fatal(const char *fmt, ...)
 		vfprintf(stderr, fmt, ap);
 		fprintf(stderr, "\n");
 	} else
-		vsyslog(LOG_DAEMON | LOG_CRIT, fmt, ap);
+		vsyslog(LOG_DAEMON | LOG_ERR, fmt, ap);
 
 	va_end(ap);
 	exit(1);
