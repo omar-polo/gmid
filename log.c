@@ -53,24 +53,6 @@ print_date(void)
 	fprintf(stderr, "[%s] ", buf);
 }
 
-void
-fatal(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-
-	if (conf.foreground) {
-		print_date();
-		vfprintf(stderr, fmt, ap);
-		fprintf(stderr, "\n");
-	} else
-		vsyslog(LOG_DAEMON | LOG_ERR, fmt, ap);
-
-	va_end(ap);
-	exit(1);
-}
-
 static inline int
 should_log(int priority)
 {
@@ -95,6 +77,22 @@ send_log(int priority, const char *msg, size_t len)
 {
 	imsg_compose(&logibuf, IMSG_LOG, priority, 0, -1, msg, len);
 	imsg_flush(&logibuf);
+}
+
+void
+fatal(const char *fmt, ...)
+{
+	va_list	 ap;
+	int	 r;
+	char	*fmted;
+
+	va_start(ap, fmt);
+	if ((r = vasprintf(&fmted, fmt, ap)) != -1) {
+		send_log(LOG_ERR, fmted, r+1);
+		free(fmted);
+	}
+	va_end(ap);
+	exit(1);
 }
 
 static inline void
