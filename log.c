@@ -91,10 +91,9 @@ should_log(int priority)
 }
 
 static inline void
-send_log(const char *msg, size_t len)
+send_log(int priority, const char *msg, size_t len)
 {
-	imsg_compose(&logibuf, IMSG_LOG, 0, 0, -1, msg, len);
-	/* XXX: use event_once() */
+	imsg_compose(&logibuf, IMSG_LOG, priority, 0, -1, msg, len);
 	imsg_flush(&logibuf);
 }
 
@@ -131,7 +130,7 @@ vlog(int priority, struct client *c,
 	if (ec < 0)
 		fatal("asprintf: %s", strerror(errno));
 
-	send_log(s, ec+1);
+	send_log(priority, s, ec+1);
 
 	free(fmted);
 	free(s);
@@ -244,7 +243,7 @@ log_request(struct client *c, char *meta, size_t l)
 	    (int)(t-meta), meta);
 	if (ec < 0)
 		err(1, "asprintf");
-	send_log(fmted, ec+1);
+	send_log(LOG_NOTICE, fmted, ec+1);
 	free(fmted);
 }
 
@@ -268,7 +267,7 @@ handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 		print_date();
 		fprintf(stderr, "%s\n", msg);
 	} else
-		syslog(LOG_DAEMON, "%s", msg);
+		syslog(LOG_DAEMON | imsg->hdr.peerid, "%s", msg);
 }
 
 static void
