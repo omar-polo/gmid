@@ -1,5 +1,7 @@
 2021-04-27  Omar Polo  <op@omarpolo.com>
 
+	* parse.y (servopt): added ``env'' option to define environment vars for CGI scripts
+
 	* log.c (fatal): lower the log priority for fatal errors from CRIT to ERR
 
 	* gmid.c (main): pidfile support with `-P pidfile'
