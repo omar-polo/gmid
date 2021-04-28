@@ -517,7 +517,7 @@ main(int argc, char **argv)
 	}
 
 	if (config_path != NULL && (argc > 0 || configless))
-		err(1, "can't specify options in config mode.");
+		errx(1, "can't specify options in config mode.");
 
 	if (conftest) {
 		parse_conf(config_path);
