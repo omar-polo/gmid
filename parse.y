@@ -260,7 +260,7 @@ parse_conf(const char *path)
 {
 	config_path = path;
 	if ((yyin = fopen(path, "r")) == NULL)
-		fatal("cannot open config: %s: %s", path, strerror(errno));
+		err(1, "cannot open config: %s", path);
 	yyparse();
 	fclose(yyin);
 
@@ -268,7 +268,7 @@ parse_conf(const char *path)
 		exit(1);
 
 	if (TAILQ_FIRST(&hosts)->domain == NULL)
-		fatal("no vhost defined in %s", path);
+		errx(1, "no vhost defined in %s", path);
 }
 
 char *
