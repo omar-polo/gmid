@@ -192,6 +192,10 @@ or a name including a wildcards,
 .Pp
 Followed by a block of options that is enclosed in curly brackets:
 .Bl -tag -width Ds
+.It Ic alias Ar name
+Specify an additional alias
+.Ar name
+for this server.
 .It Ic auto Ic index Ar bool
 If no index file is found, automatically generate a directory listing.
 It's disabled by default.
@@ -282,7 +286,7 @@ A
 .Ic location
 section may include most of the server configuration rules
 except
-.Ic cert , Ic env , Ic key , Ic root , Ic location ,
+.Ic alias , cert , Ic env , Ic key , Ic root , Ic location ,
 .Ic entrypoint No and Ic cgi .
 .It Ic root Pa directory
 Specify the root directory for this server.
