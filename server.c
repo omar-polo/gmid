@@ -391,6 +391,7 @@ handle_handshake(int fd, short ev, void *d)
 {
 	struct client *c = d;
 	struct vhost *h;
+	struct alist *a;
 	const char *servname;
 	const char *parse_err = "unknown error";
 
@@ -417,9 +418,14 @@ handle_handshake(int fd, short ev, void *d)
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
 		if (matches(h->domain, c->domain))
-			break;
+			goto found;
+		TAILQ_FOREACH(a, &h->aliases, aliases) {
+			if (matches(a->alias, c->domain))
+				goto found;
+		}
 	}
 
+found:
 	log_debug(c, "handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
 	    servname != NULL ? servname : "(null)",
 	    c->domain,

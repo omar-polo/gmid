@@ -60,7 +60,7 @@ void		 advance_loc(void);
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE
 %token TCHROOT TUSER TSERVER TPREFORK
 %token TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
-%token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA
+%token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA TALIAS
 %token TERR
 
 %token <str>	TSTRING
@@ -119,7 +119,17 @@ servopts	: /* empty */
 		| servopts servopt
 		;
 
-servopt		: TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
+servopt		: TALIAS TSTRING {
+			struct alist *a;
+
+			a = xcalloc(1, sizeof(*a));
+			a->alias = $2;
+			if (TAILQ_EMPTY(&host->aliases))
+				TAILQ_INSERT_HEAD(&host->aliases, a, aliases);
+			else
+				TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
+		}
+		| TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
 		| TCGI TSTRING		{
 			/* drop the starting '/', if any */
 			if (*$2 == '/')

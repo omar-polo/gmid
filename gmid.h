@@ -80,6 +80,12 @@ struct envlist {
 	TAILQ_ENTRY(envlist) envs;
 };
 
+TAILQ_HEAD(aliashead, alist);
+struct alist {
+	char		*alias;
+	TAILQ_ENTRY(alist) aliases;
+};
+
 extern TAILQ_HEAD(vhosthead, vhost) hosts;
 struct vhost {
 	const char	*domain;
@@ -98,6 +104,7 @@ struct vhost {
 	struct lochead	 locations;
 
 	struct envhead	 env;
+	struct aliashead aliases;
 };
 
 struct etm {			/* extension to mime */
