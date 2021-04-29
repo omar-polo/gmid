@@ -129,7 +129,7 @@ and then run it with something along the lines of
     docker run --rm -it -p 1965:1965 \
         -v /path/to/gmid.conf:...:ro \
         -v /path/to/docs:/var/gemini \
-        gmid -c .../gmid.conf
+        gmid /bin/gmid -c .../gmid.conf
 
 (ellipses used for brevity)
 
