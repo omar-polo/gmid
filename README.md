@@ -15,7 +15,7 @@ featureful server.
  - automatic redirect/error pages (see `block return`)
  - IRI support (RFC3987)
  - automatic certificate generation for config-less mode
- - CGI scripts
+ - CGI support
  - virtual hosts
  - location rules
  - event-based asynchronous I/O model
@@ -72,7 +72,7 @@ server "example.com" {
 	lang "it"
 
 	# execute CGI scripts in /cgi/
-	cgi	 "/cgi/*"
+	cgi "/cgi/*"
 
 	# only for locations that matches /files/*
 	location "/files/*" {
