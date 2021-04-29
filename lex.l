@@ -51,6 +51,7 @@
 off		yylval.num = 0; return TBOOL;
 on		yylval.num = 1; return TBOOL;
 
+alias		return TALIAS;
 auto		return TAUTO;
 block		return TBLOCK;
 ca		return TCA;
