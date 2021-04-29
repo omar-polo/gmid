@@ -65,7 +65,7 @@ server "example.com" {
 	alias "foobar.com"
 
 	cert "/path/to/cert.pem"
-	key	 "/path/to/key.pem"
+	key  "/path/to/key.pem"
 	root "/var/gemini/example.com"
 
 	# lang for text/gemini files
