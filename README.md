@@ -9,23 +9,18 @@ featureful server.
 
 (random order)
 
+ - sandboxed by default on OpenBSD, Linux and FreeBSD
  - reconfiguration: reload the running configuration without
    interruption
- - sandboxed by default on OpenBSD, Linux and FreeBSD
  - automatic redirect/error pages (see `block return`)
  - IRI support (RFC3987)
- - punycode support
- - dual stack (IPv4 and IPv6)
  - automatic certificate generation for config-less mode
  - CGI scripts
- - low memory footprint
- - event-based asynchronous I/O model
- - small codebase, easily hackable
  - virtual hosts
- - per-location rules
- - optional directory listings
- - configurable mime types
- - chroot support
+ - location rules
+ - event-based asynchronous I/O model
+ - low memory footprint
+ - small codebase, easily hackable
 
 
 ## Internationalisation (IRIs, UNICODE, punycode, all that stuff)
@@ -50,28 +45,46 @@ doesn't do that (yet).
 ## Configuration
 
 gmid has a rich configuration file, heavily inspired by OpenBSD'
-httpd.  While you should definitely check the manpage because it
-documents every option in depth, here's a small example of how a
-configuration file looks like.
+httpd, with every detail carefully documented in the manpage.  Here's
+a minimal example of a config file:
+
+```conf
+server "example.com" {
+	cert "/path/to/cert.pem"
+	key  "/path/to/key.pem"
+	root "/var/gemini/example.com"
+}
+```
+
+and a slightly complex one
 
 ```conf
 ipv6 on     # enable ipv6
 
 server "example.com" {
-    cert "/path/to/cert.pem"
-    key  "/path/to/key.pem"
-    root "/var/gemini/example.com"
-    lang "it"
-    cgi  "/cgi/*"
+	alias "foobar.com"
 
-    location "/files/*" {
-        auto index on
-    }
+	cert "/path/to/cert.pem"
+	key	 "/path/to/key.pem"
+	root "/var/gemini/example.com"
 
-    location "/repo/*" {
-        # change the index file name
-        index "README.gmi"
-    }
+	# lang for text/gemini files
+	lang "it"
+
+	# execute CGI scripts in /cgi/
+	cgi	 "/cgi/*"
+
+	# only for locations that matches /files/*
+	location "/files/*" {
+		# generate directory listings
+		auto index on
+	}
+
+	location "/repo/*" {
+		# change the index file name
+		index "README.gmi"
+		lang "en"
+	}
 }
 ```
 
