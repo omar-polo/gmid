@@ -271,7 +271,7 @@ restart
 eq "$(head /dir/foo.gmi)"	"40 % /foo.gmi  10965 localhost test"
 echo OK GET /dir/foo.gmi with strip and block
 
-eq "$(head /bigfile)"		"40 %   10965 localhost test"
+eq "$(head /bigfile)"		"40 % /  10965 localhost test"
 echo OK GET /bigfile with strip and block
 
 check "should be running"

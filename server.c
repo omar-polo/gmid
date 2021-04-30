@@ -514,6 +514,8 @@ fmt_sbuf(const char *fmt, struct client *c, const char *path)
 			strlcat(c->sbuf, "%", sizeof(c->sbuf));
 			break;
 		case 'p':
+			if (*path != '/')
+				strlcat(c->sbuf, "/", sizeof(c->sbuf));
 			strlcat(c->sbuf, path, sizeof(c->sbuf));
 			break;
 		case 'q':
