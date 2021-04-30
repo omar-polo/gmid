@@ -216,8 +216,8 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 		| TREQUIRE TCLIENT TCA TSTRING {
 			if (loc->reqca != NULL)
 				yyerror("`require client ca' specified more than once");
-			if (*$4 != '/')
-				yyerror("path to certificate must be absolute: %s", $4);
+
+			ensure_absolute_path($4);
 			if ((loc->reqca = load_ca($4)) == NULL)
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
@@ -285,7 +285,7 @@ char *
 ensure_absolute_path(char *path)
 {
 	if (path == NULL || *path != '/')
-		yyerror("not an absolute path");
+		yyerror("not an absolute path: %s", path);
 	return path;
 }
 
