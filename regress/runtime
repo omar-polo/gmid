@@ -312,8 +312,16 @@ config '' 'location "/foo/*" { root "'$PWD'/testdata" strip 1 }'
 checkconf
 restart
 
-# XXX: this fails, because /foo isn't matched by /foo/*, but it would
-# be nice if it worked.
-#eq "$(head /foo)"	"30 /foo/"		"Unexpected head for /foo"
+eq "$(head /foo)"	"51 not found"		"Unexpected head for /foo"
+eq "$(head /foo/)"	"20 text/gemini"	"Unexpected head for /foo/"
 
+# how to match both /foo and /foo/*
+config '' '
+	location "/foo"   { block return 31 "%p/" }
+	location "/foo/*" { root "'$PWD'/testdata" strip 1 }
+'
+checkconf
+restart
+
+eq "$(head /foo)"	"31 /foo/"		"Unexpected head for /foo"
 eq "$(head /foo/)"	"20 text/gemini"	"Unexpected head for /foo/"
