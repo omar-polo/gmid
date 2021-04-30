@@ -304,3 +304,16 @@ eq "$(head /)"		"61 certificate not authorised"	"Unexpected head for /"
 echo OK GET / with invalid client certificate
 
 ggflags=''
+
+
+# test with root inside a location
+
+config '' 'location "/foo/*" { root "'$PWD'/testdata" strip 1 }'
+checkconf
+restart
+
+# XXX: this fails, because /foo isn't matched by /foo/*, but it would
+# be nice if it worked.
+#eq "$(head /foo)"	"30 /foo/"		"Unexpected head for /foo"
+
+eq "$(head /foo/)"	"20 text/gemini"	"Unexpected head for /foo/"

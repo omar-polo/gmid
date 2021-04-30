@@ -70,6 +70,9 @@ struct location {
 	X509_STORE	*reqca;
 	int		 disable_log;
 
+	const char	*dir;
+	int		 dirfd;
+
 	TAILQ_ENTRY(location) locations;
 };
 
@@ -91,10 +94,8 @@ struct vhost {
 	const char	*domain;
 	const char	*cert;
 	const char	*key;
-	const char	*dir;
 	const char	*cgi;
 	const char	*entrypoint;
-	int		 dirfd;
 
 	TAILQ_ENTRY(vhost) vhosts;
 
@@ -234,6 +235,7 @@ struct cgireq {
 	time_t		notafter;
 
 	size_t		host_off;
+	size_t		loc_off;
 };
 
 enum {

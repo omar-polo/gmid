@@ -280,11 +280,19 @@ sandbox_logger_process(void)
 void
 sandbox_server_process(void)
 {
-	struct vhost *h;
+	struct vhost	*h;
+	struct location	*l;
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
-		if (unveil(h->dir, "r") == -1)
-			fatal("unveil %s for domain %s", h->dir, h->domain);
+		TAILQ_FOREACH(l, &h->locations, locations) {
+			if (l->dir == NULL)
+				continue;
+
+			if (unveil(l->dir, "r") == -1)
+				fatal("unveil %s for domain %s",
+				    l->dir,
+				    h->domain);
+		}
 	}
 
 	if (pledge("stdio recvfd rpath inet", NULL) == -1)
@@ -295,12 +303,18 @@ void
 sandbox_executor_process(void)
 {
 	struct vhost	*h;
+	struct location	*l;
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
-		/* r so we can chdir into the correct directory */
-		if (unveil(h->dir, "rx") == -1)
-			err(1, "unveil %s for domain %s",
-			    h->dir, h->domain);
+		TAILQ_FOREACH(l, &h->locations, locations) {
+			if (l->dir == NULL)
+				continue;
+
+			/* r so we can chdir into the correct directory */
+			if (unveil(l->dir, "rx") == -1)
+				fatal("unveil %s for domain %s",
+				    l->dir, h->domain);
+		}
 	}
 
 	/* rpath to chdir into the correct directory */

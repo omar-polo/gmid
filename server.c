@@ -203,6 +203,25 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 }
 
 int
+vhost_dirfd(struct vhost *v, const char *path)
+{
+	struct location *loc;
+
+	if (v == NULL || path == NULL)
+		return -1;
+
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
+		if (loc->dirfd != -1)
+			if (matches(loc->match, path))
+				return loc->dirfd;
+	}
+
+	loc = TAILQ_FIRST(&v->locations);
+	return loc->dirfd;
+}
+
+int
 vhost_strip(struct vhost *v, const char *path)
 {
 	struct location *loc;
@@ -265,22 +284,30 @@ check_path(struct client *c, const char *path, int *fd)
 {
 	struct stat sb;
 	const char *p;
-	int flags;
+	int flags, dirfd, strip;
 
 	assert(path != NULL);
 
-	if (*path == '\0')
+	/*
+	 * in send_dir we add an initial / (to be redirect-friendly),
+	 * but here we want to skip it
+	 */
+	if (*path == '/')
+		path++;
+
+	strip = vhost_strip(c->host, path);
+	p = strip_path(path, strip);
+
+	if (*p == '/')
+		p = p+1;
+	if (*p == '\0')
 		p = ".";
-	else if (*path == '/')
-		/* in send_dir we add an initial / (to be
-		 * redirect-friendly), but here we want to skip it */
-		p = path+1;
-	else
-		p = path;
 
+	dirfd = vhost_dirfd(c->host, path);
+	log_debug(c, "check_path: strip=%d path=%s original=%s",
+	    strip, p, path);
 	flags = O_RDONLY | O_NOFOLLOW;
-
-	if (*fd == -1 && (*fd = openat(c->host->dirfd, p, flags)) == -1)
+	if (*fd == -1 && (*fd = openat(dirfd, p, flags)) == -1)
 		return FILE_MISSING;
 
 	if (fstat(*fd, &sb) == -1) {

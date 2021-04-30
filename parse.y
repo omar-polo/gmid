@@ -108,8 +108,7 @@ vhost		: TSERVER TSTRING {
 			}
 		} '{' servopts locations '}' {
 
-			if (host->cert == NULL || host->key == NULL ||
-			    host->dir == NULL)
+			if (host->cert == NULL || host->key == NULL)
 				yyerror("invalid vhost definition: %s", $2);
 		}
 		| error '}'		{ yyerror("error in server directive"); }
@@ -155,7 +154,6 @@ servopt		: TALIAS TSTRING {
 				TAILQ_INSERT_TAIL(&host->env, e, envs);
 		}
 		| TKEY TSTRING		{ host->key  = ensure_absolute_path($2); }
-		| TROOT TSTRING		{ host->dir  = ensure_absolute_path($2); }
 		| locopt
 		;
 
@@ -222,6 +220,12 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
+		| TROOT TSTRING		{
+			if (loc->dir != NULL)
+				yyerror("`root' specified more than once");
+
+			loc->dir  = ensure_absolute_path($2);
+		}
 		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
 		;
 
@@ -236,7 +240,11 @@ new_vhost(void)
 static struct location *
 new_location(void)
 {
-	return xcalloc(1, sizeof(struct location));
+	struct location *l;
+
+	l = xcalloc(1, sizeof(*l));
+	l->dirfd = -1;
+	return l;
 }
 
 void

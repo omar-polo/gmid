@@ -114,11 +114,16 @@ load_local_cert(const char *hostname, const char *dir)
 void
 load_vhosts(void)
 {
-	struct vhost *h;
+	struct vhost	*h;
+	struct location	*l;
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
-		if ((h->dirfd = open(h->dir, O_RDONLY | O_DIRECTORY)) == -1)
-			fatal("open %s for domain %s", h->dir, h->domain);
+		TAILQ_FOREACH(l, &h->locations, locations) {
+			if (l->dir == NULL)
+				continue;
+			if ((l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY)) == -1)
+				fatal("open %s for domain %s", l->dir, h->domain);
+		}
 	}
 }
 
@@ -265,6 +270,11 @@ free_config(void)
 			free((char*)l->default_mime);
 			free((char*)l->index);
 			free((char*)l->block_fmt);
+			free((char*)l->dir);
+
+			if (l->dirfd != -1)
+				close(l->dirfd);
+
 			free(l);
 		}
 
@@ -278,6 +288,12 @@ free_config(void)
 			free(a->alias);
 			free(a);
 		}
+
+		free((char*)h->domain);
+		free((char*)h->cert);
+		free((char*)h->key);
+		free((char*)h->cgi);
+		free((char*)h->entrypoint);
 
 		TAILQ_REMOVE(&hosts, h, vhosts);
 		free(h);
@@ -388,17 +404,17 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 
 		switch (argc) {
 		case 0:
-			h->dir = getcwd(path, sizeof(path));
+			l->dir = getcwd(path, sizeof(path));
 			break;
 		case 1:
-			h->dir = absolutify_path(argv[0]);
+			l->dir = absolutify_path(argv[0]);
 			break;
 		default:
 			usage(getprogname());
 			return 1;
 		}
 
-		log_notice(NULL, "serving %s on port %d", h->dir, conf.port);
+		log_notice(NULL, "serving %s on port %d", l->dir, conf.port);
 	}
 
 	/* setup tls before dropping privileges: we don't want user

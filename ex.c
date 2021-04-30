@@ -121,7 +121,8 @@ setenv_time(const char *var, time_t t)
 
 /* fd or -1 on error */
 static int
-launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost)
+launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
+    struct location *loc)
 {
 	int p[2];		/* read end, write end */
 
@@ -142,14 +143,14 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost)
 		if (dup2(p[1], 1) == -1)
 			goto childerr;
 
-		ex = xasprintf("%s/%s", vhost->dir, req->spath);
+		ex = xasprintf("%s/%s", loc->dir, req->spath);
 
 		serialize_iri(iri, iribuf, sizeof(iribuf));
 
 		safe_setenv("GATEWAY_INTERFACE", "CGI/1.1");
-		safe_setenv("GEMINI_DOCUMENT_ROOT", vhost->dir);
+		safe_setenv("GEMINI_DOCUMENT_ROOT", loc->dir);
 		safe_setenv("GEMINI_SCRIPT_FILENAME",
-		    xasprintf("%s/%s", vhost->dir, req->spath));
+		    xasprintf("%s/%s", loc->dir, req->spath));
 		safe_setenv("GEMINI_URL", iribuf);
 
 		strlcpy(path, "/", sizeof(path));
@@ -161,7 +162,7 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost)
 			strlcat(path, req->relpath, sizeof(path));
 			safe_setenv("PATH_INFO", path);
 
-			strlcpy(path, vhost->dir, sizeof(path));
+			strlcpy(path, loc->dir, sizeof(path));
 			strlcat(path, "/", sizeof(path));
 			strlcat(path, req->relpath, sizeof(path));
 			safe_setenv("PATH_TRANSLATED", path);
@@ -242,10 +243,25 @@ host_nth(size_t n)
 	return NULL;
 }
 
+static struct location *
+loc_nth(struct vhost *vhost, size_t n)
+{
+	struct location *loc;
+
+	TAILQ_FOREACH(loc, &vhost->locations, locations) {
+		if (n == 0)
+			return loc;
+		n--;
+	}
+
+	return NULL;
+}
+
 static void
 handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
 	struct vhost	*h;
+	struct location	*l;
 	struct cgireq	 req;
 	struct iri	 iri;
 	int		 fd;
@@ -270,7 +286,10 @@ handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 	if ((h = host_nth(req.host_off)) == NULL)
 		abort();
 
-	fd = launch_cgi(&iri, &req, h);
+	if ((l = loc_nth(h, req.host_off)) == NULL)
+		abort();
+
+	fd = launch_cgi(&iri, &req, h, l);
 	imsg_compose(ibuf, IMSG_CGI_RES, imsg->hdr.peerid, 0, fd, NULL, 0);
 	imsg_flush(ibuf);
 }

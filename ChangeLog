@@ -1,3 +1,7 @@
+2021-04-30  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (load_vhosts): allow ``root'' rule to be specified per-location block
+
 2021-04-29  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (servopt): added ``alias'' option to define hostname aliases for a server
