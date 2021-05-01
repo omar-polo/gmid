@@ -32,7 +32,7 @@ int sock4, sock6;
 
 struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
 
-const char *config_path, *certs_dir, *hostname;
+const char *config_path, *certs_dir, *hostname, *pidfile, *cgi;
 
 struct conf conf;
 
@@ -497,7 +497,6 @@ main(int argc, char **argv)
 	struct imsgbuf exibuf;
 	int ch, conftest = 0, configless = 0;
 	int pidfd, old_ipv6, old_port;
-	const char *pidfile = NULL, *cgi = NULL;
 
 	init_config();
 
