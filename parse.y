@@ -46,6 +46,7 @@ char		*check_block_fmt(char*);
 int		 check_strip_no(int);
 int		 check_prefork_num(int);
 void		 advance_loc(void);
+void		 only_once(const void*, const char*);
 
 %}
 
@@ -128,16 +129,19 @@ servopt		: TALIAS TSTRING {
 			else
 				TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
 		}
-		| TCERT TSTRING		{ host->cert = ensure_absolute_path($2); }
+		| TCERT TSTRING		{
+			only_once(host->cert, "cert");
+			host->cert = ensure_absolute_path($2);
+		}
 		| TCGI TSTRING		{
+			only_once(host->cgi, "cgi");
 			/* drop the starting '/', if any */
 			if (*$2 == '/')
 				memmove($2, $2+1, strlen($2));
 			host->cgi = $2;
 		}
 		| TENTRYPOINT TSTRING {
-			if (host->entrypoint != NULL)
-				yyerror("`entrypoint' specified more than once");
+			only_once(host->entrypoint, "entrypoint");
 			while (*$2 == '/')
 				memmove($2, $2+1, strlen($2));
 			host->entrypoint = $2;
@@ -153,7 +157,10 @@ servopt		: TALIAS TSTRING {
 			else
 				TAILQ_INSERT_TAIL(&host->env, e, envs);
 		}
-		| TKEY TSTRING		{ host->key  = ensure_absolute_path($2); }
+		| TKEY TSTRING		{
+			only_once(host->key, "key");
+			host->key  = ensure_absolute_path($2);
+		}
 		| locopt
 		;
 
@@ -176,54 +183,44 @@ locopts		: /* empty */
 
 locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 		| TBLOCK TRETURN TNUM TSTRING {
-			if (loc->block_fmt != NULL)
-				yyerror("`block' rule specified more than once");
+			only_once(loc->block_fmt, "block");
 			loc->block_fmt = check_block_fmt($4);
 			loc->block_code = check_block_code($3);
 		}
 		| TBLOCK TRETURN TNUM {
-			if (loc->block_fmt != NULL)
-				yyerror("`block' rule specified more than once");
+			only_once(loc->block_fmt, "block");
 			loc->block_fmt = xstrdup("temporary failure");
 			loc->block_code = check_block_code($3);
 			if ($3 >= 30 && $3 < 40)
 				yyerror("missing `meta' for block return %d", $3);
 		}
 		| TBLOCK {
-			if (loc->block_fmt != NULL)
-				yyerror("`block' rule specified more than once");
+			only_once(loc->block_fmt, "block");
 			loc->block_fmt = xstrdup("temporary failure");
 			loc->block_code = 40;
 		}
 		| TDEFAULT TTYPE TSTRING {
-			if (loc->default_mime != NULL)
-				yyerror("`default type' specified more than once");
+			only_once(loc->default_mime, "default type");
 			loc->default_mime = $3;
 		}
 		| TINDEX TSTRING {
-			if (loc->index != NULL)
-				yyerror("`index' specified more than once");
+			only_once(loc->index, "index");
 			loc->index = $2;
 		}
 		| TLANG TSTRING {
-			if (loc->lang != NULL)
-				yyerror("`lang' specified more than once");
+			only_once(loc->lang, "lang");
 			loc->lang = $2;
 		}
 		| TLOG TBOOL	{ loc->disable_log = !$2; }
 		| TREQUIRE TCLIENT TCA TSTRING {
-			if (loc->reqca != NULL)
-				yyerror("`require client ca' specified more than once");
-
+			only_once(loc->reqca, "require client ca");
 			ensure_absolute_path($4);
 			if ((loc->reqca = load_ca($4)) == NULL)
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
 		| TROOT TSTRING		{
-			if (loc->dir != NULL)
-				yyerror("`root' specified more than once");
-
+			only_once(loc->dir, "root");
 			loc->dir  = ensure_absolute_path($2);
 		}
 		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
@@ -349,4 +346,11 @@ advance_loc(void)
 {
 	loc = new_location();
 	TAILQ_INSERT_TAIL(&host->locations, loc, locations);
+}
+
+void
+only_once(const void *ptr, const char *name)
+{
+	if (ptr != NULL)
+		yyerror("`%s' specified more than once", name);
 }
