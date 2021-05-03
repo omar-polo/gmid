@@ -1,3 +1,7 @@
+2021-05-03  Omar Polo  <op@omarpolo.com>
+
+	* parse.y: errors on duplicate values instead of silently using only the last value.
+
 2021-04-30  Omar Polo  <op@omarpolo.com>
 
 	* server.c (fmt_sbuf): ensure %p (path) is always absolute
