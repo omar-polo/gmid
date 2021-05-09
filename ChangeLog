@@ -1,3 +1,7 @@
+2021-05-09  Omar Polo  <op@omarpolo.com>
+
+	* server.c (apply_fastcgi): added fastcgi support!
+
 2021-05-03  Omar Polo  <op@omarpolo.com>
 
 	* parse.y: errors on duplicate values instead of silently using only the last value.
