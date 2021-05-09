@@ -26,6 +26,7 @@
 #include <netinet/in.h>
 
 #include <dirent.h>
+#include <event.h>
 #include <limits.h>
 #include <netdb.h>
 #include <signal.h>
@@ -55,7 +56,23 @@
 #define DOMAIN_NAME_LEN	(253+1)
 #define LABEL_LEN	(63+1)
 
+#define FCGI_MAX	32
 #define PROC_MAX	16
+
+struct fcgi {
+	int		 id;
+	char		*path;
+	char		*port;
+	char		*prog;
+	int		 fd;
+	struct event	 e;
+
+#define FCGI_OFF	0
+#define FCGI_INFLIGHT	1
+#define FCGI_READY	2
+	int		 s;
+};
+extern struct fcgi fcgi[FCGI_MAX];
 
 TAILQ_HEAD(lochead, location);
 struct location {
@@ -69,6 +86,7 @@ struct location {
 	int		 strip;
 	X509_STORE	*reqca;
 	int		 disable_log;
+	int		 fcgi;
 
 	const char	*dir;
 	int		 dirfd;
@@ -157,6 +175,14 @@ struct parser {
 	const char	*err;
 };
 
+struct mbuf {
+	size_t			len;
+	size_t			off;
+	TAILQ_ENTRY(mbuf)	mbufs;
+	char			data[];
+};
+TAILQ_HEAD(mbufhead, mbuf);
+
 struct client;
 
 typedef void (imsg_handlerfn)(struct imsgbuf*, struct imsg*, size_t);
@@ -171,6 +197,7 @@ typedef void (*statefn)(int, short, void*);
  * handle_handshake -> close_conn		// on err
  *
  * handle_open_conn -> handle_cgi_reply		// via open_file/dir/...
+ * handle_open_conn -> send_fcgi_req		// via apply_fastcgi, IMSG_FCGI_FD
  * handle_open_conn -> handle_dirlist		// ...same
  * handle_open_conn -> send_file		// ...same
  * handle_open_conn -> start_reply		// on error
@@ -179,6 +206,10 @@ typedef void (*statefn)(int, short, void*);
  * handle_cgi_reply -> start_reply	// on error
  *
  * handle_cgi -> close_conn
+ *
+ * send_fcgi_req -> copy_mbuf		// via handle_fcgi
+ * handle_fcgi -> close_all		// on error
+ * copy_mbuf -> close_conn		// on success/error
  *
  * handle_dirlist -> send_directory_listing
  * handle_dirlist -> close_conn			// on error
@@ -193,20 +224,32 @@ struct client {
 	char		 req[GEMINI_URL_LEN];
 	struct iri	 iri;
 	char		 domain[DOMAIN_NAME_LEN];
+
+	/*
+	 * start_reply uses this to know what function call after the
+	 * reply.  It's also used as sentinel value in fastcgi to know
+	 * if the server has closed the request.
+	 */
 	statefn		 next;
+
 	int		 code;
 	const char	*meta;
 	int		 fd, pfd;
 	struct dirent	**dir;
 	int		 dirlen, diroff;
+	int		 fcgi;
 
 	/* big enough to store STATUS + SPACE + META + CRLF */
 	char		 sbuf[1029];
 	ssize_t		 len, off;
 
+	struct mbufhead	 mbufhead;
+
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host they're talking to */
 };
+
+extern struct client clients[MAX_USERS];
 
 struct cgireq {
 	char		buf[GEMINI_URL_LEN];
@@ -248,6 +291,8 @@ enum {
 enum imsg_type {
 	IMSG_CGI_REQ,
 	IMSG_CGI_RES,
+	IMSG_FCGI_REQ,
+	IMSG_FCGI_FD,
 	IMSG_LOG,
 	IMSG_QUIT,
 };
@@ -298,11 +343,16 @@ const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
 int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
+int		 vhost_fastcgi(struct vhost*, const char*);
 int		 vhost_dirfd(struct vhost*, const char*);
 int		 vhost_strip(struct vhost*, const char*);
 X509_STORE	*vhost_require_ca(struct vhost*, const char*);
 int		 vhost_disable_log(struct vhost*, const char*);
+
 void		 mark_nonblock(int);
+void		 start_reply(struct client*, int, const char*);
+void		 close_conn(int, short, void*);
+struct client	*try_client_by_id(int);
 void		 loop(struct tls*, int, int, struct imsgbuf*);
 
 /* dirs.c */
@@ -324,6 +374,10 @@ int		 recv_time(int, time_t*);
 int		 send_fd(int, int);
 int		 recv_fd(int);
 int		 executor_main(struct imsgbuf*);
+
+/* fcgi.c */
+void		 handle_fcgi(int, short, void*);
+void		 send_fcgi_req(struct fcgi*, struct client*);
 
 /* sandbox.c */
 void		 sandbox_server_process(void);

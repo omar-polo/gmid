@@ -26,6 +26,8 @@
 #include <signal.h>
 #include <string.h>
 
+struct fcgi fcgi[FCGI_MAX];
+
 struct vhosthead hosts;
 
 int sock4, sock6;
@@ -251,7 +253,7 @@ free_config(void)
 	struct location *l, *tl;
 	struct envlist *e, *te;
 	struct alist *a, *ta;
-	int v;
+	int v, i;
 
 	v = conf.verbose;
 
@@ -297,6 +299,14 @@ free_config(void)
 
 		TAILQ_REMOVE(&hosts, h, vhosts);
 		free(h);
+	}
+
+	for (i = 0; i < FCGI_MAX; ++i) {
+		if (fcgi[i].path == NULL && fcgi[i].prog == NULL)
+			break;
+		free(fcgi[i].path);
+		free(fcgi[i].port);
+		free(fcgi[i].prog);
 	}
 
 	tls_free(ctx);

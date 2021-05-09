@@ -62,6 +62,7 @@ client		return TCLIENT;
 default		return TDEFAULT;
 entrypoint	return TENTRYPOINT;
 env		return TENV;
+fastcgi		return TFASTCGI;
 index		return TINDEX;
 ipv6		return TIPV6;
 key		return TKEY;
@@ -76,7 +77,9 @@ require		return TREQUIRE;
 return		return TRETURN;
 root		return TROOT;
 server		return TSERVER;
+spawn		return TSPAWN;
 strip		return TSTRIP;
+tcp		return TTCP;
 type		return TTYPE;
 user		return TUSER;
 

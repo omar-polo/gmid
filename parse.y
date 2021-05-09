@@ -47,6 +47,8 @@ int		 check_strip_no(int);
 int		 check_prefork_num(int);
 void		 advance_loc(void);
 void		 only_once(const void*, const char*);
+void		 only_oncei(int, const char*);
+int		 fastcgi_conf(char *, char *, char *);
 
 %}
 
@@ -60,7 +62,8 @@ void		 only_once(const void*, const char*);
 
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TCHROOT TUSER TSERVER
 %token TPREFORK TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
-%token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA TALIAS
+%token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA TALIAS TTCP
+%token TFASTCGI TSPAWN
 
 %token TERR
 
@@ -203,6 +206,29 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 			only_once(loc->default_mime, "default type");
 			loc->default_mime = $3;
 		}
+		| TFASTCGI TSPAWN TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf(NULL, NULL, $3);
+		}
+		| TFASTCGI TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($2, NULL, NULL);
+		}
+		| TFASTCGI TTCP TSTRING TNUM {
+			char *c;
+			if (asprintf(&c, "%d", $4) == -1)
+				err(1, "asprintf");
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($3, c, NULL);
+		}
+		| TFASTCGI TTCP TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($3, xstrdup("9000"), NULL);
+		}
+		| TFASTCGI TTCP TSTRING TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($3, $4, NULL);
+		}
 		| TINDEX TSTRING {
 			only_once(loc->index, "index");
 			loc->index = $2;
@@ -241,6 +267,7 @@ new_location(void)
 
 	l = xcalloc(1, sizeof(*l));
 	l->dirfd = -1;
+	l->fcgi = -1;
 	return l;
 }
 
@@ -353,4 +380,42 @@ only_once(const void *ptr, const char *name)
 {
 	if (ptr != NULL)
 		yyerror("`%s' specified more than once", name);
+}
+
+void
+only_oncei(int i, const char *name)
+{
+	if (i != -1)
+		yyerror("`%s' specified more than once", name);
+}
+
+int
+fastcgi_conf(char *path, char *port, char *prog)
+{
+	struct fcgi	*f;
+	int		i;
+
+	for (i = 0; i < FCGI_MAX; ++i) {
+		f = &fcgi[i];
+		
+		if (f->path == NULL) {
+			f->id = i;
+			f->path = path;
+			f->port = port;
+			f->prog = prog;
+			return i;
+		}
+
+		/* XXX: what to do with prog? */
+		if (!strcmp(f->path, path) &&
+		    ((port == NULL && f->port == NULL) ||
+		     !strcmp(f->port, port))) {
+			free(path);
+			free(port);
+			return i;
+		}
+	}
+
+	yyerror("too much `fastcgi' rules defined.");
+	return -1;
 }

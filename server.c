@@ -26,7 +26,8 @@
 #include <limits.h>
 #include <string.h>
 
-static struct client	 clients[MAX_USERS];
+struct client	 clients[MAX_USERS];
+
 static struct tls	*ctx;
 
 static struct event e4, e6, imsgev, siginfo, sigusr2;
@@ -48,7 +49,6 @@ static void	 fmt_sbuf(const char*, struct client*, const char*);
 static int	 apply_block_return(struct client*);
 static int	 apply_require_ca(struct client*);
 static void	 handle_open_conn(int, short, void*);
-static void	 start_reply(struct client*, int, const char*);
 static void	 handle_start_reply(int, short, void*);
 static size_t	 host_nth(struct vhost*);
 static void	 start_cgi(const char*, const char*, struct client*);
@@ -60,16 +60,16 @@ static int 	 read_next_dir_entry(struct client*);
 static void	 send_directory_listing(int, short, void*);
 static void	 handle_cgi_reply(int, short, void*);
 static void	 handle_copy(int, short, void*);
-static void	 close_conn(int, short, void*);
 static void	 do_accept(int, short, void*);
-struct client	*client_by_id(int);
 static void	 handle_imsg_cgi_res(struct imsgbuf*, struct imsg*, size_t);
+static void	 handle_imsg_fcgi_fd(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_siginfo(int, short, void*);
 
 static imsg_handlerfn *handlers[] = {
 	[IMSG_QUIT] = handle_imsg_quit,
 	[IMSG_CGI_RES] = handle_imsg_cgi_res,
+	[IMSG_FCGI_FD] = handle_imsg_fcgi_fd,
 };
 
 static inline int
@@ -200,6 +200,25 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 	*code = loc->block_code;
 	*fmt = loc->block_fmt;
 	return loc->block_code != 0;
+}
+
+int
+vhost_fastcgi(struct vhost *v, const char *path)
+{
+	struct location *loc;
+
+	if (v == NULL || path == NULL)
+		return -1;
+
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
+		if (loc->fcgi != -1)
+			if (matches(loc->match, path))
+				return loc->fcgi;
+	}
+
+	loc = TAILQ_FIRST(&v->locations);
+	return loc->fcgi;
 }
 
 int
@@ -556,6 +575,37 @@ apply_block_return(struct client *c)
 	return 1;
 }
 
+/* 1 if matching `fcgi' (and apply it), 0 otherwise */
+static int
+apply_fastcgi(struct client *c)
+{
+	int		 id;
+	struct fcgi	*f;
+
+	if ((id = vhost_fastcgi(c->host, c->iri.path)) == -1)
+		return 0;
+
+	switch ((f = &fcgi[id])->s) {
+	case FCGI_OFF:
+		f->s = FCGI_INFLIGHT;
+		log_info(c, "opening fastcgi connection for (%s,%s,%s)",
+		    f->path, f->port, f->prog);
+		imsg_compose(&exibuf, IMSG_FCGI_REQ, 0, 0, -1,
+		    &id, sizeof(id));
+		imsg_flush(&exibuf);
+                /* fallthrough */
+	case FCGI_INFLIGHT:
+                c->fcgi = id;
+		break;
+	case FCGI_READY:
+                c->fcgi = id;
+		send_fcgi_req(f, c);
+		break;
+	}
+
+	return 1;
+}
+
 /* 1 if matching `require client ca' fails (and apply it), 0 otherwise */
 static int
 apply_require_ca(struct client *c)
@@ -627,6 +677,9 @@ handle_open_conn(int fd, short ev, void *d)
 	if (apply_block_return(c))
 		return;
 
+	if (apply_fastcgi(c))
+		return;
+
 	if (c->host->entrypoint != NULL) {
 		start_cgi(c->host->entrypoint, c->iri.path, c);
 		return;
@@ -635,7 +688,7 @@ handle_open_conn(int fd, short ev, void *d)
 	open_file(c);
 }
 
-static void
+void
 start_reply(struct client *c, int code, const char *meta)
 {
 	c->code = code;
@@ -1039,10 +1092,11 @@ end:
 	close_conn(c->fd, ev, d);
 }
 
-static void
+void
 close_conn(int fd, short ev, void *d)
 {
-	struct client *c = d;
+	struct client	*c = d;
+	struct mbuf	*mbuf;
 
 	switch (tls_close(c->ctx)) {
 	case TLS_WANT_POLLIN:
@@ -1054,6 +1108,11 @@ close_conn(int fd, short ev, void *d)
 	}
 
 	connected_clients--;
+
+	while ((mbuf = TAILQ_FIRST(&c->mbufhead)) != NULL) {
+		TAILQ_REMOVE(&c->mbufhead, mbuf, mbufs);
+		free(mbuf);
+	}
 
 	tls_free(c->ctx);
 	c->ctx = NULL;
@@ -1101,6 +1160,7 @@ do_accept(int sock, short et, void *d)
 			c->pfd = -1;
 			c->dir = NULL;
 			c->addr = addr;
+			c->fcgi = -1;
 
 			yield_read(fd, c, &handle_handshake);
 			connected_clients++;
@@ -1111,11 +1171,19 @@ do_accept(int sock, short et, void *d)
 	close(fd);
 }
 
-struct client *
+static struct client *
 client_by_id(int id)
 {
 	if ((size_t)id > sizeof(clients)/sizeof(clients[0]))
 		fatal("in client_by_id: invalid id %d", id);
+	return &clients[id];
+}
+
+struct client *
+try_client_by_id(int id)
+{
+	if ((size_t)id > sizeof(clients)/sizeof(clients[0]))
+                return NULL;
 	return &clients[id];
 }
 
@@ -1130,6 +1198,39 @@ handle_imsg_cgi_res(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 		start_reply(c, TEMP_FAILURE, "internal server error");
 	else
 		yield_read(c->pfd, c, &handle_cgi_reply);
+}
+
+static void
+handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
+{
+	struct client	*c;
+	struct fcgi	*f;
+	int		 i, id;
+
+	id = imsg->hdr.peerid;
+	f = &fcgi[id];
+
+	if ((f->fd = imsg->fd) != -1) {
+		event_set(&f->e, imsg->fd, EV_READ | EV_PERSIST, &handle_fcgi,
+		    &fcgi[id]);
+		event_add(&f->e, NULL);
+	} else {
+		f->s = FCGI_OFF;
+	}
+
+	for (i = 0; i < MAX_USERS; ++i) {
+		c = &clients[i];
+		if (c->fd == -1)
+			continue;
+		if (c->fcgi != id)
+			continue;
+
+		if (f->fd == -1) {
+			c->fcgi = -1;
+			start_reply(c, TEMP_FAILURE, "internal server error");
+		} else
+			send_fcgi_req(f, c);
+	}
 }
 
 static void

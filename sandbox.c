@@ -304,6 +304,8 @@ sandbox_executor_process(void)
 {
 	struct vhost	*h;
 	struct location	*l;
+	struct fcgi	*f;
+	size_t		 i;
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
@@ -317,8 +319,25 @@ sandbox_executor_process(void)
 		}
 	}
 
-	/* rpath to chdir into the correct directory */
-	if (pledge("stdio rpath sendfd proc exec", NULL))
+	for (i = 0; i < FCGI_MAX; i++) {
+                f = &fcgi[i];
+		if (f->path != NULL) {
+			if (unveil(f->path, "rw") == -1)
+				fatal("unveil %s", f->path);
+		}
+
+		if (f->prog != NULL) {
+			if (unveil(f->prog, "rx") == -1)
+				fatal("unveil %s", f->prog);
+		}
+	}
+
+	/*
+	 * rpath: to chdir into the correct directory
+	 * proc exec: CGI
+	 * dns inet unix: FastCGI
+	 */
+	if (pledge("stdio rpath sendfd proc exec dns inet unix", NULL))
 		err(1, "pledge");
 }
 

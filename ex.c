@@ -16,6 +16,8 @@
 
 #include "gmid.h"
 
+#include <sys/un.h>
+
 #include <err.h>
 #include <errno.h>
 
@@ -28,10 +30,12 @@
 #include <string.h>
 
 static void	handle_imsg_cgi_req(struct imsgbuf*, struct imsg*, size_t);
+static void	handle_imsg_fcgi_req(struct imsgbuf*, struct imsg*, size_t);
 static void	handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
 static void	handle_dispatch_imsg(int, short, void*);
 
 static imsg_handlerfn *handlers[] = {
+	[IMSG_FCGI_REQ] = handle_imsg_fcgi_req,
 	[IMSG_CGI_REQ] = handle_imsg_cgi_req,
 	[IMSG_QUIT] = handle_imsg_quit,
 };
@@ -291,6 +295,119 @@ handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 
 	fd = launch_cgi(&iri, &req, h, l);
 	imsg_compose(ibuf, IMSG_CGI_RES, imsg->hdr.peerid, 0, fd, NULL, 0);
+	imsg_flush(ibuf);
+}
+
+static int
+fcgi_open_prog(struct fcgi *f)
+{
+	int s[2];
+	pid_t p;
+
+	/* XXX! */
+
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, s) == -1)
+		err(1, "socketpair");
+
+	switch (p = fork()) {
+	case -1:
+		err(1, "fork");
+	case 0:
+		close(s[0]);
+		if (dup2(s[1], 0) == -1)
+			err(1, "dup2");
+		execl(f->prog, f->prog, NULL);
+		err(1, "execl %s", f->prog);
+	default:
+		close(s[1]);
+		return s[0];
+	}
+}
+
+static int
+fcgi_open_sock(struct fcgi *f)
+{
+	struct sockaddr_un	addr;
+	int			fd;
+
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		log_err(NULL, "socket: %s", strerror(errno));
+		return -1;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strlcpy(addr.sun_path, f->path, sizeof(addr.sun_path));
+
+	if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+		log_warn(NULL, "failed to connect to %s: %s", f->path,
+		    strerror(errno));
+		close(fd);
+		return -1;
+	}
+
+	return fd;
+}
+
+static int
+fcgi_open_conn(struct fcgi *f)
+{
+	struct addrinfo	hints, *servinfo, *p;
+	int		r, sock;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_ADDRCONFIG;
+
+	if ((r = getaddrinfo(f->path, f->port, &hints, &servinfo)) != 0) {
+		log_warn(NULL, "getaddrinfo %s:%s: %s", f->path, f->port,
+		    gai_strerror(r));
+		return -1;
+	}
+
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (sock == -1)
+			continue;
+		if (connect(sock, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sock);
+			continue;
+		}
+		break;
+	}
+
+	if (p == NULL) {
+		log_warn(NULL, "couldn't connect to %s:%s", f->path, f->port);
+		sock = -1;
+	}
+
+	freeaddrinfo(servinfo);
+	return sock;
+}
+
+static void
+handle_imsg_fcgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+{
+	struct fcgi	*f;
+	int		 id, fd;
+
+	if (datalen != sizeof(id))
+		abort();
+	memcpy(&id, imsg->data, datalen);
+
+	if (id > FCGI_MAX || (fcgi[id].path == NULL && fcgi[id].prog == NULL))
+		abort();
+
+	f = &fcgi[id];
+	if (f->prog != NULL)
+		fd = fcgi_open_prog(f);
+	else if (f->port != NULL)
+		fd = fcgi_open_conn(f);
+	else
+		fd = fcgi_open_sock(f);
+
+	imsg_compose(ibuf, IMSG_FCGI_FD, id, 0, fd, NULL, 0);
 	imsg_flush(ibuf);
 }
 
