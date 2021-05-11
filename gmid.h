@@ -183,8 +183,6 @@ struct mbuf {
 };
 TAILQ_HEAD(mbufhead, mbuf);
 
-struct client;
-
 typedef void (imsg_handlerfn)(struct imsgbuf*, struct imsg*, size_t);
 
 typedef void (*statefn)(int, short, void*);
