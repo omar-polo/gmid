@@ -1,3 +1,7 @@
+2021-05-12  Omar Polo  <op@omarpolo.com>
+
+	* utils.c (gen_certificate): don't add gmid as organisation when generating the certificate, and now it set the version 3, so it's compatible with java/android
+
 2021-05-09  Omar Polo  <op@omarpolo.com>
 
 	* server.c (apply_fastcgi): added fastcgi support!

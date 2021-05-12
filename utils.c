@@ -115,7 +115,6 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	X509		*x509;
 	X509_NAME	*name;
 	FILE		*f;
-	const unsigned char *org = (const unsigned char*)"gmid";
 	const unsigned char *host = (const unsigned char*)hostname;
 
 	log_notice(NULL,
@@ -131,7 +130,7 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	if ((e = BN_new()) == NULL)
 		fatal("couldn't allocate a bignum");
 
-	BN_set_word(e, 17);
+	BN_set_word(e, RSA_F4);
 	if (!RSA_generate_key_ex(rsa, 4096, e, NULL))
 		fatal("couldn't generate a rsa key");
 
@@ -141,16 +140,15 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	if ((x509 = X509_new()) == NULL)
 		fatal("couldn't generate the X509 certificate");
 
-	ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
+	ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
 	X509_gmtime_adj(X509_get_notBefore(x509), 0);
 	X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 years */
+	X509_set_version(x509, 3);
 
 	if (!X509_set_pubkey(x509, pkey))
 		fatal("couldn't set the public key");
 
 	name = X509_get_subject_name(x509);
-	if (!X509_NAME_add_entry_by_txt(name, "O", MBSTRING_ASC, org, -1, -1, 0))
-		fatal("couldn't add N to cert");
 	if (!X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, host, -1, -1, 0))
 		fatal("couldn't add CN to cert");
 	X509_set_issuer_name(x509, name);
