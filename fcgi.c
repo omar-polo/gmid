@@ -456,13 +456,28 @@ err:
 void
 send_fcgi_req(struct fcgi *f, struct client *c)
 {
+	char		 addr[NI_MAXHOST];
+	const char	*t;
+	int		 e;
+
+        e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
+	    addr, sizeof(addr),
+	    NULL, 0,
+	    NI_NUMERICHOST);
+	if (e != 0)
+		fatal("getnameinfo failed");
+
 	c->next = NULL;
 
 	fcgi_begin_request(f->fd, c->id);
-	fcgi_send_param(f->fd, c->id, "QUERY_STRING", c->iri.query);
 	fcgi_send_param(f->fd, c->id, "GEMINI_URL_PATH", c->iri.path);
+	fcgi_send_param(f->fd, c->id, "QUERY_STRING", c->iri.query);
+	fcgi_send_param(f->fd, c->id, "REMOTE_ADDR", addr);
+	fcgi_send_param(f->fd, c->id, "REMOTE_HOST", addr);
+	fcgi_send_param(f->fd, c->id, "REQUEST_METHOD", "");
+	fcgi_send_param(f->fd, c->id, "SERVER_NAME", c->iri.host);
+	fcgi_send_param(f->fd, c->id, "SERVER_PROTOCOL", "GEMINI");
 	fcgi_send_param(f->fd, c->id, "SERVER_SOFTWARE", "gmid/1.7");
-	/* ... */
 
 	if (fcgi_end_param(f->fd, c->id) == -1)
 		close_all(f);
