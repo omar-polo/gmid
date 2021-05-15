@@ -300,8 +300,9 @@ chroot.
 .It Ic strip Ar number
 Strip
 .Ar number
-components from the beginning of the path.
-It's only considered for the
+components from the beginning of the path before doing a lookup in the
+root directory.
+It's also considered for the
 .Ar meta
 parameter in the scope of a
 .Ic block return .
