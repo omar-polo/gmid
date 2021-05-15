@@ -222,20 +222,25 @@ vhost_fastcgi(struct vhost *v, const char *path)
 }
 
 int
-vhost_dirfd(struct vhost *v, const char *path)
+vhost_dirfd(struct vhost *v, const char *path, size_t *retloc)
 {
 	struct location *loc;
+	size_t		 l = 0;
 
 	if (v == NULL || path == NULL)
 		return -1;
 
 	loc = TAILQ_FIRST(&v->locations);
 	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
+		l++;
 		if (loc->dirfd != -1)
-			if (matches(loc->match, path))
+			if (matches(loc->match, path)) {
+				*retloc = l;
 				return loc->dirfd;
+			}
 	}
 
+	*retloc = 0;
 	loc = TAILQ_FIRST(&v->locations);
 	return loc->dirfd;
 }
@@ -322,7 +327,7 @@ check_path(struct client *c, const char *path, int *fd)
 	if (*p == '\0')
 		p = ".";
 
-	dirfd = vhost_dirfd(c->host, path);
+	dirfd = vhost_dirfd(c->host, path, &c->loc);
 	log_debug(c, "check_path: strip=%d path=%s original=%s",
 	    strip, p, path);
 	flags = O_RDONLY | O_NOFOLLOW;
@@ -683,6 +688,7 @@ handle_open_conn(int fd, short ev, void *d)
 		return;
 
 	if (c->host->entrypoint != NULL) {
+		c->loc = 0;
 		start_cgi(c->host->entrypoint, c->iri.path, c);
 		return;
 	}
@@ -802,6 +808,7 @@ start_cgi(const char *spath, const char *relpath, struct client *c)
 	req.notafter = tls_peer_cert_notafter(c->ctx);
 
 	req.host_off = host_nth(c->host);
+	req.loc_off = c->loc;
 
 	imsg_compose(&exibuf, IMSG_CGI_REQ, c->id, 0, -1, &req, sizeof(req));
 	imsg_flush(&exibuf);

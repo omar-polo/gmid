@@ -290,7 +290,7 @@ handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 	if ((h = host_nth(req.host_off)) == NULL)
 		abort();
 
-	if ((l = loc_nth(h, req.host_off)) == NULL)
+	if ((l = loc_nth(h, req.loc_off)) == NULL)
 		abort();
 
 	fd = launch_cgi(&iri, &req, h, l);

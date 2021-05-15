@@ -245,6 +245,7 @@ struct client {
 
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host they're talking to */
+	size_t		 loc;	/* location matched */
 };
 
 extern struct client clients[MAX_USERS];
@@ -342,7 +343,7 @@ const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
 int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
 int		 vhost_fastcgi(struct vhost*, const char*);
-int		 vhost_dirfd(struct vhost*, const char*);
+int		 vhost_dirfd(struct vhost*, const char*, size_t*);
 int		 vhost_strip(struct vhost*, const char*);
 X509_STORE	*vhost_require_ca(struct vhost*, const char*);
 int		 vhost_disable_log(struct vhost*, const char*);
