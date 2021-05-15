@@ -187,7 +187,7 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 		safe_setenv("SERVER_PORT", path);
 
 		safe_setenv("SERVER_PROTOCOL", "GEMINI");
-		safe_setenv("SERVER_SOFTWARE", "gmid/1.6");
+		safe_setenv("SERVER_SOFTWARE", GMID_VERSION);
 
 		if (*req->subject != '\0')
 			safe_setenv("AUTH_TYPE", "Certificate");

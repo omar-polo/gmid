@@ -477,7 +477,7 @@ send_fcgi_req(struct fcgi *f, struct client *c)
 	fcgi_send_param(f->fd, c->id, "REQUEST_METHOD", "");
 	fcgi_send_param(f->fd, c->id, "SERVER_NAME", c->iri.host);
 	fcgi_send_param(f->fd, c->id, "SERVER_PROTOCOL", "GEMINI");
-	fcgi_send_param(f->fd, c->id, "SERVER_SOFTWARE", "gmid/1.7");
+	fcgi_send_param(f->fd, c->id, "SERVER_SOFTWARE", GMID_VERSION);
 
 	if (fcgi_end_param(f->fd, c->id) == -1)
 		close_all(f);
