@@ -44,7 +44,7 @@ static int	 check_path(struct client*, const char*, int*);
 static void	 open_file(struct client*);
 static void	 check_for_cgi(struct client*);
 static void	 handle_handshake(int, short, void*);
-static char	*strip_path(char*, int);
+static const char *strip_path(const char*, int);
 static void	 fmt_sbuf(const char*, struct client*, const char*);
 static int	 apply_block_return(struct client*);
 static int	 apply_require_ca(struct client*);
@@ -494,8 +494,8 @@ err:
 	start_reply(c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
 
-static char *
-strip_path(char *path, int strip)
+static const char *
+strip_path(const char *path, int strip)
 {
 	char *t;
 
