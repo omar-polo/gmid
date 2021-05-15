@@ -395,9 +395,11 @@ check_for_cgi(struct client *c)
 	end = strchr(path, '\0');
 
 	while (end > path) {
-		/* go up one level.  UNIX paths are simple and POSIX
-		 * dirname, with its ambiguities on if the given path
-		 * is changed or not, gives me headaches. */
+		/*
+		 * go up one level.  UNIX paths are simple and POSIX
+		 * dirname, with its ambiguities on if the given
+		 * pointer is changed or not, gives me headaches.
+		 */
 		while (*end != '/')
 			end--;
 		*end = '\0';
