@@ -2,10 +2,13 @@ include ../Makefile.local
 
 .PHONY: all clean runtime
 
-all: puny-test testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
+all: gg puny-test testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
 	./puny-test
 	./runtime
 	./iri_test
+
+gg: gg.o ../iri.o ../utf8.o ${COMPAT}
+	${CC} gg.o ../iri.o ../utf8.o ${COMPAT} -o $@ ${LDFLAGS}
 
 puny-test: puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT}
 	${CC} puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT} \
@@ -59,7 +62,7 @@ invalid.cert.pem: cert.pem
 clean:
 	rm -f *.o iri_test cert.pem key.pem
 	rm -f testca.* valid.csr valid.key invalid.*pem
-	rm -rf testdata fill-file puny-test
+	rm -rf testdata fill-file puny-test gg
 
 testdata: fill-file
 	mkdir testdata

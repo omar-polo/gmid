@@ -20,9 +20,6 @@ OBJS = ${SRCS:.c=.o} lex.yy.o y.tab.o ${COMPAT}
 gmid: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS}
 
-gg: gg.o iri.o utf8.o ${COMPAT}
-	${CC} gg.o iri.o utf8.o ${COMPAT} -o $@ ${LDFLAGS}
-
 static: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS} ${STATIC}
 
@@ -30,11 +27,11 @@ TAGS: ${SRCS}
 	@(etags ${SRCS} || true) 2>/dev/null
 
 clean:
-	rm -f *.o compat/*.o lex.yy.c y.tab.c y.tab.h y.output gmid gg
+	rm -f *.o compat/*.o lex.yy.c y.tab.c y.tab.h y.output gmid
 	rm -f compile_flags.txt
 	make -C regress clean
 
-regress: gmid gg
+regress: gmid
 	make -C regress all
 
 install: gmid

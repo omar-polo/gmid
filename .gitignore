@@ -25,3 +25,4 @@ regress/fill-file
 regress/iri_test
 regress/puny-test
 regress/*.o
+regress/gg

@@ -27,19 +27,19 @@ checkconf() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	./../gg -b $ggflags "gemini://localhost:10965/$1"
+	./gg -b $ggflags "gemini://localhost:10965/$1"
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	./../gg -h $ggflags "gemini://localhost:10965/$1"
+	./gg -h $ggflags "gemini://localhost:10965/$1"
 }
 
 # usage: raw <path>
 # return both header and body
 raw() {
-	./../gg $ggflags "gemini://localhost:10965/$1"
+	./gg $ggflags "gemini://localhost:10965/$1"
 }
 
 run() {
