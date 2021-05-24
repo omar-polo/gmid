@@ -206,29 +206,7 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 			only_once(loc->default_mime, "default type");
 			loc->default_mime = $3;
 		}
-		| TFASTCGI TSPAWN TSTRING {
-			only_oncei(loc->fcgi, "fastcgi");
-			loc->fcgi = fastcgi_conf(NULL, NULL, $3);
-		}
-		| TFASTCGI TSTRING {
-			only_oncei(loc->fcgi, "fastcgi");
-			loc->fcgi = fastcgi_conf($2, NULL, NULL);
-		}
-		| TFASTCGI TTCP TSTRING TNUM {
-			char *c;
-			if (asprintf(&c, "%d", $4) == -1)
-				err(1, "asprintf");
-			only_oncei(loc->fcgi, "fastcgi");
-			loc->fcgi = fastcgi_conf($3, c, NULL);
-		}
-		| TFASTCGI TTCP TSTRING {
-			only_oncei(loc->fcgi, "fastcgi");
-			loc->fcgi = fastcgi_conf($3, xstrdup("9000"), NULL);
-		}
-		| TFASTCGI TTCP TSTRING TSTRING {
-			only_oncei(loc->fcgi, "fastcgi");
-			loc->fcgi = fastcgi_conf($3, $4, NULL);
-		}
+		| TFASTCGI fastcgi
 		| TINDEX TSTRING {
 			only_once(loc->index, "index");
 			loc->index = $2;
@@ -250,6 +228,31 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->dir  = ensure_absolute_path($2);
 		}
 		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
+		;
+
+fastcgi		: TSPAWN TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf(NULL, NULL, $2);
+		}
+		| TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($1, NULL, NULL);
+		}
+		| TTCP TSTRING TNUM {
+			char *c;
+			if (asprintf(&c, "%d", $3) == -1)
+				err(1, "asprintf");
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($2, c, NULL);
+		}
+		| TTCP TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($2, xstrdup("9000"), NULL);
+		}
+		| TTCP TSTRING TSTRING {
+			only_oncei(loc->fcgi, "fastcgi");
+			loc->fcgi = fastcgi_conf($2, $3, NULL);
+		}
 		;
 
 %%
