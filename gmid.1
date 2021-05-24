@@ -35,8 +35,8 @@
 .Ek
 .Sh DESCRIPTION
 .Nm
-is a simple and minimal gemini server that can serve static files and
-execute CGI scripts.
+is a simple and minimal gemini server that can serve static files,
+execute CGI scripts and talk to FastCGI applications.
 It can run without a configuration file with a limited set of features
 available.
 .Pp
@@ -257,6 +257,28 @@ to
 .Ar value
 when executing CGI scripts.
 Can be provided more than once.
+.\" don't document the "spawn <prog>" form because it probably won't
+ \" be kept.
+.It Ic fastcgi Oo Ic tcp Oc Pa socket Oo Ar port Oc
+Enable FastCGI instead of serving files.
+The
+.Pa socket
+can either be a UNIX domain socket or a TCP socket.
+If the FastCGI application is listening on a UNIX domain socket,
+.Pa socket
+is a local path name within the
+.Xr chroot 2
+root directory of
+.Nm .
+Otherwise, the
+.Ic tcp
+keyword must be provided and
+.Pa socket
+is interpreted as a hostname or an IP address.
+.Ar port
+can be either a port number or the name of a service enclosed in
+double quotes.
+If it's not specified defaults to 9000.
 .It Ic index Ar string
 Set the directory index file.
 If not specified, it defaults to
