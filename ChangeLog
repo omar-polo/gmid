@@ -1,3 +1,7 @@
+2021-05-24  Omar Polo  <op@omarpolo.com>
+
+	* gg.c: move `gg' to regress, as it's only used for the tests
+
 2021-05-12  Omar Polo  <op@omarpolo.com>
 
 	* utils.c (gen_certificate): don't add gmid as organisation when generating the certificate, and now it set the version 3, so it's compatible with java/android
