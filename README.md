@@ -127,11 +127,10 @@ Docker to build a `gmid` image with:
 and then run it with something along the lines of
 
     docker run --rm -it -p 1965:1965 \
-        -v /path/to/gmid.conf:...:ro \
+        -v /path/to/gmid.conf:/etc/gmid.conf:ro \
         -v /path/to/docs:/var/gemini \
-        gmid /bin/gmid -c .../gmid.conf
+        gmid /bin/gmid -c /etc/gmid.conf
 
-(ellipses used for brevity)
 
 ### Local libretls
 
