@@ -179,5 +179,5 @@ On Linux, a `seccomp(2)` filter is installed in the listener to allow
 only certain syscalls, see [sandbox.c](sandbox.c) for more information
 on the BPF program.
 
-In any case, you are invited to run gmid inside some sort of
+In any case, it's advisable to run gmid inside some sort of
 container/jail/chroot.
