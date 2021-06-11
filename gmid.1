@@ -258,7 +258,7 @@ to
 when executing CGI scripts.
 Can be provided more than once.
 .\" don't document the "spawn <prog>" form because it probably won't
- \" be kept.
+.\" be kept.
 .It Ic fastcgi Oo Ic tcp Oc Pa socket Oo Ar port Oc
 Enable FastCGI instead of serving files.
 The
@@ -310,6 +310,12 @@ section may include most of the server configuration rules
 except
 .Ic alias , Ic cert , Ic env , Ic key , Ic location ,
 .Ic entrypoint No and Ic cgi .
+.It Ic param Ar name Ar value
+Set the param
+.Ar name
+to
+.Ar value
+for FastCGI.
 .It Ic root Pa directory
 Specify the root directory for this server.
 It's relative to the chroot, if enabled.
@@ -411,6 +417,59 @@ The time corresponding to the start of the validity period of the peer
 certificate in the ISO 8601 format.
 .El
 .Pp
+.Sh FastCGI
+.Nm
+optionally supports FastCGI.
+A
+.Ic fastcgi
+rule must be present in a server or location block.
+Then, all requests matching that server or location will be handled
+via the specified FastCGI backend.
+.Pp
+By default the following variables
+.Pq parameters
+are sent, and carry the same semantics as with CGI.
+More parameters can be added with the
+.Ic param
+option.
+.Bl -bullet -compact
+.It
+GATEWAY_INTERFACE
+.It
+GEMINI_URL_PATH
+.It
+QUERY_STRING
+.It
+REMOTE_ADDR
+.It
+REMOTE_HOST
+.It
+REQUEST_METHOD
+.It
+SERVER_NAME
+.It
+SERVER_PROTOCOL
+.It
+SERVER_SOFTWARE
+.It
+AUTH_TYPE
+.It
+REMOTE_USER
+.It
+TLS_CLIENT_ISSUER
+.It
+TLS_CLIENT_HASH
+.It
+TLS_VERSION
+.It
+TLS_CIPHER
+.It
+TLS_CIPHER_STRENGTH
+.It
+TLS_CLIENT_NOT_BEFORE
+.It
+TLS_CLIENT_NOT_AFTER
+.El
 .Sh MIME
 To auto-detect the MIME type of the response
 .Nm
