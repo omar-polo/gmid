@@ -125,6 +125,7 @@ struct vhost {
 	struct lochead	 locations;
 
 	struct envhead	 env;
+	struct envhead	 params;
 	struct aliashead aliases;
 };
 

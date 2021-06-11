@@ -34,7 +34,7 @@
  */
 #define DEBUG_FCGI 0
 
-#ifdef DEBUG_FCGI
+#if DEBUG_FCGI
 # include <sys/un.h>
 static int debug_socket = -1;
 #endif
@@ -456,9 +456,11 @@ err:
 void
 send_fcgi_req(struct fcgi *f, struct client *c)
 {
-	char		 addr[NI_MAXHOST];
-	const char	*t;
+	char		 addr[NI_MAXHOST], buf[22];
 	int		 e;
+	time_t		 tim;
+	struct tm	 tminfo;
+	struct envlist	*p;
 
         e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
 	    addr, sizeof(addr),
@@ -470,6 +472,7 @@ send_fcgi_req(struct fcgi *f, struct client *c)
 	c->next = NULL;
 
 	fcgi_begin_request(f->fd, c->id);
+	fcgi_send_param(f->fd, c->id, "GATEWAY_INTERFACE", "CGI/1.1");
 	fcgi_send_param(f->fd, c->id, "GEMINI_URL_PATH", c->iri.path);
 	fcgi_send_param(f->fd, c->id, "QUERY_STRING", c->iri.query);
 	fcgi_send_param(f->fd, c->id, "REMOTE_ADDR", addr);
@@ -478,6 +481,39 @@ send_fcgi_req(struct fcgi *f, struct client *c)
 	fcgi_send_param(f->fd, c->id, "SERVER_NAME", c->iri.host);
 	fcgi_send_param(f->fd, c->id, "SERVER_PROTOCOL", "GEMINI");
 	fcgi_send_param(f->fd, c->id, "SERVER_SOFTWARE", GMID_VERSION);
+
+	if (tls_peer_cert_provided(c->ctx)) {
+		fcgi_send_param(f->fd, c->id, "AUTH_TYPE", "CERTIFICATE");
+		fcgi_send_param(f->fd, c->id, "REMOTE_USER",
+		    tls_peer_cert_subject(c->ctx));
+		fcgi_send_param(f->fd, c->id, "TLS_CLIENT_ISSUER",
+		    tls_peer_cert_issuer(c->ctx));
+		fcgi_send_param(f->fd, c->id, "TLS_CLIENT_HASH",
+		    tls_peer_cert_hash(c->ctx));
+		fcgi_send_param(f->fd, c->id, "TLS_VERSION",
+		    tls_conn_version(c->ctx));
+		fcgi_send_param(f->fd, c->id, "TLS_CIPHER",
+		    tls_conn_cipher(c->ctx));
+
+		snprintf(buf, sizeof(buf), "%d",
+		    tls_conn_cipher_strength(c->ctx));
+		fcgi_send_param(f->fd, c->id, "TLS_CIPHER_STRENGTH", buf);
+
+		tim = tls_peer_cert_notbefore(c->ctx);
+		strftime(buf, sizeof(buf), "%FT%TZ",
+		    gmtime_r(&tim, &tminfo));
+		fcgi_send_param(f->fd, c->id, "TLS_CLIENT_NOT_BEFORE", buf);
+
+		tim = tls_peer_cert_notafter(c->ctx);
+		strftime(buf, sizeof(buf), "%FT%TZ",
+		    gmtime_r(&tim, &tminfo));
+		fcgi_send_param(f->fd, c->id, "TLS_CLIENT_NOT_AFTER", buf);
+
+		TAILQ_FOREACH(p, &c->host->params, envs) {
+			fcgi_send_param(f->fd, c->id, p->name, p->value);
+		}
+	} else
+		fcgi_send_param(f->fd, c->id, "AUTH_TYPE", "");
 
 	if (fcgi_end_param(f->fd, c->id) == -1)
 		close_all(f);
