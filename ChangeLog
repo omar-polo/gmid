@@ -1,5 +1,7 @@
 2021-06-11  Omar Polo  <op@omarpolo.com>
 
+	* parse.y (servopt): add `param' keyword
+
 	* fcgi.c (send_fcgi_req): send GATEWAY_INTERFACE, AUTH_TYPE,
 	REMOTE_USER, TLS_CLIENT_ISSUER, TLS_CLIENT_HASH, TLS_VERSION,
 	TLS_CIPHER, TLS_CIPHER_STRENGTH and TLS_CLIENT_NOT_BEFORE/AFTER.

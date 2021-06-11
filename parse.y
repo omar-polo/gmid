@@ -49,6 +49,7 @@ void		 advance_loc(void);
 void		 only_once(const void*, const char*);
 void		 only_oncei(int, const char*);
 int		 fastcgi_conf(char *, char *, char *);
+void		 add_param(char *, char *, int);
 
 %}
 
@@ -63,7 +64,7 @@ int		 fastcgi_conf(char *, char *, char *);
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TCHROOT TUSER TSERVER
 %token TPREFORK TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
 %token TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA TALIAS TTCP
-%token TFASTCGI TSPAWN
+%token TFASTCGI TSPAWN TPARAM
 
 %token TERR
 
@@ -150,19 +151,14 @@ servopt		: TALIAS TSTRING {
 			host->entrypoint = $2;
 		}
 		| TENV TSTRING TSTRING {
-			struct envlist *e;
-
-			e = xcalloc(1, sizeof(*e));
-			e->name = $2;
-			e->value = $3;
-			if (TAILQ_EMPTY(&host->env))
-				TAILQ_INSERT_HEAD(&host->env, e, envs);
-			else
-				TAILQ_INSERT_TAIL(&host->env, e, envs);
+			add_param($2, $3, 1);
 		}
 		| TKEY TSTRING		{
 			only_once(host->key, "key");
 			host->key  = ensure_absolute_path($2);
+		}
+		| TPARAM TSTRING TSTRING {
+			add_param($2, $3, 0);
 		}
 		| locopt
 		;
@@ -421,4 +417,24 @@ fastcgi_conf(char *path, char *port, char *prog)
 
 	yyerror("too much `fastcgi' rules defined.");
 	return -1;
+}
+
+void
+add_param(char *name, char *val, int env)
+{
+	struct envlist *e;
+	struct envhead *h;
+
+	if (env)
+		h = &host->env;
+	else
+		h = &host->params;
+
+	e = xcalloc(1, sizeof(*e));
+	e->name = name;
+	e->value = val;
+	if (TAILQ_EMPTY(h))
+		TAILQ_INSERT_HEAD(h, e, envs);
+	else
+		TAILQ_INSERT_TAIL(h, e, envs);
 }

@@ -70,6 +70,7 @@ lang		return TLANG;
 location	return TLOCATION;
 log		return TLOG;
 mime		return TMIME;
+param		return TPARAM;
 port		return TPORT;
 prefork		return TPREFORK;
 protocols	return TPROTOCOLS;
