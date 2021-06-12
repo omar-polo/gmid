@@ -165,7 +165,7 @@ fcgi_begin_request(int sock, int id)
 	r.body.role0 = FCGI_RESPONDER;
 	r.body.flags = FCGI_KEEP_CONN;
 
-        if (write(sock, &r, sizeof(r)) != sizeof(r))
+	if (write(sock, &r, sizeof(r)) != sizeof(r))
 		return -1;
 	return 0;
 }
