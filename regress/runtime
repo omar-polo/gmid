@@ -314,6 +314,7 @@ restart
 
 eq "$(head /foo)"	"51 not found"		"Unexpected head for /foo"
 eq "$(head /foo/)"	"20 text/gemini"	"Unexpected head for /foo/"
+echo OK /foo and /foo/ with root inside location
 
 # how to match both /foo and /foo/*
 config '' '
@@ -325,3 +326,16 @@ restart
 
 eq "$(head /foo)"	"31 /foo/"		"Unexpected head for /foo"
 eq "$(head /foo/)"	"20 text/gemini"	"Unexpected head for /foo/"
+echo OK /foo and /foo/ with root inside location
+
+# test with fastcgi
+
+# NB: the fcgi spawn is NOT supported outside of this test suite
+
+config 'prefork 1' 'fastcgi spawn "'$PWD'/fcgi-test"'
+checkconf
+restart
+
+eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
+eq "$(get /)"		"# Hello, world!"	"Unexpected body for /"
+echo OK GET / with fastcgi

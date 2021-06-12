@@ -1,11 +1,13 @@
 include ../Makefile.local
 
-.PHONY: all clean runtime
+.PHONY: all data clean runtime
 
-all: gg puny-test testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
+all: data gg puny-test fcgi-test
 	./puny-test
-	./runtime
 	./iri_test
+	./runtime
+
+data: testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
 
 gg: gg.o ../iri.o ../utf8.o ${COMPAT}
 	${CC} gg.o ../iri.o ../utf8.o ${COMPAT} -o $@ ${LDFLAGS}
@@ -19,6 +21,9 @@ iri_test: iri_test.o ../iri.o ../utf8.o ${COMPAT}
 
 fill-file: fill-file.o
 	${CC} fill-file.o -o fill-file
+
+fcgi-test: fcgi-test.o
+	${CC} fcgi-test.o ${COMPAT} -o fcgi-test ${LDFLAGS}
 
 key.pem: cert.pem
 
