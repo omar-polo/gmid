@@ -1220,6 +1220,7 @@ handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 	f = &fcgi[id];
 
 	if ((f->fd = imsg->fd) != -1) {
+		f->s = FCGI_READY;
 		event_set(&f->e, imsg->fd, EV_READ | EV_PERSIST, &handle_fcgi,
 		    &fcgi[id]);
 		event_add(&f->e, NULL);
