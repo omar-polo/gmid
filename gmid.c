@@ -288,6 +288,14 @@ free_config(void)
 			free(e);
 		}
 
+		TAILQ_FOREACH_SAFE(e, &h->params, envs, te) {
+			TAILQ_REMOVE(&h->params, e, envs);
+
+			free(e->name);
+			free(e->value);
+			free(e);
+		}
+
 		TAILQ_FOREACH_SAFE(a, &h->aliases, aliases, ta) {
 			TAILQ_REMOVE(&h->aliases, a, aliases);
 
