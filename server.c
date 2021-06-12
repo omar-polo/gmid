@@ -1109,10 +1109,10 @@ close_conn(int fd, short ev, void *d)
 
 	switch (tls_close(c->ctx)) {
 	case TLS_WANT_POLLIN:
-		yield_read(fd, c, &close_conn);
+		yield_read(c->fd, c, &close_conn);
 		return;
 	case TLS_WANT_POLLOUT:
-		yield_read(fd, c, &close_conn);
+		yield_read(c->fd, c, &close_conn);
 		return;
 	}
 
