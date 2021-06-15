@@ -344,7 +344,7 @@ sandbox_executor_process(void)
 void
 sandbox_logger_process(void)
 {
-	if (pledge("stdio", NULL) == -1)
+	if (pledge("stdio recvfd", NULL) == -1)
 		err(1, "pledge");
 }
 

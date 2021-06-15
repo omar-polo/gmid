@@ -32,17 +32,21 @@
 
 static struct event imsgev;
 
+static FILE *log;
+
 static void	handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
 static void	handle_imsg_log(struct imsgbuf*, struct imsg*, size_t);
+static void	handle_imsg_log_type(struct imsgbuf*, struct imsg*, size_t);
 static void	handle_dispatch_imsg(int, short, void*);
 
 static imsg_handlerfn *handlers[] = {
 	[IMSG_QUIT] = handle_imsg_quit,
 	[IMSG_LOG] = handle_imsg_log,
+	[IMSG_LOG_TYPE] = handle_imsg_log_type,
 };
 
 static inline void
-print_date(void)
+print_date(FILE *f)
 {
 	struct tm	tminfo;
 	time_t		t;
@@ -51,7 +55,7 @@ print_date(void)
 	time(&t);
 	strftime(buf, sizeof(buf), "%F %T",
 	    localtime_r(&t, &tminfo));
-	fprintf(stderr, "[%s] ", buf);
+	fprintf(f, "[%s] ", buf);
 }
 
 static inline int
@@ -255,6 +259,26 @@ log_request(struct client *c, char *meta, size_t l)
 
 
 static void
+do_log(int priority, const char *msg)
+{
+	int quit = 0;
+
+	if (priority == LOG_CRIT) {
+		quit = 1;
+		priority = LOG_ERR;
+	}
+
+	if (log != NULL) {
+		print_date(log);
+		fprintf(log, "%s\n", msg);
+	} else
+		syslog(LOG_DAEMON | priority, "%s", msg);
+
+	if (quit)
+		exit(1);
+}
+
+static void
 handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
 	event_loopbreak();
@@ -268,23 +292,26 @@ handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 
 	msg = imsg->data;
 	msg[datalen-1] = '\0';
-
 	priority = imsg->hdr.peerid;
+	do_log(priority, msg);
+}
 
-	quit = 0;
-	if (priority == LOG_CRIT) {
-		quit = 1;
-		priority = LOG_ERR;
+static void
+handle_imsg_log_type(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+{
+	if (log != NULL) {
+		fflush(log);
+		fclose(log);
+		log = NULL;
 	}
 
-	if (conf.foreground) {
-		print_date();
-		fprintf(stderr, "%s\n", msg);
-	} else
-		syslog(LOG_DAEMON | priority, "%s", msg);
-
-	if (quit)
-		exit(1);
+	if (imsg->fd != -1) {
+		if ((log = fdopen(imsg->fd, "a")) == NULL) {
+			syslog(LOG_DAEMON | LOG_ERR, "fdopen: %s",
+			    strerror(errno));
+			exit(1);
+		}
+	}
 }
 
 static void

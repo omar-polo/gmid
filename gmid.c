@@ -508,7 +508,11 @@ setup_configless(int argc, char **argv, const char *cgi)
 	loc = xcalloc(1, sizeof(*loc));
 	TAILQ_INSERT_HEAD(&host->locations, loc, locations);
 
+	imsg_compose(&logibuf, IMSG_LOG_TYPE, 0, 0, 2, NULL, 0);
+	imsg_flush(&logibuf);
+
 	serve(argc, argv, NULL);
+
 	imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
 	imsg_flush(&logibuf);
 }
@@ -621,6 +625,11 @@ main(int argc, char **argv)
 	if (configless) {
 		setup_configless(argc, argv, cgi);
 		return 0;
+	}
+
+	if (conf.foreground) {
+		imsg_compose(&logibuf, IMSG_LOG_TYPE, 0, 0, 2, NULL, 0);
+		imsg_flush(&logibuf);
 	}
 
 	pidfd = write_pidfile(pidfile);
