@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -114,7 +115,7 @@ static void
 read_header(struct fcgi_header *hdr)
 {
 	if (must_read(0, hdr, sizeof(*hdr)) == -1)
-		errx(1, "must_read failed");
+		exit(1);
 }
 
 /* read and consume a record of the given type */
