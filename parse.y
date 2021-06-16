@@ -27,6 +27,16 @@
 
 FILE *yyfp;
 
+typedef struct {
+	union {
+		char	*str;
+		int	 num;
+	};
+	int lineno;
+	int colno;
+} yystype;
+#define YYSTYPE yystype
+
 /*
  * #define YYDEBUG 1
  * int yydebug = 1;
@@ -36,7 +46,6 @@ struct vhost *host;
 struct location *loc;
 
 static int goterror;
-static int lineno, colno;
 
 static struct vhost	*new_vhost(void);
 static struct location	*new_location(void);
@@ -60,11 +69,6 @@ void		 add_param(char *, char *, int);
 
 /* for bison: */
 /* %define parse.error verbose */
-
-%union {
-	char		*str;
-	int		 num;
-}
 
 %token TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TCHROOT TUSER TSERVER
 %token TPREFORK TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
@@ -112,9 +116,10 @@ vhost		: TSERVER TSTRING {
 			host->domain = $2;
 
 			if (strstr($2, "xn--") != NULL) {
-				warnx("%s:%d \"%s\" looks like punycode: "
+				warnx("%s:%d:%d \"%s\" looks like punycode: "
 				    "you should use the decoded hostname.",
-				    config_path, lineno, $2);
+				    config_path, yylval.lineno+1, yylval.colno,
+				    $2);
 			}
 		} '{' servopts locations '}' {
 
@@ -283,7 +288,7 @@ yyerror(const char *msg, ...)
 	goterror = 1;
 
 	va_start(ap, msg);
-	fprintf(stderr, "%s:%d: ", config_path, lineno);
+	fprintf(stderr, "%s:%d: ", config_path, yylval.lineno);
 	vfprintf(stderr, msg, ap);
 	fprintf(stderr, "\n");
 	va_end(ap);
@@ -343,10 +348,10 @@ yylex(void)
 repeat:
 	/* skip whitespace first */
 	for (c = getc(yyfp); isspace(c); c = getc(yyfp)) {
-		colno++;
+		yylval.colno++;
 		if (c == '\n') {
-			lineno++;
-			colno = 0;
+			yylval.lineno++;
+			yylval.colno = 0;
 		}
 	}
 
@@ -360,19 +365,19 @@ repeat:
 		while ((c = getc(yyfp)) != '\n')
 			if (c == EOF)
 				goto eof;
-		colno = 0;
-		lineno++;
+		yylval.colno = 0;
+		yylval.lineno++;
 		goto repeat;
 	case EOF:
 		goto eof;
 	}
 
 	/* parsing next word */
-	for (;; c = getc(yyfp), colno++) {
+	for (;; c = getc(yyfp), yylval.colno++) {
 		switch (c) {
 		case '\0':
 			yyerror("unallowed character NULL in column %d",
-			    colno+1);
+			    yylval.colno+1);
 			escape = 0;
 			continue;
 		case '\\':
@@ -383,18 +388,18 @@ repeat:
 		case '\n':
 			if (quotes)
 				yyerror("unterminated quotes in column %d",
-				    colno+1);
+				    yylval.colno+1);
 			if (escape) {
 				nonkw = 1;
 				escape = 0;
-				colno = 0;
-				lineno++;
+				yylval.colno = 0;
+				yylval.lineno++;
 			}
 			goto eow;
 		case EOF:
 			if (escape)
 				yyerror("unterminated escape in column %d",
-				    colno);
+				    yylval.colno);
 			if (quotes)
 				yyerror("unterminated quotes in column %d",
 				    qpos+1);
@@ -412,7 +417,7 @@ repeat:
 				quotes = !quotes;
 				if (quotes) {
 					nonkw = 1;
-					qpos = colno;
+					qpos = yylval.colno;
 				}
 				continue;
 			}
