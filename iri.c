@@ -424,7 +424,7 @@ trim_req_iri(char *iri, const char **err)
 int
 serialize_iri(struct iri *i, char *buf, size_t len)
 {
-	size_t l;
+	size_t l = 0;
 
 	/* in ex.c we receive empty "" strings as NULL */
 	if (i->schema == NULL || i->host == NULL) {
