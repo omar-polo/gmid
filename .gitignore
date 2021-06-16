@@ -5,7 +5,6 @@ gg
 *.o
 compat/*.o
 docs
-lex.yy.c
 y.tab.*
 Makefile.local
 compile_flags.txt
