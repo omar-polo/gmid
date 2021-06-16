@@ -287,7 +287,7 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 static void
 handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
-	int	 priority, quit;
+	int	 priority;
 	char	*msg;
 
 	msg = imsg->data;
