@@ -7,15 +7,12 @@ Makefile.local: configure
 
 include Makefile.local
 
-lex.yy.c: lex.l y.tab.c
-	${LEX} lex.l
-
 y.tab.c: parse.y
-	${YACC} -b y -d parse.y
+	${YACC} -b y parse.y
 
 SRCS = gmid.c iri.c utf8.c ex.c server.c sandbox.c mime.c puny.c \
 	utils.c log.c dirs.c fcgi.c
-OBJS = ${SRCS:.c=.o} lex.yy.o y.tab.o ${COMPAT}
+OBJS = ${SRCS:.c=.o} y.tab.o ${COMPAT}
 
 gmid: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS}

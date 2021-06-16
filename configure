@@ -40,7 +40,6 @@ CFLAGS="${CFLAGS} -g -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
 CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
 LDFLAGS="-ltls -levent"
 LD_IMSG=
-LEX=lex
 STATIC=
 YACC=yacc
 
@@ -74,17 +73,6 @@ if which pkg-config 2>/dev/null 1>&2; then
 	esac
 fi
 
-# auto detect lex/flex
-which ${LEX} 2>/dev/null 1>&2 || {
-	echo "${LEX} not found: trying flex" 1>&2
-	echo "${LEX} not found: trying flex" 1>&3
-	LEX=flex
-	which ${LEX} 2>/dev/null 1>&2 || {
-		echo "${LEX} not found: giving up" 1>&2
-		echo "${LEX} not found: giving up" 1>&3
-	}
-}
-
 # auto detect yacc/bison
 which ${YACC} 2>/dev/null 1>&2 || {
 	echo "${YACC} not found: trying bison" 1>&2
@@ -112,7 +100,6 @@ for keyvals in "$@"; do
 		CFLAGS)  CFLAGS="$val" ;;
 		DESTDIR) DESTDIR="$val" ;;
 		LDFLAGS) LDFLAGS="$val" ;;
-		LEX)     LEX="$lex" ;;
 		PREFIX)  PREFIX="$val" ;;
 		YACC)    YACC="$val" ;;
 		*)
@@ -398,7 +385,6 @@ CC		= ${CC}
 CFLAGS		= ${CFLAGS}
 LDFLAGS		= ${LDFLAGS} ${LD_IMSG}
 YACC		= ${YACC}
-LEX		= ${LEX}
 STATIC		= ${STATIC}
 PREFIX		= ${PREFIX}
 BINDIR		= ${BINDIR}

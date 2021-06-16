@@ -310,12 +310,6 @@ void		 init_config(void);
 void		 free_config(void);
 void		 drop_priv(void);
 
-/* provided by lex/yacc */
-extern FILE *yyin;
-extern int yylineno;
-extern int yyparse(void);
-extern int yylex(void);
-
 void		 yyerror(const char*, ...);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);

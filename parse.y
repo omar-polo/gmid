@@ -1,4 +1,3 @@
-/* -*- mode: fundamental; indent-tabs-mode: t; -*- */
 %{
 
 /*
@@ -17,12 +16,16 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "gmid.h"
+
+FILE *yyfp;
 
 /*
  * #define YYDEBUG 1
@@ -32,12 +35,14 @@
 struct vhost *host;
 struct location *loc;
 
-int goterror = 0;
+static int goterror;
+static int lineno, colno;
 
 static struct vhost	*new_vhost(void);
 static struct location	*new_location(void);
 
 void		 yyerror(const char*, ...);
+static int	 yylex(void);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
 char		*ensure_absolute_path(char*);
@@ -109,7 +114,7 @@ vhost		: TSERVER TSTRING {
 			if (strstr($2, "xn--") != NULL) {
 				warnx("%s:%d \"%s\" looks like punycode: "
 				    "you should use the decoded hostname.",
-				    config_path, yylineno, $2);
+				    config_path, lineno, $2);
 			}
 		} '{' servopts locations '}' {
 
@@ -278,10 +283,191 @@ yyerror(const char *msg, ...)
 	goterror = 1;
 
 	va_start(ap, msg);
-	fprintf(stderr, "%s:%d: ", config_path, yylineno);
+	fprintf(stderr, "%s:%d: ", config_path, lineno);
 	vfprintf(stderr, msg, ap);
 	fprintf(stderr, "\n");
 	va_end(ap);
+}
+
+static struct keyword {
+	const char *word;
+	int token;
+} keywords[] = {
+	{"alias", TALIAS},
+	{"auto", TAUTO},
+	{"block", TBLOCK},
+	{"ca", TCA},
+	{"cert", TCERT},
+	{"cgi", TCGI},
+	{"chroot", TCHROOT},
+	{"client", TCLIENT},
+	{"default", TDEFAULT},
+	{"entrypoint", TENTRYPOINT},
+	{"env", TENV},
+	{"fastcgi", TFASTCGI},
+	{"index", TINDEX},
+	{"ipv6", TIPV6},
+	{"key", TKEY},
+	{"lang", TLANG},
+	{"location", TLOCATION},
+	{"log", TLOG},
+	{"mime", TMIME},
+	{"param", TPARAM},
+	{"port", TPORT},
+	{"prefork", TPREFORK},
+	{"protocols", TPROTOCOLS},
+	{"require", TREQUIRE},
+	{"return", TRETURN},
+	{"root", TROOT},
+	{"server", TSERVER},
+	{"spawn", TSPAWN},
+	{"strip", TSTRIP},
+	{"tcp", TTCP},
+	{"type", TTYPE},
+	{"user", TUSER},
+};
+
+/*
+ * Taken an adapted from doas' parse.y
+ */
+static int
+yylex(void)
+{
+	char buf[1024], *ebuf, *p, *str;
+	int c, quotes = 0, escape = 0, qpos = -1, nonkw = 0;
+	size_t i;
+
+	p = buf;
+	ebuf = buf + sizeof(buf);
+
+repeat:
+	/* skip whitespace first */
+	for (c = getc(yyfp); isspace(c); c = getc(yyfp)) {
+		colno++;
+		if (c == '\n') {
+			lineno++;
+			colno = 0;
+		}
+	}
+
+	/* check for special one-character constructions */
+	switch (c) {
+	case '{':
+	case '}':
+		return c;
+	case '#':
+		/* skip comments; NUL is allowed; no continuation */
+		while ((c = getc(yyfp)) != '\n')
+			if (c == EOF)
+				goto eof;
+		colno = 0;
+		lineno++;
+		goto repeat;
+	case EOF:
+		goto eof;
+	}
+
+	/* parsing next word */
+	for (;; c = getc(yyfp), colno++) {
+		switch (c) {
+		case '\0':
+			yyerror("unallowed character NULL in column %d",
+			    colno+1);
+			escape = 0;
+			continue;
+		case '\\':
+			escape = !escape;
+			if (escape)
+				continue;
+			break;
+		case '\n':
+			if (quotes)
+				yyerror("unterminated quotes in column %d",
+				    colno+1);
+			if (escape) {
+				nonkw = 1;
+				escape = 0;
+				colno = 0;
+				lineno++;
+			}
+			goto eow;
+		case EOF:
+			if (escape)
+				yyerror("unterminated escape in column %d",
+				    colno);
+			if (quotes)
+				yyerror("unterminated quotes in column %d",
+				    qpos+1);
+			goto eow;
+		case '{':
+		case '}':
+		case '#':
+		case ' ':
+		case '\t':
+                        if (!escape && !quotes)
+				goto eow;
+			break;
+		case '"':
+			if (!escape) {
+				quotes = !quotes;
+				if (quotes) {
+					nonkw = 1;
+					qpos = colno;
+				}
+				continue;
+			}
+		}
+		*p++ = c;
+		if (p == ebuf) {
+			yyerror("line too long");
+			p = buf;
+		}
+		escape = 0;
+	}
+
+eow:
+	*p = 0;
+	if (c != EOF)
+		ungetc(c, yyfp);
+	if (p == buf) {
+		/*
+		 * There could be a number of reason for empty buffer,
+		 * and we handle all of them here, to avoid cluttering
+		 * the main loop.
+		 */
+		if (c == EOF)
+			goto eof;
+		else if (qpos == -1) /* accept, e.g., empty args: cmd foo args "" */
+			goto repeat;
+	}
+	if (!nonkw) {
+		for (i = 0; i < sizeof(keywords) / sizeof(keywords[0]); ++i) {
+			if (!strcmp(buf, keywords[i].word))
+				return keywords[i].token;
+		}
+	}
+	c = *buf;
+	if (!nonkw && (c == '-' || isdigit(c))) {
+		yylval.num = parse_portno(buf);
+		return TNUM;
+	}
+	if (!nonkw && !strcmp(buf, "on")) {
+		yylval.num = 1;
+		return TBOOL;
+	}
+	if (!nonkw && !strcmp(buf, "off")) {
+		yylval.num = 0;
+		return TBOOL;
+	}
+	if ((str = strdup(buf)) == NULL)
+		err(1, "%s", __func__);
+	yylval.str = str;
+	return TSTRING;
+
+eof:
+	if (ferror(yyfp))
+		yyerror("input error reading config");
+	return 0;
 }
 
 int
@@ -300,10 +486,10 @@ void
 parse_conf(const char *path)
 {
 	config_path = path;
-	if ((yyin = fopen(path, "r")) == NULL)
+	if ((yyfp = fopen(path, "r")) == NULL)
 		err(1, "cannot open config: %s", path);
 	yyparse();
-	fclose(yyin);
+	fclose(yyfp);
 
 	if (goterror)
 		exit(1);

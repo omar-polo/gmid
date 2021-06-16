@@ -92,8 +92,8 @@ server "example.com" {
 ## Building
 
 gmid depends on a POSIX libc, libevent2, OpenSSL/LibreSSL and libtls
-(provided either by LibreSSL or libretls).  At build time, flex and
-yacc (or GNU bison) are also needed.
+(provided either by LibreSSL or libretls).  At build time, yacc (or
+GNU bison) is also needed.
 
 The build is as simple as
 

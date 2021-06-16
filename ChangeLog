@@ -1,3 +1,10 @@
+2021-06-16  Omar Polo  <op@omarpolo.com>
+
+	* parse.y (yylex): drop the dependency on lex by implementing
+	yylex by ourselves (the actual implementation is based off doas'
+	parse.y).  This gave us various benefits, like cleaner code, \ to
+	break long lines, better handling of quotes etc...
+
 2021-06-11  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (servopt): add `param' keyword
