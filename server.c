@@ -492,9 +492,9 @@ found:
 
 err:
 	if (servname != NULL)
-		strncpy(c->req, servname, sizeof(c->req));
+		strlcpy(c->req, servname, sizeof(c->req));
 	else
-		strncpy(c->req, "null", sizeof(c->req));
+		strlcpy(c->req, "null", sizeof(c->req));
 
 	start_reply(c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
