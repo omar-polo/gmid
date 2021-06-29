@@ -31,7 +31,7 @@ typedef struct {
 	union {
 		char	*str;
 		int	 num;
-	};
+	} v;
 	int lineno;
 	int colno;
 } yystype;
@@ -77,9 +77,9 @@ void		 add_param(char *, char *, int);
 
 %token TERR
 
-%token <str>	TSTRING
-%token <num>	TNUM
-%token <num>	TBOOL
+%token <v.str>	TSTRING
+%token <v.num>	TNUM
+%token <v.num>	TBOOL
 
 %%
 
@@ -453,20 +453,20 @@ eow:
 	}
 	c = *buf;
 	if (!nonkw && (c == '-' || isdigit(c))) {
-		yylval.num = parse_portno(buf);
+		yylval.v.num = parse_portno(buf);
 		return TNUM;
 	}
 	if (!nonkw && !strcmp(buf, "on")) {
-		yylval.num = 1;
+		yylval.v.num = 1;
 		return TBOOL;
 	}
 	if (!nonkw && !strcmp(buf, "off")) {
-		yylval.num = 0;
+		yylval.v.num = 0;
 		return TBOOL;
 	}
 	if ((str = strdup(buf)) == NULL)
 		err(1, "%s", __func__);
-	yylval.str = str;
+	yylval.v.str = str;
 	return TSTRING;
 
 eof:
