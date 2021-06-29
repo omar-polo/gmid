@@ -1,5 +1,7 @@
 2021-06-29  Omar Polo  <op@omarpolo.com>
 
+	* parse.y (conf): don't require the strict order macro > options > servers
+
 	* gmid.c (main): add -D to define macros from the cmd line
 
 	* parse.y (yylex): allow to define macros in the config file

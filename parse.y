@@ -97,10 +97,10 @@ char		*symget(const char *);
 
 %%
 
-conf		: vars options vhosts ;
-
-vars		: /* empty */
-		| vars var
+conf		: /* empty */
+		| conf var
+		| conf option
+		| conf vhost
 		;
 
 var		: TSTRING '=' TSTRING {
@@ -120,10 +120,6 @@ var		: TSTRING '=' TSTRING {
 		}
 		;
 
-options		: /* empty */
-		| options option
-		;
-
 option		: TCHROOT TSTRING	{ conf.chroot = $2; }
 		| TIPV6 TBOOL		{ conf.ipv6 = $2; }
 		| TMIME TSTRING TSTRING	{ add_mime(&conf.mime, $2, $3); }
@@ -134,10 +130,6 @@ option		: TCHROOT TSTRING	{ conf.chroot = $2; }
 				yyerror("invalid protocols string \"%s\"", $2);
 		}
 		| TUSER TSTRING		{ conf.user = $2; }
-		;
-
-vhosts		: /* empty */
-		| vhosts vhost
 		;
 
 vhost		: TSERVER TSTRING {
