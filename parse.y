@@ -587,7 +587,7 @@ fastcgi_conf(char *path, char *port, char *prog)
 
 	for (i = 0; i < FCGI_MAX; ++i) {
 		f = &fcgi[i];
-		
+
 		if (f->path == NULL) {
 			f->id = i;
 			f->path = path;
