@@ -144,6 +144,12 @@ or
 .Sq off .
 A string is a sequence of characters wrapped in double quotes,
 .Dq like this .
+Multiple strings one next to the other are joined into a single
+string:
+.Bd -literal -offset indent
+# equivalent to "temporary-failure"
+block return 40 "temporary" "-" "failure"
+.Ed
 .Pp
 Strict ordering of the sections is not enforced, so that is possible
 to mix macros, options and
