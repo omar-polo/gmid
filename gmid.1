@@ -22,6 +22,7 @@
 .Bk -words
 .Op Fl fnv
 .Op Fl c Ar config
+.Op Fl D Ar macro Ns = Ns Ar value
 .Op Fl P Ar pidfile
 .Ek
 .Nm
@@ -48,6 +49,15 @@ The options are as follows:
 .Bl -tag -width 14m
 .It Fl c Pa config
 Specify the configuration file.
+.It Fl D Ar macro Ns = Ns Ar value
+Define
+.Ar macro
+to be set to
+.Ar value
+on the command line.
+Overrides the definition of
+.Ar macro
+in the config file if present.
 .It Fl f
 Stays and logs on the foreground.
 .It Fl n
@@ -112,8 +122,11 @@ The root directory to serve.
 By default the current working directory is assumed.
 .El
 .Sh CONFIGURATION FILE
-The configuration file is divided into two sections:
+The configuration file is divided into three sections:
 .Bl -tag -width xxxx
+.It Sy Macros
+User-defined variables may be defined and used later, simplifying the
+configuration file.
 .It Sy Global Options
 Global settings for
 .Nm .
@@ -131,6 +144,32 @@ or
 .Sq off .
 A string is a sequence of characters wrapped in double quotes,
 .Dq like this .
+.Pp
+Strict ordering of the sections is not enforced, so that is possible
+to mix macros, options and
+.Ic server
+blocks.
+However, defining all the
+.Ic server
+blocks after the macros and the global options is recommended.
+.Ss Macros
+Macros can be defined that will later be expanded in context.
+Macro names must start with a letter, digit or underscore and may
+contain any of those characters.
+Macro names may not be reserved words.
+Macros are expanded inside the quotes too.
+.Pp
+For example:
+.Bd -literal -offset indent
+dir = "/var/gemini"
+cert = "/etc/keys"
+
+server "foo" {
+	root "$dir/foo"      # -> /var/gemini/foo
+	cert "$cert/foo.crt" # -> /etc/keys/foo.crt
+	key  "$cert/foo.pem" # -> /etc/keys/foo.pem
+}
+.Ed
 .Ss Global Options
 .Bl -tag -width 12m
 .It Ic chroot Pa path
