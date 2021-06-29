@@ -416,7 +416,6 @@ repeat:
 		goto eof;
 	}
 
-top:
 	/* parsing next word */
 	for (;; c = getc(yyfp), yylval.colno++) {
 		switch (c) {
@@ -433,7 +432,7 @@ top:
 
 		/* expand macros in-place */
 		case '$':
-			if (!escape) {
+			if (!escape && !quotes) {
 				v = p;
 				while (1) {
 					if ((c = getc(yyfp)) == EOF) {
@@ -449,24 +448,24 @@ top:
 						continue;
 					}
 					*p = 0;
-					ungetc(c, yyfp);
 					break;
 				}
 				p = v;
 				if ((val = symget(p)) == NULL) {
 					yyerror("macro '%s' not defined", v);
-					goto top;
+					return TERR;
 				}
 				len = strlen(val);
 				if (p + len >= ebuf - 1) {
 					yyerror("after macro-expansion, "
 					    "string too long");
-					goto top;
+					return TERR;
 				}
 				*p = '\0';
 				strlcat(p, val, ebuf - p);
 				p += len;
-				goto top;
+				nonkw = 1;
+				goto eow;
 			}
 			break;
 		case '\n':
