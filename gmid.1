@@ -171,9 +171,9 @@ dir = "/var/gemini"
 cert = "/etc/keys"
 
 server "foo" {
-	root "$dir/foo"      # -> /var/gemini/foo
-	cert "$cert/foo.crt" # -> /etc/keys/foo.crt
-	key  "$cert/foo.pem" # -> /etc/keys/foo.pem
+	root $dir "/foo"      # -> /var/gemini/foo
+	cert $cert "/foo.crt" # -> /etc/keys/foo.crt
+	key  $cert "/foo.pem" # -> /etc/keys/foo.pem
 }
 .Ed
 .Ss Global Options
