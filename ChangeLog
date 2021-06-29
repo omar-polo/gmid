@@ -1,6 +1,7 @@
 2021-06-29  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (conf): don't require the strict order macro > options > servers
+	c-like strings: when two or more strings are next to each others, concat them
 
 	* gmid.c (main): add -D to define macros from the cmd line
 

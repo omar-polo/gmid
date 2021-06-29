@@ -95,6 +95,8 @@ char		*symget(const char *);
 %token <v.num>	TNUM
 %token <v.num>	TBOOL
 
+%type <v.str>	string
+
 %%
 
 conf		: /* empty */
@@ -103,7 +105,20 @@ conf		: /* empty */
 		| conf vhost
 		;
 
-var		: TSTRING '=' TSTRING {
+string		: string TSTRING {
+			if (asprintf(&$$, "%s%s", $1, $2) == -1) {
+				free($1);
+				free($2);
+				yyerror("string: asprintf: %s", strerror(errno));
+				YYERROR;
+			}
+			free($1);
+			free($2);
+		}
+		| TSTRING
+		;
+
+var		: TSTRING '=' string {
 			char *s = $1;
 			while (*s++) {
 				if (isspace(*s)) {
@@ -120,19 +135,19 @@ var		: TSTRING '=' TSTRING {
 		}
 		;
 
-option		: TCHROOT TSTRING	{ conf.chroot = $2; }
+option		: TCHROOT string	{ conf.chroot = $2; }
 		| TIPV6 TBOOL		{ conf.ipv6 = $2; }
-		| TMIME TSTRING TSTRING	{ add_mime(&conf.mime, $2, $3); }
+		| TMIME TSTRING string	{ add_mime(&conf.mime, $2, $3); }
 		| TPORT TNUM		{ conf.port = $2; }
 		| TPREFORK TNUM		{ conf.prefork = check_prefork_num($2); }
-		| TPROTOCOLS TSTRING {
+		| TPROTOCOLS string {
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
 				yyerror("invalid protocols string \"%s\"", $2);
 		}
-		| TUSER TSTRING		{ conf.user = $2; }
+		| TUSER string		{ conf.user = $2; }
 		;
 
-vhost		: TSERVER TSTRING {
+vhost		: TSERVER string {
 			host = new_vhost();
 			TAILQ_INSERT_HEAD(&hosts, host, vhosts);
 
@@ -160,7 +175,7 @@ servopts	: /* empty */
 		| servopts servopt
 		;
 
-servopt		: TALIAS TSTRING {
+servopt		: TALIAS string {
 			struct alist *a;
 
 			a = xcalloc(1, sizeof(*a));
@@ -170,31 +185,31 @@ servopt		: TALIAS TSTRING {
 			else
 				TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
 		}
-		| TCERT TSTRING		{
+		| TCERT string		{
 			only_once(host->cert, "cert");
 			host->cert = ensure_absolute_path($2);
 		}
-		| TCGI TSTRING		{
+		| TCGI string		{
 			only_once(host->cgi, "cgi");
 			/* drop the starting '/', if any */
 			if (*$2 == '/')
 				memmove($2, $2+1, strlen($2));
 			host->cgi = $2;
 		}
-		| TENTRYPOINT TSTRING {
+		| TENTRYPOINT string {
 			only_once(host->entrypoint, "entrypoint");
 			while (*$2 == '/')
 				memmove($2, $2+1, strlen($2));
 			host->entrypoint = $2;
 		}
-		| TENV TSTRING TSTRING {
+		| TENV string string {
 			add_param($2, $3, 1);
 		}
-		| TKEY TSTRING		{
+		| TKEY string		{
 			only_once(host->key, "key");
 			host->key  = ensure_absolute_path($2);
 		}
-		| TPARAM TSTRING TSTRING {
+		| TPARAM string string {
 			add_param($2, $3, 0);
 		}
 		| locopt
@@ -204,7 +219,7 @@ locations	: /* empty */
 		| locations location
 		;
 
-location	: TLOCATION { advance_loc(); } TSTRING '{' locopts '}'	{
+location	: TLOCATION { advance_loc(); } string '{' locopts '}'	{
 			/* drop the starting '/' if any */
 			if (*$3 == '/')
 				memmove($3, $3+1, strlen($3));
@@ -218,7 +233,7 @@ locopts		: /* empty */
 		;
 
 locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
-		| TBLOCK TRETURN TNUM TSTRING {
+		| TBLOCK TRETURN TNUM string {
 			only_once(loc->block_fmt, "block");
 			loc->block_fmt = check_block_fmt($4);
 			loc->block_code = check_block_code($3);
@@ -235,54 +250,54 @@ locopt		: TAUTO TINDEX TBOOL	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->block_fmt = xstrdup("temporary failure");
 			loc->block_code = 40;
 		}
-		| TDEFAULT TTYPE TSTRING {
+		| TDEFAULT TTYPE string {
 			only_once(loc->default_mime, "default type");
 			loc->default_mime = $3;
 		}
 		| TFASTCGI fastcgi
-		| TINDEX TSTRING {
+		| TINDEX string {
 			only_once(loc->index, "index");
 			loc->index = $2;
 		}
-		| TLANG TSTRING {
+		| TLANG string {
 			only_once(loc->lang, "lang");
 			loc->lang = $2;
 		}
 		| TLOG TBOOL	{ loc->disable_log = !$2; }
-		| TREQUIRE TCLIENT TCA TSTRING {
+		| TREQUIRE TCLIENT TCA string {
 			only_once(loc->reqca, "require client ca");
 			ensure_absolute_path($4);
 			if ((loc->reqca = load_ca($4)) == NULL)
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
-		| TROOT TSTRING		{
+		| TROOT string		{
 			only_once(loc->dir, "root");
 			loc->dir  = ensure_absolute_path($2);
 		}
 		| TSTRIP TNUM		{ loc->strip = check_strip_no($2); }
 		;
 
-fastcgi		: TSPAWN TSTRING {
+fastcgi		: TSPAWN string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf(NULL, NULL, $2);
 		}
-		| TSTRING {
+		| string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($1, NULL, NULL);
 		}
-		| TTCP TSTRING TNUM {
+		| TTCP string TNUM {
 			char *c;
 			if (asprintf(&c, "%d", $3) == -1)
 				err(1, "asprintf");
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, c, NULL);
 		}
-		| TTCP TSTRING {
+		| TTCP string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, xstrdup("9000"), NULL);
 		}
-		| TTCP TSTRING TSTRING {
+		| TTCP string string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, $3, NULL);
 		}
