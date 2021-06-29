@@ -26,7 +26,7 @@
 .Ek
 .Nm
 .Bk -words
-.Op Fl 6hv
+.Op Fl 6hVv
 .Op Fl d Pa certs-dir
 .Op Fl H Ar hostname
 .Op Fl p Ar port
@@ -86,10 +86,12 @@ and
 .Pa hostname.key.pem .
 If a certificate or key don't exists for a given hostname they
 will be automatically generated.
-.It Fl h
+.It Fl h , Fl -help
 Print the usage and exit.
 .It Fl p Ar port
 The port to listen on, by default 1965.
+.It Fl V , Fl -version
+Print the version and exit.
 .It Fl v
 Verbose mode.
 Multiple
