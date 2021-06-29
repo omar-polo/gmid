@@ -378,12 +378,12 @@ drop_priv(void)
 }
 
 static void
-usage(const char *me)
+usage(void)
 {
 	fprintf(stderr,
 	    "USAGE: %s [-fn] [-c config] [-P pidfile] | [-6h] [-d certs-dir] [-H host]\n"
 	    "       [-p port] [-x cgi] [dir]\n",
-	    me);
+	    getprogname());
 }
 
 static void
@@ -441,7 +441,7 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 			l->dir = absolutify_path(argv[0]);
 			break;
 		default:
-			usage(getprogname());
+			usage();
 			return 1;
 		}
 
@@ -561,7 +561,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'h':
-			usage(*argv);
+			usage();
 			return 0;
 
 		case 'n':
@@ -594,7 +594,7 @@ main(int argc, char **argv)
 			break;
 
 		default:
-			usage(*argv);
+			usage();
 			return 1;
 		}
 	}
