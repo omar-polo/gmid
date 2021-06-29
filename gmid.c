@@ -27,7 +27,7 @@
 #include <signal.h>
 #include <string.h>
 
-static const char	*opts = "6c:d:fH:hnP:p:Vvx:";
+static const char	*opts = "6c:D:d:fH:hnP:p:Vvx:";
 
 static struct option longopts[] = {
 	{"help",	no_argument,		NULL,	'h'},
@@ -382,7 +382,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "Version: " GMID_STRING "\n"
-	    "Usage: %s [-fnv] [-c config] [-P pidfile]\n"
+	    "Usage: %s [-fnv] [-c config] [-D macro=value] [-P pidfile]\n"
 	    "       %s [-6hVv] [-d certs-dir] [-H hostname] [-p port] [-x cgi] [dir]\n",
 	    getprogname(),
 	    getprogname());
@@ -546,6 +546,11 @@ main(int argc, char **argv)
 
 		case 'c':
 			config_path = absolutify_path(optarg);
+			break;
+
+		case 'D':
+			if (cmdline_symset(optarg) == -1)
+				errx(1, "invalid macro: %s", optarg);
 			break;
 
 		case 'd':
