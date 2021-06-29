@@ -38,6 +38,7 @@
 
 #include <openssl/x509.h>
 
+#define GMID_STRING	"gmid 1.7"
 #define GMID_VERSION	"gmid/1.7"
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */

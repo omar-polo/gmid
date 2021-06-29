@@ -383,7 +383,7 @@ usage(void)
 	fprintf(stderr,
 	    "usage: %s [-fn] [-c config] [-P pidfile] | [-6h] [-d certs-dir] [-H host]\n"
 	    "       [-p port] [-x cgi] [dir]\n"
-	    "version: gmid 1.7\n",
+	    "version: " GMID_STRING "\n",
 	    getprogname());
 }
 
@@ -579,7 +579,7 @@ main(int argc, char **argv)
 			break;
 
 		case 'V':
-			puts("Version: 1.7");
+			puts("Version: " GMID_STRING);
 			return 0;
 
 		case 'v':
