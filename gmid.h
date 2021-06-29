@@ -314,6 +314,7 @@ void		 drop_priv(void);
 void		 yyerror(const char*, ...);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
+int		 cmdline_symset(char *);
 
 /* log.c */
 void		 fatal(const char*, ...)

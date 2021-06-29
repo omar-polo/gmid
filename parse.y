@@ -42,6 +42,18 @@ typedef struct {
  * int yydebug = 1;
  */
 
+/*
+ * The idea behind this implementation of macros is from rad/parse.y
+ */
+TAILQ_HEAD(symhead, sym) symhead = TAILQ_HEAD_INITIALIZER(symhead);
+struct sym {
+	TAILQ_ENTRY(sym)	 entry;
+	int			 used;
+	int			 persist;
+	char			*name;
+	char			*val;
+};
+
 struct vhost *host;
 struct location *loc;
 
@@ -64,6 +76,8 @@ void		 only_once(const void*, const char*);
 void		 only_oncei(int, const char*);
 int		 fastcgi_conf(char *, char *, char *);
 void		 add_param(char *, char *, int);
+int		 symset(const char *, const char *, int);
+char		*symget(const char *);
 
 %}
 
@@ -83,7 +97,28 @@ void		 add_param(char *, char *, int);
 
 %%
 
-conf		: options vhosts ;
+conf		: vars options vhosts ;
+
+vars		: /* empty */
+		| vars var
+		;
+
+var		: TSTRING '=' TSTRING {
+			char *s = $1;
+			while (*s++) {
+				if (isspace(*s)) {
+					yyerror("macro name cannot contain "
+					    "whitespaces");
+					free($1);
+					free($3);
+					YYERROR;
+				}
+			}
+			symset($1, $3, 0);
+			free($1);
+			free($3);
+		}
+		;
 
 options		: /* empty */
 		| options option
@@ -338,9 +373,9 @@ static struct keyword {
 static int
 yylex(void)
 {
-	char buf[1024], *ebuf, *p, *str;
+	char buf[8096], *ebuf, *p, *str, *v, *val;
 	int c, quotes = 0, escape = 0, qpos = -1, nonkw = 0;
-	size_t i;
+	size_t i, len;
 
 	p = buf;
 	ebuf = buf + sizeof(buf);
@@ -368,10 +403,13 @@ repeat:
 		yylval.colno = 0;
 		yylval.lineno++;
 		goto repeat;
+	case '=':
+		return c;
 	case EOF:
 		goto eof;
 	}
 
+top:
 	/* parsing next word */
 	for (;; c = getc(yyfp), yylval.colno++) {
 		switch (c) {
@@ -384,6 +422,45 @@ repeat:
 			escape = !escape;
 			if (escape)
 				continue;
+			break;
+
+		/* expand macros in-place */
+		case '$':
+			if (!escape) {
+				v = p;
+				while (1) {
+					if ((c = getc(yyfp)) == EOF) {
+						yyerror("EOF during macro expansion");
+                                                return 0;
+					}
+					if (p + 1 >= ebuf - 1) {
+						yyerror("string too long");
+						return 0;
+					}
+					if (isalnum(c) || c == '_') {
+						*p++ = c;
+						continue;
+					}
+					*p = 0;
+					ungetc(c, yyfp);
+					break;
+				}
+				p = v;
+				if ((val = symget(p)) == NULL) {
+					yyerror("macro '%s' not defined", v);
+					goto top;
+				}
+				len = strlen(val);
+				if (p + len >= ebuf - 1) {
+					yyerror("after macro-expansion, "
+					    "string too long");
+					goto top;
+				}
+				*p = '\0';
+				strlcat(p, val, ebuf - p);
+				p += len;
+				goto top;
+			}
 			break;
 		case '\n':
 			if (quotes)
@@ -490,6 +567,8 @@ parse_portno(const char *p)
 void
 parse_conf(const char *path)
 {
+	struct sym	*sym, *next;
+
 	config_path = path;
 	if ((yyfp = fopen(path, "r")) == NULL)
 		err(1, "cannot open config: %s", path);
@@ -501,6 +580,17 @@ parse_conf(const char *path)
 
 	if (TAILQ_FIRST(&hosts)->domain == NULL)
 		errx(1, "no vhost defined in %s", path);
+
+	/* free unused macros */
+	TAILQ_FOREACH_SAFE(sym, &symhead, entry, next) {
+		/* TODO: warn if !sym->used */
+		if (!sym->persist) {
+			free(sym->name);
+			free(sym->val);
+			TAILQ_REMOVE(&symhead, sym, entry);
+			free(sym);
+		}
+	}
 }
 
 char *
@@ -628,4 +718,65 @@ add_param(char *name, char *val, int env)
 		TAILQ_INSERT_HEAD(h, e, envs);
 	else
 		TAILQ_INSERT_TAIL(h, e, envs);
+}
+
+int
+symset(const char *name, const char *val, int persist)
+{
+	struct sym *sym;
+
+	TAILQ_FOREACH(sym, &symhead, entry) {
+		if (!strcmp(name, sym->name))
+			break;
+	}
+
+	if (sym != NULL) {
+		if (sym->persist)
+			return 0;
+		else {
+			free(sym->name);
+			free(sym->val);
+			TAILQ_REMOVE(&symhead, sym, entry);
+			free(sym);
+		}
+	}
+
+        sym = xcalloc(1, sizeof(*sym));
+	sym->name = xstrdup(name);
+	sym->val = xstrdup(val);
+	sym->used = 0;
+	sym->persist = persist;
+
+	TAILQ_INSERT_TAIL(&symhead, sym, entry);
+	return 0;
+}
+
+int
+cmdline_symset(char *s)
+{
+	char	*sym, *val;
+	int	 ret;
+
+	if ((val = strrchr(s, '=')) == NULL)
+		return -1;
+	sym = xcalloc(1, val - s + 1);
+	memcpy(sym, s, val - s);
+	ret = symset(sym, val + 1, 1);
+	free(sym);
+	return ret;
+}
+
+char *
+symget(const char *name)
+{
+	struct sym	*sym;
+
+	TAILQ_FOREACH(sym, &symhead, entry) {
+		if (!strcmp(name, sym->name)) {
+			sym->used = 1;
+			return sym->val;
+		}
+	}
+
+	return NULL;
 }

@@ -1,5 +1,7 @@
 2021-06-29  Omar Polo  <op@omarpolo.com>
 
+	* parse.y (yylex): allow to define macros in the config file
+
 	* gmid.c (main): use getopt_long, add --help as synonym of -h and -V/--version
 
 2021-06-17  Omar Polo  <op@omarpolo.com>
