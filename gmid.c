@@ -20,11 +20,20 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <getopt.h>
 #include <libgen.h>
 #include <limits.h>
 #include <pwd.h>
 #include <signal.h>
 #include <string.h>
+
+static const char	*opts = "6c:d:fH:hnP:p:Vvx:";
+
+static struct option longopts[] = {
+	{"help",	no_argument,		NULL,	'h'},
+	{"version",	no_argument,		NULL,	'V'},
+	{NULL,		0,			NULL,	0},
+};
 
 struct fcgi fcgi[FCGI_MAX];
 
@@ -526,7 +535,7 @@ main(int argc, char **argv)
 
 	init_config();
 
-	while ((ch = getopt(argc, argv, "6c:d:fH:hnP:p:vx:")) != -1) {
+	while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 		switch (ch) {
 		case '6':
 			conf.ipv6 = 1;
@@ -567,6 +576,10 @@ main(int argc, char **argv)
 			conf.port = parse_portno(optarg);
 			configless = 1;
 			break;
+
+		case 'V':
+			puts("Version: 1.7");
+			return 0;
 
 		case 'v':
 			conf.verbose++;
