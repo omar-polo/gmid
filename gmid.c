@@ -381,9 +381,10 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-fn] [-c config] [-P pidfile] | [-6h] [-d certs-dir] [-H host]\n"
-	    "       [-p port] [-x cgi] [dir]\n"
-	    "version: " GMID_STRING "\n",
+	    "Version: " GMID_STRING "\n"
+	    "Usage: %s [-fnv] [-c config] [-P pidfile]\n"
+	    "       %s [-6hVv] [-d certs-dir] [-H hostname] [-p port] [-x cgi] [dir]\n",
+	    getprogname(),
 	    getprogname());
 }
 
