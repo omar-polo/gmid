@@ -381,8 +381,9 @@ static void
 usage(void)
 {
 	fprintf(stderr,
-	    "USAGE: %s [-fn] [-c config] [-P pidfile] | [-6h] [-d certs-dir] [-H host]\n"
-	    "       [-p port] [-x cgi] [dir]\n",
+	    "usage: %s [-fn] [-c config] [-P pidfile] | [-6h] [-d certs-dir] [-H host]\n"
+	    "       [-p port] [-x cgi] [dir]\n"
+	    "version: gmid 1.7\n",
 	    getprogname());
 }
 
