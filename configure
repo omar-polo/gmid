@@ -43,6 +43,8 @@ LD_IMSG=
 STATIC=
 YACC=yacc
 
+DISABLE_SANDBOX=0
+
 NEED_GNU_SOURCE=0
 NEED_OPENBSD_SOURCE=0
 
@@ -88,6 +90,11 @@ which ${YACC} 2>/dev/null 1>&2 || {
 # allow certain variables to be overridden on the command line
 
 for keyvals in "$@"; do
+	if [ "$keyvals" = "--disable-sandbox" ]; then
+		DISABLE_SANDBOX=1
+		continue
+	fi
+
 	key=`echo $keyvals | cut -s -d '=' -f1`
 	if [ -z "$key" ]; then
 		echo "$0: invalid key-value: $keyvals" 1>&2
@@ -274,6 +281,8 @@ echo "#include <stdint.h>"
 echo "#include <imsg.h>"
 
 cat <<__HEREDOC__
+
+#define DISABLE_SANDBOX		${DISABLE_SANDBOX}
 
 #define HAVE_ERR		${HAVE_ERR}
 #define HAVE_EXPLICIT_BZERO	${HAVE_EXPLICIT_BZERO}

@@ -16,7 +16,30 @@
 
 #include "gmid.h"
 
-#if defined(__FreeBSD__)
+#if DISABLE_SANDBOX
+
+#warning "Sandbox disabled! Please report issues upstream instead of disabling the sandbox."
+
+void
+sandbox_server_process(void)
+{
+	return;
+}
+
+void
+sandbox_executor_process(void)
+{
+        log_notice(NULL, "Sandbox disabled!  "
+	    "Please report issues upstream instead of disabling the sandbox.");
+}
+
+void
+sandbox_logger_process(void)
+{
+	return;
+}
+
+#elif defined(__FreeBSD__)
 
 #include <sys/capsicum.h>
 
