@@ -59,33 +59,6 @@ sandbox_logger_process(void)
 #include <stdio.h>
 #include <string.h>
 
-/* thanks chromium' src/seccomp.c */
-#if defined(__i386__)
-#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_I386
-#elif defined(__x86_64__)
-#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_X86_64
-#elif defined(__arm__)
-#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARM
-#elif defined(__aarch64__)
-#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_AARCH64
-#elif defined(__mips__)
-#  if defined(__mips64)
-#    if defined(__MIPSEB__)
-#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPS64
-#    else
-#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPSEL64
-#    endif
-#  else
-#    if defined(__MIPSEB__)
-#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPS
-#    else
-#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPSEL
-#    endif
-#  endif
-#else
-#  error "Platform does not support seccomp filter yet"
-#endif
-
 /* uncomment to enable debugging.  ONLY FOR DEVELOPMENT */
 /* #define SC_DEBUG */
 
@@ -95,10 +68,283 @@ sandbox_logger_process(void)
 # define SC_FAIL SECCOMP_RET_KILL
 #endif
 
+#if (BYTE_ORDER == LITTLE_ENDIAN)
+# define SC_ARG_LO	0
+# define SC_ARG_HI	sizeof(uint32_t)
+#elif (BYTE_ORDER == BIG_ENDIAN)
+# define SC_ARG_LO	sizeof(uint32_t)
+# define SC_ARG_HI	0
+#else
+# error "Uknown endian"
+#endif
+
 /* make the filter more readable */
 #define SC_ALLOW(nr)						\
 	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_##nr, 0, 1),	\
 	BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW)
+
+/*
+ * SC_ALLOW_ARG and the SECCOMP_AUDIT_ARCH below are courtesy of
+ * https://roy.marples.name/git/dhcpcd/blob/HEAD:/src/privsep-linux.c
+ */
+#define SC_ALLOW_ARG(_nr, _arg, _val)						\
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K, (_nr), 0, 6),			\
+	BPF_STMT(BPF_LD + BPF_W + BPF_ABS,					\
+	    offsetof(struct seccomp_data, args[(_arg)]) + SC_ARG_LO),		\
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K,					\
+	    ((_val) & 0xffffffff), 0, 3),					\
+	BPF_STMT(BPF_LD + BPF_W + BPF_ABS,					\
+	    offsetof(struct seccomp_data, args[(_arg)]) + SC_ARG_HI),		\
+	BPF_JUMP(BPF_JMP + BPF_JEQ + BPF_K,					\
+	    (((uint32_t)((uint64_t)(_val) >> 32)) & 0xffffffff), 0, 1),		\
+	BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_ALLOW),				\
+	BPF_STMT(BPF_LD + BPF_W + BPF_ABS,					\
+	    offsetof(struct seccomp_data, nr))
+
+/*
+ * I personally find this quite nutty.  Why can a system header not
+ * define a default for this?
+ */
+#if defined(__i386__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_I386
+#elif defined(__x86_64__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_X86_64
+#elif defined(__arc__)
+#  if defined(__A7__)
+#    if (BYTE_ORDER == LITTLE_ENDIAN)
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARCOMPACT
+#    else
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARCOMPACTBE
+#    endif
+#  elif defined(__HS__)
+#    if (BYTE_ORDER == LITTLE_ENDIAN)
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARCV2
+#    else
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARCV2BE
+#    endif
+#  else
+#    error "Platform does not support seccomp filter yet"
+#  endif
+#elif defined(__arm__)
+#  ifndef EM_ARM
+#    define EM_ARM 40
+#  endif
+#  if (BYTE_ORDER == LITTLE_ENDIAN)
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARM
+#  else
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ARMEB
+#  endif
+#elif defined(__aarch64__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_AARCH64
+#elif defined(__alpha__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_ALPHA
+#elif defined(__hppa__)
+#  if defined(__LP64__)
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_PARISC64
+#  else
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_PARISC
+#  endif
+#elif defined(__ia64__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_IA64
+#elif defined(__microblaze__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MICROBLAZE
+#elif defined(__m68k__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_M68K
+#elif defined(__mips__)
+#  if defined(__MIPSEL__)
+#    if defined(__LP64__)
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPSEL64
+#    else
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPSEL
+#    endif
+#  elif defined(__LP64__)
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPS64
+#  else
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_MIPS
+#  endif
+#elif defined(__nds32__)
+#  if (BYTE_ORDER == LITTLE_ENDIAN)
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_NDS32
+#else
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_NDS32BE
+#endif
+#elif defined(__nios2__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_NIOS2
+#elif defined(__or1k__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_OPENRISC
+#elif defined(__powerpc64__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_PPC64
+#elif defined(__powerpc__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_PPC
+#elif defined(__riscv)
+#  if defined(__LP64__)
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_RISCV64
+#  else
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_RISCV32
+#  endif
+#elif defined(__s390x__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_S390X
+#elif defined(__s390__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_S390
+#elif defined(__sh__)
+#  if defined(__LP64__)
+#    if (BYTE_ORDER == LITTLE_ENDIAN)
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_SHEL64
+#    else
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_SH64
+#    endif
+#  else
+#    if (BYTE_ORDER == LITTLE_ENDIAN)
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_SHEL
+#    else
+#      define SECCOMP_AUDIT_ARCH AUDIT_ARCH_SH
+#    endif
+#  endif
+#elif defined(__sparc__)
+#  if defined(__arch64__)
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_SPARC64
+#  else
+#    define SECCOMP_AUDIT_ARCH AUDIT_ARCH_SPARC
+#  endif
+#elif defined(__xtensa__)
+#  define SECCOMP_AUDIT_ARCH AUDIT_ARCH_XTENSA
+#else
+#  error "Platform does not support seccomp filter yet"
+#endif
+
+static struct sock_filter filter[] = {
+	/* load the *current* architecture */
+	BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+	    (offsetof(struct seccomp_data, arch))),
+	/* ensure it's the same that we've been compiled on */
+	BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
+	    SECCOMP_AUDIT_ARCH, 1, 0),
+	/* if not, kill the program */
+	BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
+
+	/* load the syscall number */
+	BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
+	    (offsetof(struct seccomp_data, nr))),
+
+#ifdef __NR_accept
+	SC_ALLOW(accept),
+#endif
+#ifdef __NR_accept4
+	SC_ALLOW(accept4),
+#endif
+#ifdef __NR_brk
+	SC_ALLOW(brk),
+#endif
+#ifdef __NR_clock_gettime
+	SC_ALLOW(clock_gettime),
+#endif
+#if defined(__x86_64__) && defined(__ILP32__) && defined(__X32_SYSCALL_BIT)
+	SECCOMP_ALLOW(__NR_clock_gettime & ~__X32_SYSCALL_BIT),
+#endif
+#ifdef __NR_clock_gettime64
+	SC_ALLOW(clock_gettime64),
+#endif
+#ifdef __NR_close
+	SC_ALLOW(close),
+#endif
+#ifdef __NR_epoll_ctl
+	SC_ALLOW(epoll_ctl),
+#endif
+#ifdef __NR_epoll_pwait
+	SC_ALLOW(epoll_pwait),
+#endif
+#ifdef __NR_epoll_wait
+	SC_ALLOW(epoll_wait),
+#endif
+#ifdef __NR_exit
+	SC_ALLOW(exit),
+#endif
+#ifdef __NR_exit_group
+	SC_ALLOW(exit_group),
+#endif
+#ifdef __NR_fcntl
+	SC_ALLOW(fcntl),
+#endif
+#ifdef __NR_fcntl64
+	SC_ALLOW(fcntl64),
+#endif
+#ifdef __NR_fstat
+	SC_ALLOW(fstat),
+#endif
+#ifdef __NR_getdents64
+	SC_ALLOW(getdents64),
+#endif
+#ifdef __NR_getpid
+	SC_ALLOW(getpid),
+#endif
+#ifdef __NR_getrandom
+	SC_ALLOW(getrandom),
+#endif
+#ifdef __NR_gettimeofday
+	SC_ALLOW(gettimeofday),
+#endif
+#ifdef __NR_ioctl
+	/* allow ioctl only on fd 1, glibc doing stuff? */
+        SC_ALLOW_ARG(__NR_ioctl, 0, 1),
+#endif
+#ifdef __NR_lseek
+	SC_ALLOW(lseek),
+#endif
+#ifdef __NR_madvise
+	SC_ALLOW(madvise),
+#endif
+#ifdef __NR_mmap
+	SC_ALLOW(mmap),
+#endif
+#ifdef __NR_mmap2
+	SC_ALLOW(mmap2),
+#endif
+#ifdef __NR_munmap
+	SC_ALLOW(munmap),
+#endif
+#ifdef __NR_newfstatat
+	SC_ALLOW(newfstatat),
+#endif
+#ifdef __NR_oldfstat
+	SC_ALLOW(oldfstat),
+#endif
+#ifdef __NR_openat
+	SC_ALLOW(openat),
+#endif
+#ifdef __NR_prlimit64
+	SC_ALLOW(prlimit64),
+#endif
+#ifdef __NR_read
+	SC_ALLOW(read),
+#endif
+#ifdef __NR_recvmsg
+	SC_ALLOW(recvmsg),
+#endif
+#ifdef __NR_redav
+	SC_ALLOW(redav),
+#endif
+#ifdef __NR_rt_sigaction
+	SC_ALLOW(rt_sigaction),
+#endif
+#ifdef __NR_rt_sigreturn
+	SC_ALLOW(rt_sigreturn),
+#endif
+#ifdef __NR_sendmsg
+	SC_ALLOW(sendmsg),
+#endif
+#ifdef __NR_statx
+	SC_ALLOW(statx),
+#endif
+#ifdef __NR_write
+	SC_ALLOW(write),
+#endif
+#ifdef __NR_writev
+	SC_ALLOW(writev),
+#endif
+
+	/* disallow enything else */
+	BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
+};
 
 #ifdef SC_DEBUG
 
@@ -141,102 +387,6 @@ sandbox_seccomp_catch_sigsys(void)
 void
 sandbox_server_process(void)
 {
-	struct sock_filter filter[] = {
-		/* load the *current* architecture */
-		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
-		    (offsetof(struct seccomp_data, arch))),
-		/* ensure it's the same that we've been compiled on */
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K,
-		    SECCOMP_AUDIT_ARCH, 1, 0),
-		/* if not, kill the program */
-		BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
-
-		/* load the syscall number */
-		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
-		    (offsetof(struct seccomp_data, nr))),
-
-		/* allow logging on stdout */
-		SC_ALLOW(write),
-		SC_ALLOW(writev),
-		SC_ALLOW(readv),
-
-		/* these are used to serve the files.  note how we
-		 * allow openat but not open. */
-#ifdef __NR_epoll_wait
-		/* epoll_wait(2) isn't present on aarch64, at least */
-		SC_ALLOW(epoll_wait),
-#endif
-		SC_ALLOW(epoll_pwait),
-		SC_ALLOW(epoll_ctl),
-		SC_ALLOW(accept),
-		SC_ALLOW(accept4),
-		SC_ALLOW(read),
-		SC_ALLOW(openat),
-		SC_ALLOW(fstat),
-		SC_ALLOW(newfstatat),
-		SC_ALLOW(close),
-		SC_ALLOW(lseek),
-		SC_ALLOW(brk),
-		SC_ALLOW(mmap),
-		SC_ALLOW(munmap),
-
-		/* for imsg */
-		SC_ALLOW(sendmsg),
-		SC_ALLOW(prlimit64),
-
-		/* needed for signal handling */
-		SC_ALLOW(rt_sigreturn),
-		SC_ALLOW(rt_sigaction),
-
-		/* we need recvmsg to receive fd */
-		SC_ALLOW(recvmsg),
-
-		/* XXX: ??? */
-		SC_ALLOW(getpid),
-
-		/* alpine on amd64 */
-		SC_ALLOW(clock_gettime),
-		SC_ALLOW(madvise),
-
-		/* void on aarch64 does a gettrandom */
-		SC_ALLOW(getrandom),
-
-		/* arch on amd64 */
-		SC_ALLOW(gettimeofday),
-
-		/* for directory listing */
-		SC_ALLOW(getdents64),
-
-		SC_ALLOW(exit),
-		SC_ALLOW(exit_group),
-
-		/* allow only F_GETFL, F_SETFL & F_SETFD fcntl */
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_fcntl, 0, 8),
-		BPF_STMT(BPF_LD  | BPF_W | BPF_ABS,
-		    (offsetof(struct seccomp_data, args[1]))),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_GETFL, 0, 1),
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_SETFL, 0, 1),
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, F_SETFD, 0, 1),
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
-		BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
-
-		/* re-load the syscall number */
-		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
-		    (offsetof(struct seccomp_data, nr))),
-
-		/* allow ioctl but only on fd 1, glibc doing stuff? */
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, __NR_ioctl, 0, 3),
-		BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
-		    (offsetof(struct seccomp_data, args[0]))),
-		BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, 1, 0, 1),
-		BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
-
-		/* disallow enything else */
-		BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
-	};
-
 	struct sock_fprog prog = {
 		.len = (unsigned short) (sizeof(filter) / sizeof(filter[0])),
 		.filter = filter,
