@@ -1,3 +1,7 @@
+2021-07-02  Omar Polo  <op@omarpolo.com>
+
+	* sandbox.c (filter): seccomp filter reworked: now it should work on x86 and possibly other arches too!
+
 2021-03-20  Omar Polo  <op@omarpolo.com>
 
 	* 1.6 tagged
