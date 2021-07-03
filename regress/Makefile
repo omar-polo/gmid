@@ -30,27 +30,27 @@ key.pem: cert.pem
 # XXX: key size is NOT GOOD.  This is only for testing.  Smaller keys
 # are quicker to generate.  DON'T DO THIS AT HOME.
 cert.pem:
-	printf ".\n.\n.\n.\n.\nlocalhost\n.\n" |	\
-		openssl req -x509 -newkey rsa:2048	\
-			-keyout key.pem			\
-			-out cert.pem			\
-			-days 365 -nodes
+	openssl req -x509 -newkey rsa:2048	\
+		-keyout key.pem			\
+		-out cert.pem			\
+		-days 365 -nodes		\
+		-subj "/CN=localhost"
 	@echo
 
 testca.pem:
 	openssl genrsa -out testca.key 2048
-	printf ".\n.\n.\n.\n.\ntestca\n.\n" |	\
-		openssl req -x509 -new -sha256		\
-			-key testca.key			\
-			-days 365 -nodes		\
-			-out testca.pem
+	openssl req -x509 -new -sha256		\
+		-key testca.key			\
+		-days 365 -nodes		\
+		-out testca.pem			\
+		-subj "/CN=testca"
 	@echo
 
 valid.crt: testca.pem
 	openssl genrsa -out valid.key 2048
-	printf ".\n.\n.\n.\n.\nvalid\n.\n\n\n"|	\
-		openssl req -new -key valid.key	\
-			-out valid.csr
+	openssl req -new -key valid.key	\
+		-out valid.csr		\
+		-subj "/CN=valid"
 	@echo
 	openssl x509 -req -in valid.csr		\
 		-CA testca.pem			\
