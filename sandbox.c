@@ -369,7 +369,7 @@ static struct sock_filter filter[] = {
 	SC_ALLOW(writev),
 #endif
 
-	/* disallow enything else */
+	/* disallow everything else */
 	BPF_STMT(BPF_RET | BPF_K, SC_FAIL),
 };
 
