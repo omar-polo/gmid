@@ -21,6 +21,13 @@
 int flag2, flag3, bflag, cflag, hflag, Nflag, Vflag, vflag;
 const char *cert, *key;
 
+static void
+timeout(int signo)
+{
+	dprintf(2, "%s: timer expired\n", getprogname());
+	exit(1);
+}
+
 int
 main(int argc, char **argv)
 {
@@ -28,15 +35,14 @@ main(int argc, char **argv)
 	struct tls_config *conf;
 	struct tls *ctx;
 	char iribuf[GEMINI_URL_LEN], buf[GEMINI_URL_LEN];
-	const char *parse_err = "unknown error", *port = "1965";
+	const char *parse_err = "unknown error", *port = "1965", *errstr;
 	const char *hostname;
 	char *t;
-	int ch;
-	int handshake;
+	int ch, handshake, timer;
 	ssize_t len;
 
 	hostname = NULL;
-	while ((ch = getopt(argc, argv, "23C:cbH:hK:NVv")) != -1) {
+	while ((ch = getopt(argc, argv, "23C:cbH:hK:NT:Vv")) != -1) {
 		switch (ch) {
 		case '2':
 			flag2 = 1;
@@ -64,6 +70,13 @@ main(int argc, char **argv)
 			break;
 		case 'N':
 			Nflag = 1;
+			break;
+		case 'T':
+			timer = strtonum(optarg, 1, 1000, &errstr);
+			if (errstr != NULL)
+				errx(1, "timeout is %s: %s", errstr, optarg);
+			signal(SIGALRM, timeout);
+			alarm(timer);
 			break;
 		case 'V':
 			Vflag = 1;

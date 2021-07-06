@@ -1,5 +1,7 @@
 2021-07-06  Omar Polo  <op@omarpolo.com>
 
+	* regress/gg.c (main): add -T timeout
+
 	* configure (guessing_cflags): try to preserve CFLAGS/LDFLAGS
 
 2021-07-02  Omar Polo  <op@omarpolo.com>

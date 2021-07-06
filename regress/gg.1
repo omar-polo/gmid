@@ -23,6 +23,7 @@
 .Op Fl 23bchNVv
 .Op Fl C Pa cert.pem Fl K Pa key.pem
 .Op Fl H Ar hostname
+.Op Fl T Ar timeout
 .Ar IRI
 .Ek
 .Sh DESCRIPTION
@@ -54,6 +55,12 @@ Load the client certificate key, must be in PEM format.
 .It Fl N
 Don't check whether the peer certificate name matches the requested
 hostname.
+.It Fl T Ar timeout
+Kill
+.Nm
+after
+.Ar timeout
+seconds.
 .It Fl V
 Only validate the IRI, don't do the Gemini transaction.
 .It Fl v
