@@ -56,20 +56,23 @@ server "example.com" {
 }
 ```
 
-and a slightly complex one
+and a slightly more complex one
 
 ```conf
 ipv6 on     # enable ipv6
 
+# define a macro
+cert_root = "/path/to/keys"
+
 server "example.com" {
 	alias "foobar.com"
 
-	cert "/path/to/cert.pem"
-	key  "/path/to/key.pem"
+	cert $cert_root "/example.com.crt"
+	key  $cert_root "/example.com.pem"
 	root "/var/gemini/example.com"
 
 	# lang for text/gemini files
-	lang "it"
+	lang "en"
 
 	# execute CGI scripts in /cgi/
 	cgi "/cgi/*"
@@ -83,7 +86,7 @@ server "example.com" {
 	location "/repo/*" {
 		# change the index file name
 		index "README.gmi"
-		lang "en"
+		lang "it"
 	}
 }
 ```
