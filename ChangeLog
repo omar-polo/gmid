@@ -1,3 +1,7 @@
+2021-07-06  Omar Polo  <op@omarpolo.com>
+
+	* configure (guessing_cflags): try to preserve CFLAGS/LDFLAGS
+
 2021-07-02  Omar Polo  <op@omarpolo.com>
 
 	* sandbox.c (filter): seccomp filter reworked: now it should work on x86 and possibly other arches too!
