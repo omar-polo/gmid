@@ -4,12 +4,16 @@ set -e
 
 ggflags=
 
+config_common='
+ipv6 off
+port 10965
+'
+
 # usage: config <global config> <stuff for localhost>
 # generates a configuration file reg.conf
 config() {
 	cat <<EOF > reg.conf
-ipv6 off
-port 10965
+$config_common
 $1
 server "localhost" {
 	cert "$PWD/cert.pem"
@@ -43,7 +47,7 @@ raw() {
 }
 
 run() {
-	./../gmid -f -c reg.conf &
+	./../gmid -vvv -f -c reg.conf &
 	pid=$!
 	# give gmid time to bind the port, otherwise we end up
 	# executing gg when gmid isn't ready yet.
@@ -339,3 +343,23 @@ restart
 eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
 eq "$(get /)"		"# Hello, world!"	"Unexpected body for /"
 echo OK GET / with fastcgi
+
+# test macro expansion
+
+cat <<EOF > reg.conf
+pwd = "$PWD"
+$config_common
+
+server "localhost" {
+	# the quoting of \$ is for sh
+	cert \$pwd "/cert.pem"
+	key  \$pwd "/key.pem"
+	root \$pwd "/testdata"
+}
+EOF
+checkconf
+restart
+
+eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
+eq "$(get /)"		"# hello world$ln"	"Unexpected body for /"
+echo OK GET / with macro expansion
