@@ -477,7 +477,7 @@ send_fcgi_req(struct fcgi *f, struct client *c)
 
 	f->pending++;
 
-        e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
+	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
 	    addr, sizeof(addr),
 	    NULL, 0,
 	    NI_NUMERICHOST);
