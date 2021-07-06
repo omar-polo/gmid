@@ -131,7 +131,7 @@ vlog(int priority, struct client *c,
 	if (vasprintf(&fmted, fmt, ap) == -1)
 		fatal("vasprintf: %s", strerror(errno));
 
-        if (c == NULL)
+	if (c == NULL)
 		ec = asprintf(&s, "internal: %s", fmted);
 	else
 		ec = asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted);
