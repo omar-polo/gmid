@@ -65,7 +65,9 @@ if which pkg-config 2>/dev/null 1>&2; then
 	fi
 
 	case "$(uname)" in
-		OpenBSD) ;;
+		OpenBSD)
+			# use libevent in base
+			;;
 		*)
 			if pkg-config libevent; then
 				CFLAGS="${CFLAGS} $(pkg-config --cflags libevent)"
