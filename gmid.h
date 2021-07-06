@@ -70,6 +70,9 @@ struct fcgi {
 	int		 fd;
 	struct event	 e;
 
+	/* number of pending clients */
+	int		 pending;
+
 #define FCGI_OFF	0
 #define FCGI_INFLIGHT	1
 #define FCGI_READY	2
@@ -337,6 +340,7 @@ void		 load_default_mime(struct mime*);
 const char	*mime(struct vhost*, const char*);
 
 /* server.c */
+extern int	shutting_down;
 const char	*vhost_lang(struct vhost*, const char*);
 const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
@@ -375,6 +379,7 @@ int		 recv_fd(int);
 int		 executor_main(struct imsgbuf*);
 
 /* fcgi.c */
+void		 fcgi_close_backend(struct fcgi *);
 void		 handle_fcgi(int, short, void*);
 void		 send_fcgi_req(struct fcgi*, struct client*);
 

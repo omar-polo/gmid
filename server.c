@@ -26,6 +26,8 @@
 #include <limits.h>
 #include <string.h>
 
+int shutting_down;
+
 struct client	 clients[MAX_USERS];
 
 static struct tls	*ctx;
@@ -1246,11 +1248,15 @@ handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 static void
 handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 {
+	size_t i;
+
 	(void)imsg;
 	(void)len;
 
 	/* don't call event_loopbreak since we want to finish to
 	 * handle the ongoing connections. */
+
+	shutting_down = 1;
 
 	event_del(&e4);
 	if (has_ipv6)
@@ -1259,6 +1265,17 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 		signal_del(&siginfo);
 	event_del(&imsgev);
 	signal_del(&sigusr2);
+
+	for (i = 0; i < FCGI_MAX; ++i) {
+		if (fcgi[i].path == NULL && fcgi[i].prog == NULL)
+			break;
+
+		if (!event_pending(&fcgi[i].e, EV_READ, NULL) ||
+		    fcgi[i].pending != 0)
+			continue;
+
+		fcgi_close_backend(&fcgi[i]);
+	}
 }
 
 static void

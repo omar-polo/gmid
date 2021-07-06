@@ -381,9 +381,16 @@ close_all(struct fcgi *f)
 			start_reply(c, CGI_ERROR, "CGI error");
 	}
 
+	fcgi_close_backend(f);
+}
+
+void
+fcgi_close_backend(struct fcgi *f)
+{
 	event_del(&f->e);
 	close(f->fd);
 	f->fd = -1;
+	f->pending = 0;
 	f->s = FCGI_OFF;
 }
 
@@ -413,6 +420,8 @@ handle_fcgi(int sock, short event, void *d)
 		if (must_read(sock, (char*)&end, sizeof(end)) == -1)
 			goto err;
 		/* TODO: do something with the status? */
+
+		f->pending--;
 		c->fcgi = -1;
 		c->next = close_conn;
 		event_once(c->fd, EV_WRITE, &copy_mbuf, c, NULL);
@@ -447,6 +456,10 @@ handle_fcgi(int sock, short event, void *d)
 
 	if (!consume(sock, h.padding))
 		goto err;
+
+	if (f->pending == 0 && shutting_down)
+		fcgi_close_backend(f);
+
 	return;
 
 err:
@@ -461,6 +474,8 @@ send_fcgi_req(struct fcgi *f, struct client *c)
 	time_t		 tim;
 	struct tm	 tminfo;
 	struct envlist	*p;
+
+	f->pending++;
 
         e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
 	    addr, sizeof(addr),
