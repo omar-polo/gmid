@@ -128,9 +128,11 @@ static int
 launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
     struct location *loc)
 {
-	int p[2];		/* read end, write end */
+	int p[2], errp[2];	/* read end, write end */
 
 	if (pipe(p) == -1)
+		return -1;
+	if (pipe(errp) == -1)
 		return -1;
 
 	switch (fork()) {
@@ -145,6 +147,10 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 
 		close(p[0]);
 		if (dup2(p[1], 1) == -1)
+			goto childerr;
+
+		close(errp[0]);
+		if (dup2(errp[1], 2) == -1)
 			goto childerr;
 
 		ex = xasprintf("%s/%s", loc->dir, req->spath);
@@ -224,6 +230,7 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 
 	default:
 		close(p[1]);
+		close(errp[1]);
 		mark_nonblock(p[0]);
 		return p[0];
 	}
