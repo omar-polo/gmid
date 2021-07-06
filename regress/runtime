@@ -47,7 +47,7 @@ raw() {
 }
 
 run() {
-	./../gmid -vvv -f -c reg.conf &
+	./../gmid -f -c reg.conf &
 	pid=$!
 	# give gmid time to bind the port, otherwise we end up
 	# executing gg when gmid isn't ready yet.
