@@ -114,13 +114,15 @@ parse_scheme(struct parser *p)
 	}
 
 	do {
-		/* normalize the scheme (i.e. lowercase it)
+		/*
+		 * normalize the scheme (i.e. lowercase it)
 		 *
 		 * XXX: since we cannot have good things, tolower
 		 * behaviour depends on the LC_CTYPE locale.  The good
 		 * news is that we're sure p->iri points to something
 		 * that's in the ASCII range, so tolower can't
-		 * mis-behave on some systems due to the locale. */
+		 * mis-behave on some systems due to the locale.
+		 */
 		*p->iri = tolower(*p->iri);
 		p->iri++;
 	} while (isalnum(*p->iri)
@@ -214,9 +216,11 @@ parse_authority(struct parser *p)
 	return 0;
 }
 
-/* Routine for path_clean.  Elide the pointed .. with the preceding
+/*
+ * Routine for path_clean.  Elide the pointed .. with the preceding
  * element.  Return 0 if it's not possible.  incr is the length of
- * the increment, 3 for ../ and 2 for .. */
+ * the increment, 3 for ../ and 2 for ..
+ */
 static int
 path_elide_dotdot(char *path, char *i, int incr)
 {

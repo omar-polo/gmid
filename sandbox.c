@@ -53,8 +53,10 @@ sandbox_server_process(void)
 void
 sandbox_executor_process(void)
 {
-	/* We cannot capsicum the executor process because it needs
-	 * to fork(2)+execve(2) cgi scripts */
+	/*
+	 * We cannot capsicum the executor process because it needs to
+	 * fork(2)+execve(2) cgi scripts
+	 */
 	return;
 }
 
@@ -435,18 +437,22 @@ sandbox_server_process(void)
 void
 sandbox_executor_process(void)
 {
-	/* We cannot use seccomp for the executor process because we
+	/*
+	 * We cannot use seccomp for the executor process because we
 	 * don't know what the child will do.  Also, our filter will
 	 * be inherited so the child cannot set its own seccomp
-	 * policy. */
+	 * policy.
+	 */
 	return;
 }
 
 void
 sandbox_logger_process(void)
 {
-	/* To be honest, here we could use a seccomp policy to only
-	 * allow writev(2) and memory allocations. */
+	/*
+	 * To be honest, here we could use a seccomp policy to only
+	 * allow writev(2) and memory allocations.
+	 */
 	return;
 }
 

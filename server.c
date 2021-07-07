@@ -930,10 +930,12 @@ enter_handle_dirlist(int fd, short ev, void *d)
 	l = snprintf(c->sbuf, sizeof(c->sbuf),
 	    "# Index of %s\n\n", b);
 	if (l >= sizeof(c->sbuf)) {
-		/* this is impossible, given that we have enough space
+		/*
+		 * This is impossible, given that we have enough space
 		 * in c->sbuf to hold the ancilliary string plus the
 		 * full path; but it wouldn't read nice without some
-		 * error checking, and I'd like to avoid a strlen. */
+		 * error checking, and I'd like to avoid a strlen.
+		 */
 		close_conn(fd, ev, c);
 		return;
 	}
@@ -1253,8 +1255,10 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 	(void)imsg;
 	(void)len;
 
-	/* don't call event_loopbreak since we want to finish to
-	 * handle the ongoing connections. */
+	/*
+	 * don't call event_loopbreak since we want to finish to
+	 * handle the ongoing connections.
+	 */
 
 	shutting_down = 1;
 

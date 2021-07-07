@@ -123,9 +123,11 @@ struct vhost {
 
 	TAILQ_ENTRY(vhost) vhosts;
 
-	/* the first location rule is always '*' and holds the default
+	/*
+	 * the first location rule is always '*' and holds the default
 	 * settings for the vhost, then follows the "real" location
-	 * rules as specified in the configuration. */
+	 * rules as specified in the configuration.
+	 */
 	struct lochead	 locations;
 
 	struct envhead	 env;
