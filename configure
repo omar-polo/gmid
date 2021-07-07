@@ -62,23 +62,23 @@ BINDIR=
 INSTALL="install"
 
 add_cflags() {
-	CFLAGS="${CFLAGS} $1"
+	CFLAGS="${CFLAGS} $(pkg-config --cflags "$1")"
 }
 
 add_ldflags() {
-	LDFLAGS="${LDFLAGS} $1"
+	LDFLAGS="${LDFLAGS} $(pkg-config --libs "$1")"
 }
 
 # try to auto detect CFLAGS and LDFLAGS
 if which pkg-config 2>/dev/null 1>&2; then
 	if pkg-config libtls; then
-		add_cflags "$(pkg-config --cflags libtls)"
-		add_ldflags "$(pkg-config --libs libtls)"
+		add_cflags "libtls"
+		add_ldflags "libtls"
 	fi
 
 	if pkg-config openssl; then
-		add_cflags "$(pkg-config --cflags openssl)"
-		add_ldflags "$(pkg-config --libs openssl)"
+		add_cflags "openssl"
+		add_ldflags "openssl"
 	fi
 
 	case "$(uname)" in
@@ -87,13 +87,13 @@ if which pkg-config 2>/dev/null 1>&2; then
 			;;
 		*)
 			if pkg-config libevent; then
-				add_cflags "$(pkg-config --cflags libevent)"
-				add_ldflags "$(pkg-config --libs libevent)"
+				add_cflags "libevent"
+				add_ldflags "libevent"
 			fi
 
 			if pkg-config libimsg; then
-				add_cflags "$(pkg-config --cflags libimsg)"
-				add_ldflags "$(pkg-config --libs libimsg)"
+				add_cflags "libimsg"
+				add_ldflags "libimsg"
 			fi
 			;;
 	esac
