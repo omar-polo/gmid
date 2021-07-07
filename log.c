@@ -299,11 +299,11 @@ handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 static void
 handle_imsg_log_type(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
-	if (log != NULL) {
+	if (log != NULL && log != stderr) {
 		fflush(log);
 		fclose(log);
-		log = NULL;
 	}
+	log = NULL;
 
 	if (imsg->fd != -1) {
 		if ((log = fdopen(imsg->fd, "a")) == NULL) {
@@ -324,6 +324,8 @@ handle_dispatch_imsg(int fd, short ev, void *d)
 int
 logger_main(int fd, struct imsgbuf *ibuf)
 {
+	log = stderr;
+
 	event_init();
 
 	event_set(&imsgev, fd, EV_READ | EV_PERSIST, &handle_dispatch_imsg, ibuf);

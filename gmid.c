@@ -526,9 +526,6 @@ setup_configless(int argc, char **argv, const char *cgi)
 	loc = xcalloc(1, sizeof(*loc));
 	TAILQ_INSERT_HEAD(&host->locations, loc, locations);
 
-	imsg_compose(&logibuf, IMSG_LOG_TYPE, 0, 0, 2, NULL, 0);
-	imsg_flush(&logibuf);
-
 	serve(argc, argv, NULL);
 
 	imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
@@ -542,6 +539,7 @@ main(int argc, char **argv)
 	int ch, conftest = 0, configless = 0;
 	int pidfd, old_ipv6, old_port;
 
+	logger_init();
 	init_config();
 
 	while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
@@ -557,7 +555,8 @@ main(int argc, char **argv)
 
 		case 'D':
 			if (cmdline_symset(optarg) == -1)
-				errx(1, "invalid macro: %s", optarg);
+				fatal("could not parse macro definition: %s",
+				    optarg);
 			break;
 
 		case 'd':
@@ -623,7 +622,7 @@ main(int argc, char **argv)
 	}
 
 	if (config_path != NULL && (argc > 0 || configless))
-		errx(1, "can't specify options in config mode.");
+		fatal("can't specify options in config mode.");
 
 	if (conftest) {
 		parse_conf(config_path);
@@ -632,14 +631,16 @@ main(int argc, char **argv)
 	}
 
 	if (!conf.foreground && !configless) {
+		/* log to syslog */
+		imsg_compose(&logibuf, IMSG_LOG_TYPE, 0, 0, -1, NULL, 0);
+		imsg_flush(&logibuf);
+
 		if (daemon(1, 1) == -1)
-			err(1, "daemon");
+			fatal("daemon: %s", strerror(errno));
 	}
 
 	if (config_path != NULL)
 		parse_conf(config_path);
-
-	logger_init();
 
 	sock4 = make_socket(conf.port, AF_INET);
 	sock6 = -1;
@@ -652,11 +653,6 @@ main(int argc, char **argv)
 	if (configless) {
 		setup_configless(argc, argv, cgi);
 		return 0;
-	}
-
-	if (conf.foreground) {
-		imsg_compose(&logibuf, IMSG_LOG_TYPE, 0, 0, 2, NULL, 0);
-		imsg_flush(&logibuf);
 	}
 
 	pidfd = write_pidfile(pidfile);
