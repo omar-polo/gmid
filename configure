@@ -83,12 +83,17 @@ if which pkg-config 2>/dev/null 1>&2; then
 
 	case "$(uname)" in
 		OpenBSD)
-			# use libevent in base
+			# use libevent and imsg in base
 			;;
 		*)
 			if pkg-config libevent; then
 				add_cflags "$(pkg-config --cflags libevent)"
 				add_ldflags "$(pkg-config --libs libevent)"
+			fi
+
+			if pkg-config libimsg; then
+				add_cflags "$(pkg-config --cflags libimsg)"
+				add_ldflags "$(pkg-config --libs libimsg)"
 			fi
 			;;
 	esac
