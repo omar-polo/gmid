@@ -119,6 +119,11 @@ for keyvals in "$@"; do
 		continue
 	fi
 
+	if [ "$keyvals" = "--enable-sandbox" ]; then
+		DISABLE_SANDBOX=0
+		continue
+	fi
+
 	key=`echo $keyvals | cut -s -d '=' -f1`
 	if [ -z "$key" ]; then
 		echo "$0: invalid key-value: $keyvals" 1>&2
