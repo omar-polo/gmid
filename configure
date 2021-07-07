@@ -36,17 +36,13 @@ echo "file config.log: writing..."
 
 CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
 
-guessing_cflags=0
 if [ -z "${CFLAGS}" ]; then
-	guessing_cflags=1
 	CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
 	CFLAGS="${CFLAGS} -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
 	CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
 fi
 
-guessing_ldflags=0
 if [ -z "${LDFLAGS}" ]; then
-	guessing_ldflags=1
 	LDFLAGS=`printf "all:\\n\\t@echo \\\$(LDFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
 	LDFLAGS="-ltls -levent -lcrypto"
 fi
@@ -66,15 +62,11 @@ BINDIR=
 INSTALL="install"
 
 add_cflags() {
-	if [ $guessing_cflags = 1 ]; then
-		CFLAGS="${CFLAGS} $1"
-	fi
+	CFLAGS="${CFLAGS} $1"
 }
 
 add_ldflags() {
-	if [ $guessing_ldflags = 1 ]; then
-		LDFLAGS="${LDFLAGS} $1"
-	fi
+	LDFLAGS="${LDFLAGS} $1"
 }
 
 # try to auto detect CFLAGS and LDFLAGS
