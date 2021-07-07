@@ -38,9 +38,10 @@ CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
 
 if [ -z "${CFLAGS}" ]; then
 	CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
-	CFLAGS="${CFLAGS} -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
-	CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
 fi
+
+CFLAGS="${CFLAGS} -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
+CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
 
 if [ -z "${LDFLAGS}" ]; then
 	LDFLAGS=`printf "all:\\n\\t@echo \\\$(LDFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
