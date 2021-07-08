@@ -62,40 +62,25 @@ BINDIR=
 
 INSTALL="install"
 
-add_cflags() {
-	CFLAGS="${CFLAGS} $(pkg-config --cflags "$1")"
-}
-
-add_ldflags() {
-	LDFLAGS="${LDFLAGS} $(pkg-config --libs "$1")"
+add_library() {
+	if pkg-config "$1"; then
+		CFLAGS="${CFLAGS} $(pkg-config --cflags "$1")"
+		LDFLAGS="${LDFLAGS} $(pkg-config --libs "$1")"
+	fi
 }
 
 # try to auto detect CFLAGS and LDFLAGS
 if which pkg-config 2>/dev/null 1>&2; then
-	if pkg-config libtls; then
-		add_cflags "libtls"
-		add_ldflags "libtls"
-	fi
-
-	if pkg-config openssl; then
-		add_cflags "openssl"
-		add_ldflags "openssl"
-	fi
+	add_library "libtls"
+	add_library "openssl"
 
 	case "$(uname)" in
 		OpenBSD)
 			# use libevent and imsg in base
 			;;
 		*)
-			if pkg-config libevent; then
-				add_cflags "libevent"
-				add_ldflags "libevent"
-			fi
-
-			if pkg-config libimsg; then
-				add_cflags "libimsg"
-				add_ldflags "libimsg"
-			fi
+			add_library "libevent"
+			add_library "libimsg"
 			;;
 	esac
 
@@ -103,10 +88,7 @@ if which pkg-config 2>/dev/null 1>&2; then
 		*BSD|DragonFly|Darwin)
 			;;
 		*)
-			if pkg-config libbsd-ctor libbsd-overlay; then
-				add_cflags "libbsd-ctor libbsd-overlay"
-				add_ldflags "libbsd-ctor libbsd-overlay"
-			fi
+			add_library "libbsd-ctor libbsd-overlay"
 			;;
 	esac
 fi
