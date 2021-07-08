@@ -137,6 +137,11 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 
 	switch (fork()) {
 	case -1:
+		log_err(NULL, "fork failed: %s", strerror(errno));
+		close(p[0]);
+		close(p[1]);
+		close(errp[0]);
+		close(errp[1]);
 		return -1;
 
 	case 0: {		/* child */
@@ -230,6 +235,7 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 
 	default:
 		close(p[1]);
+		close(errp[0]);
 		close(errp[1]);
 		mark_nonblock(p[0]);
 		return p[0];
