@@ -17,10 +17,10 @@ puny-test: puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT}
 		-o puny-test ${LDFLAGS}
 
 iri_test: iri_test.o ../iri.o ../utf8.o ${COMPAT}
-	${CC} iri_test.o ../iri.o ../utf8.o ${COMPAT} -o iri_test
+	${CC} iri_test.o ../iri.o ../utf8.o ${COMPAT} -o $@ ${LDFLAGS}
 
 fill-file: fill-file.o
-	${CC} fill-file.o -o fill-file
+	${CC} fill-file.o -o $@ ${LDFLAGS}
 
 fcgi-test: fcgi-test.o
 	${CC} fcgi-test.o ${COMPAT} -o fcgi-test ${LDFLAGS}
