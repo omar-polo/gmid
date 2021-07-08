@@ -98,6 +98,17 @@ if which pkg-config 2>/dev/null 1>&2; then
 			fi
 			;;
 	esac
+
+	case "$(uname)" in
+		*BSD|DragonFly|Darwin)
+			;;
+		*)
+			if pkg-config libbsd-ctor libbsd-overlay; then
+				add_cflags "libbsd-ctor libbsd-overlay"
+				add_ldflags "libbsd-ctor libbsd-overlay"
+			fi
+			;;
+	esac
 fi
 
 # auto detect yacc/bison
