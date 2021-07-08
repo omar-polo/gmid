@@ -319,7 +319,7 @@ fcgi_open_prog(struct fcgi *f)
 
 	/* XXX! */
 
-	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNIX, s) == -1)
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, s) == -1)
 		err(1, "socketpair");
 
 	switch (p = fork()) {
