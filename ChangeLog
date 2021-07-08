@@ -1,3 +1,7 @@
+2021-07-08  Omar Polo  <op@omarpolo.com>
+
+	* parse.y (option): rename `mime MIME EXT' to `map MIME to-ext EXT', but retain the old `mime' for compatibility.
+
 2021-07-06  Omar Polo  <op@omarpolo.com>
 
 	* regress/gg.c (main): add -T timeout

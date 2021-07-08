@@ -88,7 +88,7 @@ char		*symget(const char *);
 %token	TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TCHROOT TUSER TSERVER
 %token	TPREFORK TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
 %token	TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA TALIAS TTCP
-%token	TFASTCGI TSPAWN TPARAM
+%token	TFASTCGI TSPAWN TPARAM TMAP TTOEXT
 
 %token	TERR
 
@@ -138,7 +138,14 @@ var		: TSTRING '=' string {
 
 option		: TCHROOT string	{ conf.chroot = $2; }
 		| TIPV6 TBOOL		{ conf.ipv6 = $2; }
-		| TMIME TSTRING string	{ add_mime(&conf.mime, $2, $3); }
+		| TMIME TSTRING string	{
+			fprintf(stderr, "%s:%d: `mime MIME EXT' is deprecated and "
+			    "will be removed in a future version, "
+			    "please use the new syntax: `map MIME to-ext EXT'",
+			    config_path, yylval.lineno+1);
+			add_mime(&conf.mime, $2, $3);
+		}
+		| TMAP string TTOEXT string { add_mime(&conf.mime, $3, $5); }
 		| TPORT TNUM		{ conf.port = $2; }
 		| TPREFORK TNUM		{ conf.prefork = check_prefork_num($2); }
 		| TPROTOCOLS string {
@@ -360,6 +367,7 @@ static struct keyword {
 	{"lang", TLANG},
 	{"location", TLOCATION},
 	{"log", TLOG},
+	{"map", TMAP},
 	{"mime", TMIME},
 	{"param", TPARAM},
 	{"port", TPORT},
@@ -372,6 +380,7 @@ static struct keyword {
 	{"spawn", TSPAWN},
 	{"strip", TSTRIP},
 	{"tcp", TTCP},
+	{"to-ext", TTOEXT},
 	{"type", TTYPE},
 	{"user", TUSER},
 };

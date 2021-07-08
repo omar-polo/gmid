@@ -148,7 +148,7 @@ echo OK GET /hello
 check "should be running"
 
 # try with custom mime
-config 'mime "text/x-funny-text" "gmi"' 'default type "application/x-trash"'
+config 'map "text/x-funny-text" to-ext "gmi"' 'default type "application/x-trash"'
 checkconf
 restart
 

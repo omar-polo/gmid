@@ -196,8 +196,8 @@ may enforce this.
 .It Ic ipv6 Ar bool
 Enable or disable IPv6 support.
 By default is off.
-.It Ic mime Ar mime-type Ar file-extension
-Add a mapping for the given
+.It Ic map Ar mime-type Cm to-ext Ar file-extension
+Add a mapping for
 .Ar file-extension
 to the given
 .Ar mime-type .
@@ -524,7 +524,7 @@ To auto-detect the MIME type of the response
 looks at the file extension and consults its internal table.
 By default the following mappings are loaded, but they can be
 overridden or extended using the
-.Ic mime
+.Ic map
 configuration option.
 If no MIME is found, the value of
 .Ic default type
@@ -590,7 +590,7 @@ ipv6 on		# enable ipv6
 
 protocols "tlsv1.3"
 
-mime "application/rtf" "rtf"
+map "application/rtf" to-ext "rtf"
 
 server "example.com" {
 	cert "/path/to/cert.pem"
