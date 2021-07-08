@@ -145,7 +145,7 @@ option		: TCHROOT string	{ conf.chroot = $2; }
 			    config_path, yylval.lineno+1);
 			add_mime(&conf.mime, $2, $3);
 		}
-		| TMAP string TTOEXT string { add_mime(&conf.mime, $3, $5); }
+		| TMAP string TTOEXT string { add_mime(&conf.mime, $2, $4); }
 		| TPORT TNUM		{ conf.port = $2; }
 		| TPREFORK TNUM		{ conf.prefork = check_prefork_num($2); }
 		| TPROTOCOLS string {
