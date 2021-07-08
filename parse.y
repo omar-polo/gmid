@@ -88,7 +88,7 @@ char		*symget(const char *);
 %token	TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TCHROOT TUSER TSERVER
 %token	TPREFORK TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
 %token	TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA TALIAS TTCP
-%token	TFASTCGI TSPAWN TPARAM TMAP TTOEXT
+%token	TFASTCGI TSPAWN TPARAM TMAP TTOEXT TARROW
 
 %token	TERR
 
@@ -210,15 +210,15 @@ servopt		: TALIAS string {
 				memmove($2, $2+1, strlen($2));
 			host->entrypoint = $2;
 		}
-		| TENV string string {
-			add_param($2, $3, 1);
+		| TENV string TARROW string {
+			add_param($2, $4, 1);
 		}
 		| TKEY string		{
 			only_once(host->key, "key");
 			host->key  = ensure_absolute_path($2);
 		}
-		| TPARAM string string {
-			add_param($2, $3, 0);
+		| TPARAM string TARROW string {
+			add_param($2, $4, 0);
 		}
 		| locopt
 		;
@@ -294,9 +294,9 @@ fastcgi		: TSPAWN string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($1, NULL, NULL);
 		}
-		| TTCP string TNUM {
+		| TTCP string TPORT TNUM {
 			char *c;
-			if (asprintf(&c, "%d", $3) == -1)
+			if (asprintf(&c, "%d", $4) == -1)
 				err(1, "asprintf");
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, c, NULL);
@@ -305,9 +305,9 @@ fastcgi		: TSPAWN string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, xstrdup("9000"), NULL);
 		}
-		| TTCP string string {
+		| TTCP string TPORT string {
 			only_oncei(loc->fcgi, "fastcgi");
-			loc->fcgi = fastcgi_conf($2, $3, NULL);
+			loc->fcgi = fastcgi_conf($2, $4, NULL);
 		}
 		;
 
@@ -429,7 +429,10 @@ repeat:
 		yylval.lineno++;
 		goto repeat;
 	case '=':
-		return c;
+		if ((c = getc(yyfp)) == '>')
+			return TARROW;
+		ungetc(c, yyfp);
+		return '=';
 	case EOF:
 		goto eof;
 	}

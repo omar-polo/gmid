@@ -297,7 +297,7 @@ is set to
 Handle all the requests for the current virtual host using the
 CGI script at
 .Pa path .
-.It Ic env Ar name Ar value
+.It Ic env Ar name Cm => Ar value
 Set the environment variable
 .Ar name
 to
@@ -306,7 +306,7 @@ when executing CGI scripts.
 Can be provided more than once.
 .\" don't document the "spawn <prog>" form because it probably won't
 .\" be kept.
-.It Ic fastcgi Oo Ic tcp Oc Pa socket Oo Ar port Oc
+.It Ic fastcgi Oo Ic tcp Oc Pa socket Oo Cm port Ar port Oc
 Enable FastCGI instead of serving files.
 The
 .Pa socket
@@ -359,7 +359,7 @@ except
 .Ic entrypoint No and Ic cgi .
 .It Ic log Ar bool
 Enable or disable the logging for the current server or location block.
-.It Ic param Ar name Ar value
+.It Ic param Ar name Cm => Ar value
 Set the param
 .Ar name
 to
