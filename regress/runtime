@@ -2,6 +2,15 @@
 
 set -e
 
+if [ "${SKIP_RUNTIME_TESTS}" -eq 1 ]; then
+	echo
+	echo "======================"
+	echo "runtime tests skipped!"
+	echo "======================"
+	echo
+	exit 0
+fi
+
 ggflags=
 
 config_common='
