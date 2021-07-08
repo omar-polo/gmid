@@ -63,6 +63,7 @@ static struct vhost	*new_vhost(void);
 static struct location	*new_location(void);
 
 void		 yyerror(const char*, ...);
+int		 kw_cmp(const void *, const void *);
 static int	 yylex(void);
 int		 parse_portno(const char*);
 void		 parse_conf(const char*);
@@ -340,6 +341,7 @@ static struct keyword {
 	const char *word;
 	int token;
 } keywords[] = {
+	/* these MUST be sorted */
 	{"alias", TALIAS},
 	{"auto", TAUTO},
 	{"block", TBLOCK},
@@ -374,15 +376,22 @@ static struct keyword {
 	{"user", TUSER},
 };
 
+int
+kw_cmp(const void *k, const void *e)
+{
+	return strcmp(k, ((struct keyword *)e)->word);
+}
+
 /*
  * Taken an adapted from doas' parse.y
  */
 static int
 yylex(void)
 {
+	struct keyword *kw;
 	char buf[8096], *ebuf, *p, *str, *v, *val;
 	int c, quotes = 0, escape = 0, qpos = -1, nonkw = 0;
-	size_t i, len;
+	size_t len;
 
 	p = buf;
 	ebuf = buf + sizeof(buf);
@@ -529,10 +538,10 @@ eow:
 			goto repeat;
 	}
 	if (!nonkw) {
-		for (i = 0; i < sizeof(keywords) / sizeof(keywords[0]); ++i) {
-			if (!strcmp(buf, keywords[i].word))
-				return keywords[i].token;
-		}
+		kw = bsearch(buf, keywords, sizeof(keywords)/sizeof(keywords[0]),
+		    sizeof(keywords[0]), kw_cmp);
+		if (kw != NULL)
+			return kw->token;
 	}
 	c = *buf;
 	if (!nonkw && (c == '-' || isdigit(c))) {
