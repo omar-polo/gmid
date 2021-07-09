@@ -88,7 +88,7 @@ char		*symget(const char *);
 %token	TIPV6 TPORT TPROTOCOLS TMIME TDEFAULT TTYPE TCHROOT TUSER TSERVER
 %token	TPREFORK TLOCATION TCERT TKEY TROOT TCGI TENV TLANG TLOG TINDEX TAUTO
 %token	TSTRIP TBLOCK TRETURN TENTRYPOINT TREQUIRE TCLIENT TCA TALIAS TTCP
-%token	TFASTCGI TSPAWN TPARAM TMAP TTOEXT TARROW
+%token	TFASTCGI TSPAWN TPARAM TMAP TTOEXT
 
 %token	TERR
 
@@ -210,14 +210,14 @@ servopt		: TALIAS string {
 				memmove($2, $2+1, strlen($2));
 			host->entrypoint = $2;
 		}
-		| TENV string TARROW string {
+		| TENV string '=' string {
 			add_param($2, $4, 1);
 		}
 		| TKEY string		{
 			only_once(host->key, "key");
 			host->key  = ensure_absolute_path($2);
 		}
-		| TPARAM string TARROW string {
+		| TPARAM string '=' string {
 			add_param($2, $4, 0);
 		}
 		| locopt
@@ -429,10 +429,7 @@ repeat:
 		yylval.lineno++;
 		goto repeat;
 	case '=':
-		if ((c = getc(yyfp)) == '>')
-			return TARROW;
-		ungetc(c, yyfp);
-		return '=';
+		return c;
 	case EOF:
 		goto eof;
 	}
