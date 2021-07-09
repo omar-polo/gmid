@@ -185,7 +185,7 @@ option		: TCHROOT string	{ conf.chroot = $2; }
 		| TMIME STRING string	{
 			fprintf(stderr, "%s:%d: `mime MIME EXT' is deprecated and "
 			    "will be removed in a future version, "
-			    "please use the new syntax: `map MIME to-ext EXT'",
+			    "please use the new syntax: `map MIME to-ext EXT'\n",
 			    config_path, yylval.lineno+1);
 			add_mime(&conf.mime, $2, $3);
 		}
