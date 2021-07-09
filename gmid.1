@@ -156,7 +156,9 @@ block return 40 "temporary" "-" "failure"
 .Ed
 .Pp
 Furthermore, quoting is necessary only when a string needs to contain
-spaces, something that looks like a number or a reserved keyword.
+special characters
+.Pq like spaces or punctuation ,
+something that looks like a number or a reserved keyword.
 The last example could have been written also as:
 .Bd -literal -offset indent
 block return 40 temporary "-" failure
@@ -169,6 +171,18 @@ blocks.
 However, defining all the
 .Ic server
 blocks after the macros and the global options is recommended.
+.Pp
+Newlines are often optional, except around top-level instructions, and
+semicolons
+.Dq \&;
+can also be optionally used to separate options.
+.Pp
+Additional configuration files can be included with the
+.Ic include
+keyword, for example:
+.Bd -literal -offset indent
+include "/etc/gmid.conf.local"
+.Ed
 .Ss Macros
 Macros can be defined that will later be expanded in context.
 Macro names must start with a letter, digit or underscore and may
@@ -176,15 +190,25 @@ contain any of those characters.
 Macros names may not be reserved words.
 Macros are not expanded inside quotes.
 .Pp
+Two kinds of macros are supported: variable-like and proper macros.
+When a macro is invoked with a
+.Dq $
+before its name its expanded as a string, whereas when it's invoked
+with a
+.Dq @
+its expanded in-place.
+.Pp
 For example:
 .Bd -literal -offset indent
 dir = "/var/gemini"
 cert = "/etc/keys"
+common = "lang it; auto index on"
 
 server "foo" {
 	root $dir "/foo"      # -> /var/gemini/foo
 	cert $cert "/foo.crt" # -> /etc/keys/foo.crt
 	key  $cert "/foo.pem" # -> /etc/keys/foo.pem
+	@common
 }
 .Ed
 .Ss Global Options
