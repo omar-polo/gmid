@@ -1,6 +1,7 @@
 2021-07-09  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (STRING): add `include' directive
+	(yylex): add @-macros (real macros)
 
 2021-07-08  Omar Polo  <op@omarpolo.com>
 
