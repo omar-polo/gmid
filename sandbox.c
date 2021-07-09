@@ -495,7 +495,7 @@ sandbox_executor_process(void)
 			if (l->dir == NULL)
 				continue;
 
-			/* r so we can chdir into the correct directory */
+			/* r so we can chdir into the directory */
 			if (unveil(l->dir, "rx") == -1)
 				fatal("unveil %s for domain %s",
 				    l->dir, h->domain);
