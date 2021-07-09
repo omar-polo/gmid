@@ -169,12 +169,13 @@ to reload the configuration and spawn a new generation of children
 process.  The logger processes gather the logs and prints 'em to
 stderr or syslog (for the time being.)  The listener process is the
 only one that needs internet access and is sandboxed by default.  The
-executor process exists only to fork and execute CGI scripts.
+executor process exists only to fork and execute CGI scripts, and
+optionally to connect to FastCGI applications.
 
 On OpenBSD, the listener runs with the `stdio recvfd rpath inet`
-pledges, while the executor has `stdio sendfd proc exec`; both have
-unveiled only the served directories.  The logger process has pledge
-`stdio`.
+pledges, while the executor has `stdio sendfd proc exec dns inet
+unix`; both have unveiled only the served directories.  The logger
+process has pledge `stdio recvfd`.
 
 On FreeBSD, the listener and logger process are sandboxed with `capsicum(4)`.
 
