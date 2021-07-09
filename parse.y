@@ -78,11 +78,11 @@ char	*symget(const char *);
 
 struct vhost	*new_vhost(void);
 struct location	*new_location(void);
-int		 parse_portno(const char*);
 char		*ensure_absolute_path(char*);
 int		 check_block_code(int);
 char		*check_block_fmt(char*);
 int		 check_strip_no(int);
+int		 check_port_num(int);
 int		 check_prefork_num(int);
 void		 advance_loc(void);
 void		 only_once(const void*, const char*);
@@ -190,7 +190,7 @@ option		: TCHROOT string	{ conf.chroot = $2; }
 			add_mime(&conf.mime, $2, $3);
 		}
 		| TMAP string TTOEXT string { add_mime(&conf.mime, $2, $4); }
-		| TPORT NUM		{ conf.port = $2; }
+		| TPORT NUM		{ conf.port = check_port_num($2); }
 		| TPREFORK NUM		{ conf.prefork = check_prefork_num($2); }
 		| TPROTOCOLS string {
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
@@ -864,18 +864,6 @@ new_location(void)
 	return l;
 }
 
-int
-parse_portno(const char *p)
-{
-	const char *errstr;
-	int n;
-
-	n = strtonum(p, 0, UINT16_MAX, &errstr);
-	if (errstr != NULL)
-		yyerror("port number is %s: %s", errstr, p);
-	return n;
-}
-
 char *
 ensure_absolute_path(char *path)
 {
@@ -920,6 +908,16 @@ check_strip_no(int n)
 {
 	if (n <= 0)
 		yyerror("invalid strip number %d", n);
+	return n;
+}
+
+int
+check_port_num(int n)
+{
+	if (n <= 0 || n >= UINT16_MAX)
+		yyerror("port number is %s: %d",
+		    n <= 0 ? "too small" : "too large",
+		    n);
 	return n;
 }
 

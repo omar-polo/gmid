@@ -532,6 +532,18 @@ setup_configless(int argc, char **argv, const char *cgi)
 	imsg_flush(&logibuf);
 }
 
+static int
+parse_portno(const char *p)
+{
+	const char *errstr;
+	int n;
+
+	n = strtonum(p, 0, UINT16_MAX, &errstr);
+	if (errstr != NULL)
+		yyerror("port number is %s: %s", errstr, p);
+	return n;
+}
+
 int
 main(int argc, char **argv)
 {
