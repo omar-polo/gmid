@@ -63,9 +63,12 @@ Stays and logs on the foreground.
 .It Fl n
 Check that the configuration is valid, but don't start the server.
 .It Fl P Pa pidfile
-Write
+Write the daemon pid to the given location.
+.Ar pidfile
+will also act as lock: if another process is holding a lock on that
+file,
 .Nm
-pid to the given path.
+will refuse to start.
 .El
 .Pp
 If no configuration file is given,
@@ -81,8 +84,9 @@ By default is
 i.e.
 .Pa ~/.local/share/gmid .
 .It Fl H Ar hostname
-The hostname, by default
-.Ar localhost .
+The hostname
+.Ar localhost
+by default.
 Certificates for the given
 .Ar hostname
 are searched inside the
@@ -151,6 +155,13 @@ string:
 block return 40 "temporary" "-" "failure"
 .Ed
 .Pp
+Furthermore, quoting is necessary only when a string needs to contain
+spaces, something that looks like a number or a reserved keyword.
+The last example could have been written also as:
+.Bd -literal -offset indent
+block return 40 temporary "-" failure
+.Ed
+.Pp
 Strict ordering of the sections is not enforced, so that is possible
 to mix macros, options and
 .Ic server
@@ -194,23 +205,23 @@ Future version of
 .Nm
 may enforce this.
 .It Ic ipv6 Ar bool
-Enable or disable IPv6 support.
-By default is off.
+Enable or disable IPv6 support, off by default.
 .It Ic map Ar mime-type Cm to-ext Ar file-extension
-Add a mapping for
-.Ar file-extension
+Map
+.Ar mime-type
 to the given
-.Ar mime-type .
+.Ar file-extension .
 Both argument are strings.
 .It Ic port Ar portno
 The port to listen on.
-By default is 1965.
+1965 by default.
 .It Ic prefork Ar number
 Run the specified number of server processes.
 This increases the performance and prevents delays when connecting to
 a server.
+When not in config-less mode,
 .Nm
-runs 3 server processes by default, when not in config-less mode.
+runs 3 server processes by default.
 The maximum number allowed is 16.
 .It Ic protocols Ar string
 Specify the TLS protocols to enable.
@@ -231,7 +242,7 @@ block:
 .Bl -tag -width Ds
 .It Ic server Ar hostname Brq ...
 Match the server name using shell globbing rules.
-This can be an explicit name,
+It can be an explicit name,
 .Ar www.example.com ,
 or a name including a wildcards,
 .Ar *.example.com .
@@ -245,24 +256,24 @@ Specify an additional alias
 for this server.
 .It Ic auto Ic index Ar bool
 If no index file is found, automatically generate a directory listing.
-It's disabled by default.
+Disabled by default.
 .It Ic block Op Ic return Ar code Op Ar meta
 Send a reply and close the connection;
+by default
 .Ar code
 is 40
 and
 .Ar meta
 is
-.Dq temporary failure
-by default.
+.Dq temporary failure .
 If
 .Ar code
 is in the 3x range, then
 .Ar meta
-must be provided.
+is mandatory.
 Inside
 .Ar meta ,
-the following special sequences are replaced:
+the following special sequences are supported:
 .Bl -tag -width Ds -compact
 .It \&%\&%
 is replaced with a single
@@ -296,7 +307,8 @@ is set to
 .It Ic entrypoint Pa path
 Handle all the requests for the current virtual host using the
 CGI script at
-.Pa path .
+.Pa path ,
+relative to the current document root.
 .It Ic env Ar name Cm = Ar value
 Set the environment variable
 .Ar name
@@ -310,7 +322,7 @@ Can be provided more than once.
 Enable FastCGI instead of serving files.
 The
 .Pa socket
-can either be a UNIX domain socket or a TCP socket.
+can either be a UNIX-domain socket or a TCP socket.
 If the FastCGI application is listening on a UNIX domain socket,
 .Pa socket
 is a local path name within the
@@ -325,7 +337,7 @@ is interpreted as a hostname or an IP address.
 .Ar port
 can be either a port number or the name of a service enclosed in
 double quotes.
-If it's not specified defaults to 9000.
+If not specified defaults to 9000.
 .It Ic index Ar string
 Set the directory index file.
 If not specified, it defaults to
@@ -366,8 +378,9 @@ to
 .Ar value
 for FastCGI.
 .It Ic root Pa directory
-Specify the root directory for this server.
-It's relative to the chroot, if enabled.
+Specify the root directory for this server
+.Pq alas the current Dq document root .
+It's relative to the chroot if enabled.
 .It Ic require Ic client Ic ca Pa path
 Allow requests only from clients that provide a certificate signed by
 the CA certificate in
@@ -480,6 +493,7 @@ are sent, and carry the same semantics as with CGI.
 More parameters can be added with the
 .Ic param
 option.
+.Pp
 .Bl -bullet -compact
 .It
 GATEWAY_INTERFACE
@@ -569,8 +583,7 @@ $ gmid .
 To serve the directory
 .Pa docs
 and enable CGI scripts inside
-.Pa docs/cgi ,
-you can
+.Pa docs/cgi
 .Bd -literal -offset indent
 $ mkdir docs/cgi
 $ cat <<EOF > docs/cgi/hello
@@ -602,7 +615,11 @@ server "it.example.com" {
 	cert "/path/to/cert.pem"
 	key  "/path/to/key.pem"
 	root "/var/gemini/it.example.com"
+
+	# enable cgi scripts inside "cgi-bin"
 	cgi  "/cgi-bin/*"
+
+	# set the language for text/gemini files
 	lang "it"
 }
 .Ed
@@ -617,11 +634,14 @@ chroot "/var/gemini"
 user "_gmid"
 
 server "example.com" {
-	cert "/path/to/cert.pem"
-	key  "/path/to/key.pem"
-	root "/example.com" # in the /var/gemini chroot
+	cert "/path/to/cert.pem" # absolute path
+	key  "/path/to/key.pem"  # also absolute
+	root "/example.com"      # relative to the chroot
 
 	location "/static/*" {
+		# load the following rules only for
+		# requests that matches "/static/*"
+
 		auto index on
 		index "index.gemini"
 	}
@@ -642,12 +662,12 @@ program was written by
 .Sh CAVEATS
 .Bl -bullet
 .It
-The root directories of all virtual hosts are opened during the daemon
-startup; this means that if a root directory gets deleted and then
-re-created,
+All the root directories are opened during the daemon startup; if a
+root directory is deleted and then re-created,
 .Nm
 won't be able to serve files inside that directory until a restart.
-This restriction applies only to the root directories and not their content.
+This restriction only applies to the root directories and not their
+content.
 .It
 a %2F sequence is indistinguishable from a literal slash: this is not
 RFC3986-compliant.
