@@ -354,6 +354,7 @@ fastcgi		: TSPAWN string {
 		;
 
 optnl		: '\n' optnl		/* zero or more newlines */
+		| ';' optnl		/* semicolons too */
 		| /*empty*/
 		;
 
@@ -562,6 +563,30 @@ top:
 		while (1) {
 			if ((c = lgetc(0)) == EOF)
 				return 0;
+			if (p + 1 >= buf + sizeof(buf) -1) {
+				yyerror("string too long");
+				return findeol();
+			}
+			if (isalnum(c) || c == '_') {
+				*p++ = c;
+				continue;
+			}
+			*p = '\0';
+			lungetc(c);
+			break;
+		}
+		val = symget(buf);
+		if (val == NULL) {
+			yyerror("macro `%s' not defined", buf);
+			return findeol();
+		}
+		yylval.v.string = xstrdup(val);
+		return STRING;
+	}
+	if (c == '@' && !expanding) {
+		while (1) {
+			if ((c = lgetc(0)) == EOF)
+				return 0;
 
 			if (p + 1 >= buf + sizeof(buf) - 1) {
 				yyerror("string too long");
@@ -670,9 +695,9 @@ nodigits:
 	(isalnum(x) || (ispunct(x) && x != '(' && x != ')' && \
 	x != '{' && x != '}' && \
 	x != '!' && x != '=' && x != '#' && \
-	x != ','))
+	x != ',' && x != ';'))
 
-	if (isalnum(c) || c == ':' || c == '_' || c == '/' || c == '.') {
+	if (isalnum(c) || c == ':' || c == '_') {
 		do {
 			*p++ = c;
 			if ((size_t)(p-buf) >= sizeof(buf)) {
