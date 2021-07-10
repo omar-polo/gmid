@@ -34,6 +34,8 @@ echo "file config.log: writing..."
 # default settings: initialize all vars here such that nothing is
 # leaked from the environment except for CC, CFLAGS and LDFLAGS
 
+VERSION=1.6
+
 CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
 
 if [ -z "${CFLAGS}" ]; then
@@ -305,6 +307,7 @@ echo "#include <imsg.h>"
 
 cat <<__HEREDOC__
 
+#define VERSION			"${VERSION}"
 #define DISABLE_SANDBOX		${DISABLE_SANDBOX}
 
 #define HAVE_ERR		${HAVE_ERR}
@@ -427,6 +430,8 @@ INSTALL_PROGRAM	= ${INSTALL_PROGRAM}
 INSTALL_LIB	= ${INSTALL_LIB}
 INSTALL_MAN	= ${INSTALL_MAN}
 INSTALL_DATA	= ${INSTALL_DATA}
+
+VERSION		= ${VERSION}
 
 __HEREDOC__
 
