@@ -26,10 +26,10 @@ TAGS: ${SRCS}
 clean:
 	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid
 	rm -f compile_flags.txt
-	make -C regress clean
+	${MAKE} -C regress clean
 
 regress: gmid
-	make -C regress all
+	${MAKE} -C regress all
 
 install: gmid
 	mkdir -p ${DESTDIR}${BINDIR}
