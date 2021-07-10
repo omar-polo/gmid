@@ -2,7 +2,7 @@
 
 set -e
 
-if [ "${SKIP_RUNTIME_TESTS}" -eq 1 ]; then
+if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
 	echo
 	echo "======================"
 	echo "runtime tests skipped!"
