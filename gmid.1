@@ -201,13 +201,13 @@ its expanded in-place.
 For example:
 .Bd -literal -offset indent
 dir = "/var/gemini"
-cert = "/etc/keys"
+certdir = "/etc/keys"
 common = "lang it; auto index on"
 
 server "foo" {
 	root $dir "/foo"      # -> /var/gemini/foo
-	cert $cert "/foo.crt" # -> /etc/keys/foo.crt
-	key  $cert "/foo.pem" # -> /etc/keys/foo.pem
+	cert $certdir "/foo.crt" # -> /etc/keys/foo.crt
+	key  $certdir "/foo.pem" # -> /etc/keys/foo.pem
 	@common
 }
 .Ed
