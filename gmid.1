@@ -205,7 +205,7 @@ certdir = "/etc/keys"
 common = "lang it; auto index on"
 
 server "foo" {
-	root $dir "/foo"      # -> /var/gemini/foo
+	root $dir "/foo"         # -> /var/gemini/foo
 	cert $certdir "/foo.crt" # -> /etc/keys/foo.crt
 	key  $certdir "/foo.pem" # -> /etc/keys/foo.pem
 	@common
