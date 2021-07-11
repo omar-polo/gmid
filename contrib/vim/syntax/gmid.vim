@@ -61,6 +61,7 @@ syn keyword gmidDirective cert
 syn keyword gmidDirective cgi
 syn match   gmidDirective "\<default\s\+type>" display
 syn keyword gmidDirective entrypoint
+syn keyword gmidDirective env
 syn keyword gmidDirective fastcgi
 syn keyword gmidDirectiveContinuation tcp
 syn keyword gmidDirective index
