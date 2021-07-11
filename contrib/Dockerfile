@@ -1,6 +1,15 @@
 FROM alpine as builder
 WORKDIR /build
-RUN apk update && apk upgrade && apk add alpine-sdk linux-headers libressl-dev bison libevent-dev libevent-static
+RUN apk update &&	\
+	apk upgrade &&	\
+	apk add	--repository=https://dl-cdn.alpinelinux.org/alpine/edge/main \
+		alpine-sdk	\
+		linux-headers	\
+		bison		\
+		libretls-dev	\
+		libretls-static	\
+		libevent-dev	\
+		libevent-static
 COPY . .
 RUN make static
 

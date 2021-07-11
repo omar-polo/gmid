@@ -1,4 +1,9 @@
 **
 !*.c
+!*.h
+!*.y
+!compat/*.c
+!compat/*.h
+!have/*.c
 !Makefile
 !configure
