@@ -1,6 +1,12 @@
-This directory is for additional contributed files which may be useful.
+This directory is for additional contributed files which may be
+useful.
+
+gmid.service
+
+	Simple systemd service file.
 
 vim
 
 	Syntax highlighting of gmid configuration for vim, to be
 	placed into ~/.vim/ or /usr/share/vim/vimfiles.
+

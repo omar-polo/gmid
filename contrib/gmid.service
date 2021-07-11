@@ -1,0 +1,14 @@
+[Unit]
+Description=The gmid Gemini server
+After=syslog.target network.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+ExecStart=/usr/local/bin/gmid -c /etc/gmid.conf
+# to start the daemon as a dedicated user:
+#User=_gmid
+#Group=_gmid
+
+[Install]
+WantedBy=multi-user.target
