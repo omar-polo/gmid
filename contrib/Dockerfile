@@ -7,3 +7,4 @@ RUN make static
 FROM alpine
 RUN apk update && apk upgrade
 COPY --from=builder /build/gmid /bin/gmid
+ENTRYPOINT ["gmid"]

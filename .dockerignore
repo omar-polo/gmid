@@ -1,7 +1,4 @@
-.git
-*.o
-gmid
-gg
-regress
-Makefile.local
-config.h
+**
+!*.c
+!Makefile
+!configure

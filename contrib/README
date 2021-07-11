@@ -1,6 +1,10 @@
 This directory is for additional contributed files which may be
 useful.
 
+Dockerfile
+
+	Sample Dockerfile to build alpine-based gmid images.
+
 gmid.service
 
 	Simple systemd service file.
