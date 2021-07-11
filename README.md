@@ -122,18 +122,11 @@ working as intended.
 
 ### Docker
 
-If you have trouble installing LibreSSL or libretls, you can use
-Docker to build a `gmid` image with:
+If you have trouble installing LibreSSL or libretls, in `contrib`
+there's a sample Dockerfile.  See [the contrib page][contrib-page] for
+more information.
 
-    docker build -t gmid .
-
-and then run it with something along the lines of
-
-    docker run --rm -it -p 1965:1965 \
-        -v /path/to/gmid.conf:/etc/gmid.conf:ro \
-        -v /path/to/docs:/var/gemini \
-        gmid /bin/gmid -c /etc/gmid.conf
-
+[contrib-page]: https://gmid.omarpolo.com/contrib.html#dockerfile
 
 ### Local libretls
 
