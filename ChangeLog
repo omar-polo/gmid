@@ -1,3 +1,7 @@
+2021-07-11  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): 1.7.1 tagged
+
 2021-07-11  Anna “CyberTailor”
 
 	* gmid.1 (common): fix misleading example in man page: macros names may not be reserved words
