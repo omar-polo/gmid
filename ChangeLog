@@ -1,3 +1,8 @@
+2021-07-13  Anna “CyberTailor”
+
+	* parse.y (yyerror): error and warning messages are prefixed with "error:" and "warning:"
+	(yywarn): fix off-by-one line number in warnings
+
 2021-07-11  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): 1.7.1 tagged
