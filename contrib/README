@@ -5,6 +5,10 @@ Dockerfile
 
 	Sample Dockerfile to build alpine-based gmid images.
 
+gmid
+
+	Sample rc(8) script for OpenBSD, to be placed in /etc/rc.d.
+
 gmid.service
 
 	Simple systemd service file.
@@ -13,7 +17,3 @@ vim
 
 	Syntax highlighting of gmid configuration for vim, to be
 	placed into ~/.vim/ or /usr/share/vim/vimfiles.
-
-gmid
-
-    Sample rc(8) script for gmid for OpenBSD.
