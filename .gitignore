@@ -2,7 +2,6 @@
 *.pem
 TAGS
 gmid
-!contrib/gmid
 gg
 *.o
 *.swp
@@ -16,6 +15,7 @@ config.h.old
 config.log
 config.log.old
 configure.local
+!contrib/gmid
 !contrib/vim/syntax_checkers/gmid
 regress/testdata
 regress/*.pem
