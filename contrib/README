@@ -14,3 +14,6 @@ vim
 	Syntax highlighting of gmid configuration for vim, to be
 	placed into ~/.vim/ or /usr/share/vim/vimfiles.
 
+gmid
+
+    Sample rc(8) script for gmid for OpenBSD.

@@ -1,6 +1,7 @@
 *.pem
 TAGS
 gmid
+!contrib/gmid
 gg
 *.o
 compat/*.o
