@@ -16,4 +16,8 @@ gmid.service
 vim
 
 	Syntax highlighting of gmid configuration for vim, to be
-	placed into ~/.vim/ or /usr/share/vim/vimfiles.
+	placed into ~/.vim/ or /usr/share/vim/vimfiles/.
+
+	To enable Syntastic checker, put this line in your vimrc:
+
+	let g:syntastic_gmid_checkers = ['gmid']

@@ -1,9 +1,11 @@
+*~
 *.pem
 TAGS
 gmid
 !contrib/gmid
 gg
 *.o
+*.swp
 compat/*.o
 docs
 y.tab.*
@@ -14,6 +16,7 @@ config.h.old
 config.log
 config.log.old
 configure.local
+!contrib/vim/syntax_checkers/gmid
 regress/testdata
 regress/*.pem
 regress/*.key

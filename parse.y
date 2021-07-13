@@ -52,6 +52,9 @@ int		 yylex(void);
 void		 yyerror(const char *, ...)
     __attribute__((__format__ (printf, 1, 2)))
     __attribute__((__nonnull__ (1)));
+void		 yywarn(const char *, ...)
+    __attribute__((__format__ (printf, 1, 2)))
+    __attribute__((__nonnull__ (1)));
 int		 kw_cmp(const void *, const void *);
 int		 lookup(char *);
 int		 igetc(void);
@@ -183,10 +186,9 @@ varset		: STRING '=' string		{
 option		: TCHROOT string	{ conf.chroot = $2; }
 		| TIPV6 bool		{ conf.ipv6 = $2; }
 		| TMIME STRING string	{
-			fprintf(stderr, "%s:%d: `mime MIME EXT' is deprecated and "
-			    "will be removed in a future version, "
-			    "please use the new syntax: `map MIME to-ext EXT'\n",
-			    config_path, yylval.lineno+1);
+			yywarn("`mime MIME EXT' is deprecated and will be "
+			    "removed in a future version, please use the new "
+			    "syntax: `map MIME to-ext EXT'");
 			add_mime(&conf.mime, $2, $3);
 		}
 		| TMAP string TTOEXT string { add_mime(&conf.mime, $2, $4); }
@@ -210,15 +212,14 @@ vhost		: TSERVER string {
 			host->domain = $2;
 
 			if (strstr($2, "xn--") != NULL) {
-				warnx("%s:%d \"%s\" looks like punycode: "
-				    "you should use the decoded hostname.",
-				    config_path, yylval.lineno+1, $2);
+				yywarn("\"%s\" looks like punycode: you "
+				    "should use the decoded hostname", $2);
 			}
 		} '{' optnl servopts locations '}' {
 			if (host->cert == NULL || host->key == NULL)
 				yyerror("invalid vhost definition: %s", $2);
 		}
-		| error '}'		{ yyerror("error in server directive"); }
+		| error '}'		{ yyerror("bad server directive"); }
 		;
 
 servopts	: /* empty */
@@ -411,7 +412,19 @@ yyerror(const char *msg, ...)
 	file->errors++;
 
 	va_start(ap, msg);
-	fprintf(stderr, "%s:%d: ", config_path, yylval.lineno);
+	fprintf(stderr, "%s:%d error: ", config_path, yylval.lineno);
+	vfprintf(stderr, msg, ap);
+	fprintf(stderr, "\n");
+	va_end(ap);
+}
+
+void
+yywarn(const char *msg, ...)
+{
+	va_list ap;
+
+	va_start(ap, msg);
+	fprintf(stderr, "%s:%d warning: ", config_path, yylval.lineno);
 	vfprintf(stderr, msg, ap);
 	fprintf(stderr, "\n");
 	va_end(ap);
@@ -640,7 +653,7 @@ top:
 				*p = '\0';
 				break;
 			} else if (c == '\0') {
-				yyerror("syntax error");
+				yyerror("invalid syntax");
 				return findeol();
 			}
 			if (p + 1 >= buf + sizeof(buf) - 1) {
