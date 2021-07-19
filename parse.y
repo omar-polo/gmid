@@ -110,22 +110,21 @@ typedef struct {
 /* for bison: */
 /* %define parse.error verbose */
 
-%token	INCLUDE
-%token	TALIAS TAUTO
-%token	TBLOCK
-%token	TCA TCERT TCGI TCHROOT TCLIENT
-%token	TDEFAULT
-%token	TENTRYPOINT TENV
-%token	TFASTCGI
-%token	TINDEX TIPV6
-%token	TKEY
-%token	TLANG TLOCATION TLOG
-%token	TMAP TMIME
-%token	TOFF TON
-%token	TPARAM TPORT TPREFORK TPROTOCOLS
-%token	TREQUIRE TRETURN TROOT
-%token	TSERVER TSPAWN TSTRIP
-%token	TTCP TTOEXT TTYPE TUSER
+%token	ALIAS AUTO
+%token	BLOCK
+%token	CA CERT CGI CHROOT CLIENT
+%token	DEFAULT
+%token	ENTRYPOINT ENV
+%token	FASCGI
+%token	INCLUDE INDEX IPV6
+%token	KEY
+%token	LANG LOCATION LOG
+%token	MAP MIME
+%token	OFF ON
+%token	PARAM PORT PREFORK PROTOCOLS
+%token	REQUIRE RETURN ROOT
+%token	SERVER SPAWN STRIP
+%token	TCP TOEXT TYPE USER
 
 %token	ERROR
 
@@ -161,8 +160,8 @@ include		: INCLUDE STRING		{
 		}
 		;
 
-bool		: TON	{ $$ = 1; }
-		| TOFF	{ $$ = 0; }
+bool		: ON	{ $$ = 1; }
+		| OFF	{ $$ = 0; }
 		;
 
 string		: string STRING	{
@@ -195,25 +194,25 @@ varset		: STRING '=' string		{
 		}
 		;
 
-option		: TCHROOT string	{ conf.chroot = $2; }
-		| TIPV6 bool		{ conf.ipv6 = $2; }
-		| TMIME STRING string	{
+option		: CHROOT string	{ conf.chroot = $2; }
+		| IPV6 bool		{ conf.ipv6 = $2; }
+		| MIME STRING string	{
 			yywarn("`mime MIME EXT' is deprecated and will be "
 			    "removed in a future version, please use the new "
 			    "syntax: `map MIME to-ext EXT'");
 			add_mime(&conf.mime, $2, $3);
 		}
-		| TMAP string TTOEXT string { add_mime(&conf.mime, $2, $4); }
-		| TPORT NUM		{ conf.port = check_port_num($2); }
-		| TPREFORK NUM		{ conf.prefork = check_prefork_num($2); }
-		| TPROTOCOLS string {
+		| MAP string TOEXT string { add_mime(&conf.mime, $2, $4); }
+		| PORT NUM		{ conf.port = check_port_num($2); }
+		| PREFORK NUM		{ conf.prefork = check_prefork_num($2); }
+		| PROTOCOLS string {
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
 				yyerror("invalid protocols string \"%s\"", $2);
 		}
-		| TUSER string		{ conf.user = $2; }
+		| USER string		{ conf.user = $2; }
 		;
 
-vhost		: TSERVER string {
+vhost		: SERVER string {
 			host = new_vhost();
 			TAILQ_INSERT_HEAD(&hosts, host, vhosts);
 
@@ -238,7 +237,7 @@ servopts	: /* empty */
 		| servopts servopt optnl
 		;
 
-servopt		: TALIAS string {
+servopt		: ALIAS string {
 			struct alist *a;
 
 			a = xcalloc(1, sizeof(*a));
@@ -248,31 +247,31 @@ servopt		: TALIAS string {
 			else
 				TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
 		}
-		| TCERT string		{
+		| CERT string		{
 			only_once(host->cert, "cert");
 			host->cert = ensure_absolute_path($2);
 		}
-		| TCGI string		{
+		| CGI string		{
 			only_once(host->cgi, "cgi");
 			/* drop the starting '/', if any */
 			if (*$2 == '/')
 				memmove($2, $2+1, strlen($2));
 			host->cgi = $2;
 		}
-		| TENTRYPOINT string {
+		| ENTRYPOINT string {
 			only_once(host->entrypoint, "entrypoint");
 			while (*$2 == '/')
 				memmove($2, $2+1, strlen($2));
 			host->entrypoint = $2;
 		}
-		| TENV string '=' string {
+		| ENV string '=' string {
 			add_param($2, $4, 1);
 		}
-		| TKEY string		{
+		| KEY string		{
 			only_once(host->key, "key");
 			host->key  = ensure_absolute_path($2);
 		}
-		| TPARAM string '=' string {
+		| PARAM string '=' string {
 			add_param($2, $4, 0);
 		}
 		| locopt
@@ -282,7 +281,7 @@ locations	: /* empty */
 		| locations location optnl
 		;
 
-location	: TLOCATION { advance_loc(); } string '{' optnl locopts '}' {
+location	: LOCATION { advance_loc(); } string '{' optnl locopts '}' {
 			/* drop the starting '/' if any */
 			if (*$3 == '/')
 				memmove($3, $3+1, strlen($3));
@@ -295,53 +294,53 @@ locopts		: /* empty */
 		| locopts locopt optnl
 		;
 
-locopt		: TAUTO TINDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
-		| TBLOCK TRETURN NUM string {
+locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
+		| BLOCK RETURN NUM string {
 			only_once(loc->block_fmt, "block");
 			loc->block_fmt = check_block_fmt($4);
 			loc->block_code = check_block_code($3);
 		}
-		| TBLOCK TRETURN NUM {
+		| BLOCK RETURN NUM {
 			only_once(loc->block_fmt, "block");
 			loc->block_fmt = xstrdup("temporary failure");
 			loc->block_code = check_block_code($3);
 			if ($3 >= 30 && $3 < 40)
 				yyerror("missing `meta' for block return %d", $3);
 		}
-		| TBLOCK {
+		| BLOCK {
 			only_once(loc->block_fmt, "block");
 			loc->block_fmt = xstrdup("temporary failure");
 			loc->block_code = 40;
 		}
-		| TDEFAULT TTYPE string {
+		| DEFAULT TYPE string {
 			only_once(loc->default_mime, "default type");
 			loc->default_mime = $3;
 		}
-		| TFASTCGI fastcgi
-		| TINDEX string {
+		| FASCGI fastcgi
+		| INDEX string {
 			only_once(loc->index, "index");
 			loc->index = $2;
 		}
-		| TLANG string {
+		| LANG string {
 			only_once(loc->lang, "lang");
 			loc->lang = $2;
 		}
-		| TLOG bool	{ loc->disable_log = !$2; }
-		| TREQUIRE TCLIENT TCA string {
+		| LOG bool	{ loc->disable_log = !$2; }
+		| REQUIRE CLIENT CA string {
 			only_once(loc->reqca, "require client ca");
 			ensure_absolute_path($4);
 			if ((loc->reqca = load_ca($4)) == NULL)
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
-		| TROOT string		{
+		| ROOT string		{
 			only_once(loc->dir, "root");
 			loc->dir  = ensure_absolute_path($2);
 		}
-		| TSTRIP NUM		{ loc->strip = check_strip_no($2); }
+		| STRIP NUM		{ loc->strip = check_strip_no($2); }
 		;
 
-fastcgi		: TSPAWN string {
+fastcgi		: SPAWN string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf(NULL, NULL, $2);
 		}
@@ -349,18 +348,18 @@ fastcgi		: TSPAWN string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($1, NULL, NULL);
 		}
-		| TTCP string TPORT NUM {
+		| TCP string PORT NUM {
 			char *c;
 			if (asprintf(&c, "%d", $4) == -1)
 				err(1, "asprintf");
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, c, NULL);
 		}
-		| TTCP string {
+		| TCP string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, xstrdup("9000"), NULL);
 		}
-		| TTCP string TPORT string {
+		| TCP string PORT string {
 			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, $4, NULL);
 		}
@@ -378,42 +377,42 @@ static struct keyword {
 	int token;
 } keywords[] = {
 	/* these MUST be sorted */
-	{"alias", TALIAS},
-	{"auto", TAUTO},
-	{"block", TBLOCK},
-	{"ca", TCA},
-	{"cert", TCERT},
-	{"cgi", TCGI},
-	{"chroot", TCHROOT},
-	{"client", TCLIENT},
-	{"default", TDEFAULT},
-	{"entrypoint", TENTRYPOINT},
-	{"env", TENV},
-	{"fastcgi", TFASTCGI},
-	{"index", TINDEX},
-	{"ipv6", TIPV6},
-	{"key", TKEY},
-	{"lang", TLANG},
-	{"location", TLOCATION},
-	{"log", TLOG},
-	{"map", TMAP},
-	{"mime", TMIME},
-	{"off", TOFF},
-	{"on", TON},
-	{"param", TPARAM},
-	{"port", TPORT},
-	{"prefork", TPREFORK},
-	{"protocols", TPROTOCOLS},
-	{"require", TREQUIRE},
-	{"return", TRETURN},
-	{"root", TROOT},
-	{"server", TSERVER},
-	{"spawn", TSPAWN},
-	{"strip", TSTRIP},
-	{"tcp", TTCP},
-	{"to-ext", TTOEXT},
-	{"type", TTYPE},
-	{"user", TUSER},
+	{"alias", ALIAS},
+	{"auto", AUTO},
+	{"block", BLOCK},
+	{"ca", CA},
+	{"cert", CERT},
+	{"cgi", CGI},
+	{"chroot", CHROOT},
+	{"client", CLIENT},
+	{"default", DEFAULT},
+	{"entrypoint", ENTRYPOINT},
+	{"env", ENV},
+	{"fastcgi", FASCGI},
+	{"index", INDEX},
+	{"ipv6", IPV6},
+	{"key", KEY},
+	{"lang", LANG},
+	{"location", LOCATION},
+	{"log", LOG},
+	{"map", MAP},
+	{"mime", MIME},
+	{"off", OFF},
+	{"on", ON},
+	{"param", PARAM},
+	{"port", PORT},
+	{"prefork", PREFORK},
+	{"protocols", PROTOCOLS},
+	{"require", REQUIRE},
+	{"return", RETURN},
+	{"root", ROOT},
+	{"server", SERVER},
+	{"spawn", SPAWN},
+	{"strip", STRIP},
+	{"tcp", TCP},
+	{"to-ext", TOEXT},
+	{"type", TYPE},
+	{"user", USER},
 };
 
 void
