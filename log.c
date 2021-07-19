@@ -78,9 +78,9 @@ should_log(int priority)
 }
 
 static inline void
-send_log(int priority, const char *msg, size_t len)
+send_log(int type, int priority, const char *msg, size_t len)
 {
-	imsg_compose(&logibuf, IMSG_LOG, priority, 0, -1, msg, len);
+	imsg_compose(&logibuf, type, priority, 0, -1, msg, len);
 	imsg_flush(&logibuf);
 }
 
@@ -94,7 +94,7 @@ fatal(const char *fmt, ...)
 
 	va_start(ap, fmt);
 	if ((r = vasprintf(&fmted, fmt, ap)) != -1) {
-		send_log(LOG_CRIT, fmted, r+1);
+		send_log(LOG_CRIT, IMSG_LOG, fmted, r+1);
 		free(fmted);
 
 		/* wait for the logger process to shut down */
@@ -139,7 +139,7 @@ vlog(int priority, struct client *c,
 	if (ec < 0)
 		fatal("asprintf: %s", strerror(errno));
 
-	send_log(priority, s, ec+1);
+	send_log(priority, IMSG_LOG, s, ec+1);
 
 	free(fmted);
 	free(s);
@@ -252,7 +252,7 @@ log_request(struct client *c, char *meta, size_t l)
 	    (int)(t-meta), meta);
 	if (ec < 0)
 		err(1, "asprintf");
-	send_log(LOG_NOTICE, fmted, ec+1);
+	send_log(LOG_NOTICE, IMSG_LOG, fmted, ec+1);
 	free(fmted);
 }
 
