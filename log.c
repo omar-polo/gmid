@@ -42,6 +42,7 @@ static void	handle_dispatch_imsg(int, short, void*);
 static imsg_handlerfn *handlers[] = {
 	[IMSG_QUIT] = handle_imsg_quit,
 	[IMSG_LOG] = handle_imsg_log,
+	[IMSG_LOG_REQUEST] = handle_imsg_log,
 	[IMSG_LOG_TYPE] = handle_imsg_log_type,
 };
 
@@ -252,14 +253,14 @@ log_request(struct client *c, char *meta, size_t l)
 	    (int)(t-meta), meta);
 	if (ec < 0)
 		err(1, "asprintf");
-	send_log(LOG_NOTICE, IMSG_LOG, fmted, ec+1);
+	send_log(LOG_NOTICE, IMSG_LOG_REQUEST, fmted, ec+1);
 	free(fmted);
 }
 
 
 
 static void
-do_log(int priority, const char *msg)
+do_log(int type, int priority, const char *msg)
 {
 	int quit = 0;
 
@@ -269,7 +270,8 @@ do_log(int priority, const char *msg)
 	}
 
 	if (log != NULL) {
-		print_date(log);
+		if (type != IMSG_LOG_REQUEST)
+			print_date(log);
 		fprintf(log, "%s\n", msg);
 	} else
 		syslog(LOG_DAEMON | priority, "%s", msg);
@@ -293,7 +295,7 @@ handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 	msg = imsg->data;
 	msg[datalen-1] = '\0';
 	priority = imsg->hdr.peerid;
-	do_log(priority, msg);
+	do_log(imsg->hdr.type, priority, msg);
 }
 
 static void
