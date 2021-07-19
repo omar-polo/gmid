@@ -1,3 +1,7 @@
+2021-07-19  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (setup_configless): unbreak configless mode
+
 2021-07-11  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): 1.7.1 tagged
