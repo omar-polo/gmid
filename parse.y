@@ -115,7 +115,7 @@ typedef struct {
 %token	CA CERT CGI CHROOT CLIENT
 %token	DEFAULT
 %token	ENTRYPOINT ENV
-%token	FASCGI
+%token	FASTCGI
 %token	INCLUDE INDEX IPV6
 %token	KEY
 %token	LANG LOCATION LOG
@@ -316,7 +316,7 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			only_once(loc->default_mime, "default type");
 			loc->default_mime = $3;
 		}
-		| FASCGI fastcgi
+		| FASTCGI fastcgi
 		| INDEX string {
 			only_once(loc->index, "index");
 			loc->index = $2;
@@ -388,7 +388,7 @@ static struct keyword {
 	{"default", DEFAULT},
 	{"entrypoint", ENTRYPOINT},
 	{"env", ENV},
-	{"fastcgi", FASCGI},
+	{"fastcgi", FASTCGI},
 	{"index", INDEX},
 	{"ipv6", IPV6},
 	{"key", KEY},
