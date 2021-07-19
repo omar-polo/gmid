@@ -1,3 +1,7 @@
+2021-07-19  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (setup_configless): unbreak configless mode
+
 2021-07-13  Anna “CyberTailor”
 
 	* parse.y (yyerror): error and warning messages are prefixed with "error:" and "warning:"

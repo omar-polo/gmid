@@ -13,10 +13,12 @@ fi
 
 ggflags=
 
-config_common='
+port=10965
+
+config_common="
 ipv6 off
-port 10965
-'
+port $port
+"
 
 # usage: config <global config> <stuff for localhost>
 # generates a configuration file reg.conf
@@ -101,7 +103,18 @@ onexit() {
 	quit
 }
 
-# tests
+# configless tests
+
+./../gmid -p $port testdata &
+pid=$!
+sleep 1
+
+eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
+eq "$(get /)"		"# hello world$ln"	"Unexpected body for /"
+echo OK GET / in configless mode
+quit
+
+# daemon tests
 
 trap 'onexit' INT TERM EXIT
 

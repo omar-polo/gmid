@@ -524,6 +524,7 @@ setup_configless(int argc, char **argv, const char *cgi)
 	TAILQ_INSERT_HEAD(&hosts, host, vhosts);
 
 	loc = xcalloc(1, sizeof(*loc));
+	loc->fcgi = -1;
 	TAILQ_INSERT_HEAD(&host->locations, loc, locations);
 
 	serve(argc, argv, NULL);
