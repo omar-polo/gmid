@@ -105,7 +105,7 @@ onexit() {
 
 # configless tests
 
-./../gmid -p $port testdata &
+./../gmid -p $port -H localhost -d . testdata &
 pid=$!
 sleep 1
 
