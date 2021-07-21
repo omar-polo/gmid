@@ -612,7 +612,7 @@ and enable CGI scripts inside
 $ mkdir docs/cgi
 $ cat <<EOF > docs/cgi/hello
 #!/bin/sh
-printf "20 text/plain\\r\\n"
+printf "20 text/plain\er\en"
 echo "hello world"
 EOF
 $ chmod +x docs/cgi/hello
