@@ -352,8 +352,8 @@ static struct sock_filter filter[] = {
 #ifdef __NR_recvmsg
 	SC_ALLOW(recvmsg),
 #endif
-#ifdef __NR_redav
-	SC_ALLOW(redav),
+#ifdef __NR_readv
+	SC_ALLOW(readv),
 #endif
 #ifdef __NR_rt_sigaction
 	SC_ALLOW(rt_sigaction),
