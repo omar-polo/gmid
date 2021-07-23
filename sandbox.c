@@ -300,6 +300,9 @@ static struct sock_filter filter[] = {
 #ifdef __NR_fstat
 	SC_ALLOW(fstat),
 #endif
+#ifdef __NR_fstat64
+	SC_ALLOW(fstat64),
+#endif
 #ifdef __NR_getdents64
 	SC_ALLOW(getdents64),
 #endif
