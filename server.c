@@ -310,7 +310,7 @@ check_path(struct client *c, const char *path, int *fd)
 {
 	struct stat sb;
 	const char *p;
-	int flags, dirfd, strip;
+	int dirfd, strip;
 
 	assert(path != NULL);
 
@@ -332,8 +332,7 @@ check_path(struct client *c, const char *path, int *fd)
 	dirfd = vhost_dirfd(c->host, path, &c->loc);
 	log_debug(c, "check_path: strip=%d path=%s original=%s",
 	    strip, p, path);
-	flags = O_RDONLY | O_NOFOLLOW;
-	if (*fd == -1 && (*fd = openat(dirfd, p, flags)) == -1)
+	if (*fd == -1 && (*fd = openat(dirfd, p, O_RDONLY)) == -1)
 		return FILE_MISSING;
 
 	if (fstat(*fd, &sb) == -1) {
