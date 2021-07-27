@@ -1,3 +1,7 @@
+2021-07-27  Omar Polo  <op@omarpolo.com>
+
+	* server.c (check_path): allow symlinks
+
 2021-07-19  Omar Polo  <op@omarpolo.com>
 
 	* gmid.c (setup_configless): unbreak configless mode
