@@ -646,9 +646,25 @@ $ chmod +x docs/cgi/hello
 $ gmid -x '/cgi/*' docs
 .Ed
 .Pp
+An X.509 certificate must be provided to run
+.Nm
+using a configuration file.
+First, the RSA certificate is created using a wildcard common name:
+.Bd -literal -offset indent
+# openssl genrsa \-out /etc/ssl/private/example.com.key 4096
+# openssl req \-new \-x509 \-key /etc/ssl/private/example.com.key \e
+	\-out /etc/ssl/example.com.crt \-days 36500 \-nodes \-subj "/CN=*.com"
+# chmod 600 /etc/ssl/example.com.crt
+# chmod 600 /etc/ssl/private/example.com.key
+.Ed
+.Pp
+In the example above, a certificate is valid for one hundred years from
+the date it was created, which is normal for TOFU.
+.Pp
 The following is an example of a possible configuration for a site
 that enables only TLSv1.3, adds a mime type for the file extension
-"rtf" and defines two virtual host:
+.Qq rtf
+and defines two virtual host:
 .Bd -literal -offset indent
 ipv6 on		# enable ipv6
 
@@ -657,14 +673,14 @@ protocols "tlsv1.3"
 map "application/rtf" to-ext "rtf"
 
 server "example.com" {
-	cert "/path/to/cert.pem"
-	key  "/path/to/key.pem"
+	cert "/etc/ssl/example.com.crt"
+	key  "/etc/ssl/private/example.com.key"
 	root "/var/gemini/example.com"
 }
 
 server "it.example.com" {
-	cert "/path/to/cert.pem"
-	key  "/path/to/key.pem"
+	cert "/etc/ssl/example.com.crt"
+	key  "/etc/ssl/private/example.com.key"
 	root "/var/gemini/it.example.com"
 
 	# enable cgi scripts inside "cgi-bin"
