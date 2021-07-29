@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd $Mdocdate: January 30 2021$
+.Dd $Mdocdate: July 29 2021$
 .Dt GMID 1
 .Os
 .Sh NAME
@@ -597,6 +597,33 @@ image/svg+xml
 text/plain
 .It xml
 text/xml
+.El
+.Sh LOGGING
+Messages and requests are logged by
+.Xr syslog 3
+using the
+.Dv DAEMON
+facility or printed on
+.Em stderr .
+.Pp
+Requests are logged with the
+.Dv NOTICE
+severity.
+Each request log entry has the following fields, separated by
+whitespace:
+.Pp
+.Bl -bullet -compact
+.It
+Client IP address and the source port number, separated by a colon
+.It
+.Sy GET
+keyword
+.It
+Request URL
+.It
+Response status
+.It
+Response meta
 .El
 .Sh EXAMPLES
 Serve the current directory

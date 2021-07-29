@@ -159,7 +159,7 @@ gmid is composed by four processes: the parent process, the logger,
 the listener and the executor.  The parent process is the only one
 that doesn't drop privileges, but all it does is to wait for a SIGHUP
 to reload the configuration and spawn a new generation of children
-process.  The logger processes gather the logs and prints 'em to
+process.  The logger process gathers the logs and prints 'em to
 stderr or syslog (for the time being.)  The listener process is the
 only one that needs internet access and is sandboxed by default.  The
 executor process exists only to fork and execute CGI scripts, and
