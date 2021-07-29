@@ -1,3 +1,7 @@
+2021-07-29  Anna “CyberTailor”
+
+	* gmid.1: document logging, openssl key generation example, spelling/grammar and crosslinks
+
 2021-07-27  Omar Polo  <op@omarpolo.com>
 
 	* server.c (check_path): allow symlinks
