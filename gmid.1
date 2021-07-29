@@ -63,7 +63,7 @@ Stays and logs on the foreground.
 .It Fl n
 Check that the configuration is valid, but don't start the server.
 .It Fl P Pa pidfile
-Write the daemon pid to the given location.
+Write daemon's pid to the given location.
 .Ar pidfile
 will also act as lock: if another process is holding a lock on that
 file,
@@ -79,14 +79,16 @@ will look for the following options
 Enable IPv6.
 .It Fl d Pa certs-path
 Directory where certificates for the config-less mode are stored.
-By default is
+By default it is
 .Pa $XDG_DATA_HOME/gmid ,
 i.e.
 .Pa ~/.local/share/gmid .
 .It Fl H Ar hostname
 The hostname
+.Po
 .Ar localhost
-by default.
+by default
+.Pc .
 Certificates for the given
 .Ar hostname
 are searched inside the
@@ -98,8 +100,8 @@ They have the form
 .Pa hostname.cert.pem
 and
 .Pa hostname.key.pem .
-If a certificate or key don't exists for a given hostname they
-will be automatically generated.
+If a certificate or a key doesn't exist for a given hostname, they
+will be generated automatically.
 .It Fl h , Fl -help
 Print the usage and exit.
 .It Fl p Ar port
@@ -112,12 +114,14 @@ Multiple
 .Fl v
 options increase the verbosity.
 .It Fl x Pa path
-Enable execution of CGI scripts.
+Enable execution of
+.Sx CGI
+scripts.
 See the description of the
 .Ic cgi
-option in the section
+option in the
 .Sq Servers
-below to learn how
+section below to learn how
 .Pa path
 is processed.
 Cannot be provided more than once.
@@ -318,7 +322,9 @@ The
 should contain a PEM encoded certificate.
 This option is mandatory.
 .It Ic cgi Pa path
-Execute CGI scripts that matches
+Execute
+.Sx CGI
+scripts that matches
 .Pa path
 using shell globbing rules.
 .It Ic default type Ar string
@@ -330,7 +336,8 @@ is set to
 .Dq application/octet-stream .
 .It Ic entrypoint Pa path
 Handle all the requests for the current virtual host using the
-CGI script at
+.Sx CGI
+script at
 .Pa path ,
 relative to the current document root.
 .It Ic env Ar name Cm = Ar value
@@ -343,7 +350,9 @@ Can be provided more than once.
 .\" don't document the "spawn <prog>" form because it probably won't
 .\" be kept.
 .It Ic fastcgi Oo Ic tcp Oc Pa socket Oo Cm port Ar port Oc
-Enable FastCGI instead of serving files.
+Enable
+.Sx FastCGI
+instead of serving files.
 The
 .Pa socket
 can either be a UNIX-domain socket or a TCP socket.
@@ -424,7 +433,7 @@ parameter in the scope of a
 .Sh CGI
 When a request for an executable file matches the
 .Ic cgi
-rule, that file will be execute and its output fed to the client.
+rule, that file will be executed and its output fed to the client.
 .Pp
 The CGI scripts are executed in the directory they reside and inherit
 the environment from
