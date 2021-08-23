@@ -1,3 +1,7 @@
+2021-08-24  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): don't crash on -n without -c
+
 2021-07-29  Anna “CyberTailor”
 
 	* gmid.1: document logging, openssl key generation example, spelling/grammar and crosslinks
