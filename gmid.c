@@ -638,6 +638,8 @@ main(int argc, char **argv)
 		fatal("can't specify options in config mode.");
 
 	if (conftest) {
+		if (config_path == NULL)
+			fatal("missing configuration");
 		parse_conf(config_path);
 		puts("config OK");
 		return 0;
