@@ -752,7 +752,7 @@ pushfile(const char *name, int secret)
 	nfile = xcalloc(1, sizeof(*nfile));
 	nfile->name = xstrdup(name);
 	if ((nfile->stream = fopen(nfile->name, "r")) == NULL) {
-		yyerror("can't open %s: %s", nfile->name,
+		log_warn(NULL, "can't open %s: %s", nfile->name,
 		    strerror(errno));
 		free(nfile->name);
 		free(nfile);
@@ -789,7 +789,7 @@ parse_conf(const char *filename)
 
 	file = pushfile(filename, 0);
 	if (file == NULL)
-		return;
+		exit(1);
 	topfile = file;
 
 	yyparse();
