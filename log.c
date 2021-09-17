@@ -328,6 +328,8 @@ logger_main(int fd, struct imsgbuf *ibuf)
 {
 	log = stderr;
 
+	openlog(getprogname(), LOG_NDELAY, LOG_DAEMON);
+
 	event_init();
 
 	event_set(&imsgev, fd, EV_READ | EV_PERSIST, &handle_dispatch_imsg, ibuf);
@@ -336,6 +338,8 @@ logger_main(int fd, struct imsgbuf *ibuf)
 	sandbox_logger_process();
 
 	event_dispatch();
+
+	closelog();
 
 	return 0;
 }
