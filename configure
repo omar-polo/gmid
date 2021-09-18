@@ -236,8 +236,8 @@ fi
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest freezero	FREEZERO	|| true
-runtest getdtablesize	GETDTABLESIZE	|| true
 runtest getdtablecount	GETDTABLECOUNT	|| true
+runtest getdtablesize	GETDTABLESIZE	|| true
 runtest getprogname	GETPROGNAME	|| true
 runtest imsg		IMSG		-lutil || true
 runtest libevent	LIBEVENT	|| true
