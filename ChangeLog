@@ -14,6 +14,10 @@
 
 	* server.c (check_path): allow symlinks
 
+2021-07-23  Omar Polo  <op@omarpolo.com>
+
+	* sandbox.c: seccomp allow fstat64 (used by glibc an aarch64).  Reported by pine, thanks!
+
 2021-07-19  Omar Polo  <op@omarpolo.com>
 
 	* gmid.c (setup_configless): unbreak configless mode
