@@ -509,6 +509,59 @@ server_landlock(void)
 
 	return fd;
 }
+
+static int
+logger_landlock(void)
+{
+	int fd, err;
+
+	/*
+	 * These are all the possible actions.  The logger receives
+	 * files descriptor so it doesn't need *ANY* fs access.  It's
+	 * easier to remove FS access than come up with a seccomp
+	 * filter.
+	 */
+	struct landlock_ruleset_attr ruleset_attr = {
+		.handled_access_fs =	LANDLOCK_ACCESS_FS_EXECUTE	|
+					LANDLOCK_ACCESS_FS_WRITE_FILE	|
+					LANDLOCK_ACCESS_FS_READ_FILE	|
+					LANDLOCK_ACCESS_FS_READ_DIR	|
+					LANDLOCK_ACCESS_FS_REMOVE_DIR	|
+					LANDLOCK_ACCESS_FS_REMOVE_FILE	|
+					LANDLOCK_ACCESS_FS_MAKE_CHAR	|
+					LANDLOCK_ACCESS_FS_MAKE_DIR	|
+					LANDLOCK_ACCESS_FS_MAKE_REG	|
+					LANDLOCK_ACCESS_FS_MAKE_SOCK	|
+					LANDLOCK_ACCESS_FS_MAKE_FIFO	|
+					LANDLOCK_ACCESS_FS_MAKE_BLOCK	|
+					LANDLOCK_ACCESS_FS_MAKE_SYM,
+	};
+
+	/*
+	 * Disallow every action.
+	 */
+	struct landlock_path_beneath_attr path_beneath = {
+		.allowed_access = 0,
+	};
+
+	fd = gmid_create_landlock_rs(&ruleset_attr, sizeof(ruleset_attr), 0);
+	if (fd == -1)
+		return -1;
+
+	path_beneath.parent_fd = open("/", O_PATH);
+	if (path_beneath.parent_fd == -1)
+		fatal("%s: can't open / for landlock: %s",
+		    __func__, strerror(errno));
+
+	err = landlock_add_rule(fd, LANDLOCK_RULE_PATH_BENEATH,
+	    &path_beneath, 0);
+	if (err)
+		fatal("%s: landlock_add_rule(/) failed: %s",
+		    __func__, strerror(errno));
+	close(path_beneath.parent_fd);
+
+	return fd;
+}
 #endif
 
 void
@@ -565,9 +618,30 @@ void
 sandbox_logger_process(void)
 {
 	/*
-	 * To be honest, here we could use a seccomp policy to only
-	 * allow writev(2) and memory allocations.
+	 * Here we could use a seccomp filter to allow only recvfd,
+	 * write/writev and memory allocations, but syslog is a beast
+	 * and I don't know what syscalls it could end up doing.
+	 * Landlock is a simpler beast, use it to disallow any file
+	 * sytsem access.
 	 */
+
+#if HAVE_LANDLOCK
+	int fd;
+
+	if ((fd = logger_landlock()) == -1)
+		return;
+
+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1)
+		fatal("%s: prctl(PR_SET_NO_NEW_PRIVS): %s",
+		    __func__, strerror(errno));
+
+	if (landlock_restrict_self(fd, 0))
+		fatal("%s: landlock_restrict_self: %s"
+		    __func__, strerror(errno));
+
+	close(fd);
+#endif
+
 	return;
 }
 
