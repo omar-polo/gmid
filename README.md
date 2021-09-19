@@ -174,7 +174,8 @@ On FreeBSD, the listener and logger process are sandboxed with `capsicum(4)`.
 
 On Linux, a `seccomp(2)` filter is installed in the listener to allow
 only certain syscalls, see [sandbox.c](sandbox.c) for more information
-on the BPF program.
+about the BPF program.  If available, landlock is used to limit the
+portion of the file system gmid can access (requires linux 5.13+.)
 
 In any case, it's advisable to run gmid inside some sort of
 container/jail/chroot.
