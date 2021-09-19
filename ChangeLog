@@ -1,5 +1,7 @@
 2021-09-19  Omar Polo  <op@omarpolo.com>
 
+	* sandbox.c (gmid_create_landlock_rs): [linux] use landlock on the server and logger process to reduce the fs access
+
 	* configure (VERSION): 1.7.3 tagged
 
 2021-09-17  Omar Polo  <op@omarpolo.com>
