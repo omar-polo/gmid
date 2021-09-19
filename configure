@@ -240,6 +240,7 @@ runtest getdtablecount	GETDTABLECOUNT	|| true
 runtest getdtablesize	GETDTABLESIZE	|| true
 runtest getprogname	GETPROGNAME	|| true
 runtest imsg		IMSG		-lutil || true
+runtest landlock	LANDLOCK	|| true
 runtest libevent	LIBEVENT	|| true
 runtest libtls		LIBTLS		|| true
 runtest openssl		OPENSSL		|| true
