@@ -84,6 +84,10 @@ sandbox_logger_process(void)
 #include <stdio.h>
 #include <string.h>
 
+#if HAVE_LANDLOCK
+# include "landlock_shim.h"
+#endif
+
 /* uncomment to enable debugging.  ONLY FOR DEVELOPMENT */
 /* #define SC_DEBUG */
 
@@ -416,9 +420,88 @@ sandbox_seccomp_catch_sigsys(void)
 }
 #endif	/* SC_DEBUG */
 
+#if HAVE_LANDLOCK
+static int
+server_landlock(void)
+{
+	int		 fd, err;
+	struct vhost	*h;
+	struct location	*l;
+
+	/*
+	 * These are all the actions that we want to either allow or
+	 * disallow.  Things like LANDLOCK_ACCESS_FS_EXECUTE are
+	 * omitted because are already handled by seccomp.
+	 */
+	struct landlock_ruleset_attr ruleset_attr = {
+		.handled_access_fs =	LANDLOCK_ACCESS_FS_WRITE_FILE	|
+					LANDLOCK_ACCESS_FS_READ_FILE	|
+					LANDLOCK_ACCESS_FS_READ_DIR	|
+					LANDLOCK_ACCESS_FS_MAKE_CHAR	|
+					LANDLOCK_ACCESS_FS_MAKE_DIR	|
+					LANDLOCK_ACCESS_FS_MAKE_REG	|
+					LANDLOCK_ACCESS_FS_MAKE_SOCK	|
+					LANDLOCK_ACCESS_FS_MAKE_FIFO	|
+					LANDLOCK_ACCESS_FS_MAKE_BLOCK	|
+					LANDLOCK_ACCESS_FS_MAKE_SYM,
+	};
+
+	/*
+	 * These are all the actions allowed for the root directories
+	 * of the vhosts.  All the other rules mentioned in
+	 * ruleset_attr and omitted here are implicitly disallowed.
+	 */
+	struct landlock_path_beneath_attr path_beneath = {
+		.allowed_access =	LANDLOCK_ACCESS_FS_READ_FILE |
+					LANDLOCK_ACCESS_FS_READ_DIR,
+	};
+
+	fd = landlock_create_ruleset(&ruleset_attr, sizeof(ruleset_attr), 0);
+	if (fd == -1) {
+		switch (errno) {
+		case ENOSYS:
+			fatal("%s: failed to create ruleset.  "
+			    "Landlock doesn't seem to be supported by the "
+			    "current kernel.", __func__);
+		case EOPNOTSUPP:
+			log_warn(NULL, "%s: failed to create ruleset.  "
+			    "Landlock seems to be currently disabled; "
+			    "continuing without it.", __func__);
+			return -1;
+		default:
+			fatal("%s: failed to create ruleset: %s",
+			    __func__, strerror(errno));
+		}
+	}
+
+	TAILQ_FOREACH(h, &hosts, vhosts) {
+		TAILQ_FOREACH(l, &h->locations, locations) {
+			if (l->dir == NULL)
+				continue;
+
+			path_beneath.parent_fd = open(l->dir, O_PATH);
+			if (path_beneath.parent_fd == -1)
+				fatal("%s: can't open %s for landlock: %s",
+				    __func__, l->dir, strerror(errno));
+
+			err = landlock_add_rule(fd, LANDLOCK_RULE_PATH_BENEATH,
+			    &path_beneath, 0);
+			if (err)
+				fatal("%s: landlock_add_rule(%s) failed: %s",
+				    __func__, l->dir, strerror(errno));
+
+			close(path_beneath.parent_fd);
+		}
+	}
+
+	return fd;
+}
+#endif
+
 void
 sandbox_server_process(void)
 {
+	int fd;
 	struct sock_fprog prog = {
 		.len = (unsigned short) (sizeof(filter) / sizeof(filter[0])),
 		.filter = filter,
@@ -428,9 +511,25 @@ sandbox_server_process(void)
 	sandbox_seccomp_catch_sigsys();
 #endif
 
+#if HAVE_LANDLOCK
+	log_warn(NULL, "loading landlock...");
+	fd = server_landlock();
+#else
+	(void)fd;		/* avoid unused var warning */
+#endif
+
 	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1)
 		fatal("%s: prctl(PR_SET_NO_NEW_PRIVS): %s",
 		    __func__, strerror(errno));
+
+#if HAVE_LANDLOCK
+	if (fd != -1) {
+		if (landlock_restrict_self(fd, 0))
+			fatal("%s: landlock_restrict_self: %s",
+			    __func__, strerror(errno));
+		close(fd);
+	}
+#endif
 
 	if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) == -1)
 		fatal("%s: prctl(PR_SET_SECCOMP): %s\n",
