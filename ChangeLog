@@ -1,3 +1,7 @@
+2021-09-19  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): 1.7.3 tagged
+
 2021-09-17  Omar Polo  <op@omarpolo.com>
 
 	* log.c (logger_main): fix syslog logging on FreeBSD
