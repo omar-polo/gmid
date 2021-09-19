@@ -421,6 +421,33 @@ sandbox_seccomp_catch_sigsys(void)
 #endif	/* SC_DEBUG */
 
 #if HAVE_LANDLOCK
+static inline int
+gmid_create_landlock_rs(struct landlock_ruleset_attr *attr, size_t len,
+    __u32 flags)
+{
+	int fd;
+
+	fd = landlock_create_ruleset(attr, len, 0);
+	if (fd == -1) {
+		switch (errno) {
+		case ENOSYS:
+			fatal("%s: failed to create ruleset.  "
+			    "Landlock doesn't seem to be supported by the "
+			    "current kernel.", __func__);
+		case EOPNOTSUPP:
+			log_warn(NULL, "%s: failed to create ruleset.  "
+			    "Landlock seems to be currently disabled; "
+			    "continuing without it.", __func__);
+			break;
+		default:
+			fatal("%s: failed to create ruleset: %s",
+			    __func__, strerror(errno));
+		}
+	}
+
+	return fd;
+}
+
 static int
 server_landlock(void)
 {
@@ -456,23 +483,9 @@ server_landlock(void)
 					LANDLOCK_ACCESS_FS_READ_DIR,
 	};
 
-	fd = landlock_create_ruleset(&ruleset_attr, sizeof(ruleset_attr), 0);
-	if (fd == -1) {
-		switch (errno) {
-		case ENOSYS:
-			fatal("%s: failed to create ruleset.  "
-			    "Landlock doesn't seem to be supported by the "
-			    "current kernel.", __func__);
-		case EOPNOTSUPP:
-			log_warn(NULL, "%s: failed to create ruleset.  "
-			    "Landlock seems to be currently disabled; "
-			    "continuing without it.", __func__);
-			return -1;
-		default:
-			fatal("%s: failed to create ruleset: %s",
-			    __func__, strerror(errno));
-		}
-	}
+	fd = gmid_create_landlock_rs(&ruleset_attr, sizeof(ruleset_attr), 0);
+	if (fd == -1)
+		return -1;
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
