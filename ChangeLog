@@ -1,8 +1,8 @@
 2021-09-24  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): 1.7.4 tagged
-	
-	* server.c (check_for_cgi): fix out-of-bound access
+
+	* server.c (check_for_cgi): fix out-of-bound access, found with lots of help from cage, thanks!
 
 2021-09-19  Omar Polo  <op@omarpolo.com>
 
