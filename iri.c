@@ -390,7 +390,11 @@ int
 parse_iri(char *iri, struct iri *ret, const char **err_ret)
 {
 	char *end;
-	struct parser p = {iri, ret, NULL};
+	struct parser p = {
+		.iri = iri,
+		.parsed = ret,
+		.err = NULL,
+	};
 
 	memset(ret, 0, sizeof(*ret));
 
@@ -423,7 +427,6 @@ trim_req_iri(char *iri, const char **err)
 	*i = '\0';
 	return 1;
 }
-
 
 int
 serialize_iri(struct iri *i, char *buf, size_t len)
