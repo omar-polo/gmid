@@ -650,9 +650,6 @@ handle_open_conn(int fd, short ev, void *d)
 	const char *parse_err = "invalid request";
 	char decoded[DOMAIN_NAME_LEN];
 
-	bzero(c->req, sizeof(c->req));
-	bzero(&c->iri, sizeof(c->iri));
-
 	switch (tls_read(c->ctx, c->req, sizeof(c->req)-1)) {
 	case -1:
 		log_err(c, "tls_read: %s", tls_error(c->ctx));
