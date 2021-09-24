@@ -406,8 +406,12 @@ check_for_cgi(struct client *c)
 		 * dirname, with its ambiguities on if the given
 		 * pointer is changed or not, gives me headaches.
 		 */
-		while (*end != '/')
+		while (*end != '/' && end > path)
 			end--;
+
+		if (end == path)
+			break;
+
 		*end = '\0';
 
 		switch (check_path(c, path, &c->pfd)) {

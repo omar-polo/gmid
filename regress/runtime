@@ -385,3 +385,13 @@ restart
 eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
 eq "$(get /)"		"# hello world$ln"	"Unexpected body for /"
 echo OK GET / with macro expansion
+
+
+# 1.7.4 bugfix: check_for_cgi goes out-of-bound processing a string
+# that doesn't contain a '/'
+config '' 'cgi "*"'
+checkconf
+restart
+
+eq "$(head /favicon.txt)"	"51 not found"	"Unexpected head for /"
+echo OK GET /favicon.txt with cgi
