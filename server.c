@@ -665,17 +665,17 @@ handle_open_conn(int fd, short ev, void *d)
 		return;
 	}
 
-	if (!trim_req_iri(c->req, &parse_err)
-	    || !parse_iri(c->req, &c->iri, &parse_err)
-	    || !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
+	if (!trim_req_iri(c->req, &parse_err) ||
+	    !parse_iri(c->req, &c->iri, &parse_err) ||
+	    !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
 		log_info(c, "iri parse error: %s", parse_err);
 		start_reply(c, BAD_REQUEST, "invalid request");
 		return;
 	}
 
-	if (c->iri.port_no != conf.port
-	    || strcmp(c->iri.schema, "gemini")
-	    || strcmp(decoded, c->domain)) {
+	if (c->iri.port_no != conf.port ||
+	    strcmp(c->iri.schema, "gemini") ||
+	    strcmp(decoded, c->domain)) {
 		start_reply(c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}
