@@ -392,7 +392,7 @@ parse_iri(char *iri, struct iri *ret, const char **err_ret)
 	char *end;
 	struct parser p = {iri, ret, NULL};
 
-	bzero(ret, sizeof(*ret));
+	memset(ret, 0, sizeof(*ret));
 
 	/* initialize optional stuff to the empty string */
 	end = iri + strlen(iri);

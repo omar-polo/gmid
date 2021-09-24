@@ -149,7 +149,7 @@ make_socket(int port, int family)
 
         switch (family) {
 	case AF_INET:
-		bzero(&addr4, sizeof(addr4));
+		memset(&addr4, 0, sizeof(addr4));
 		addr4.sin_family = family;
 		addr4.sin_port = htons(port);
 		addr4.sin_addr.s_addr = INADDR_ANY;
@@ -158,7 +158,7 @@ make_socket(int port, int family)
 		break;
 
 	case AF_INET6:
-		bzero(&addr6, sizeof(addr6));
+		memset(&addr6, 0, sizeof(addr6));
 		addr6.sin6_family = AF_INET6;
 		addr6.sin6_port = htons(port);
 		addr6.sin6_addr = in6addr_any;
