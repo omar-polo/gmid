@@ -147,7 +147,7 @@ make_socket(int port, int family)
 	struct sockaddr *addr;
 	socklen_t len;
 
-        switch (family) {
+	switch (family) {
 	case AF_INET:
 		memset(&addr4, 0, sizeof(addr4));
 		addr4.sin_family = family;
@@ -428,7 +428,7 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 	struct vhost	*h;
 	struct location	*l;
 
-        if (config_path == NULL) {
+	if (config_path == NULL) {
 		if (hostname == NULL)
 			hostname = "localhost";
 		if (certs_dir == NULL)
