@@ -464,7 +464,11 @@ handle_handshake(int fd, short ev, void *d)
 		abort();
 	}
 
-	servname = tls_conn_servername(c->ctx);
+	if ((servname = tls_conn_servername(c->ctx)) == NULL) {
+		log_debug(c, "handshake: missing SNI");
+		goto err;
+	}
+
 	if (!puny_decode(servname, c->domain, sizeof(c->domain), &parse_err)) {
 		log_info(c, "puny_decode: %s", parse_err);
 		goto err;
