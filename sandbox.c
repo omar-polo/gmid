@@ -422,12 +422,21 @@ sandbox_seccomp_catch_sigsys(void)
 
 #if HAVE_LANDLOCK
 static inline int
-gmid_create_landlock_rs(struct landlock_ruleset_attr *attr, size_t len,
-    __u32 flags)
+open_landlock(void)
 {
 	int fd;
 
-	fd = landlock_create_ruleset(attr, len, 0);
+	/*
+	 * These are all the actions that we may want to
+	 * allow.  Anything not specified here is implicitly blocked
+	 * (e.g. LANDLOCK_ACCESS_FS_EXECUTE.)
+	 */
+	struct landlock_ruleset_attr attr = {
+		.handled_access_fs =	LANDLOCK_ACCESS_FS_READ_FILE	|
+					LANDLOCK_ACCESS_FS_READ_DIR,
+	};
+
+	fd = landlock_create_ruleset(&attr, sizeof(attr), 0);
 	if (fd == -1) {
 		switch (errno) {
 		case ENOSYS:
@@ -449,125 +458,86 @@ gmid_create_landlock_rs(struct landlock_ruleset_attr *attr, size_t len,
 }
 
 static int
+landlock_unveil_path(int landlock_fd, const char *path, int perms)
+{
+	struct landlock_path_beneath_attr pb;
+	int err, saved_errno;
+
+	pb.allowed_access = perms;
+
+	if ((pb.parent_fd = open(path, O_PATH)) == -1)
+		return -1;
+
+	err = landlock_add_rule(landlock_fd, LANDLOCK_RULE_PATH_BENEATH,
+	    &pb, 0);
+	saved_errno = errno;
+	close(pb.parent_fd);
+	errno = saved_errno;
+	return err ? -1 : 0;
+}
+
+static int
+landlock_apply(int fd)
+{
+	int r, saved_errno;
+
+	if (fd == -1)
+		return 0;
+
+	r = landlock_restrict_self(fd, 0);
+	saved_errno = errno;
+	close(fd);
+	errno = saved_errno;
+	return r ? -1 : 0;
+}
+
+static int
 server_landlock(void)
 {
-	int		 fd, err;
+	int		 fd, perms;
 	struct vhost	*h;
 	struct location	*l;
 
 	/*
-	 * These are all the actions that we want to either allow or
-	 * disallow.  Things like LANDLOCK_ACCESS_FS_EXECUTE are
-	 * omitted because are already handled by seccomp.
-	 */
-	struct landlock_ruleset_attr ruleset_attr = {
-		.handled_access_fs =	LANDLOCK_ACCESS_FS_WRITE_FILE	|
-					LANDLOCK_ACCESS_FS_READ_FILE	|
-					LANDLOCK_ACCESS_FS_READ_DIR	|
-					LANDLOCK_ACCESS_FS_MAKE_CHAR	|
-					LANDLOCK_ACCESS_FS_MAKE_DIR	|
-					LANDLOCK_ACCESS_FS_MAKE_REG	|
-					LANDLOCK_ACCESS_FS_MAKE_SOCK	|
-					LANDLOCK_ACCESS_FS_MAKE_FIFO	|
-					LANDLOCK_ACCESS_FS_MAKE_BLOCK	|
-					LANDLOCK_ACCESS_FS_MAKE_SYM,
-	};
-
-	/*
 	 * These are all the actions allowed for the root directories
-	 * of the vhosts.  All the other rules mentioned in
-	 * ruleset_attr and omitted here are implicitly disallowed.
+	 * of the vhosts.
 	 */
-	struct landlock_path_beneath_attr path_beneath = {
-		.allowed_access =	LANDLOCK_ACCESS_FS_READ_FILE |
-					LANDLOCK_ACCESS_FS_READ_DIR,
-	};
+	perms = LANDLOCK_ACCESS_FS_READ_FILE | LANDLOCK_ACCESS_FS_READ_DIR;
 
-	fd = gmid_create_landlock_rs(&ruleset_attr, sizeof(ruleset_attr), 0);
-	if (fd == -1)
-		return -1;
+	if ((fd = open_landlock()) == -1)
+		return 0;
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
 			if (l->dir == NULL)
 				continue;
 
-			path_beneath.parent_fd = open(l->dir, O_PATH);
-			if (path_beneath.parent_fd == -1)
-				fatal("%s: can't open %s for landlock: %s",
+			if (landlock_unveil_path(fd, l->dir, perms) == -1)
+				fatal("%s: landlock_unveil_path(%s): %s",
 				    __func__, l->dir, strerror(errno));
-
-			err = landlock_add_rule(fd, LANDLOCK_RULE_PATH_BENEATH,
-			    &path_beneath, 0);
-			if (err)
-				fatal("%s: landlock_add_rule(%s) failed: %s",
-				    __func__, l->dir, strerror(errno));
-
-			close(path_beneath.parent_fd);
 		}
 	}
 
-	return fd;
+	return landlock_apply(fd);
 }
 
 static int
 logger_landlock(void)
 {
-	int fd, err;
+	int fd;
 
-	/*
-	 * These are all the possible actions.  The logger receives
-	 * files descriptor so it doesn't need *ANY* fs access.  It's
-	 * easier to remove FS access than come up with a seccomp
-	 * filter.
-	 */
-	struct landlock_ruleset_attr ruleset_attr = {
-		.handled_access_fs =	LANDLOCK_ACCESS_FS_EXECUTE	|
-					LANDLOCK_ACCESS_FS_WRITE_FILE	|
-					LANDLOCK_ACCESS_FS_READ_FILE	|
-					LANDLOCK_ACCESS_FS_READ_DIR	|
-					LANDLOCK_ACCESS_FS_REMOVE_DIR	|
-					LANDLOCK_ACCESS_FS_REMOVE_FILE	|
-					LANDLOCK_ACCESS_FS_MAKE_CHAR	|
-					LANDLOCK_ACCESS_FS_MAKE_DIR	|
-					LANDLOCK_ACCESS_FS_MAKE_REG	|
-					LANDLOCK_ACCESS_FS_MAKE_SOCK	|
-					LANDLOCK_ACCESS_FS_MAKE_FIFO	|
-					LANDLOCK_ACCESS_FS_MAKE_BLOCK	|
-					LANDLOCK_ACCESS_FS_MAKE_SYM,
-	};
+	if ((fd = open_landlock()) == -1)
+		return 0;
 
-	/*
-	 * Disallow every action.
-	 */
-	struct landlock_path_beneath_attr path_beneath = {
-		.allowed_access = 0,
-	};
+	/* no rules.  the logger doesn't need fs access at all. */
 
-	fd = gmid_create_landlock_rs(&ruleset_attr, sizeof(ruleset_attr), 0);
-	if (fd == -1)
-		return -1;
-
-	path_beneath.parent_fd = open("/", O_PATH);
-	if (path_beneath.parent_fd == -1)
-		fatal("%s: can't open / for landlock: %s",
-		    __func__, strerror(errno));
-
-	err = landlock_add_rule(fd, LANDLOCK_RULE_PATH_BENEATH,
-	    &path_beneath, 0);
-	if (err)
-		fatal("%s: landlock_add_rule(/) failed: %s",
-		    __func__, strerror(errno));
-	close(path_beneath.parent_fd);
-
-	return fd;
+	return landlock_apply(fd);
 }
 #endif
 
 void
 sandbox_server_process(void)
 {
-	int fd;
 	struct sock_fprog prog = {
 		.len = (unsigned short) (sizeof(filter) / sizeof(filter[0])),
 		.filter = filter,
@@ -577,24 +547,14 @@ sandbox_server_process(void)
 	sandbox_seccomp_catch_sigsys();
 #endif
 
-#if HAVE_LANDLOCK
-	log_warn(NULL, "loading landlock...");
-	fd = server_landlock();
-#else
-	(void)fd;		/* avoid unused var warning */
-#endif
-
 	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1)
 		fatal("%s: prctl(PR_SET_NO_NEW_PRIVS): %s",
 		    __func__, strerror(errno));
 
 #if HAVE_LANDLOCK
-	if (fd != -1) {
-		if (landlock_restrict_self(fd, 0))
-			fatal("%s: landlock_restrict_self: %s",
-			    __func__, strerror(errno));
-		close(fd);
-	}
+	if (server_landlock() == -1)
+		fatal("%s: server_landlock: %s",
+		    __func__, strerror(errno));
 #endif
 
 	if (prctl(PR_SET_SECCOMP, SECCOMP_MODE_FILTER, &prog) == -1)
@@ -626,20 +586,9 @@ sandbox_logger_process(void)
 	 */
 
 #if HAVE_LANDLOCK
-	int fd;
-
-	if ((fd = logger_landlock()) == -1)
-		return;
-
-	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1)
-		fatal("%s: prctl(PR_SET_NO_NEW_PRIVS): %s",
+	if (logger_landlock() == -1)
+		fatal("%s: logger_landlock: %s",
 		    __func__, strerror(errno));
-
-	if (landlock_restrict_self(fd, 0))
-		fatal("%s: landlock_restrict_self: %s"
-		    __func__, strerror(errno));
-
-	close(fd);
 #endif
 
 	return;
