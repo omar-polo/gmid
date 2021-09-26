@@ -1179,6 +1179,8 @@ do_accept(int sock, short et, void *d)
 			c->addr = addr;
 			c->fcgi = -1;
 
+			TAILQ_INIT(&c->mbufhead);
+
 			yield_read(fd, c, &handle_handshake);
 			connected_clients++;
 			return;
