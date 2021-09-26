@@ -615,7 +615,7 @@ apply_fastcgi(struct client *c)
 		break;
 	case FCGI_READY:
                 c->fcgi = id;
-		send_fcgi_req(f, c);
+		fcgi_req(f, c);
 		break;
 	}
 
@@ -1229,13 +1229,23 @@ handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 	id = imsg->hdr.peerid;
 	f = &fcgi[id];
 
-	if ((f->fd = imsg->fd) != -1) {
-		f->s = FCGI_READY;
-		event_set(&f->e, imsg->fd, EV_READ | EV_PERSIST, &handle_fcgi,
-		    &fcgi[id]);
-		event_add(&f->e, NULL);
-	} else {
+	if ((f->fd = imsg->fd) == -1)
 		f->s = FCGI_OFF;
+	else {
+		mark_nonblock(f->fd);
+
+		f->s = FCGI_READY;
+
+		f->bev = bufferevent_new(f->fd, fcgi_read, fcgi_write,
+		    fcgi_error, f);
+		if (f->bev == NULL) {
+			close(f->fd);
+			log_err(NULL, "%s: failed to allocate client buffer",
+			    __func__);
+			f->s = FCGI_OFF;
+		}
+
+		bufferevent_enable(f->bev, EV_READ|EV_WRITE);
 	}
 
 	for (i = 0; i < MAX_USERS; ++i) {
@@ -1245,11 +1255,11 @@ handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 		if (c->fcgi != id)
 			continue;
 
-		if (f->fd == -1) {
+		if (f->s == FCGI_OFF) {
 			c->fcgi = -1;
 			start_reply(c, TEMP_FAILURE, "internal server error");
 		} else
-			send_fcgi_req(f, c);
+			fcgi_req(f, c);
 	}
 }
 
@@ -1280,8 +1290,7 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 		if (fcgi[i].path == NULL && fcgi[i].prog == NULL)
 			break;
 
-		if (!event_pending(&fcgi[i].e, EV_READ, NULL) ||
-		    fcgi[i].pending != 0)
+		if (fcgi[i].bev == NULL || fcgi[i].pending != 0)
 			continue;
 
 		fcgi_close_backend(&fcgi[i]);

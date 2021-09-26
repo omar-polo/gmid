@@ -68,7 +68,8 @@ struct fcgi {
 	char		*port;
 	char		*prog;
 	int		 fd;
-	struct event	 e;
+
+	struct bufferevent *bev;
 
 	/* number of pending clients */
 	int		 pending;
@@ -382,8 +383,10 @@ int		 executor_main(struct imsgbuf*);
 
 /* fcgi.c */
 void		 fcgi_close_backend(struct fcgi *);
-void		 handle_fcgi(int, short, void*);
-void		 send_fcgi_req(struct fcgi*, struct client*);
+void		 fcgi_read(struct bufferevent *, void *);
+void		 fcgi_write(struct bufferevent *, void *);
+void		 fcgi_error(struct bufferevent *, short, void *);
+void		 fcgi_req(struct fcgi *, struct client *);
 
 /* sandbox.c */
 void		 sandbox_server_process(void);
