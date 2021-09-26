@@ -69,6 +69,7 @@ sandbox_logger_process(void)
 
 #elif defined(__linux__)
 
+#include <sys/ioctl.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/syscall.h>
