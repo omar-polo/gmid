@@ -320,8 +320,10 @@ static struct sock_filter filter[] = {
 	SC_ALLOW(gettimeofday),
 #endif
 #ifdef __NR_ioctl
-	/* allow ioctl only on fd 1, glibc doing stuff? */
+	/* allow ioctl on fd 1, glibc doing stuff? */
         SC_ALLOW_ARG(__NR_ioctl, 0, 1),
+	/* allow FIONREAD needed by libevent */
+	SC_ALLOW_ARG(__NR_ioctl, 1, FIONREAD),
 #endif
 #ifdef __NR_lseek
 	SC_ALLOW(lseek),
