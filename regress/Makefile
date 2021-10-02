@@ -69,8 +69,8 @@ invalid.cert.pem: cert.pem
 clean:
 	rm -f *.o iri_test cert.pem key.pem
 	rm -f localhost.cert.pem localhost.key.pem
-	rm -f testca.* valid.csr valid.key invalid.*pem
-	rm -rf testdata fill-file puny-test gg
+	rm -f testca.* valid.csr valid.key valid.crt invalid.*pem
+	rm -rf testdata fill-file puny-test gg fcgi-test
 
 testdata: fill-file
 	mkdir testdata
