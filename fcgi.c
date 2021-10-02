@@ -223,16 +223,18 @@ fcgi_end_param(struct bufferevent *bev, int id)
 	return 0;
 }
 
-static int
-fcgi_abort_request(struct bufferevent *bev, int id)
+void
+fcgi_abort_request(struct client *c)
 {
+	struct fcgi *f;
 	struct fcgi_header h;
 
-	prepare_header(&h, FCGI_ABORT_REQUEST, id, 0, 0);
-	if (bufferevent_write(bev, &h, sizeof(h)) == -1)
-		return -1;
+	f = &fcgi[c->fcgi];
 
-	return 0;
+	prepare_header(&h, FCGI_ABORT_REQUEST, c->id, 0, 0);
+
+	if (bufferevent_write(f->bev, &h, sizeof(h)) == -1)
+		fcgi_close_backend(f);
 }
 
 static inline int
@@ -245,55 +247,6 @@ static inline int
 reclen(struct fcgi_header *h)
 {
 	return h->content_len0 + (h->content_len1 << 8);
-}
-
-static void
-copy_mbuf(int fd, short ev, void *d)
-{
-	struct client	*c = d;
-	struct mbuf	*mbuf;
-	size_t		 len;
-	ssize_t		 r;
-	char		*data;
-
-        for (;;) {
-		mbuf = TAILQ_FIRST(&c->mbufhead);
-		if (mbuf == NULL)
-			break;
-
-		len = mbuf->len - mbuf->off;
-		data = mbuf->data + mbuf->off;
-		switch (r = tls_write(c->ctx, data, len)) {
-		case -1:
-			/*
-			 * Can't close_conn here.  The application
-			 * needs to be informed first, otherwise it
-			 * can interfere with future connections.
-			 * Check also that we're not doing recursion
-			 * (copy_mbuf -> handle_fcgi -> copy_mbuf ...)
-			 */
-			if (c->next != NULL)
-				goto end;
-			fcgi_abort_request(0, c->id);
-			return;
-		case TLS_WANT_POLLIN:
-			event_once(c->fd, EV_READ, &copy_mbuf, c, NULL);
-			return;
-		case TLS_WANT_POLLOUT:
-			event_once(c->fd, EV_WRITE, &copy_mbuf, c, NULL);
-			return;
-		}
-		mbuf->off += r;
-
-		if (mbuf->off == mbuf->len) {
-			TAILQ_REMOVE(&c->mbufhead, mbuf, mbufs);
-			free(mbuf);
-		}
-	}
-
-end:
-	if (c->next != NULL)
-		c->next(0, 0, c);
 }
 
 void
@@ -315,7 +268,6 @@ fcgi_read(struct bufferevent *bev, void *d)
 	struct fcgi_header	 hdr;
 	struct fcgi_end_req_body end;
 	struct client		*c;
-	struct mbuf		*mbuf;
 	size_t			 len;
 
 #if DEBUG_FCGI
@@ -372,8 +324,8 @@ fcgi_read(struct bufferevent *bev, void *d)
 			/* TODO: do something with the status? */
 			fcgi->pending--;
 			c->fcgi = -1;
-			c->next = close_conn;
-			event_once(c->fd, EV_WRITE, &copy_mbuf, c, NULL);
+			c->type = REQUEST_DONE;
+			client_write(c->bev, c);
 			break;
 
 		case FCGI_STDERR:
@@ -382,16 +334,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 			break;
 
 		case FCGI_STDOUT:
-			if ((mbuf = calloc(1, sizeof(*mbuf) + len)) == NULL)
-				fatal("calloc");
-			mbuf->len = len;
-			bufferevent_read(bev, mbuf->data, len);
-
-			if (TAILQ_EMPTY(&c->mbufhead))
-				event_once(c->fd, EV_WRITE, &copy_mbuf,
-				    c, NULL);
-
-			TAILQ_INSERT_TAIL(&c->mbufhead, mbuf, mbufs);
+			bufferevent_write_buffer(c->bev, EVBUFFER_INPUT(bev));
 			break;
 
 		default:
@@ -439,7 +382,7 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 			continue;
 
 		if (c->code != 0)
-			close_conn(0, 0, 0);
+			client_close(c);
 		else
 			start_reply(c, CGI_ERROR, "CGI error");
 	}
@@ -465,8 +408,6 @@ fcgi_req(struct fcgi *f, struct client *c)
 	if (e != 0)
 		fatal("getnameinfo failed: %s (%s)",
 		    gai_strerror(e), strerror(errno));
-
-	c->next = NULL;
 
 	fcgi_begin_request(f->bev, c->id);
 	fcgi_send_param(f->bev, c->id, "GATEWAY_INTERFACE", "CGI/1.1");

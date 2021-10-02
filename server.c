@@ -19,12 +19,15 @@
 #include <sys/stat.h>
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <event.h>
 #include <fcntl.h>
 #include <fnmatch.h>
 #include <limits.h>
 #include <string.h>
+
+#define MIN(a, b)	((a) < (b) ? (a) : (b))
 
 int shutting_down;
 
@@ -39,9 +42,6 @@ int connected_clients;
 
 static inline int matches(const char*, const char*);
 
-static inline void yield_read(int, struct client*, statefn);
-static inline void yield_write(int, struct client*, statefn);
-
 static int	 check_path(struct client*, const char*, int*);
 static void	 open_file(struct client*);
 static void	 check_for_cgi(struct client*);
@@ -49,23 +49,33 @@ static void	 handle_handshake(int, short, void*);
 static const char *strip_path(const char*, int);
 static void	 fmt_sbuf(const char*, struct client*, const char*);
 static int	 apply_block_return(struct client*);
+static int	 apply_fastcgi(struct client*);
 static int	 apply_require_ca(struct client*);
-static void	 handle_open_conn(int, short, void*);
-static void	 handle_start_reply(int, short, void*);
 static size_t	 host_nth(struct vhost*);
 static void	 start_cgi(const char*, const char*, struct client*);
 static void	 open_dir(struct client*);
 static void	 redirect_canonical_dir(struct client*);
-static void	 enter_handle_dirlist(int, short, void*);
-static void	 handle_dirlist(int, short, void*);
-static int 	 read_next_dir_entry(struct client*);
-static void	 send_directory_listing(int, short, void*);
-static void	 handle_cgi_reply(int, short, void*);
-static void	 handle_copy(int, short, void*);
+
+static void	 client_tls_readcb(int, short, void *);
+static void	 client_tls_writecb(int, short, void *);
+
+static void	 client_read(struct bufferevent *, void *);
+void		 client_write(struct bufferevent *, void *);
+static void	 client_error(struct bufferevent *, short, void *);
+
+static void	 client_close_ev(int, short, void *);
+
+static void	 cgi_read(struct bufferevent *, void *);
+static void	 cgi_write(struct bufferevent *, void *);
+static void	 cgi_error(struct bufferevent *, short, void *);
+
 static void	 do_accept(int, short, void*);
+static struct client *client_by_id(int);
+
 static void	 handle_imsg_cgi_res(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_imsg_fcgi_fd(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
+static void	 handle_dispatch_imsg(int, short, void *);
 static void	 handle_siginfo(int, short, void*);
 
 static imsg_handlerfn *handlers[] = {
@@ -80,18 +90,6 @@ matches(const char *pattern, const char *path)
 	if (*path == '/')
 		path++;
 	return !fnmatch(pattern, path, 0);
-}
-
-static inline void
-yield_read(int fd, struct client *c, statefn fn)
-{
-	event_once(fd, EV_READ, fn, c, NULL);
-}
-
-static inline void
-yield_write(int fd, struct client *c, statefn fn)
-{
-	event_once(fd, EV_WRITE, fn, c, NULL);
 }
 
 const char *
@@ -362,7 +360,7 @@ open_file(struct client *c)
 		/* fallthrough */
 
 	case FILE_EXISTS:
-		c->next = handle_copy;
+		c->type = REQUEST_FILE;
 		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
 		return;
 
@@ -458,10 +456,10 @@ handle_handshake(int fd, short ev, void *d)
 	case -1: /* already handshaked */
 		break;
 	case TLS_WANT_POLLIN:
-		yield_read(fd, c, &handle_handshake);
+		event_once(c->fd, EV_READ, handle_handshake, c, NULL);
 		return;
 	case TLS_WANT_POLLOUT:
-		yield_write(fd, c, &handle_handshake);
+		event_once(c->fd, EV_WRITE, handle_handshake, c, NULL);
 		return;
 	default:
 		/* unreachable */
@@ -495,16 +493,24 @@ found:
 
 	if (h != NULL) {
 		c->host = h;
-		handle_open_conn(fd, ev, c);
+
+		c->bev = bufferevent_new(fd, client_read, client_write,
+		    client_error, c);
+		if (c->bev == NULL)
+			fatal("%s: failed to allocate client buffer: %s",
+			    __func__, strerror(errno));
+
+		event_set(&c->bev->ev_read, c->fd, EV_READ,
+		    client_tls_readcb, c->bev);
+		event_set(&c->bev->ev_write, c->fd, EV_WRITE,
+		    client_tls_writecb, c->bev);
+
+		bufferevent_enable(c->bev, EV_READ);
+
 		return;
 	}
 
 err:
-	if (servname != NULL)
-		strlcpy(c->req, servname, sizeof(c->req));
-	else
-		strlcpy(c->req, "null", sizeof(c->req));
-
 	start_reply(c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
 }
 
@@ -647,110 +653,6 @@ apply_require_ca(struct client *c)
 	return 0;
 }
 
-static void
-handle_open_conn(int fd, short ev, void *d)
-{
-	struct client *c = d;
-	const char *parse_err = "invalid request";
-	char decoded[DOMAIN_NAME_LEN];
-
-	switch (tls_read(c->ctx, c->req, sizeof(c->req)-1)) {
-	case -1:
-		log_err(c, "tls_read: %s", tls_error(c->ctx));
-		close_conn(fd, ev, c);
-		return;
-
-	case TLS_WANT_POLLIN:
-		yield_read(fd, c, &handle_open_conn);
-		return;
-
-	case TLS_WANT_POLLOUT:
-		yield_write(fd, c, &handle_open_conn);
-		return;
-	}
-
-	if (!trim_req_iri(c->req, &parse_err) ||
-	    !parse_iri(c->req, &c->iri, &parse_err) ||
-	    !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
-		log_info(c, "iri parse error: %s", parse_err);
-		start_reply(c, BAD_REQUEST, "invalid request");
-		return;
-	}
-
-	if (c->iri.port_no != conf.port ||
-	    strcmp(c->iri.schema, "gemini") ||
-	    strcmp(decoded, c->domain)) {
-		start_reply(c, PROXY_REFUSED, "won't proxy request");
-		return;
-	}
-
-	if (apply_require_ca(c))
-		return;
-
-	if (apply_block_return(c))
-		return;
-
-	if (apply_fastcgi(c))
-		return;
-
-	if (c->host->entrypoint != NULL) {
-		c->loc = 0;
-		start_cgi(c->host->entrypoint, c->iri.path, c);
-		return;
-	}
-
-	open_file(c);
-}
-
-void
-start_reply(struct client *c, int code, const char *meta)
-{
-	c->code = code;
-	c->meta = meta;
-	handle_start_reply(c->fd, 0, c);
-}
-
-static void
-handle_start_reply(int fd, short ev, void *d)
-{
-	struct client *c = d;
-	char buf[1030];		/* status + ' ' + max reply len + \r\n\0 */
-	const char *lang;
-	size_t len;
-
-	lang = vhost_lang(c->host, c->iri.path);
-
-	snprintf(buf, sizeof(buf), "%d ", c->code);
-	strlcat(buf, c->meta, sizeof(buf));
-	if (!strcmp(c->meta, "text/gemini") && lang != NULL) {
-		strlcat(buf, "; lang=", sizeof(buf));
-		strlcat(buf, lang, sizeof(buf));
-	}
-
-	len = strlcat(buf, "\r\n", sizeof(buf));
-	assert(len < sizeof(buf));
-
-	switch (tls_write(c->ctx, buf, len)) {
-	case -1:
-		close_conn(fd, ev, c);
-		return;
-	case TLS_WANT_POLLIN:
-		yield_read(fd, c, &handle_start_reply);
-		return;
-	case TLS_WANT_POLLOUT:
-		yield_write(fd, c, &handle_start_reply);
-		return;
-	}
-
-	if (!vhost_disable_log(c->host, c->iri.path))
-		log_request(c, buf, sizeof(buf));
-
-	if (c->code != SUCCESS)
-		close_conn(fd, ev, c);
-	else
-		c->next(fd, ev, c);
-}
-
 static size_t
 host_nth(struct vhost *h)
 {
@@ -773,6 +675,8 @@ start_cgi(const char *spath, const char *relpath, struct client *c)
 	const char *t;
 	struct cgireq req;
 	int e;
+
+	c->type = REQUEST_CGI;
 
 	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
 	    addr, sizeof(addr),
@@ -865,7 +769,7 @@ open_dir(struct client *c)
 		/* fallthrough */
 
 	case FILE_EXISTS:
-		c->next = handle_copy;
+		c->type = REQUEST_FILE;
 		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
 		break;
 
@@ -881,7 +785,7 @@ open_dir(struct client *c)
 			break;
 		}
 
-		c->next = enter_handle_dirlist;
+		c->type = REQUEST_DIR;
 
 		c->dirlen = scandir_fd(dirfd, &c->dir,
 		    root ? select_non_dotdot : select_non_dot,
@@ -896,6 +800,8 @@ open_dir(struct client *c)
 		c->off = 0;
 
                 start_reply(c, SUCCESS, "text/gemini");
+		evbuffer_add_printf(EVBUFFER_OUTPUT(c->bev),
+		    "# Index of %s\n\n", c->iri.path);
 		return;
 
 	default:
@@ -924,215 +830,326 @@ redirect_canonical_dir(struct client *c)
 }
 
 static void
-enter_handle_dirlist(int fd, short ev, void *d)
+client_tls_readcb(int fd, short event, void *d)
 {
-	struct client *c = d;
-	char b[PATH_MAX];
-	size_t l;
+	struct bufferevent	*bufev = d;
+	struct client		*client = bufev->cbarg;
+	ssize_t			 ret;
+	size_t			 len;
+	int			 what = EVBUFFER_READ;
+	int			 howmuch = IBUF_READ_SIZE;
+	char			 buf[IBUF_READ_SIZE];
 
-	strlcpy(b, c->iri.path, sizeof(b));
-	l = snprintf(c->sbuf, sizeof(c->sbuf),
-	    "# Index of %s\n\n", b);
-	if (l >= sizeof(c->sbuf)) {
+	if (event == EV_TIMEOUT) {
+		what |= EVBUFFER_TIMEOUT;
+		goto err;
+	}
+
+	if (bufev->wm_read.high != 0)
+		howmuch = MIN(sizeof(buf), bufev->wm_read.high);
+
+	switch (ret = tls_read(client->ctx, buf, howmuch)) {
+	case TLS_WANT_POLLIN:
+	case TLS_WANT_POLLOUT:
+		goto retry;
+	case -1:
+		what |= EVBUFFER_ERROR;
+		goto err;
+	}
+	len = ret;
+
+	if (len == 0) {
+		what |= EVBUFFER_EOF;
+		goto err;
+	}
+
+	if (evbuffer_add(bufev->input, buf, len) == -1) {
+		what |= EVBUFFER_ERROR;
+		goto err;
+	}
+
+	event_add(&bufev->ev_read, NULL);
+	if (bufev->wm_read.low != 0 && len < bufev->wm_read.low)
+		return;
+	if (bufev->wm_read.high != 0 && len > bufev->wm_read.high) {
 		/*
-		 * This is impossible, given that we have enough space
-		 * in c->sbuf to hold the ancilliary string plus the
-		 * full path; but it wouldn't read nice without some
-		 * error checking, and I'd like to avoid a strlen.
+		 * here we could implement a read pressure policy.
 		 */
-		close_conn(fd, ev, c);
-		return;
 	}
 
-	c->len = l;
-	handle_dirlist(fd, ev, c);
+	if (bufev->readcb != NULL)
+		(*bufev->readcb)(bufev, bufev->cbarg);
+
+	return;
+
+retry:
+	event_add(&bufev->ev_read, NULL);
+	return;
+
+err:
+	(*bufev->errorcb)(bufev, what, bufev->cbarg);
 }
 
 static void
-handle_dirlist(int fd, short ev, void *d)
+client_tls_writecb(int fd, short event, void *d)
 {
-	struct client *c = d;
-	ssize_t r;
+	struct bufferevent	*bufev = d;
+	struct client		*client = bufev->cbarg;
+	ssize_t			 ret;
+	size_t			 len;
+	short			 what = EVBUFFER_WRITE;
 
-	while (c->len > 0) {
-		switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
-		case -1:
-			close_conn(fd, ev, c);
-			return;
-		case TLS_WANT_POLLOUT:
-			yield_read(fd, c, &handle_dirlist);
-			return;
+	if (event == EV_TIMEOUT) {
+		what |= EVBUFFER_TIMEOUT;
+		goto err;
+	}
+
+	if (EVBUFFER_LENGTH(bufev->output) != 0) {
+		ret = tls_write(client->ctx,
+		    EVBUFFER_DATA(bufev->output),
+		    EVBUFFER_LENGTH(bufev->output));
+		switch (ret) {
 		case TLS_WANT_POLLIN:
-			yield_write(fd, c, &handle_dirlist);
-			return;
-		default:
-			c->off += r;
-			c->len -= r;
-		}
-	}
-
-	send_directory_listing(fd, ev, c);
-}
-
-static int
-read_next_dir_entry(struct client *c)
-{
-	if (c->diroff == c->dirlen)
-		return 0;
-
-	/* XXX: url escape */
-	snprintf(c->sbuf, sizeof(c->sbuf), "=> %s\n",
-	    c->dir[c->diroff]->d_name);
-
-	free(c->dir[c->diroff]);
-	c->diroff++;
-
-	c->len = strlen(c->sbuf);
-	c->off = 0;
-	return 1;
-}
-
-static void
-send_directory_listing(int fd, short ev, void *d)
-{
-	struct client *c = d;
-	ssize_t r;
-
-	while (1) {
-		if (c->len == 0) {
-			if (!read_next_dir_entry(c))
-				goto end;
-		}
-
-		while (c->len > 0) {
-			switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
-			case -1:
-				goto end;
-
-			case TLS_WANT_POLLOUT:
-				yield_read(fd, c, &send_directory_listing);
-				return;
-
-			case TLS_WANT_POLLIN:
-				yield_write(fd, c, &send_directory_listing);
-				return;
-
-			default:
-				c->off += r;
-				c->len -= r;
-				break;
-			}
-		}
-	}
-
-end:
-	close_conn(fd, ev, d);
-}
-
-/* accumulate the meta line from the cgi script. */
-static void
-handle_cgi_reply(int fd, short ev, void *d)
-{
-	struct client *c = d;
-	void	*buf, *e;
-	size_t	 len;
-	ssize_t	 r;
-
-
-	buf = c->sbuf + c->len;
-	len = sizeof(c->sbuf) - c->len;
-
-	r = read(c->pfd, buf, len);
-	if (r == 0 || r == -1) {
-		start_reply(c, CGI_ERROR, "CGI error");
-		return;
-	}
-
-	c->len += r;
-
-	/* TODO: error if the CGI script don't reply correctly */
-	e = strchr(c->sbuf, '\n');
-	if (e != NULL || c->len == sizeof(c->sbuf)) {
-		log_request(c, c->sbuf, c->len);
-
-		c->off = 0;
-		handle_copy(fd, ev, c);
-		return;
-	}
-
-	yield_read(fd, c, &handle_cgi_reply);
-}
-
-static void
-handle_copy(int fd, short ev, void *d)
-{
-	struct client *c = d;
-	ssize_t r;
-
-	while (1) {
-		while (c->len > 0) {
-			switch (r = tls_write(c->ctx, c->sbuf + c->off, c->len)) {
-			case -1:
-				goto end;
-
-			case TLS_WANT_POLLOUT:
-				yield_write(c->fd, c, &handle_copy);
-				return;
-
-			case TLS_WANT_POLLIN:
-				yield_read(c->fd, c, &handle_copy);
-				return;
-
-			default:
-                                c->off += r;
-				c->len -= r;
-				break;
-			}
-		}
-
-		switch (r = read(c->pfd, c->sbuf, sizeof(c->sbuf))) {
-		case 0:
-			goto end;
+		case TLS_WANT_POLLOUT:
+			goto retry;
 		case -1:
-			if (errno == EAGAIN || errno == EWOULDBLOCK) {
-				yield_read(c->pfd, c, &handle_copy);
-				return;
-			}
-			goto end;
-		default:
-			c->len = r;
-			c->off = 0;
+			what |= EVBUFFER_ERROR;
+			goto err;
 		}
+		len = ret;
+		evbuffer_drain(bufev->output, len);
 	}
 
-end:
-	close_conn(c->fd, ev, d);
+	if (EVBUFFER_LENGTH(bufev->output) != 0)
+		event_add(&bufev->ev_write, NULL);
+
+	if (bufev->writecb != NULL &&
+	    EVBUFFER_LENGTH(bufev->output) <= bufev->wm_write.low)
+		(*bufev->writecb)(bufev, bufev->cbarg);
+	return;
+
+retry:
+	event_add(&bufev->ev_write, NULL);
+	return;
+err:
+	log_err(client, "tls error: %s", tls_error(client->ctx));
+	(*bufev->errorcb)(bufev, what, bufev->cbarg);
+}
+
+static void
+client_read(struct bufferevent *bev, void *d)
+{
+	struct client	*c = d;
+	struct evbuffer	*src = EVBUFFER_INPUT(bev);
+	const char	*parse_err = "invalid request";
+	char		 decoded[DOMAIN_NAME_LEN];
+	size_t		 len;
+
+	bufferevent_disable(bev, EVBUFFER_READ);
+
+	/* max url len + \r\n */
+	if (EVBUFFER_LENGTH(src) > 1024 + 2) {
+		log_err(c, "too much data received");
+		start_reply(c, BAD_REQUEST, "bad request");
+		return;
+	}
+
+	c->req = evbuffer_readln(src, &len, EVBUFFER_EOL_CRLF_STRICT);
+	if (c->req == NULL) {
+		/* not enough data yet. */
+		bufferevent_enable(bev, EVBUFFER_READ);
+		return;
+	}
+
+	if (!parse_iri(c->req, &c->iri, &parse_err) ||
+	    !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
+		log_err(c, "IRI parse error: %s", parse_err);
+                start_reply(c, BAD_REQUEST, "bad request");
+		return;
+	}
+
+	if (c->iri.port_no != conf.port ||
+	    strcmp(c->iri.schema, "gemini") ||
+	    strcmp(decoded, c->domain)) {
+		start_reply(c, PROXY_REFUSED, "won't proxy request");
+		return;
+	}
+
+	if (apply_require_ca(c) ||
+	    apply_block_return(c)||
+	    apply_fastcgi(c))
+		return;
+
+	if (c->host->entrypoint != NULL) {
+		c->loc = 0;
+		start_cgi(c->host->entrypoint, c->iri.path, c);
+		return;
+	}
+
+	open_file(c);
 }
 
 void
-close_conn(int fd, short ev, void *d)
+client_write(struct bufferevent *bev, void *d)
 {
 	struct client	*c = d;
-	struct mbuf	*mbuf;
+	struct evbuffer	*out = EVBUFFER_OUTPUT(bev);
+	char		 buf[BUFSIZ];
+	ssize_t		 r;
+
+	switch (c->type) {
+	case REQUEST_UNDECIDED:
+		/*
+		 * Ignore spurious calls when we still don't have idea
+		 * what to do with the request.
+		 */
+		break;
+
+	case REQUEST_FILE:
+		if ((r = read(c->pfd, buf, sizeof(buf))) == -1) {
+			log_warn(c, "read: %s", strerror(errno));
+			client_error(bev, EVBUFFER_ERROR, c);
+			return;
+		} else if (r == 0) {
+			client_close(c);
+			return;
+		} else if (r != sizeof(buf))
+			c->type = REQUEST_DONE;
+		bufferevent_write(bev, buf, r);
+		break;
+
+	case REQUEST_DIR:
+		/* TODO: handle big big directories better */
+		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff) {
+			evbuffer_add_printf(out, "=> %s\n",
+			    c->dir[c->diroff]->d_name);
+			free(c->dir[c->diroff]);
+		}
+		free(c->dir);
+		c->dir = NULL;
+
+		c->type = REQUEST_DONE;
+
+		event_add(&c->bev->ev_write, NULL);
+		break;
+
+	case REQUEST_CGI:
+	case REQUEST_FCGI:
+		/*
+		 *  Here we depend on on the cgi script or fastcgi
+		 *  connection to provide data.
+		 */
+		break;
+
+	case REQUEST_DONE:
+		if (EVBUFFER_LENGTH(out) == 0)
+			client_close(c);
+		break;
+	}
+}
+
+static void
+client_error(struct bufferevent *bev, short error, void *d)
+{
+	struct client	*c = d;
+
+	if (c->type == REQUEST_FCGI)
+		fcgi_abort_request(c);
+
+	c->type = REQUEST_DONE;
+
+	if (error & EVBUFFER_TIMEOUT) {
+		log_warn(c, "timeout reached, "
+		    "forcefully closing the connection");
+		if (c->code == 0)
+			start_reply(c, BAD_REQUEST, "timeout");
+		else
+			client_close(c);
+		return;
+	}
+
+	if (error & EVBUFFER_EOF) {
+		client_close(c);
+		return;
+	}
+
+	log_err(c, "unknown bufferevent error: %s", strerror(errno));
+	client_close(c);
+}
+
+void
+start_reply(struct client *c, int code, const char *meta)
+{
+	struct evbuffer	*evb = EVBUFFER_OUTPUT(c->bev);
+	const char	*lang;
+	int		 r, rr;
+
+	bufferevent_enable(c->bev, EVBUFFER_WRITE);
+
+	c->code = code;
+	c->meta = meta;
+
+	r = evbuffer_add_printf(evb, "%d %s", code, meta);
+	if (r == -1)
+		goto err;
+
+	/* 2 digit status + space + 1024 max reply */
+	if (r > 1027)
+		goto overflow;
+
+	if (c->type != REQUEST_CGI &&
+	    c->type != REQUEST_FCGI &&
+	    !strcmp(meta, "text/gemini") &&
+	    (lang = vhost_lang(c->host, c->iri.path)) != NULL) {
+                rr = evbuffer_add_printf(evb, ";lang=%s", lang);
+		if (rr == -1)
+			goto err;
+		if (r + rr > 1027)
+			goto overflow;
+	}
+
+	bufferevent_write(c->bev, "\r\n", 2);
+
+	if (!vhost_disable_log(c->host, c->iri.path))
+		log_request(c, EVBUFFER_DATA(evb), EVBUFFER_LENGTH(evb));
+
+	if (code != 20 && IS_INTERNAL_REQUEST(c->type))
+		c->type = REQUEST_DONE;
+
+	return;
+
+err:
+	log_err(c, "evbuffer_add_printf error: no memory");
+	evbuffer_drain(evb, EVBUFFER_LENGTH(evb));
+	client_close(c);
+	return;
+
+overflow:
+	log_warn(c, "reply header overflow");
+	evbuffer_drain(evb, EVBUFFER_LENGTH(evb));
+	start_reply(c, TEMP_FAILURE, "internal error");
+}
+
+static void
+client_close_ev(int fd, short event, void *d)
+{
+	struct client	*c = d;
 
 	switch (tls_close(c->ctx)) {
 	case TLS_WANT_POLLIN:
-		yield_read(c->fd, c, &close_conn);
-		return;
+		event_once(c->fd, EV_READ, client_close_ev, c, NULL);
+		break;
 	case TLS_WANT_POLLOUT:
-		yield_read(c->fd, c, &close_conn);
-		return;
+		event_once(c->fd, EV_WRITE, client_close_ev, c, NULL);
+		break;
 	}
 
 	connected_clients--;
 
-	while ((mbuf = TAILQ_FIRST(&c->mbufhead)) != NULL) {
-		TAILQ_REMOVE(&c->mbufhead, mbuf, mbufs);
-		free(mbuf);
-	}
-
 	tls_free(c->ctx);
 	c->ctx = NULL;
+
+	free(c->header);
 
 	if (c->pfd != -1)
 		close(c->pfd);
@@ -1142,6 +1159,122 @@ close_conn(int fd, short ev, void *d)
 
 	close(c->fd);
 	c->fd = -1;
+}
+
+void
+client_close(struct client *c)
+{
+	/*
+	 * We may end up calling client_close in various situations
+	 * and for the most unexpected reasons.  Therefore, we need to
+	 * ensure that everything is properly released once we reach
+	 * this point.
+	 */
+
+	if (c->type == REQUEST_FCGI)
+		fcgi_abort_request(c);
+
+	if (c->cgibev != NULL) {
+		bufferevent_disable(c->cgibev, EVBUFFER_READ|EVBUFFER_WRITE);
+		bufferevent_free(c->cgibev);
+		c->cgibev = NULL;
+		close(c->pfd);
+		c->pfd = -1;
+	}
+
+	bufferevent_disable(c->bev, EVBUFFER_READ|EVBUFFER_WRITE);
+	bufferevent_free(c->bev);
+	c->bev = NULL;
+
+	client_close_ev(c->fd, 0, c);
+}
+
+static void
+cgi_read(struct bufferevent *bev, void *d)
+{
+	struct client	*client = d;
+	struct evbuffer	*src = EVBUFFER_INPUT(bev);
+	char		*header;
+	size_t		 len;
+	int		 code;
+
+	/* intercept the header */
+	if (client->code == 0) {
+		header = evbuffer_readln(src, &len, EVBUFFER_EOL_CRLF_STRICT);
+		if (header == NULL) {
+			/* max reply + \r\n */
+			if (EVBUFFER_LENGTH(src) > 1026) {
+				log_warn(client, "CGI script is trying to "
+				    "send a header too long.");
+				cgi_error(bev, EVBUFFER_READ, client);
+			}
+
+			/* wait a bit */
+			return;
+		}
+
+		if (len < 3 || len > 1029 ||
+		    !isdigit(header[0]) ||
+		    !isdigit(header[1]) ||
+		    !isspace(header[2])) {
+			free(header);
+			log_warn(client, "CGI script is trying to send a "
+			    "malformed header");
+			cgi_error(bev, EVBUFFER_READ, client);
+			return;
+		}
+
+		client->header = header;
+		code = (header[0] - '0') * 10 + (header[1] - '0');
+
+		if (code < 10 || code >= 70) {
+			log_warn(client, "CGI script is trying to send an "
+			    "invalid reply code (%d)", code);
+			cgi_error(bev, EVBUFFER_READ, client);
+			return;
+		}
+
+		start_reply(client, code, header + 3);
+
+		if (client->code < 20 || client->code > 29) {
+			cgi_error(client->cgibev, EVBUFFER_EOF, client);
+			return;
+		}
+	}
+
+	bufferevent_write_buffer(client->bev, src);
+}
+
+static void
+cgi_write(struct bufferevent *bev, void *d)
+{
+	/*
+	 * Never called.  We don't send data to a CGI script.
+	 */
+	abort();
+}
+
+static void
+cgi_error(struct bufferevent *bev, short error, void *d)
+{
+	struct client	*client = d;
+
+	if (error & EVBUFFER_ERROR)
+		log_err(client, "%s: evbuffer error (%x): %s",
+		    __func__, error, strerror(errno));
+
+	bufferevent_disable(bev, EVBUFFER_READ|EVBUFFER_WRITE);
+	bufferevent_free(bev);
+	client->cgibev = NULL;
+
+	close(client->pfd);
+	client->pfd = -1;
+
+	client->type = REQUEST_DONE;
+	if (client->code != 0)
+		client_write(client->bev, client);
+	else
+		start_reply(client, CGI_ERROR, "CGI error");
 }
 
 static void
@@ -1179,9 +1312,9 @@ do_accept(int sock, short et, void *d)
 			c->addr = addr;
 			c->fcgi = -1;
 
-			TAILQ_INIT(&c->mbufhead);
+			event_once(c->fd, EV_READ|EV_WRITE, handle_handshake,
+			    c, NULL);
 
-			yield_read(fd, c, &handle_handshake);
 			connected_clients++;
 			return;
 		}
@@ -1213,10 +1346,17 @@ handle_imsg_cgi_res(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 
 	c = client_by_id(imsg->hdr.peerid);
 
-	if ((c->pfd = imsg->fd) == -1)
+	if ((c->pfd = imsg->fd) == -1) {
 		start_reply(c, TEMP_FAILURE, "internal server error");
-	else
-		yield_read(c->pfd, c, &handle_cgi_reply);
+		return;
+	}
+
+	c->type = REQUEST_CGI;
+
+	c->cgibev = bufferevent_new(c->pfd, cgi_read, cgi_write,
+	    cgi_error, c);
+
+	bufferevent_enable(c->cgibev, EV_READ);
 }
 
 static void

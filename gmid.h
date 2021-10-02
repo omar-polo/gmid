@@ -185,60 +185,33 @@ struct parser {
 	const char	*err;
 };
 
-struct mbuf {
-	size_t			len;
-	size_t			off;
-	TAILQ_ENTRY(mbuf)	mbufs;
-	char			data[];
-};
-TAILQ_HEAD(mbufhead, mbuf);
-
 typedef void (imsg_handlerfn)(struct imsgbuf*, struct imsg*, size_t);
 
-typedef void (*statefn)(int, short, void*);
+enum {
+	REQUEST_UNDECIDED,
+	REQUEST_FILE,
+	REQUEST_DIR,
+	REQUEST_CGI,
+	REQUEST_FCGI,
+	REQUEST_DONE,
+};
 
-/*
- * DFA: handle_handshake is the initial state, close_conn the final.
- * Sometimes we have an enter_* function to handle the state switch.
- *
- * handle_handshake -> handle_open_conn
- * handle_handshake -> close_conn		// on err
- *
- * handle_open_conn -> handle_cgi_reply		// via open_file/dir/...
- * handle_open_conn -> send_fcgi_req		// via apply_fastcgi, IMSG_FCGI_FD
- * handle_open_conn -> handle_dirlist		// ...same
- * handle_open_conn -> send_file		// ...same
- * handle_open_conn -> start_reply		// on error
- *
- * handle_cgi_reply -> handle_cgi	// after logging the CGI reply
- * handle_cgi_reply -> start_reply	// on error
- *
- * handle_cgi -> close_conn
- *
- * send_fcgi_req -> copy_mbuf		// via handle_fcgi
- * handle_fcgi -> close_all		// on error
- * copy_mbuf -> close_conn		// on success/error
- *
- * handle_dirlist -> send_directory_listing
- * handle_dirlist -> close_conn			// on error
- *
- * send_directory_listing -> close_conn
- *
- * send_file -> close_conn
- */
+#define IS_INTERNAL_REQUEST(x)	((x) != REQUEST_CGI && (x) != REQUEST_FCGI)
+
 struct client {
 	int		 id;
 	struct tls	*ctx;
-	char		 req[GEMINI_URL_LEN];
+	char		*req;
 	struct iri	 iri;
 	char		 domain[DOMAIN_NAME_LEN];
 
-	/*
-	 * start_reply uses this to know what function call after the
-	 * reply.  It's also used as sentinel value in fastcgi to know
-	 * if the server has closed the request.
-	 */
-	statefn		 next;
+	struct bufferevent *bev;
+
+	int		 type;
+
+	struct bufferevent *cgibev;
+
+	char		*header;
 
 	int		 code;
 	const char	*meta;
@@ -250,8 +223,6 @@ struct client {
 	/* big enough to store STATUS + SPACE + META + CRLF */
 	char		 sbuf[1029];
 	ssize_t		 len, off;
-
-	struct mbufhead	 mbufhead;
 
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host they're talking to */
@@ -356,8 +327,9 @@ X509_STORE	*vhost_require_ca(struct vhost*, const char*);
 int		 vhost_disable_log(struct vhost*, const char*);
 
 void		 mark_nonblock(int);
+void		 client_write(struct bufferevent *, void *);
 void		 start_reply(struct client*, int, const char*);
-void		 close_conn(int, short, void*);
+void		 client_close(struct client *);
 struct client	*try_client_by_id(int);
 void		 loop(struct tls*, int, int, struct imsgbuf*);
 
@@ -382,6 +354,7 @@ int		 recv_fd(int);
 int		 executor_main(struct imsgbuf*);
 
 /* fcgi.c */
+void		 fcgi_abort_request(struct client *);
 void		 fcgi_close_backend(struct fcgi *);
 void		 fcgi_read(struct bufferevent *, void *);
 void		 fcgi_write(struct bufferevent *, void *);
