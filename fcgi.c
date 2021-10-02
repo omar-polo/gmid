@@ -354,7 +354,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 			return;
 
 #if DEBUG_FCGI
-		write(debug_soocket, EVBUFFER_DATA(src),
+		write(debug_socket, EVBUFFER_DATA(src),
 		    sizeof(hdr) + len + hdr.padding);
 #endif
 
