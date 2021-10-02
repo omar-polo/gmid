@@ -1,3 +1,8 @@
+2021-10-02  Omar Polo  <op@omarpolo.com>
+
+	* server.c (client_read): reworked the internal structure.  Now we leverage libevent' bufferevents more.
+	(cgi_read): be more strict with CGI scripts: don't pass through illegal CGI responses.
+
 2021-09-26  Omar Polo  <op@omarpolo.com>
 
 	* fcgi.c (fcgi_req): the FastCGI implementation is fully asynchronous
