@@ -130,9 +130,9 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 {
 	int p[2], errp[2];	/* read end, write end */
 
-	if (pipe(p) == -1)
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
 		return -1;
-	if (pipe(errp) == -1)
+	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, errp) == -1)
 		return -1;
 
 	switch (fork()) {
