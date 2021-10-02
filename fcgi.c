@@ -343,8 +343,8 @@ fcgi_read(struct bufferevent *bev, void *d)
 		c = try_client_by_id(recid(&hdr));
 		if (c == NULL) {
 			log_err(NULL,
-			    "got invalid client id from fcgi backend %d",
-			    recid(&hdr));
+			    "got invalid client id %d from fcgi backend %d",
+			    recid(&hdr), fcgi->id);
 			goto err;
 		}
 
@@ -463,7 +463,8 @@ fcgi_req(struct fcgi *f, struct client *c)
 	    NULL, 0,
 	    NI_NUMERICHOST);
 	if (e != 0)
-		fatal("getnameinfo failed");
+		fatal("getnameinfo failed: %s (%s)",
+		    gai_strerror(e), strerror(errno));
 
 	c->next = NULL;
 
