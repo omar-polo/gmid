@@ -242,6 +242,7 @@ runtest getprogname	GETPROGNAME	|| true
 runtest imsg		IMSG		-lutil || true
 runtest landlock	LANDLOCK	|| true
 runtest libevent	LIBEVENT	|| true
+runtest libevent2	LIBEVENT2	|| true
 runtest libtls		LIBTLS		|| true
 runtest openssl		OPENSSL		|| true
 runtest pr_set_name	PR_SET_NAME	|| true
@@ -320,6 +321,7 @@ cat <<__HEREDOC__
 #define HAVE_IMSG		${HAVE_IMSG}
 #define HAVE_LANDLOCK		${HAVE_LANDLOCK}
 #define HAVE_LIBEVENT		${HAVE_LIBEVENT}
+#define HAVE_LIBEVENT2		${HAVE_LIBEVENT2}
 #define HAVE_PROGRAM_INVOCATION_SHORT_NAME ${HAVE_PROGRAM_INVOCATION_SHORT_NAME}
 #define HAVE_PR_SET_NAME	${HAVE_PR_SET_NAME}
 #define HAVE_QUEUE_H		${HAVE_QUEUE_H}

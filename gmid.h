@@ -26,7 +26,6 @@
 #include <netinet/in.h>
 
 #include <dirent.h>
-#include <event.h>
 #include <limits.h>
 #include <netdb.h>
 #include <signal.h>
@@ -37,6 +36,19 @@
 #include <unistd.h>
 
 #include <openssl/x509.h>
+
+#if HAVE_EVENT2
+# include <event2/event.h>
+# include <event2/event_compat.h>
+# include <event2/event_struct.h>
+# include <event2/buffer.h>
+# include <event2/buffer_compat.h>
+# include <event2/bufferevent.h>
+# include <event2/bufferevent_struct.h>
+# include <event2/bufferevent_compat.h>
+#else
+# include <event.h>
+#endif
 
 #define GMID_STRING	"gmid " VERSION
 #define GMID_VERSION	"gmid/" VERSION
