@@ -416,19 +416,6 @@ parse_iri(char *iri, struct iri *ret, const char **err_ret)
 }
 
 int
-trim_req_iri(char *iri, const char **err)
-{
-	char *i;
-
-	if ((i = strstr(iri, "\r\n")) == NULL) {
-		*err = "missing CRLF";
-		return 0;
-	}
-	*i = '\0';
-	return 1;
-}
-
-int
 serialize_iri(struct iri *i, char *buf, size_t len)
 {
 	size_t l = 0;
