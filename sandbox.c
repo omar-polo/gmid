@@ -588,6 +588,10 @@ sandbox_logger_process(void)
 	 * sytsem access.
 	 */
 
+	if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) == -1)
+		fatal("%s: prctl(PR_SET_NO_NEW_PRIVS): %s",
+		    __func__, strerror(errno));
+
 #if HAVE_LANDLOCK
 	if (logger_landlock() == -1)
 		fatal("%s: logger_landlock: %s",
