@@ -428,10 +428,9 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 	struct client	*c;
 	size_t		 i;
 
-	if (!(err & EVBUFFER_ERROR) ||
-	    !(err & EVBUFFER_EOF))
-		log_warn(NULL, "unknown event error (%x)",
-		    err);
+	if (!(err & (EVBUFFER_ERROR|EVBUFFER_EOF)))
+		log_warn(NULL, "unknown event error (%x): %s",
+		    err, strerror(errno));
 
 	for (i = 0; i < MAX_USERS; ++i) {
 		c = &clients[i];
