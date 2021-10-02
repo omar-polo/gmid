@@ -505,6 +505,11 @@ found:
 		event_set(&c->bev->ev_write, c->fd, EV_WRITE,
 		    client_tls_writecb, c->bev);
 
+#if HAVE_LIBEVENT2
+		evbuffer_unfreeze(c->bev->input, 0);
+		evbuffer_unfreeze(c->bev->output, 1);
+#endif
+
 		bufferevent_enable(c->bev, EV_READ);
 
 		return;
