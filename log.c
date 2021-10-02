@@ -126,7 +126,8 @@ vlog(int priority, struct client *c,
 		    sbuf, sizeof(sbuf),
 		    NI_NUMERICHOST | NI_NUMERICSERV);
 		if (ec != 0)
-			fatal("getnameinfo: %s", gai_strerror(ec));
+			fatal("getnameinfo: %s: %s",
+			    gai_strerror(ec), strerror(errno));
 	}
 
 	if (vasprintf(&fmted, fmt, ap) == -1)
