@@ -1,5 +1,7 @@
 2021-10-04  Omar Polo  <op@omarpolo.com>
 
+	* regress/lib.sh (raw): reduced the timeout time for single checks from 30 to 10 seconds
+
 	* regress/runtime: regression test restructured.  still implemented as a set of POSIX-scripts
 
 2021-10-02  Omar Polo  <op@omarpolo.com>
