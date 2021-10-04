@@ -334,7 +334,8 @@ fcgi_read(struct bufferevent *bev, void *d)
 			break;
 
 		case FCGI_STDOUT:
-			bufferevent_write_buffer(c->bev, EVBUFFER_INPUT(bev));
+			bufferevent_write(c->bev, EVBUFFER_DATA(src), len);
+			evbuffer_drain(src, len);
 			break;
 
 		default:
