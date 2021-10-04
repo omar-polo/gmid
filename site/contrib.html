@@ -182,12 +182,15 @@
     <p>Some things to keep in mind:</p>
     <ul>
       <li>
-        the <code>ExecStart</code> path depends on the installation.
+        the <code>ExecStart</code> path may depend on the installation.
       </li>
       <li>
-        decomment <code>User</code> and <code>Group</code> to start
-        gmid without root priviledges.  It's not needed, since gmid
-        can lower its privileges, but may come in handy.
+        a <code>gmid</code> user needs to be created for e.g. with:
+        <pre># useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid</pre>
+      </li>
+      <li>
+        logs can be inspected with <code>journalctl(1)</code>:
+        <pre># journalctl -t gmid</pre>
       </li>
     </ul>
     <h2 id="vim-syntax-files">Vim syntax files</h2>

@@ -45,8 +45,18 @@ A simple service file for systemd.  To install it
 then the usual ‘systemctl [status|start|enable|stop] gmid’ commands can be used to manage the server.
 
 Some things to keep in mind:
-* the ExecStart path depends on the installation
-* decomment “User” and “Group” to start gmid without root priviledges.  It’s not needed, since gmid can lower its privileges, but may come in handy.
+* the ExecStart path may depend on the installation
+* a ‘gmid’ user needs to be create for e.g. with
+
+```how to create a dedicated user
+# useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
+```
+
+* logs can be inspected with journalctl(1)
+
+```reads gmid logs with journalctl
+# journalctl -t gmid
+```
 
 ## Vim syntax files
 
