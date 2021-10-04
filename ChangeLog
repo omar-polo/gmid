@@ -1,3 +1,7 @@
+2021-10-04  Omar Polo  <op@omarpolo.com>
+
+	* regress/runtime: regression test restructured.  still implemented as a set of POSIX-scripts
+
 2021-10-02  Omar Polo  <op@omarpolo.com>
 
 	* server.c (client_read): reworked the internal structure.  Now we leverage libevent' bufferevents more.
