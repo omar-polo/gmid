@@ -1,0 +1,26 @@
+linux_amd64_task:
+  container:
+    image: alpine:latest
+  test_script:
+    - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
+    - ./configure
+    - make
+    - make regress
+
+linux_arm_task:
+  arm_container:
+    image: alpine:latest
+  test_script:
+    - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
+    - ./configure
+    - make
+    - make regress
+
+freebsd_13_task:
+  freebsd_instance:
+    image_family: freebsd-13-0
+  test_script:
+    - pkg install -y libevent libressl pkgconf
+    - ./configure
+    - make
+    - make regress
