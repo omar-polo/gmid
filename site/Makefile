@@ -1,4 +1,4 @@
-.PHONY: all serve-www serve-gemini
+.PHONY: all serve-www serve-gemini upload
 
 all: gmid.1.html gmid.1.txt
 
@@ -13,3 +13,7 @@ serve-www:
 
 serve-gemini:
 	gmid -p 1966 .
+
+upload:
+	rsync --delete -a . op:sites/gmid.omarpolo.com
+	rsync --delete -a . op:gemini/gmid.omarpolo.com
