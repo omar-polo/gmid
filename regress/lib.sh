@@ -78,19 +78,19 @@ setup_simple_test() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	$gg -T30 -b $ggflags "gemini://localhost:10965/$1"
+	$gg -T10 -b $ggflags "gemini://localhost:10965/$1"
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	$gg -T30 -h $ggflags "gemini://localhost:10965/$1"
+	$gg -T10 -h $ggflags "gemini://localhost:10965/$1"
 }
 
 # usage: raw <path>
 # return both header and body
 raw() {
-	$gg -T30 $ggflags "gemini://localhost:10965/$1"
+	$gg -T10 $ggflags "gemini://localhost:10965/$1"
 }
 
 # usage: fetch <path>
