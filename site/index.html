@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>gmid</title>
+    <meta charset="utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+    body {
+      font-family: monospace;
+      font-size: 14px;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 80px;
+    }
+
+    h1::before {
+      content: "# ";
+    }
+
+    h2 {
+      margin-top: 40px;
+    }
+
+    h2::before {
+      content: "## ";
+    }
+
+    h3::before {
+      content: "### ";
+    }
+
+    blockquote {
+      margin: 0;
+      padding: 0;
+    }
+
+    blockquote::before {
+      content: "> ";
+    }
+
+    blockquote p {
+      font-style: italic;
+      display: inline;
+    }
+
+    p.link::before {
+      content: "→ ";
+    }
+
+    strong::before { content: "*" }
+    strong::after  { content: "*" }
+
+    hr {
+      border: 0;
+      height: 1px;
+      background-color: #222;
+      width: 100%;
+      display: block;
+      margin: 2em auto;
+    }
+
+    img {
+      border-radius: 5px;
+    }
+
+    pre {
+      overflow: auto;
+      padding: 1rem;
+      background-color: #f0f0f0;
+      border-radius: 3px;
+    }
+
+    pre.banner {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    code, kbd {
+      color: #9d109d;
+    }
+
+    img {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #222;
+        color: white;
+      }
+
+      a {
+        color: aqua;
+      }
+
+      hr {
+        background-color: #ddd;
+      }
+
+      pre {
+        background-color: #353535;
+      }
+
+      code, kbd {
+        color: #ff4cff;
+      }
+    }
+
+    @media (max-width: 400px) {
+      pre.banner { font-size: 9px; }
+    }
+
+    @media (max-width: 500px) {
+      pre.banner { font-size: 10px; }
+    }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        Home | <a href="contrib.html">contrib</a> | <a href="gmid.1.html">docs</a>
+      </nav>
+    </header>
+    <h1>gmid</h1>
+    <blockquote>
+      <p>A Gemini server</p>
+    </blockquote>
+    <h2>Features</h2>
+    <ul>
+      <li>sandboxed by default on OpenBSD, FreeBSD and Linux</li>
+      <li>able to reload the configuration on-the-fly without loosing connections</li>
+      <li>punycode and IRI support</li>
+      <li>CGI and FastCGI support</li>
+      <li>virtual hosts and per-location rules</li>
+      <li>low memory footprint</li>
+      <li>event-based asynchronous I/O model</li>
+      <li>rich configuration file</li>
+    </ul>
+    <h2>Install</h2>
+    <p>Some distros provide a package — thanks to the maintainers!</p>
+    <p>
+      <a href="https://repology.org/project/gmid/versions">
+        <img src="https://repology.org/badge/vertical-allrepos/gmid.svg" alt="Packaging status">
+      </a>
+    </p>
+    <p>Source code and precompiled binaries for linux are available:</p>
+    <ul>
+      <li>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid-1.7.4.tar.gz">gmid-1.7.4.tar.gz</a>
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <a href="https://git.omarpolo.com/gmid/">git repository</a>
+      </li>
+      <li>
+        <a href="gemini://git.omarpolo.com/gmid.git/">git repository via Gemini</a>
+      </li>
+      <li>
+        <a href="https://github.com/omar-polo/gmid">GitHub mirror</a>
+      </li>
+    </ul>
+    <ul>
+      <li>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid.linux.aarch64">gmid.linux.aarch64</a>
+      </li>
+      <li>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid.linux.amd64">gmid.linux.amd64</a>
+      </li>
+    </ul>
+    <p>
+      When in doubt, compile from source: it’s easy and takes less
+      than a minute on a raspberry pi 3.  The dependencies are:
+    </p>
+    <ul>
+      <li>libevent</li>
+      <li>OpenSSL/LibreSSL</li>
+      <li>libtls (from either LibreSSL or LibreTLS)</li>
+      <li>yacc or GNU bison</li>
+    </ul>
+    <p>Once all the dependencies are installed, building is as easy as:</p>
+    <pre>$ curl -LO https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid-1.7.4.tar.gz
+$ tar xzvf gmid-1.7.4.tar.gz
+$ cd gmid-1.7.4
+$ ./configure
+$ make
+$ sudo make install # eventually</pre>
+    <p>
+      A SHA256 file is available.  However, that only checks for
+      accidental corruption: you can use signify (SHA256.sig and the
+      public key gmid-1.7.pub) or GPG.  The hash of the signify public
+      key is also included in the SHA256 file and thus signed with my
+      GPG.  The signify public key for the next release ‘gmid-1.8.pub’
+      is also included.
+    </p>
+    <ul>
+      <li>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/SHA256">SHA256</a>
+      </li>
+      <li>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/SHA256.gpg">SHA256.gpg</a>
+      </li>
+      <li>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/SHA256.sig">SHA256.sig</a>
+      </li>
+    </ul>
+    <p>To verify the signatures with signify(1)</p>
+    <pre>$ signify -C -p gmid-1.7.pub -x SHA256.sig
+Signature Verified
+gmid-1.7.pub: OK
+gmid-1.7.4.tar.gz: OK
+gmid-1.8.pub: OK
+gmid.linux.aarch64: OK
+gmid.linux.amd64: OK</pre>
+    <h2>Changelog for the last versions</h2>
+    <p>1.7.4 “Space-dye Vest”  fourth bugfix release — Released September 24, 2021</p>
+    <p>This version includes the following bugfix:</p>
+    <ul>
+      <li>
+        fix a possible out-of-bound access when handling a request for
+        a non-existent file in the root directory of a vhost that's
+        matched by the cgi option
+      </li>
+    </ul>
+    <p>and the relative regression test.</p>
+    <hr />
+    <p>1.7.3 “Space-dye Vest” third bugfix release — Released September 18, 2021</p>
+    <h3>Improvements</h3>
+    <ul>
+      <li>follows symlinks</li>
+      <li>improved documentation and added key generation example (thanks! Anna)</li>
+    </ul>
+    <h3>Bugfix</h3>
+    <ul>
+      <li>fix syslog logging on FreeBSD.  Reported by Karl Jeacle, thanks!</li>
+      <li>don't crash if <code>-c</code> is missing in configtest mode (<code>-n</code>).  Reported by heph, thanks!</li>
+      <li>allow fstat64 on linux (needed by glibc on aarch64).  Reported by pine, thanks!</li>
+    </ul>
+    <hr />
+    <p>1.7.2 “Space-dye Vest” second bugfix release — Released July 19, 2021</p>
+    <p>This version includes the following bugfix:</p>
+    <ul>
+      <li>
+        An un-initialized field in the configless code path leads to a
+        crash on the first request.
+      </li>
+    </ul>
+    <p>and the relative regression test.</p>
+    <hr />
+    <p>1.7.1 “Space-dye Vest” bugfix release — Released July 11, 2021</p>
+    <p>This version includes two bugfixes:</p>
+    <ul>
+      <li>use <code>${MAKE}</code> to recursively call make.</li>
+      <li>
+        fix the misleading example in the manpage: macros name may not
+        be reserved words.
+      </li>
+    </ul>
+    <hr />
+    <p>1.7 “Space-dye Vest” — Released July 10, 2021</p>
+    <p>
+      Starting from this version gmid doesn't depend on lex anymore,
+      but yacc is still needed.
+    </p>
+    <h3>New Features</h3>
+    <ul>
+      <li>initial fastcgi support!  (it&#8217;s still young!)</li>
+      <li>
+        added user-defined macros, either via <code>-Dname=val</code> or
+        directly in the configuration file.
+      </li>
+      <li>new <code>include</code> keyword to load additional configuration files.</li>
+      <li>new <code>env</code> rule to define environment vars for CGI scripts.</li>
+      <li>new <code>alias</code> rule to define hostname aliases for a server.</li>
+      <li>allow <code>root</code> to be specified per-location block.</li>
+      <li>pidfile support with the new <code>-P</code> cli flag.</li>
+      <li>
+        define <code>TLS_VERSION</code>, <code>TLS_CIPHER</code> and
+        <code>TLS_CIPHER_STRENGTH</code> for CGI scripts.
+      </li>
+    </ul>
+    <h3>Improvements</h3>
+    <ul>
+      <li>
+        remove limits on the number of virtual hosts and location
+        blocks that can be defined.
+      </li>
+      <li>print the datetime when logging to stderr.</li>
+      <li>
+        use <code>text&#47;x-patch</code> for <code>.patch</code> and <code>.diff</code> files.
+      </li>
+      <li>sort the auto index alphabetically.</li>
+      <li>various improvements to the log management.</li>
+      <li>drop the dependency on lex.</li>
+      <li>
+        added <code>--help</code> as synonym of <code>-h</code> and
+        <code>-V</code>&#47;<code>--version</code> to print the version.
+      </li>
+      <li>
+        c-like handling of strings in the configuration file: when
+        two or more strings are next to each-others, are
+        automatically joined into a single string.  This is
+        particularly useful with <code>$</code>-macros.
+      </li>
+    </ul>
+    <h3>Bug fixes</h3>
+    <ul>
+      <li>
+        correctly handle CGI scripts that replies with the maxium
+        header length allowed.
+      </li>
+      <li>fixed the <code>static</code> target.</li>
+      <li>
+        fixed recursive mkdirs for configless mode (i.e. create
+        <code>~&#47;.local&#47;share&#47;gmid</code>)
+      </li>
+      <li>
+        logs sent to syslog now have proper priority (before every
+        message ended up as LOG_CRIT).  Found by Anna
+        &#8220;CyberTailor&#8221;, thanks!
+      </li>
+      <li>
+        ensure <code>%p</code> (path) is always absolute in
+        <code>block return</code> rules.
+      </li>
+      <li>
+        fix automatic certificate generation, it caused problems on
+        some adroid devices.  Found by Gnuserland, thanks!
+      </li>
+      <li>document the <code>log</code> rule.</li>
+      <li>
+        the seccomp filter was reworked and now it&#8217;s known to
+        work properly on a vast range of architectures (to be more
+        specific: all the architectures supported by alpine linux),
+        see github issue #4.  Prompted and tested by @begss, thanks!
+      </li>
+      <li>
+        various improvements to the configure script, notified and
+        fixed by Anna &#8220;CyberTailor&#8221;, thanks!
+      </li>
+      <li>added a timeout to the regression tests.</li>
+    </ul>
+    <h3>Breaking changes</h3>
+    <ul>
+      <li>
+        if duplicate rules are found in the configuration file, an
+        error is now raised instead of silently using only the last
+        value.
+      </li>
+      <li>
+        (sort of) <code>gg</code> moved to <code>regress</code> as
+        it's only used in the regression suite.
+      </li>
+      <li>
+        (notice) the <code>mime "mime-type" "extension"</code> rule was deprecated and
+        replaced by the new <code>map "mime-type" to-ext "extension"</code>.  The
+        <code>mime</code> rule will be removed in a future version
+        because its syntax is incompatible with the new string
+        auto-concat mechanism.
+      </li>
+    </ul>
+  </body>
+</html>

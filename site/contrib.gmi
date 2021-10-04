@@ -1,0 +1,66 @@
+=> / Home
+=> /gmid.1.txt docs
+
+# Contrib
+
+This directory is for additional contributed files which may be useful.
+
+## Dockerfile
+
+=> https://git.omarpolo.com/gmid/tree/contrib/Dockerfile contrib/Dockerfile
+
+A sample Dockerfile.  The resulting image is a classic alpine linux image with a statically linked gmid installed as /bin/gmid.
+To build the image:
+
+```instructions to build the image
+# docker build -f contrib/Dockerfile -t gmid .
+```
+and then run it with something along the lines of:
+```instruction to run the image
+# docker run --rm -it -p 1965:1965      \
+        -v gmid.conf:/etc/gmid.conf:ro  \
+        -v path/to/keys:/tls:ro         \
+        -v /var/gemini:/var/gemini:ro   \
+        gmid -c /etc/gmid.conf
+```
+
+## OpenBSD rc file
+
+=> https://git.omarpolo.com/gmid/tree/contrib/gmid contrib/gmid
+
+contrib/gmid is a sample service file for OpenBSD rc(8).  To install it:
+```command to install the rc file
+# cp contrib/gmid /etc/rc.d
+```
+then the usual ‘rcctl [start|stop|enable|restart] gmid’ are available.
+
+## Systemd unit file
+
+=> https://git.omarpolo.com/gmid/tree/contrib/gmid.service gmid.service
+
+A simple service file for systemd.  To install it
+```instructions to install the system file
+# cp contrib/gmid.service /lib/systemd/system/gmid.service
+```
+then the usual ‘systemctl [status|start|enable|stop] gmid’ commands can be used to manage the server.
+
+Some things to keep in mind:
+* the ExecStart path depends on the installation
+* decomment “User” and “Group” to start gmid without root priviledges.  It’s not needed, since gmid can lower its privileges, but may come in handy.
+
+## Vim syntax files
+
+=> https://git.omarpolo.com/gmid/tree/contrib/vim contrib/vim
+
+contrib/vim contains a syntax highlighting for vim.  To install it, just copy the files to ~/.vim or to /usr/share/vim/vimfiles, e.g.:
+```install the vim syntax highlight in your home
+$ mkdir -p ~/.vim
+$ cp -R contrib/vim/* ~/.vim/
+```
+
+To enable Syntastic checker, add to your vimrc:
+```
+let g:syntastic_gmid_checkers = ['gmid']
+```
+
+=> vim-screenshot.png Screenshot of vim editing gmid.conf

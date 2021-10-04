@@ -31,3 +31,6 @@ regress/puny-test
 regress/*.o
 regress/gg
 regress/gmid.pid
+
+site/gmid.1.html
+site/gmid.1.txt
