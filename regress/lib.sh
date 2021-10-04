@@ -35,6 +35,15 @@ port $port
 	fi
 }
 
+tests_done() {
+	if [ "$failed" != "" ]; then
+		echo
+		echo "failed tests:$failed"
+		exit 1
+	fi
+	exit 0
+}
+
 # usage: gen_config <global config> <server config>
 # generates a configuration file reg.conf
 gen_config() {

@@ -16,6 +16,15 @@ rm -f gmid.pid
 
 trap 'onexit' INT TERM EXIT
 
+if [ $# -ne 0 ]; then
+	while [ $# -ne 0 ]; do
+		run_test $1
+		shift
+	done
+
+	tests_done
+fi
+
 run_test test_configless_mode
 run_test test_static_files
 run_test test_directory_redirect
@@ -41,8 +50,4 @@ run_test test_fastcgi
 run_test test_macro_expansion
 run_test test_174_bugfix
 
-if [ "$failed" != "" ]; then
-	echo
-	echo "failed tests:$failed"
-	exit 1
-fi
+tests_done
