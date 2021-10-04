@@ -30,3 +30,4 @@ regress/iri_test
 regress/puny-test
 regress/*.o
 regress/gg
+regress/gmid.pid

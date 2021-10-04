@@ -1,7 +1,5 @@
 #!/bin/sh
 
-set -e
-
 if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
 	echo
 	echo "======================"
@@ -11,387 +9,40 @@ if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
 	exit 0
 fi
 
-ggflags=
+rm -f gmid.pid
 
-port=10965
-
-config_common="
-ipv6 off
-port $port
-"
-
-# usage: config <global config> <stuff for localhost>
-# generates a configuration file reg.conf
-config() {
-	cat <<EOF > reg.conf
-$config_common
-$1
-server "localhost" {
-	cert "$PWD/cert.pem"
-	key  "$PWD/key.pem"
-	root "$PWD/testdata"
-	$2
-}
-EOF
-}
-
-checkconf() {
-	./../gmid -n -c reg.conf
-}
-
-# usage: get <path>
-# return the body of the request on stdout
-get() {
-	./gg -T30 -b $ggflags "gemini://localhost:10965/$1"
-}
-
-# usage: head <path>
-# return the meta response line on stdout
-head() {
-	./gg -T30 -h $ggflags "gemini://localhost:10965/$1"
-}
-
-# usage: raw <path>
-# return both header and body
-raw() {
-	./gg -T30 $ggflags "gemini://localhost:10965/$1"
-}
-
-run() {
-	./../gmid -f -c reg.conf &
-	pid=$!
-	# give gmid time to bind the port, otherwise we end up
-	# executing gg when gmid isn't ready yet.
-	sleep 1
-}
-
-# usage: check [exit-message]
-# check if gmid is still running
-check() {
-	if ! ps $pid >/dev/null; then
-		echo ${1:-"gmid crashed?"}
-		exit 1
-	fi
-}
-
-restart() {
-	kill -HUP $pid
-	sleep 1
-}
-
-# quit gmid
-quit() {
-	kill $pid || true
-	wait || true
-}
-
-count() {
-	wc -l | xargs
-}
-
-# usage: eq a b errmsg
-# if a and b aren't equal strings, exit with errmsg
-eq() {
-	if ! [ "$1" = "$2" ]; then
-		echo "$3: \"$1\" not equal \"$2\""
-		exit 1
-	fi
-}
-
-onexit() {
-	rm -f bigfile bigfile.sha
-	quit
-}
-
-# configless tests
-
-./../gmid -p $port -H localhost -d . testdata &
-pid=$!
-sleep 1
-
-eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
-eq "$(get /)"		"# hello world$ln"	"Unexpected body for /"
-echo OK GET / in configless mode
-quit
-
-# daemon tests
+. ./lib.sh
+. ./tests.sh
 
 trap 'onexit' INT TERM EXIT
 
-endl=`printf "\r\n"`
-lf=`echo`
-
-config "" ""
-checkconf
-run
-
-eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
-eq "$(get /)"		"# hello world$ln"	"Unexpected body for /"
-echo OK GET /
-
-eq "$(head /foo)"	"51 not found"		"Unexpected head /foo"
-eq "$(get /foo)"	""			"Unexpected body /foo"
-echo OK GET /foo
-
-# should redirect if asked for a directory but without the trailing /
-eq "$(head /dir)"	"30 /dir/"		"Unexpected redirect for /dir"
-eq "$(get  /dir)"	""			"Unexpected body for redirect"
-echo OK GET /dir
-
-# 51 for a directory without index.gmi
-eq "$(head /dir/)"	"51 not found"		"Unexpected head for /"
-eq "$(get  /dir/)"	""			"Unexpected body for error"
-echo OK GET /dir/
-
-eq "$(head /dir/foo.gmi)" "20 text/gemini"	"Unexpected head for /dir/foo.gmi"
-eq "$(get  /dir/foo.gmi)" "# hello world$ln"	"Unexpected body for /dir/foo.gmi"
-echo OK GET /dir/foo.gmi
-
-# try a big file
-eq "$(head /bigfile)"	"20 application/octet-stream" "Unexpected head for /bigfile"
-get /bigfile > bigfile
-./sha bigfile bigfile.sha
-eq "$(cat bigfile.sha)"	"$(cat testdata/bigfile.sha)" "Unexpected sha for /bigfile"
-echo OK GET /bigfile
-
-# shouldn't be executing cgi scripts
-eq "$(head /hello)"	"20 application/octet-stream" "Unexpected head for /hello"
-echo OK GET /hello
-
-check "should be running"
-
-# try with custom mime
-config 'map "text/x-funny-text" to-ext "gmi"' 'default type "application/x-trash"'
-checkconf
-restart
-
-eq "$(head /)"		"20 text/x-funny-text"		"Unexpected head for /"
-echo OK GET / with custom mime
-
-eq "$(head /hello)"	"20 application/x-trash"	"Unexpected head for /hello"
-echo OK GET /hello with custom mime
-
-check "should be running"
-
-# try with custom lang
-config '' 'lang "it"'
-checkconf
-restart
-
-eq "$(head /)"		"20 text/gemini;lang=it"	"Unexpected head for /"
-echo OK GET / with custom lang
-
-check "should be running"
-
-# make sure we can use different lang in different location rules
-config '' 'lang "it" location "/en/*" { lang "en" } location "/de/*" { lang "de" }'
-checkconf
-echo OK parse multiple locations correctly
-restart
-
-# try with CGI scripts
-config '' 'cgi "*"'
-checkconf
-restart
-
-eq "$(head /hello)"	"20 text/gemini"		"Unexpected head for /hello"
-eq "$(get  /hello)"	"# hello world$ln"		"Unexpected body for /hello"
-echo OK GET /hello with cgi
-
-eq "$(head /slow)"	"20 text/gemini"		"Unexpected head for /slow"
-eq "$(get  /slow)"	"# hello world$ln"		"Unexpected body for /slow"
-echo OK GET /slow with cgi
-
-eq "$(head /err)"	"42 CGI error"	"Unexpected head for /err"
-eq "$(get  /err)"	""		"Unexpected body for /err"
-echo OK GET /err with cgi
-
-#eq "$(raw /invalid | wc -c | xargs)" 2048		"Unexpected body for /invalid"
-#echo OK GET /invalid with cgi
-
-eq "$(raw /max-length-reply | wc -c | xargs)" 1029	"Unexpected header for /max-length-reply"
-echo OK GET /max-length-reply with cgi
-
-# try a big file
-eq "$(head /serve-bigfile)"	"20 application/octet-stream" "Unexpected head for /serve-bigfile"
-get /bigfile > bigfile
-./sha bigfile bigfile.sha
-eq "$(cat bigfile.sha)"	"$(cat testdata/bigfile.sha)" "Unexpected sha for /serve-bigfile"
-echo OK GET /serve-bigfile with cgi
-
-# ensure we split the query correctly
-eq "$(get /env | awk /^-/ | count)"		1	"Unexpected number of arguments"
-eq "$(get /env?foo | awk /^-/ | count)"		2	"Unexpected number of arguments"
-eq "$(get /env?foo+bar | awk /^-/ | count)"	3	"Unexpected number of arguments"
-eq "$(get /env?foo+bar=5 | awk /^-/ | count)"	1	"Unexpected number of arguments"
-eq "$(get /env?foo+bar%3d5 | awk /^-/ | count)"	3	"Unexpected number of arguments"
-
-check "should be running"
-
-config '' 'index "foo.gmi"'
-checkconf
-restart
-
-eq "$(head /dir/)"	"20 text/gemini"	"Unexpected head for /"
-eq "$(get  /dir/)"	"# hello world$ln"	"Unexpected body for error"
-echo OK GET /dir/ with custom index
-
-check "should be running"
-
-config '' 'location "/dir/*" { default type "text/plain" index "hello" }'
-checkconf
-restart
-
-eq "$(head /dir/hello)"	"20 text/plain"			"Unexpected head for /"
-echo OK GET /dir/hello with location and default type
-
-eq "$(head /dir/)"	"20 text/plain"			"Unexpected head for /dir/"
-eq "$(get  /dir/|tail -1)" 'echo "# hello world"'	"Unexpected body for /dir/"
-echo OK GET /dir/ with location and custom index
-
-check "should be running"
-
-config '' 'location "/dir/*" { auto index on }'
-checkconf
-restart
-
-eq "$(head /)"		"20 text/gemini"		"Unexpected head for /"
-eq "$(get  /)"		"# hello world$ln"		"Unexpected body for /"
-echo OK GET / with auto index
-
-eq "$(head /dir)"		"30 /dir/"		"Unexpected head for /dir"
-eq "$(head /dir/)"		"20 text/gemini"	"Unexpected head for /dir/"
-eq "$(get /dir/|wc -l|xargs)"	"5"			"Unexpected body for /dir/"
-echo OK GET /dir/ with auto index on
-
-check "should be running"
-
-# test block return and strip
-
-config '' 'location "*" { block }'
-checkconf
-restart
-
-eq "$(head /)"		"40 temporary failure"		"Unexpected head for /"
-eq "$(get /)"		""				"Unexpected body for /"
-echo OK GET / with block
-
-eq "$(head /nonexists)"	"40 temporary failure"		"Unexpected head for /nonexists"
-eq "$(get /nonexists)"	""				"Unexpected body for /nonexists"
-echo OK GET /nonexists with block
-
-check "should be running"
-
-config '' '
-location "/dir" {
-	strip 1
-	block return 40 "%% %p %q %P %N test"
-}
-location "*" {
-	strip 99
-	block return 40 "%% %p %q %P %N test"
-}'
-checkconf
-restart
-
-eq "$(head /dir/foo.gmi)"	"40 % /foo.gmi  10965 localhost test"
-echo OK GET /dir/foo.gmi with strip and block
-
-eq "$(head /bigfile)"		"40 % /  10965 localhost test"
-echo OK GET /bigfile with strip and block
-
-check "should be running"
-
-# test the entrypoint
-
-config '' 'entrypoint "/env"'
-checkconf
-restart
-
-eq "$(head /foo/bar)"	"20 text/plain; lang=en"	"Unknown head for /foo/bar"
-eq "$(get /foo/bar|grep PATH_INFO)" "PATH_INFO=/foo/bar" "Unexpected PATH_INFO"
-echo OK GET /foo/bar with entrypoint
-
-# test with require ca
-
-config '' 'require client ca "'$PWD'/testca.pem"'
-checkconf
-restart
-
-eq "$(head /)"		"60 client certificate required" "Unexpected head for /"
-echo OK GET / without client certificate
-
-ggflags="-C valid.crt -K valid.key"
-eq "$(head /)"		"20 text/gemini"		"Unexpected head for /"
-echo OK GET / with valid client certificate
-
-ggflags="-C invalid.cert.pem -K invalid.key.pem"
-eq "$(head /)"		"61 certificate not authorised"	"Unexpected head for /"
-echo OK GET / with invalid client certificate
-
-ggflags=''
-
-
-# test with root inside a location
-
-config '' 'location "/foo/*" { root "'$PWD'/testdata" strip 1 }'
-checkconf
-restart
-
-eq "$(head /foo)"	"51 not found"		"Unexpected head for /foo"
-eq "$(head /foo/)"	"20 text/gemini"	"Unexpected head for /foo/"
-echo OK /foo and /foo/ with root inside location
-
-# how to match both /foo and /foo/*
-config '' '
-	location "/foo"   { block return 31 "%p/" }
-	location "/foo/*" { root "'$PWD'/testdata" strip 1 }
-'
-checkconf
-restart
-
-eq "$(head /foo)"	"31 /foo/"		"Unexpected head for /foo"
-eq "$(head /foo/)"	"20 text/gemini"	"Unexpected head for /foo/"
-echo OK /foo and /foo/ with root inside location
-
-# test with fastcgi
-
-# NB: the fcgi spawn is NOT supported outside of this test suite
-
-config 'prefork 1' 'fastcgi spawn "'$PWD'/fcgi-test"'
-checkconf
-restart
-
-eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
-eq "$(get /)"		"# Hello, world!"	"Unexpected body for /"
-echo OK GET / with fastcgi
-
-# test macro expansion
-
-cat <<EOF > reg.conf
-pwd = "$PWD"
-$config_common
-
-server "localhost" {
-	# the quoting of \$ is for sh
-	cert \$pwd "/cert.pem"
-	key  \$pwd "/key.pem"
-	root \$pwd "/testdata"
-}
-EOF
-checkconf
-restart
-
-eq "$(head /)"		"20 text/gemini"	"Unexpected head for /"
-eq "$(get /)"		"# hello world$ln"	"Unexpected body for /"
-echo OK GET / with macro expansion
-
-
-# 1.7.4 bugfix: check_for_cgi goes out-of-bound processing a string
-# that doesn't contain a '/'
-config '' 'cgi "*"'
-checkconf
-restart
-
-eq "$(head /favicon.txt)"	"51 not found"	"Unexpected head for /"
-echo OK GET /favicon.txt with cgi
+run_test test_configless_mode
+run_test test_static_files
+run_test test_directory_redirect
+run_test test_serve_big_files
+run_test test_dont_execute_scripts
+run_test test_custom_mime
+run_test test_default_type
+run_test test_custom_lang
+run_test test_parse_custom_lang_per_location
+run_test test_cgi_scripts
+run_test test_cgi_big_replies
+run_test test_cgi_split_query
+run_test test_custom_index
+run_test test_custom_index_default_type_per_location
+run_test test_auto_index
+run_test test_block
+run_test test_block_return_fmt
+run_test test_entrypoint
+run_test test_require_client_ca
+run_test test_root_inside_location
+run_test test_root_inside_location_with_redirect
+run_test test_fastcgi
+run_test test_macro_expansion
+run_test test_174_bugfix
+
+if [ "$failed" != "" ]; then
+	echo
+	echo "failed tests:$failed"
+	exit 1
+fi
