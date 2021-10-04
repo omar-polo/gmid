@@ -38,7 +38,7 @@ test_serve_big_files() {
 
 	hdr="$(head /bigfile)"
 	get /bigfile > bigfile
-	sha bigfile bigfile.sha
+	./sha bigfile bigfile.sha
 	body="$(cat bigfile.sha)"
 
 	check_reply "20 application/octet-stream" "$(cat testdata/bigfile.sha)"
@@ -99,7 +99,7 @@ test_cgi_big_replies() {
 
 	hdr="$(head /serve-bigfile)"
 	get /bigfile > bigfile
-	sha bigfile bigfile.sha
+	./sha bigfile bigfile.sha
 	body="$(cat bigfile.sha)"
 	check_reply "20 application/octet-stream" "$(cat testdata/bigfile.sha)"
 }

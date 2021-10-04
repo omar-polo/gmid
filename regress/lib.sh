@@ -159,23 +159,6 @@ check() {
 	return 1
 }
 
-# usage: sha in out
-# writes the sha256 of `in' to `out'
-sha() {
-	if which sha256 >/dev/null 2>&1; then
-		sha256 < "$1" > "$2"
-		return $?
-	fi
-
-	if which sha256sum >/dev/null 2>&1; then
-		sha256sum "$1" | awk '{print $1}' > "$2"
-		return $?
-	fi
-
-	echo "No sha binary found" >&2
-	exit 1
-}
-
 count() {
 	wc -l | xargs
 }
