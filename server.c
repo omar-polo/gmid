@@ -1151,6 +1151,8 @@ client_close_ev(int fd, short event, void *d)
 
 	connected_clients--;
 
+	free(c->req);
+
 	tls_free(c->ctx);
 	c->ctx = NULL;
 
