@@ -969,7 +969,7 @@ client_read(struct bufferevent *bev, void *d)
 	if (!parse_iri(c->req, &c->iri, &parse_err) ||
 	    !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
 		log_err(c, "IRI parse error: %s", parse_err);
-                start_reply(c, BAD_REQUEST, "bad request");
+		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
 
