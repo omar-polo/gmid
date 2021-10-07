@@ -332,9 +332,6 @@ free_config(void)
 		fcgi[i].path = NULL;
 		fcgi[i].port = NULL;
 		fcgi[i].prog = NULL;
-
-		fcgi[i].pending = 0;
-		fcgi[i].s = FCGI_OFF;
 	}
 
 	tls_free(ctx);

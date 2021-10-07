@@ -79,17 +79,6 @@ struct fcgi {
 	char		*path;
 	char		*port;
 	char		*prog;
-	int		 fd;
-
-	struct bufferevent *bev;
-
-	/* number of pending clients */
-	int		 pending;
-
-#define FCGI_OFF	0
-#define FCGI_INFLIGHT	1
-#define FCGI_READY	2
-	int		 s;
 };
 extern struct fcgi fcgi[FCGI_MAX];
 
@@ -230,7 +219,6 @@ struct client {
 	int		 fd, pfd;
 	struct dirent	**dir;
 	int		 dirlen, diroff;
-	int		 fcgi;
 
 	/* big enough to store STATUS + SPACE + META + CRLF */
 	char		 sbuf[1029];
@@ -366,12 +354,10 @@ int		 recv_fd(int);
 int		 executor_main(struct imsgbuf*);
 
 /* fcgi.c */
-void		 fcgi_abort_request(struct client *);
-void		 fcgi_close_backend(struct fcgi *);
 void		 fcgi_read(struct bufferevent *, void *);
 void		 fcgi_write(struct bufferevent *, void *);
 void		 fcgi_error(struct bufferevent *, short, void *);
-void		 fcgi_req(struct fcgi *, struct client *);
+void		 fcgi_req(struct client *);
 
 /* sandbox.c */
 void		 sandbox_server_process(void);

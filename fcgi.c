@@ -127,15 +127,12 @@ struct fcgi_end_req_body {
 #define FCGI_MPXS_CONNS	"FCGI_MPXS_CONNS"
 
 static int
-prepare_header(struct fcgi_header *h, int type, int id, size_t size,
+prepare_header(struct fcgi_header *h, int type, size_t size,
     size_t padding)
 {
-	memset(h, 0, sizeof(*h));
+	int id = 1;
 
-	/*
-	 * id=0 is reserved for status messages.
-	 */
-	id++;
+	memset(h, 0, sizeof(*h));
 
 	h->version = FCGI_VERSION_1;
         h->type = type;
@@ -149,16 +146,12 @@ prepare_header(struct fcgi_header *h, int type, int id, size_t size,
 }
 
 static int
-fcgi_begin_request(struct bufferevent *bev, int id)
+fcgi_begin_request(struct bufferevent *bev)
 {
 	struct fcgi_begin_req_record r;
 
-	if (id > UINT16_MAX)
-		return -1;
-
 	memset(&r, 0, sizeof(r));
-	prepare_header(&r.header, FCGI_BEGIN_REQUEST, id,
-	    sizeof(r.body), 0);
+	prepare_header(&r.header, FCGI_BEGIN_REQUEST, sizeof(r.body), 0);
 	assert(sizeof(r.body) == FCGI_HEADER_LEN);
 
 	r.body.role1 = 0;
@@ -171,7 +164,7 @@ fcgi_begin_request(struct bufferevent *bev, int id)
 }
 
 static int
-fcgi_send_param(struct bufferevent *bev, int id, const char *name,
+fcgi_send_param(struct bufferevent *bev, const char *name,
     const char *value)
 {
 	struct fcgi_header	h;
@@ -195,7 +188,7 @@ fcgi_send_param(struct bufferevent *bev, int id, const char *name,
 	s[6] = ((vallen >>  8) & 0xFF);
 	s[7] = ( vallen        & 0xFF);
 
-	prepare_header(&h, FCGI_PARAMS, id, size, padlen);
+	prepare_header(&h, FCGI_PARAMS, size, padlen);
 
 	if (bufferevent_write(bev, &h, sizeof(h))   == -1 ||
 	    bufferevent_write(bev, s, sizeof(s))    == -1 ||
@@ -208,39 +201,25 @@ fcgi_send_param(struct bufferevent *bev, int id, const char *name,
 }
 
 static int
-fcgi_end_param(struct bufferevent *bev, int id)
+fcgi_end_param(struct bufferevent *bev)
 {
 	struct fcgi_header h;
 
-	prepare_header(&h, FCGI_PARAMS, id, 0, 0);
+	prepare_header(&h, FCGI_PARAMS, 0, 0);
 	if (bufferevent_write(bev, &h, sizeof(h)) == -1)
 		return -1;
 
-	prepare_header(&h, FCGI_STDIN, id, 0, 0);
+	prepare_header(&h, FCGI_STDIN, 0, 0);
 	if (bufferevent_write(bev, &h, sizeof(h)) == -1)
 		return -1;
 
 	return 0;
 }
 
-void
-fcgi_abort_request(struct client *c)
-{
-	struct fcgi *f;
-	struct fcgi_header h;
-
-	f = &fcgi[c->fcgi];
-
-	prepare_header(&h, FCGI_ABORT_REQUEST, c->id, 0, 0);
-
-	if (bufferevent_write(f->bev, &h, sizeof(h)) == -1)
-		fcgi_close_backend(f);
-}
-
 static inline int
 recid(struct fcgi_header *h)
 {
-	return h->req_id0 + (h->req_id1 << 8) - 1;
+	return h->req_id0 + (h->req_id1 << 8);
 }
 
 static inline int
@@ -250,24 +229,12 @@ reclen(struct fcgi_header *h)
 }
 
 void
-fcgi_close_backend(struct fcgi *f)
-{
-	bufferevent_free(f->bev);
-	f->bev = NULL;
-	close(fcgi->fd);
-	fcgi->fd = -1;
-	fcgi->pending = 0;
-	fcgi->s = FCGI_OFF;
-}
-
-void
 fcgi_read(struct bufferevent *bev, void *d)
 {
-	struct fcgi		*fcgi = d;
+	struct client		*c = d;
 	struct evbuffer		*src = EVBUFFER_INPUT(bev);
 	struct fcgi_header	 hdr;
 	struct fcgi_end_req_body end;
-	struct client		*c;
 	size_t			 len;
 
 #if DEBUG_FCGI
@@ -292,11 +259,10 @@ fcgi_read(struct bufferevent *bev, void *d)
 
 		memcpy(&hdr, EVBUFFER_DATA(src), sizeof(hdr));
 
-		c = try_client_by_id(recid(&hdr));
-		if (c == NULL) {
+		if (recid(&hdr) != 1) {
 			log_err(NULL,
-			    "got invalid client id %d from fcgi backend %d",
-			    recid(&hdr), fcgi->id);
+			    "got invalid client id %d from fcgi backend",
+			    recid(&hdr));
 			goto err;
 		}
 
@@ -322,8 +288,6 @@ fcgi_read(struct bufferevent *bev, void *d)
 			bufferevent_read(bev, &end, sizeof(end));
 
 			/* TODO: do something with the status? */
-			fcgi->pending--;
-			c->fcgi = -1;
 			c->type = REQUEST_DONE;
 			client_write(c->bev, c);
 			break;
@@ -345,15 +309,10 @@ fcgi_read(struct bufferevent *bev, void *d)
 		}
 
 		evbuffer_drain(src, hdr.padding);
-
-		if (fcgi->pending == 0 && shutting_down) {
-			fcgi_error(bev, EVBUFFER_EOF, fcgi);
-			return;
-		}
 	}
 
 err:
-	fcgi_error(bev, EVBUFFER_ERROR, fcgi);
+	fcgi_error(bev, EVBUFFER_ERROR, c);
 }
 
 void
@@ -368,39 +327,27 @@ fcgi_write(struct bufferevent *bev, void *d)
 void
 fcgi_error(struct bufferevent *bev, short err, void *d)
 {
-	struct fcgi	*fcgi = d;
-	struct client	*c;
-	size_t		 i;
+	struct client	*c = d;
 
 	if (!(err & (EVBUFFER_ERROR|EVBUFFER_EOF)))
 		log_warn(NULL, "unknown event error (%x): %s",
 		    err, strerror(errno));
 
-	for (i = 0; i < MAX_USERS; ++i) {
-		c = &clients[i];
-
-		if (c->fcgi != fcgi->id)
-			continue;
-
-		if (c->code != 0)
-			client_close(c);
-		else
-			start_reply(c, CGI_ERROR, "CGI error");
-	}
-
-	fcgi_close_backend(fcgi);
+	c->type = REQUEST_DONE;
+	if (c->code != 0)
+		client_close(c);
+	else
+		start_reply(c, CGI_ERROR, "CGI error");
 }
 
 void
-fcgi_req(struct fcgi *f, struct client *c)
+fcgi_req(struct client *c)
 {
 	char		 addr[NI_MAXHOST], buf[22];
 	int		 e;
 	time_t		 tim;
 	struct tm	 tminfo;
 	struct envlist	*p;
-
-	f->pending++;
 
 	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
 	    addr, sizeof(addr),
@@ -410,50 +357,50 @@ fcgi_req(struct fcgi *f, struct client *c)
 		fatal("getnameinfo failed: %s (%s)",
 		    gai_strerror(e), strerror(errno));
 
-	fcgi_begin_request(f->bev, c->id);
-	fcgi_send_param(f->bev, c->id, "GATEWAY_INTERFACE", "CGI/1.1");
-	fcgi_send_param(f->bev, c->id, "GEMINI_URL_PATH", c->iri.path);
-	fcgi_send_param(f->bev, c->id, "QUERY_STRING", c->iri.query);
-	fcgi_send_param(f->bev, c->id, "REMOTE_ADDR", addr);
-	fcgi_send_param(f->bev, c->id, "REMOTE_HOST", addr);
-	fcgi_send_param(f->bev, c->id, "REQUEST_METHOD", "");
-	fcgi_send_param(f->bev, c->id, "SERVER_NAME", c->iri.host);
-	fcgi_send_param(f->bev, c->id, "SERVER_PROTOCOL", "GEMINI");
-	fcgi_send_param(f->bev, c->id, "SERVER_SOFTWARE", GMID_VERSION);
+	fcgi_begin_request(c->cgibev);
+	fcgi_send_param(c->cgibev, "GATEWAY_INTERFACE", "CGI/1.1");
+	fcgi_send_param(c->cgibev, "GEMINI_URL_PATH", c->iri.path);
+	fcgi_send_param(c->cgibev, "QUERY_STRING", c->iri.query);
+	fcgi_send_param(c->cgibev, "REMOTE_ADDR", addr);
+	fcgi_send_param(c->cgibev, "REMOTE_HOST", addr);
+	fcgi_send_param(c->cgibev, "REQUEST_METHOD", "");
+	fcgi_send_param(c->cgibev, "SERVER_NAME", c->iri.host);
+	fcgi_send_param(c->cgibev, "SERVER_PROTOCOL", "GEMINI");
+	fcgi_send_param(c->cgibev, "SERVER_SOFTWARE", GMID_VERSION);
 
 	if (tls_peer_cert_provided(c->ctx)) {
-		fcgi_send_param(f->bev, c->id, "AUTH_TYPE", "CERTIFICATE");
-		fcgi_send_param(f->bev, c->id, "REMOTE_USER",
+		fcgi_send_param(c->cgibev, "AUTH_TYPE", "CERTIFICATE");
+		fcgi_send_param(c->cgibev, "REMOTE_USER",
 		    tls_peer_cert_subject(c->ctx));
-		fcgi_send_param(f->bev, c->id, "TLS_CLIENT_ISSUER",
+		fcgi_send_param(c->cgibev, "TLS_CLIENT_ISSUER",
 		    tls_peer_cert_issuer(c->ctx));
-		fcgi_send_param(f->bev, c->id, "TLS_CLIENT_HASH",
+		fcgi_send_param(c->cgibev, "TLS_CLIENT_HASH",
 		    tls_peer_cert_hash(c->ctx));
-		fcgi_send_param(f->bev, c->id, "TLS_VERSION",
+		fcgi_send_param(c->cgibev, "TLS_VERSION",
 		    tls_conn_version(c->ctx));
-		fcgi_send_param(f->bev, c->id, "TLS_CIPHER",
+		fcgi_send_param(c->cgibev, "TLS_CIPHER",
 		    tls_conn_cipher(c->ctx));
 
 		snprintf(buf, sizeof(buf), "%d",
 		    tls_conn_cipher_strength(c->ctx));
-		fcgi_send_param(f->bev, c->id, "TLS_CIPHER_STRENGTH", buf);
+		fcgi_send_param(c->cgibev, "TLS_CIPHER_STRENGTH", buf);
 
 		tim = tls_peer_cert_notbefore(c->ctx);
 		strftime(buf, sizeof(buf), "%FT%TZ",
 		    gmtime_r(&tim, &tminfo));
-		fcgi_send_param(f->bev, c->id, "TLS_CLIENT_NOT_BEFORE", buf);
+		fcgi_send_param(c->cgibev, "TLS_CLIENT_NOT_BEFORE", buf);
 
 		tim = tls_peer_cert_notafter(c->ctx);
 		strftime(buf, sizeof(buf), "%FT%TZ",
 		    gmtime_r(&tim, &tminfo));
-		fcgi_send_param(f->bev, c->id, "TLS_CLIENT_NOT_AFTER", buf);
+		fcgi_send_param(c->cgibev, "TLS_CLIENT_NOT_AFTER", buf);
 
 		TAILQ_FOREACH(p, &c->host->params, envs) {
-			fcgi_send_param(f->bev, c->id, p->name, p->value);
+			fcgi_send_param(c->cgibev, p->name, p->value);
 		}
 	} else
-		fcgi_send_param(f->bev, c->id, "AUTH_TYPE", "");
+		fcgi_send_param(c->cgibev, "AUTH_TYPE", "");
 
-	if (fcgi_end_param(f->bev, c->id) == -1)
-		fcgi_error(f->bev, EVBUFFER_ERROR, f);
+	if (fcgi_end_param(c->cgibev) == -1)
+		fcgi_error(c->cgibev, EVBUFFER_ERROR, c);
 }

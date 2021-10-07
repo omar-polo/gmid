@@ -612,24 +612,14 @@ apply_fastcgi(struct client *c)
 	if ((id = vhost_fastcgi(c->host, c->iri.path)) == -1)
 		return 0;
 
-	switch ((f = &fcgi[id])->s) {
-	case FCGI_OFF:
-		f->s = FCGI_INFLIGHT;
-		log_info(c, "opening fastcgi connection for (%s,%s,%s)",
-		    f->path, f->port, f->prog);
-		imsg_compose(&exibuf, IMSG_FCGI_REQ, 0, 0, -1,
-		    &id, sizeof(id));
-		imsg_flush(&exibuf);
-                /* fallthrough */
-	case FCGI_INFLIGHT:
-                c->fcgi = id;
-		break;
-	case FCGI_READY:
-                c->fcgi = id;
-		fcgi_req(f, c);
-		break;
-	}
+	f = &fcgi[id];
 
+	log_debug(c, "opening fastcgi connection for (%s,%s,%s)",
+	    f->path, f->port, f->prog);
+
+	imsg_compose(&exibuf, IMSG_FCGI_REQ, c->id, 0, -1,
+	    &id, sizeof(id));
+	imsg_flush(&exibuf);
 	return 1;
 }
 
@@ -1058,9 +1048,6 @@ client_error(struct bufferevent *bev, short error, void *d)
 {
 	struct client	*c = d;
 
-	if (c->type == REQUEST_FCGI)
-		fcgi_abort_request(c);
-
 	c->type = REQUEST_DONE;
 
 	if (error & EVBUFFER_TIMEOUT) {
@@ -1177,9 +1164,6 @@ client_close(struct client *c)
 	 * ensure that everything is properly released once we reach
 	 * this point.
 	 */
-
-	if (c->type == REQUEST_FCGI)
-		fcgi_abort_request(c);
 
 	if (c->cgibev != NULL) {
 		bufferevent_disable(c->cgibev, EVBUFFER_READ|EVBUFFER_WRITE);
@@ -1317,7 +1301,6 @@ do_accept(int sock, short et, void *d)
 			c->pfd = -1;
 			c->dir = NULL;
 			c->addr = addr;
-			c->fcgi = -1;
 
 			event_once(c->fd, EV_READ|EV_WRITE, handle_handshake,
 			    c, NULL);
@@ -1370,51 +1353,37 @@ static void
 handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 {
 	struct client	*c;
-	struct fcgi	*f;
-	int		 i, id;
+	int		 id;
 
 	id = imsg->hdr.peerid;
-	f = &fcgi[id];
 
-	if ((f->fd = imsg->fd) == -1)
-		f->s = FCGI_OFF;
-	else {
-		mark_nonblock(f->fd);
-
-		f->s = FCGI_READY;
-
-		f->bev = bufferevent_new(f->fd, fcgi_read, fcgi_write,
-		    fcgi_error, f);
-		if (f->bev == NULL) {
-			close(f->fd);
-			log_err(NULL, "%s: failed to allocate client buffer",
-			    __func__);
-			f->s = FCGI_OFF;
-		}
-
-		bufferevent_enable(f->bev, EV_READ|EV_WRITE);
+	if ((c = try_client_by_id(id)) == NULL) {
+		if (imsg->fd != -1)
+			close(imsg->fd);
+		return;
 	}
 
-	for (i = 0; i < MAX_USERS; ++i) {
-		c = &clients[i];
-		if (c->fd == -1)
-			continue;
-		if (c->fcgi != id)
-			continue;
-
-		if (f->s == FCGI_OFF) {
-			c->fcgi = -1;
-			start_reply(c, TEMP_FAILURE, "internal server error");
-		} else
-			fcgi_req(f, c);
+	if ((c->pfd = imsg->fd) == -1) {
+		start_reply(c, CGI_ERROR, "CGI error");
+		return;
 	}
+
+	mark_nonblock(c->pfd);
+
+	c->cgibev = bufferevent_new(c->pfd, fcgi_read, fcgi_write,
+	    fcgi_error, c);
+	if (c->cgibev == NULL) {
+		start_reply(c, TEMP_FAILURE, "internal server error");
+		return;
+	}
+
+	bufferevent_enable(c->cgibev, EV_READ|EV_WRITE);
+	fcgi_req(c);
 }
 
 static void
 handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 {
-	size_t i;
-
 	(void)imsg;
 	(void)len;
 
@@ -1432,16 +1401,6 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 		signal_del(&siginfo);
 	event_del(&imsgev);
 	signal_del(&sigusr2);
-
-	for (i = 0; i < FCGI_MAX; ++i) {
-		if (fcgi[i].path == NULL && fcgi[i].prog == NULL)
-			break;
-
-		if (fcgi[i].bev == NULL || fcgi[i].pending != 0)
-			continue;
-
-		fcgi_close_backend(&fcgi[i]);
-	}
 }
 
 static void

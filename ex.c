@@ -420,7 +420,7 @@ handle_imsg_fcgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 	else
 		fd = fcgi_open_sock(f);
 
-	imsg_compose(ibuf, IMSG_FCGI_FD, id, 0, fd, NULL, 0);
+	imsg_compose(ibuf, IMSG_FCGI_FD, imsg->hdr.peerid, 0, fd, NULL, 0);
 	imsg_flush(ibuf);
 }
 
