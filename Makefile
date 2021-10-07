@@ -1,3 +1,7 @@
+# tests to run as a port of the regression suite.  Leave empty to run
+# all.
+TESTS=
+
 .PHONY: all static clean regress install
 
 all: Makefile.local gmid TAGS compile_flags.txt
@@ -29,7 +33,7 @@ clean:
 	${MAKE} -C regress clean
 
 regress: gmid
-	${MAKE} -C regress all
+	${MAKE} TESTS=${TESTS} -C regress all
 
 install: gmid
 	mkdir -p ${DESTDIR}${BINDIR}

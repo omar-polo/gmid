@@ -1,3 +1,7 @@
+# tests to run as a port of the regression suite.  Leave empty to run
+# all.
+TESTS=
+
 include ../Makefile.local
 
 .PHONY: all data clean runtime
@@ -5,7 +9,7 @@ include ../Makefile.local
 all: data gg puny-test fcgi-test
 	./puny-test
 	./iri_test
-	./runtime
+	./runtime ${TESTS}
 
 data: testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
 
