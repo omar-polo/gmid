@@ -133,7 +133,8 @@ load_vhosts(void)
 			if (l->dir == NULL)
 				continue;
 			if ((l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY)) == -1)
-				fatal("open %s for domain %s", l->dir, h->domain);
+				fatal("open %s for domain %s: %s", l->dir, h->domain,
+				    strerror(errno));
 		}
 	}
 }
