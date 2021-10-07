@@ -20,6 +20,7 @@
 #include "config.h"
 
 #include <sys/socket.h>
+#include <sys/tree.h>
 #include <sys/types.h>
 
 #include <arpa/inet.h>
@@ -64,8 +65,6 @@
 #define BAD_REQUEST	59
 #define CLIENT_CERT_REQ	60
 #define CERT_NOT_AUTH	61
-
-#define MAX_USERS	64
 
 /* maximum hostname and label length, +1 for the NUL-terminator */
 #define DOMAIN_NAME_LEN	(253+1)
@@ -200,7 +199,7 @@ enum {
 #define IS_INTERNAL_REQUEST(x)	((x) != REQUEST_CGI && (x) != REQUEST_FCGI)
 
 struct client {
-	int		 id;
+	uint32_t	 id;
 	struct tls	*ctx;
 	char		*req;
 	struct iri	 iri;
@@ -227,9 +226,11 @@ struct client {
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host they're talking to */
 	size_t		 loc;	/* location matched */
-};
 
-extern struct client clients[MAX_USERS];
+	SPLAY_ENTRY(client) entry;
+};
+SPLAY_HEAD(client_tree_id, client);
+extern struct client_tree_id clients;
 
 struct cgireq {
 	char		buf[GEMINI_URL_LEN];
@@ -332,6 +333,9 @@ void		 start_reply(struct client*, int, const char*);
 void		 client_close(struct client *);
 struct client	*try_client_by_id(int);
 void		 loop(struct tls*, int, int, struct imsgbuf*);
+
+int		 client_tree_cmp(struct client *, struct client *);
+SPLAY_PROTOTYPE(client_tree_id, client, entry, client_tree_cmp);
 
 /* dirs.c */
 int		 scandir_fd(int, struct dirent***, int(*)(const struct dirent*),

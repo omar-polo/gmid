@@ -31,8 +31,6 @@
 
 int shutting_down;
 
-struct client	 clients[MAX_USERS];
-
 static struct tls	*ctx;
 
 static struct event e4, e6, imsgev, siginfo, sigusr2;
@@ -83,6 +81,10 @@ static imsg_handlerfn *handlers[] = {
 	[IMSG_CGI_RES] = handle_imsg_cgi_res,
 	[IMSG_FCGI_FD] = handle_imsg_fcgi_fd,
 };
+
+static uint32_t server_client_id;
+
+struct client_tree_id clients;
 
 static inline int
 matches(const char *pattern, const char *path)
@@ -1165,6 +1167,8 @@ client_close(struct client *c)
 	 * this point.
 	 */
 
+	SPLAY_REMOVE(client_tree_id, &clients, c);
+
 	if (c->cgibev != NULL) {
 		bufferevent_disable(c->cgibev, EVBUFFER_READ|EVBUFFER_WRITE);
 		bufferevent_free(c->cgibev);
@@ -1275,7 +1279,7 @@ do_accept(int sock, short et, void *d)
 	struct sockaddr_storage addr;
 	struct sockaddr *saddr;
 	socklen_t len;
-	int i, fd;
+	int fd;
 
 	(void)et;
 
@@ -1289,44 +1293,41 @@ do_accept(int sock, short et, void *d)
 
 	mark_nonblock(fd);
 
-	for (i = 0; i < MAX_USERS; ++i) {
-		c = &clients[i];
-		if (c->fd == -1) {
-			memset(c, 0, sizeof(*c));
-			c->id = i;
-			if (tls_accept_socket(ctx, &c->ctx, fd) == -1)
-				break; /* goodbye fd! */
+	c = xcalloc(1, sizeof(*c));
+	c->id = ++server_client_id;
+	c->fd = fd;
+	c->pfd = -1;
+	c->addr = addr;
 
-			c->fd = fd;
-			c->pfd = -1;
-			c->dir = NULL;
-			c->addr = addr;
-
-			event_once(c->fd, EV_READ|EV_WRITE, handle_handshake,
-			    c, NULL);
-
-			connected_clients++;
-			return;
-		}
+	if (tls_accept_socket(ctx, &c->ctx, fd) == -1) {
+		log_warn(c, "failed to accept socket: %s", tls_error(c->ctx));
+		close(c->fd);
+		free(c);
+		return;
 	}
 
-	close(fd);
+	SPLAY_INSERT(client_tree_id, &clients, c);
+	event_once(c->fd, EV_READ|EV_WRITE, handle_handshake, c, NULL);
+	connected_clients++;
 }
 
 static struct client *
 client_by_id(int id)
 {
-	if ((size_t)id > sizeof(clients)/sizeof(clients[0]))
+	struct client *c;
+
+	if ((c = try_client_by_id(id)) == NULL)
 		fatal("in client_by_id: invalid id %d", id);
-	return &clients[id];
+	return c;
 }
 
 struct client *
 try_client_by_id(int id)
 {
-	if ((size_t)id > sizeof(clients)/sizeof(clients[0]))
-                return NULL;
-	return &clients[id];
+	struct client find;
+
+	find.id = id;
+	return SPLAY_FIND(client_tree_id, &clients, &find);
 }
 
 static void
@@ -1423,15 +1424,11 @@ handle_siginfo(int fd, short ev, void *d)
 void
 loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 {
-	size_t i;
-
 	ctx = ctx_;
 
-	event_init();
+	SPLAY_INIT(&clients);
 
-	memset(&clients, 0, sizeof(clients));
-	for (i = 0; i < MAX_USERS; ++i)
-		clients[i].fd = -1;
+	event_init();
 
 	event_set(&e4, sock4, EV_READ | EV_PERSIST, &do_accept, NULL);
 	event_add(&e4, NULL);
@@ -1457,3 +1454,16 @@ loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 	event_dispatch();
 	_exit(0);
 }
+
+int
+client_tree_cmp(struct client *a, struct client *b)
+{
+	if (a->id == b->id)
+		return 0;
+	else if (a->id < b->id)
+		return -1;
+	else
+		return +1;
+}
+
+SPLAY_GENERATE(client_tree_id, client, entry, client_tree_cmp)
