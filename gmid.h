@@ -20,7 +20,6 @@
 #include "config.h"
 
 #include <sys/socket.h>
-#include <sys/tree.h>
 #include <sys/types.h>
 
 #include <arpa/inet.h>

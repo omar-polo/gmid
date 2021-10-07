@@ -254,6 +254,7 @@ runtest setproctitle	SETPROCTITLE	|| true
 runtest strlcat		STRLCAT		|| true
 runtest strlcpy		STRLCPY		|| true
 runtest strtonum	STRTONUM	|| true
+runtest tree_h		TREE_H		|| true
 runtest vasprintf	VASPRINTF	"" -D_GNU_SOURCE || true
 
 if [ ${HAVE_LIBTLS} -eq 0 ]; then
@@ -274,7 +275,7 @@ if [ ${HAVE_LIBEVENT} -eq 0 ]; then
 	exit 1
 fi
 
-if [ ${HAVE_QUEUE_H} -eq 0 -o ${HAVE_IMSG} -eq 0 ]; then
+if [ ${HAVE_QUEUE_H} -eq 0 -o ${HAVE_IMSG} -eq 0 -o ${HAVE_TREE_H} -eq 0 ]; then
 	CFLAGS="${CFLAGS} -I ${PWD}/compat"
 fi
 
@@ -300,6 +301,12 @@ if [ ${HAVE_QUEUE_H} -eq 1 ]; then
 	echo "#include <sys/queue.h>"
 else
 	echo "#include <queue.h>"
+fi
+
+if [ ${HAVE_TREE_H} -eq 1 ]; then
+	echo "#include <sys/tree.h>"
+else
+	echo "#include <tree.h>"
 fi
 
 echo "#include <sys/types.h>"
@@ -331,6 +338,7 @@ cat <<__HEREDOC__
 #define HAVE_STRLCAT		${HAVE_STRLCAT}
 #define HAVE_STRLCPY		${HAVE_STRLCPY}
 #define HAVE_STRTONUM		${HAVE_STRTONUM}
+#define HAVE_TREE_H		${HAVE_TREE_H}
 #define HAVE_VASPRINTF		${HAVE_VASPRINTF}
 
 __HEREDOC__
