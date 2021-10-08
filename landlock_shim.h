@@ -16,10 +16,9 @@
 
 /*
  * What's the deal with landlock?  While distro with linux >= 5.13
- * have the struct declarations, it seems that the glibc (or whatever)
- * wrappers are missing.  The sample landlock code provided by the
- * authors includes these "shims" for the landlock API until libc
- * provides them.
+ * have the struct declarations, libc wrappers are missing.  The
+ * sample landlock code provided by the authors includes these "shims"
+ * in their example for the landlock API until libc provides them.
  *
  * Linux is such a mess sometimes.  /rant
  */
