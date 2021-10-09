@@ -661,8 +661,10 @@ using a configuration file.
 First, the RSA certificate is created using a wildcard common name:
 .Bd -literal -offset indent
 # openssl genrsa \-out /etc/ssl/private/example.com.key 4096
-# openssl req \-new \-x509 \-key /etc/ssl/private/example.com.key \e
-	\-out /etc/ssl/example.com.crt \-days 36500 \-nodes \e
+# openssl req \-new \-x509 \e
+	\-key /etc/ssl/private/example.com.key \e
+	\-out /etc/ssl/example.com.crt \e
+	\-days 36500 \-nodes \e
 	\-subj "/CN=example.com"
 # chmod 600 /etc/ssl/example.com.crt
 # chmod 600 /etc/ssl/private/example.com.key
