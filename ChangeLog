@@ -1,5 +1,7 @@
 2021-10-09  Omar Polo  <op@omarpolo.com>
 
+	* parse.y (print_conf): multiple -n to dump the parsed configuration
+
 	* contrib/gencert: add gencert, a simple script to generate self-signed certs
 
 2021-10-04  Omar Polo  <op@omarpolo.com>

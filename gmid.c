@@ -589,7 +589,7 @@ main(int argc, char **argv)
 			return 0;
 
 		case 'n':
-			conftest = 1;
+			conftest++;
 			break;
 
 		case 'P':
@@ -639,7 +639,9 @@ main(int argc, char **argv)
 		if (config_path == NULL)
 			fatal("missing configuration");
 		parse_conf(config_path);
-		puts("config OK");
+		fprintf(stderr, "config OK\n");
+		if (conftest > 1)
+			print_conf();
 		return 0;
 	}
 

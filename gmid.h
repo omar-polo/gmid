@@ -291,6 +291,7 @@ void		 drop_priv(void);
 
 void		 yyerror(const char*, ...);
 void		 parse_conf(const char*);
+void		 print_conf(void);
 int		 cmdline_symset(char *);
 
 /* log.c */
