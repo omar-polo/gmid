@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>gmid | contrib</title>
+    <meta charset="utf8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+    body {
+      font-family: monospace;
+      font-size: 14px;
+      max-width: 780px;
+      margin: 0 auto;
+      padding: 20px;
+      padding-bottom: 80px;
+    }
+
+    h1::before {
+      content: "# ";
+    }
+
+    h2 {
+      margin-top: 40px;
+    }
+
+    h2::before {
+      content: "## ";
+    }
+
+    h3::before {
+      content: "### ";
+    }
+
+    blockquote {
+      margin: 0;
+      padding: 0;
+    }
+
+    blockquote::before {
+      content: "> ";
+    }
+
+    blockquote p {
+      font-style: italic;
+      display: inline;
+    }
+
+    p.link::before {
+      content: "→ ";
+    }
+
+    strong::before { content: "*" }
+    strong::after  { content: "*" }
+
+    hr {
+      border: 0;
+      height: 1px;
+      background-color: #222;
+      width: 100%;
+      display: block;
+      margin: 2em auto;
+    }
+
+    img {
+      border-radius: 5px;
+    }
+
+    pre {
+      overflow: auto;
+      padding: 1rem;
+      background-color: #f0f0f0;
+      border-radius: 3px;
+    }
+
+    pre.banner {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+    }
+
+    code, kbd {
+      color: #9d109d;
+    }
+
+    img {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      body {
+        background-color: #222;
+        color: white;
+      }
+
+      a {
+        color: aqua;
+      }
+
+      hr {
+        background-color: #ddd;
+      }
+
+      pre {
+        background-color: #353535;
+      }
+
+      code, kbd {
+        color: #ff4cff;
+      }
+    }
+
+    @media (max-width: 400px) {
+      pre.banner { font-size: 9px; }
+    }
+
+    @media (max-width: 500px) {
+      pre.banner { font-size: 10px; }
+    }
+    </style>
+  </head>
+  <body>
+    <header>
+      <nav>
+        <a href="/">Home</a> |
+        <a href="contrib.html">contrib</a> |
+        Quickstart |
+        <a href="gmid.1.html">docs</a>
+      </nav>
+    </header>
+    <h1>gmid quickstart</h1>
+    <p>gmid can be run in two different “modes”:</p>
+    <dl>
+      <dt>configless:</dt>
+      <dd>
+        a quick way to serve a directory tree from the shell, useful
+        for testing a capsule before uploading it
+      </dd>
+      <dt>daemon mode:</dt>
+      <dd>
+        gmid reads the configuration file and runs in the background
+      </dd>
+    </dl>
+    <p>To run gmid in the “configless” mode, just type:</p>
+    <pre>$ gmid path/to/dir</pre>
+    <p>
+      gmid will then generate a certificate inside ~/.local/share/gmid
+      and serving the given directory locally.
+    </p>
+    <p>
+      To run gmid in daemon mode a configuration file is needed.  The
+      format of the configuration file is described in the manpage and
+      is quite flexible, but for simple setup something like the
+      following should be enough:
+    </p>
+    <pre># /etc/gmid.conf
+
+server "example.com" {
+	cert "/path/to/certificate"
+	key  "/path/to/private-key"
+	root "/var/gemini/example.com"
+}</pre>
+    <p>
+      A X.509 (TLS) certificate can be generated using
+      <a href="https://git.omarpolo.com/gmid/tree/contrib/gencert">contrib/gencert</a>:
+    </p>
+    <pre>$ ./contrib/gencert example.com
+Generating a 4096 bit RSA private key
+.................................................++++
+..........++++
+writing new private key to './example.com.key'
+-----
+
+Generated files:
+        ./example.com.pem : certificate
+        ./example.com.key : private key</pre>
+    <p>
+      Optionally copy ‘example.com.pem’ and ‘example.com.key’ to
+      another location.
+    </p>
+    <p>
+      Make sure that the ‘cert’ and ‘key’ options in the configuration
+      file points to these files.
+    </p>
+    <p>Then running gmid is as easy as</p>
+    <pre>$ gmid -c /etc/gmid.conf</pre>
+    <h2>Securing your gmid installation</h2>
+    <p>
+      gmid employs various techniques to prevent the damage caused by
+      bugs, but some steps needs to be done manually.
+    </p>
+    <p>
+      If gmid was installed from your distribution package manager,
+      chance are that it already does all of this and is also
+      providing a service to run gmid automatically (e.g. a systemd
+      unit file, a rc script, …)  Otherwise, it’s heavily suggested to
+      create at least a dedicated user.
+    </p>
+    <h3>A dedicated user</h3>
+    <p>
+      Ideally, gmid should be run with root privileges and to drop
+      privileges to a local user.  This way, the created certificates
+      can be readable only by root.  For example, on GNU/linux systems
+      a ‘gmid’ user can be created with:
+    </p>
+    <pre>$ useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid</pre>
+    <p>
+      Please consult your OS documentation for more information on the
+      matter.
+    </p>
+    <p>
+      The configuration then needs to be adjusted to include the
+      ‘user’ directive at the top:
+    </p>
+    <pre># /etc/gmid.conf
+user "gmid"
+
+server "example.com" { … }</pre>
+    <p>
+      gmid then needs to be started with root privileges, but will
+      then switch to the provided user automatically.  If by accident
+      the ‘user’ is forgotten and gmid is running as root, it will
+      complain loudly in the logs.
+    </p>
+    <h3>chroot</h3>
+    <p>
+      It’s a common practice for system daemons to chroot themselves
+      into a directory.  From here on I’ll assume /var/gemini, but it
+      can be any directory.
+    </p>
+    <p>
+      A chroot on UNIX-like OS is an operation that changes the
+      “apparent” root directory (i.e. “/”) from the current process
+      and its child.  Think of it like imprisoning a process into a
+      directory and never letting it escape until it terminates.
+    </p>
+    <p>
+      Using a chroot may complicate the use of CGI scripts, because
+      then all the dependencies of the scripts (like sh, perl, or
+      other libraries) needs to be installed inside the chroot too.
+      For this very reason gmid supports FastCGI too.
+    </p>
+    <p>
+      The chroot feature requires a dedicate user, see the previous
+      section.
+    </p>
+    <p>
+      To chroot gmid inside a directory, use the ‘chroot’ directive in
+      the configuration file:
+    </p>
+    <pre># /etc/gmid.conf
+
+# the given directory, /var/gemini in this case, must exists.
+chroot "/var/gemini"</pre>
+    <p>
+      Note that once ‘chroot’ is in place, every ‘root’ directive is
+      implicitly relative to the chroot, but ‘cert’ and ‘key’ aren’t!
+    </p>
+    <p>For example, given the following configuration:</p>
+    <pre># /etc/gmid.conf
+
+user "gmid"
+chroot "/var/gemini"
+
+server "example.com" {
+	cert "/etc/ssl/example.com.pem"
+	key  "/etc/ssl/example.com.key"
+	root "/example.com"
+}</pre>
+    <p>
+      The certificate and the key path are the specified ones, but the
+      root directory of the virtual host is actually
+      “/var/gemini/example.com/”.
+    </p>
+  </body>
+</html>
