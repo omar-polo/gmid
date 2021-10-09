@@ -1,0 +1,95 @@
+#!/bin/sh
+#
+# NAME
+#	gencert - generate certificates
+#
+# SYNOPSIS
+#	./gencert [-fh] [-D days] [-d destdir] hostname
+#
+# DESCRIPTION
+#	A simple script to generate self-signed X.509 certificates for
+#	gmid.
+#
+#	The option are as follows:
+#		-D	Specify the number of days the certificate
+#			will be valid for.  Use 365 (a year) by default.
+#		-d	Save the certificates to the given directory.
+#			By default the current directory is used.
+#		-f	Forcefully overwrite existing certificates
+#			without prompting.
+#		-h	Display usage and exit.
+#
+# SEE ALSO
+#	openssl(1)
+#
+
+progname="$(basename -- "$0")"
+
+usage() {
+	echo "usage: $progname [-fh] [-d destdir] [-D days] hostname" >&2
+	echo "Please read the comment at the top of $0 for the usage." >&2
+	exit $1
+}
+
+force=no
+destdir=.
+days=365
+
+while getopts "D:d:fh" flag; do
+	case $flag in
+		D) days="$OPTARG" ;;
+		d) destdir="${OPTARG%/}" ;;
+		f) force=yes ;;
+		h) usage 0 ;;
+		?) usage 1 ;;
+	esac
+done
+
+shift $(($OPTIND - 1))
+
+if [ $# -ne 1 ]; then
+	usage 1
+fi
+
+if [ ! -d "${destdir}" ]; then
+	echo "${progname}: ${destdir} is not a directory." >&2
+	usage 1
+fi
+
+hostname="${1}"
+pem="${destdir}/${hostname}.pem"
+key="${destdir}/${hostname}.key"
+
+if [ -f "$pem" -o -f "$key" ]; then
+	if [ $force = no ]; then
+		while :; do
+			printf "Overwrite existing certificate $pem? [y/n] "
+			if ! read -r reply; then
+				echo
+				exit 1
+			fi
+			case "$reply" in
+				[yY]) echo "overwriting"; break ;;
+				[nN]) echo "quitting"; exit 0 ;;
+			esac
+		done
+	fi
+fi
+
+openssl req -x509		\
+	-newkey rsa:4096	\
+	-out "${pem}"		\
+	-keyout "${key}"	\
+	-days "${days}"		\
+	-nodes			\
+	-subj "/CN=$hostname"
+
+e=$?
+if [ $e -ne 0 ]; then
+	exit $e
+fi
+
+echo
+echo "Generated files:"
+echo "	$pem : certificate"
+echo "	$key : private key"

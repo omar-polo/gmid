@@ -1,3 +1,7 @@
+2021-10-09  Omar Polo  <op@omarpolo.com>
+
+	* contrib/gencert: add gencert, a simple script to generate self-signed certs
+
 2021-10-04  Omar Polo  <op@omarpolo.com>
 
 	* regress/lib.sh (raw): reduced the timeout time for single checks from 30 to 10 seconds

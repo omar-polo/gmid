@@ -5,6 +5,10 @@ Dockerfile
 
 	Sample Dockerfile to build alpine-based gmid images.
 
+gencert
+
+	Simple shell script to generate self-signed certificates.
+
 gmid
 
 	Sample rc(8) script for OpenBSD, to be placed in /etc/rc.d.
