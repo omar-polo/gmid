@@ -42,7 +42,7 @@ Generated files:
         ./example.com.key : private key
 ```
 
-Optionally copy ‘example.com.pem’ and ‘example.com.key’ to another location.
+Optionally, move ‘example.com.pem’ and ‘example.com.key’ to another location.
 
 Make sure that the ‘cert’ and ‘key’ options in the configuration file points to these files.
 
@@ -62,10 +62,10 @@ If gmid was installed from your distribution package manager, chance are that it
 
 ### A dedicated user
 
-Ideally, gmid should be run with root privileges and to drop privileges to a local user.  This way, the created certificates can be readable only by root.  For example, on GNU/linux systems a ‘gmid’ user can be created with:
+Ideally, gmid should be started with root privileges and drop privileges to a local user.  This way, the created certificates can be readable only by root.  For example, on GNU/linux systems a ‘gmid’ user can be created with:
 
 ```how to create the gmid user
-$ useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
+# useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
 ```
 
 Please consult your OS documentation for more information on the matter.
@@ -88,7 +88,7 @@ It’s a common practice for system daemons to chroot themselves into a director
 
 A chroot on UNIX-like OS is an operation that changes the “apparent” root directory (i.e. “/”) from the current process and its child.  Think of it like imprisoning a process into a directory and never letting it escape until it terminates.
 
-Using a chroot may complicate the use of CGI scripts, because then all the dependencies of the scripts (like sh, perl, or other libraries) needs to be installed inside the chroot too.  For this very reason gmid supports FastCGI too.
+Using a chroot may complicate the use of CGI scripts, because then all the dependencies of the scripts (like sh, perl, libraries…) need to be installed inside the chroot too.  For this very reason gmid supports FastCGI.
 
 The chroot feature requires a dedicate user, see the previous section.
 
@@ -96,6 +96,8 @@ To chroot gmid inside a directory, use the ‘chroot’ directive in the configu
 
 ```how to use the ‘chroot’ option
 # /etc/gmid.conf
+
+user "gmid"
 
 # the given directory, /var/gemini in this case, must exists.
 chroot "/var/gemini"

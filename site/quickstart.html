@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-    <title>gmid | contrib</title>
+    <title>gmid quickstart</title>
     <meta charset="utf8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
@@ -175,7 +175,7 @@ Generated files:
         ./example.com.pem : certificate
         ./example.com.key : private key</pre>
     <p>
-      Optionally copy ‘example.com.pem’ and ‘example.com.key’ to
+      Optionally, move ‘example.com.pem’ and ‘example.com.key’ to
       another location.
     </p>
     <p>
@@ -198,12 +198,12 @@ Generated files:
     </p>
     <h3>A dedicated user</h3>
     <p>
-      Ideally, gmid should be run with root privileges and to drop
+      Ideally, gmid should be started with root privileges and drop
       privileges to a local user.  This way, the created certificates
       can be readable only by root.  For example, on GNU/linux systems
       a ‘gmid’ user can be created with:
     </p>
-    <pre>$ useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid</pre>
+    <pre># useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid</pre>
     <p>
       Please consult your OS documentation for more information on the
       matter.
@@ -236,9 +236,9 @@ server "example.com" { … }</pre>
     </p>
     <p>
       Using a chroot may complicate the use of CGI scripts, because
-      then all the dependencies of the scripts (like sh, perl, or
-      other libraries) needs to be installed inside the chroot too.
-      For this very reason gmid supports FastCGI too.
+      then all the dependencies of the scripts (like sh, perl,
+      libraries…) need to be installed inside the chroot too.  For
+      this very reason gmid supports FastCGI.
     </p>
     <p>
       The chroot feature requires a dedicate user, see the previous
@@ -249,6 +249,8 @@ server "example.com" { … }</pre>
       the configuration file:
     </p>
     <pre># /etc/gmid.conf
+
+user "gmid"
 
 # the given directory, /var/gemini in this case, must exists.
 chroot "/var/gemini"</pre>
