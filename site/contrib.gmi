@@ -26,6 +26,12 @@ and then run it with something along the lines of:
         gmid -c /etc/gmid.conf
 ```
 
+## gencert
+
+=> https://git.omarpolo.com/gmid/tree/contrib/gencert contrib/gencert
+
+contrib/gencert is a simple script to generate self-signed certificates.
+
 ## OpenBSD rc file
 
 => https://git.omarpolo.com/gmid/tree/contrib/gmid contrib/gmid

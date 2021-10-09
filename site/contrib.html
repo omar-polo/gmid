@@ -133,6 +133,7 @@
     <p>Contents:</p>
     <ul>
       <li><a href="#dockerfile">Dockerfile</a></li>
+      <li><a href="#gencert">gencert</a></li>
       <li><a href="#openbsd-rc">OpenBSD rc file</a></li>
       <li><a href="#systemd-unit-file">Systemd unit file</a></li>
       <li><a href="#vim-syntax-files">Vim syntax files</a></li>
@@ -154,6 +155,11 @@
         -v path/to/keys:/tls:ro         \
         -v /var/gemini:/var/gemini:ro   \
         gmid -c /etc/gmid.conf</pre>
+    <h2 id="gencert">gencert</h2>
+    <p>
+      <a href="https://git.omarpolo.com/gmid/tree/contrib/gencert">contrib/gencert</a>
+      is a simple script to generate self-signed certificates.
+    </p>
     <h2 id="openbsd-rc">OpenBSD rc file</h2>
     <p>
       <a href="https://git.omarpolo.com/gmid/tree/contrib/gmid">contrib/gmid</a>
