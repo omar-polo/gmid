@@ -15,7 +15,16 @@ man -Thtml -l "$1" > "$2"
 exec ed "$2" <<EOF
 /<style>
 a
-    body { max-width: 960px; margin: 0 auto; }
+    body {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 0 10px;
+        font-size: 1rem;
+    }
+
+    pre {
+        overflow: auto;
+    }
 .
 wq
 EOF
