@@ -429,10 +429,6 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
 	int i;
 
-	(void)ibuf;
-	(void)imsg;
-	(void)datalen;
-
 	for (i = 0; i < conf.prefork; ++i) {
 		imsg_compose(&servibuf[i], IMSG_QUIT, 0, 0, -1, NULL, 0);
 		imsg_flush(&exibuf);

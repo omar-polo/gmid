@@ -1281,8 +1281,6 @@ do_accept(int sock, short et, void *d)
 	socklen_t len;
 	int fd;
 
-	(void)et;
-
 	saddr = (struct sockaddr*)&addr;
 	len = sizeof(addr);
 	if ((fd = accept(sock, saddr, &len)) == -1) {
@@ -1385,9 +1383,6 @@ handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 static void
 handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 {
-	(void)imsg;
-	(void)len;
-
 	/*
 	 * don't call event_loopbreak since we want to finish to
 	 * handle the ongoing connections.
@@ -1414,10 +1409,6 @@ handle_dispatch_imsg(int fd, short ev, void *d)
 static void
 handle_siginfo(int fd, short ev, void *d)
 {
-	(void)fd;
-	(void)ev;
-	(void)d;
-
 	log_info(NULL, "%d connected clients", connected_clients);
 }
 

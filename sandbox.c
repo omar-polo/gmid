@@ -393,9 +393,6 @@ static struct sock_filter filter[] = {
 static void
 sandbox_seccomp_violation(int signum, siginfo_t *info, void *ctx)
 {
-	(void)signum;
-	(void)ctx;
-
 	fprintf(stderr, "%s: unexpected system call (arch:0x%x,syscall:%d @ %p)\n",
 	    __func__, info->si_arch, info->si_syscall, info->si_call_addr);
 	_exit(1);
