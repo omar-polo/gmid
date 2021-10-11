@@ -1,0 +1,200 @@
+#!/usr/bin/env perl
+#
+# Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+# You can read the documentation for this script using
+#
+#	$ perldoc renew-certs
+#
+
+use v5.10;
+use strict;
+use warnings;
+
+use Getopt::Std;
+use Time::Piece;
+
+my $auto = 0;
+my $conf = '/etc/gmid.conf';
+my $days = 365;
+my $gmid = 'gmid';
+my $restart = 0;
+my $threshold = 24 * 60 * 60;
+
+my %options = ();
+getopts("ac:d:g:r", \%options);
+
+foreach my $flag (keys %options) {
+	if ($flag eq 'a') {
+		$auto = 1;
+	} elsif ($flag eq 'c') {
+		$conf = $options{c};
+	} elsif ($flag eq 'd') {
+		$days = int($options{d}) or exit 1;
+	} elsif ($flag eq 'g') {
+		$gmid = $options{g};
+	} elsif ($flag eq 'r') {
+		$auto = 1;
+		$restart = 1;
+	} elsif ($flag eq 't') {
+		$threshold = int($options{t}) or exit 1;
+	}
+}
+
+my $now = localtime()->epoch + $threshold;
+my $found_one = 0;
+
+my $c = `$gmid -nn -c $conf @ARGV 2>/dev/null`;
+die "$gmid failed to parse $conf" if $? != 0;
+
+while ($c =~ /server \"(.*)\"/g) {
+	my $server = $1;
+
+	$c =~ /cert \"(.*)\"/gc;
+	my $cert = $1;
+
+	$c =~ /key \"(.*)\"/gc;
+	my $key = $1;
+
+	if (expired($cert)) {
+		$found_one = 1;
+		if ($auto) {
+			renew($server, $cert, $key);
+		} else {
+			say $server;
+		}
+	}
+}
+
+if ($found_one && $restart) {
+	my @cmd = ("pkill", "-HUP", $gmid);
+	system(@cmd);
+}
+
+exit !$found_one;
+
+sub expired {
+	my ($cert) = @_;
+
+	my $exp = `openssl x509 -noout -enddate -in $cert`;
+	die 'failed to execute openssl' if $? != 0;
+	chomp $exp;
+
+	my $d = Time::Piece->strptime($exp, "notAfter=%b %e %T %Y %Z");
+	return $d->epoch < $now;
+}
+
+sub renew {
+	my ($hostname, $cert, $key) = @_;
+	my @cmd = (
+		"openssl", "req", "-x509",
+		"-newkey", "rsa:4096",
+		"-out", $cert,
+		"-keyout", $key,
+		"-days", $days,
+		"-nodes",
+		"-subj", "/CN=".$hostname,
+	);
+
+	system(@cmd) == 0
+	    or die "system @cmd failed: $?";
+}
+
+__END__
+
+=head1 NAME
+
+B<renew-certs> - automatically renew gmid certificates
+
+=head1 SYNOPSIS
+
+B<renew-certs> [-ar] [-c I<conf>] [-d I<days>] [-g I<gmid>] [-t I<threshold>] [-- I<gmid flags...>]
+
+=head1 DESCRIPTION
+
+B<renew-certs> attempts to renew the certificates used by gmid if they
+are close to the expiration date and can optionally restart the
+server.  It's meant to be used in a crontab(5) file.
+
+B<renew-certs> needs at least B<gmid> 1.8.
+
+The arguments are as follows:
+
+=over
+
+=item -a
+
+Automatically generate a new set of certificates.
+
+=item -c I<conf>
+
+Path to the gmid configuration.  By default is F</etc/gmid.conf>.
+
+=item -d I<days>
+
+Number of I<days> the newly generated certificates will be valid for;
+365 by default.
+
+=item -g I<gmid>
+
+Path to the gmid(1) executable.
+
+=item -r
+
+Restart B<gmid> after re-generating the certificates by killing it
+with SIGHUP.  Implies -a.
+
+=item -t I<threshold>
+
+Tweak the expiring I<threshold>.  Certificates whose I<notAfter> field
+ends before I<threshold> seconds will be considered outdated.  By
+default is 86400, or 24 * 60 * 60, 24 hours.
+
+=item I<gmid flags>
+
+Additional flags to be passed to gmid(1).
+
+=back
+
+=head1 EXIT STATUS
+
+The B<renew-certs> utility exits on 0 when at least one certificate is
+about to expire and >0 otherwise, or if an error occurs.
+
+=head1 EXAMPLES
+
+Some examples of how to use B<renew-certs> in a crontab(5) file
+follows:
+
+	# automatically renew and restart gmid
+	0 0 * * * renew-certs -r
+
+	# like the previous, but pass a custom flag to gmid
+	0 0 * * * renew-certs -r -- -Dcerts=/etc/ssl/
+
+	# automatically renew the certs but use a custom
+	# command (rcctl in this case) to restart the server
+	0 0 * * * renew-certs -a && rcctl restart gmid
+
+	# only check for expiration.  `cmd' can read the names of the
+	# servers with an expiring certificate from stdin, one per
+	# line
+	0 0 * * * renew-certs | cmd
+
+=head1 SEE ALSO
+
+crontab(1) gmid(1) openssl(1) crontab(5)
+
+=cut

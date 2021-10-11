@@ -1,3 +1,7 @@
+2021-10-11  Omar Polo  <op@omarpolo.com>
+
+	* contrib/renew-certs: add script to automatically renew self-signed certificates
+
 2021-10-09  Omar Polo  <op@omarpolo.com>
 
 	* parse.y (print_conf): multiple -n to dump the parsed configuration

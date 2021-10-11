@@ -17,6 +17,12 @@ gmid.service
 
 	Simple systemd service file.
 
+renew-certs
+
+	Flexible script meant to be run in a cronjob to watch for cert
+	expiration.  It can optionally regen the (self-signed)
+	certificate in place and restart the server too.
+
 vim
 
 	Syntax highlighting of gmid configuration for vim, to be
