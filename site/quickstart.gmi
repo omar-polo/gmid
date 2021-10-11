@@ -1,5 +1,5 @@
 => / Home
-=> /quickstart.gmi Quickstart
+=> contrib.gmi contrib
 => /gmid.1.txt docs
 
 # gmid quickstart
