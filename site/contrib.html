@@ -139,6 +139,7 @@
       <li><a href="#gencert">gencert</a></li>
       <li><a href="#openbsd-rc">OpenBSD rc file</a></li>
       <li><a href="#systemd-unit-file">Systemd unit file</a></li>
+      <li><a href="#renew-certs">renew certificates automatically</a></li>
       <li><a href="#vim-syntax-files">Vim syntax files</a></li>
     </ul>
     <hr />
@@ -200,6 +201,14 @@
         <pre># journalctl -t gmid</pre>
       </li>
     </ul>
+    <h2 id="renew-certs">renew certificates automatically</h2>
+    <p>
+      <a href="https://git.omarpolo.com/gmid/tree/contrib/renew-certs">contrib/renew-certs</a>
+      is a script meant to be run in a crontab that watch for
+      certificate expiration.  It can optionally renew the certs and
+      restart gmid too.
+    </p>
+    <p>Read the documentation with: <code>perldoc renew-certs</code></p>
     <h2 id="vim-syntax-files">Vim syntax files</h2>
     <p>
       <a href="https://git.omarpolo.com/gmid/tree/contrib/vim">contrib/vim</a>
