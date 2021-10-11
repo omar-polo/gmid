@@ -1,3 +1,7 @@
+=> / Home
+=> /quickstart.gmi Quickstart
+=> /gmid.1.txt docs
+
 # gmid quickstart
 
 gmid can be run in two different “modes”:
