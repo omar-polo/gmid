@@ -13,7 +13,11 @@ $ gmid path/to/dir
 
 gmid will then generate a certificate inside ~/.local/share/gmid and serve the given directory locally.
 
-To run gmid in daemon mode a configuration file is needed.  The format of the configuration file is described in the manpage and is quite flexible, but for simple setup something like the following should be enough:
+## Setting up a capsule with gmid
+
+To host a Gemini capsule you need to run gmid in “daemon” mode.
+
+To run gmid in daemon mode a configuration file is needed.  The format of the configuration file is described in the manpage and is quite flexible, but something like the following should be enough to start:
 
 ```sample configuration file
 # /etc/gmid.conf
@@ -25,7 +29,7 @@ server "example.com" {
 }
 ```
 
-A X.509 (TLS) certificate can be generated using contrib/gencert
+You also need to generate a certificate for the capsule.  A X.509 (TLS) certificate can be generated for e.g. with contrib/gencert
 
 => https://git.omarpolo.com/gmid/tree/contrib/gencert contrib/gencert
 
@@ -52,6 +56,8 @@ Then running gmid is as easy as
 $ gmid -c /etc/gmid.conf
 ```
 
+Congratulations, your capsule is online!
+
 
 ## Securing your gmid installation
 
@@ -62,7 +68,7 @@ If gmid was installed from your distribution package manager, chance are that it
 
 ### A dedicated user
 
-Ideally, gmid should be started with root privileges and drop privileges to a local user.  This way, the created certificates can be readable only by root.  For example, on GNU/linux systems a ‘gmid’ user can be created with:
+Ideally, gmid should be started as root and drop privileges to a local user.  This way, the certificates can be readable only by root.  For example, on GNU/linux systems a ‘gmid’ user can be created with:
 
 ```how to create the gmid user
 # useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
@@ -79,16 +85,16 @@ user "gmid"
 server "example.com" { … }
 ```
 
-gmid then needs to be started with root privileges, but will then switch to the provided user automatically.  If by accident the ‘user’ is forgotten and gmid is running as root, it will complain loudly in the logs.
+gmid then needs to be started with root privileges, but will then switch to the provided user automatically.  If by accident the ‘user’ option is omitted and gmid is running as root, it will complain loudly in the logs.
 
 
 ### chroot
 
 It’s a common practice for system daemons to chroot themselves into a directory.  From here on I’ll assume /var/gemini, but it can be any directory.
 
-A chroot on UNIX-like OS is an operation that changes the “apparent” root directory (i.e. “/”) from the current process and its child.  Think of it like imprisoning a process into a directory and never letting it escape until it terminates.
+A chroot on UNIX-like OS is an operation that changes the “apparent” root directory (i.e. the “/”) from the current process and its child.  Think of it like imprisoning a process into a directory and never letting it escape until it terminates.
 
-Using a chroot may complicate the use of CGI scripts, because then all the dependencies of the scripts (like sh, perl, libraries…) need to be installed inside the chroot too.  For this very reason gmid supports FastCGI.
+Using a chroot may complicate the use of CGI scripts, because then all the dependencies of the scripts (sh, perl, libraries…) need to be installed inside the chroot too.  For this very reason gmid supports FastCGI.
 
 The chroot feature requires a dedicate user, see the previous section.
 
