@@ -158,13 +158,15 @@
     <pre># /etc/gmid.conf
 
 server "example.com" {
-	cert "/path/to/certificate"
-	key  "/path/to/private-key"
+	cert "/etc/ssl/example.com.pem"
+	key  "/etc/ssl/private/example.com/key"
+
+	# path to the root directory of your capsule
 	root "/var/gemini/example.com"
 }</pre>
     <p>
-      You also need to generate a certificate for the capsule.  A
-      X.509 (TLS) certificate can be generated for e.g. with
+      A certificate is needed for the capsule.  Generate one for
+      e.g. using
       <a href="https://git.omarpolo.com/gmid/tree/contrib/gencert">contrib/gencert</a>:
     </p>
     <pre>$ ./contrib/gencert example.com
@@ -178,9 +180,15 @@ Generated files:
         ./example.com.pem : certificate
         ./example.com.key : private key</pre>
     <p>
-      Optionally, move ‘example.com.pem’ and ‘example.com.key’ to
-      another location.
+      Move ‘example.com.pem’ and ‘example.com.key’ to a safe place and
+      double check that the ‘cert’ and ‘key’ options in the
+      configuration points to these files.
     </p>
+    <p>For example, save them in ‘/etc/ssl/’ (as root)</p>
+    <pre># mkdir -p /etc/ssl/private
+# chown 700 /etc/ssl/private
+# mv example.com.pem /etc/ssl/
+# mv example.com.key /etc/ssl/private/</pre>
     <p>
       Make sure that the ‘cert’ and ‘key’ options in the configuration
       file points to these files.
@@ -196,8 +204,8 @@ Generated files:
     <p>
       If gmid was installed from your distribution package manager,
       chance are that it already does all of this and is also
-      providing a service to run gmid automatically (e.g. a systemd
-      unit file, a rc script, …)  Otherwise, it’s heavily suggested to
+      providing a service to run gmid automatically (e.g. a rc script,
+      a systemd unit file …)  Otherwise, it’s heavily suggested to
       create at least a dedicated user.
     </p>
     <h3>A dedicated user</h3>
