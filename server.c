@@ -1284,7 +1284,8 @@ do_accept(int sock, short et, void *d)
 	saddr = (struct sockaddr*)&addr;
 	len = sizeof(addr);
 	if ((fd = accept(sock, saddr, &len)) == -1) {
-		if (errno == EWOULDBLOCK || errno == EAGAIN)
+		if (errno == EWOULDBLOCK || errno == EAGAIN ||
+		    errno == ECONNABORTED)
 			return;
 		fatal("accept: %s", strerror(errno));
 	}
