@@ -1,3 +1,7 @@
+2021-10-13  Omar Polo  <op@omarpolo.com>
+
+	* server.c (do_accept): don't die on ECONNABORTED (``Software caused connection abort'')
+
 2021-09-24  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): 1.7.4 tagged
