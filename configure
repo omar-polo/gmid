@@ -34,7 +34,7 @@ echo "file config.log: writing..."
 # default settings: initialize all vars here such that nothing is
 # leaked from the environment except for CC, CFLAGS and LDFLAGS
 
-VERSION=1.7.4
+VERSION=1.7.5
 
 CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
 
