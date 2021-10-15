@@ -1,3 +1,7 @@
+2021-10-15  Stephen Gregoratto  <dev@sgregoratto.me>
+
+	* gmid.c (add_keypair): implement OCSP stapling support
+
 2021-10-13  Omar Polo  <op@omarpolo.com>
 
 	* server.c (do_accept): don't die on ECONNABORTED (``Software caused connection abort'')
