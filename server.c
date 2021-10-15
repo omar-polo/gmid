@@ -468,6 +468,22 @@ handle_handshake(int fd, short ev, void *d)
 		abort();
 	}
 
+	c->bev = bufferevent_new(fd, client_read, client_write,
+	    client_error, c);
+	if (c->bev == NULL)
+		fatal("%s: failed to allocate client buffer: %s",
+		    __func__, strerror(errno));
+
+	event_set(&c->bev->ev_read, c->fd, EV_READ,
+	    client_tls_readcb, c->bev);
+	event_set(&c->bev->ev_write, c->fd, EV_WRITE,
+	    client_tls_writecb, c->bev);
+
+#if HAVE_LIBEVENT2
+	evbuffer_unfreeze(c->bev->input, 0);
+	evbuffer_unfreeze(c->bev->output, 1);
+#endif
+
 	if ((servname = tls_conn_servername(c->ctx)) == NULL) {
 		log_debug(c, "handshake: missing SNI");
 		goto err;
@@ -495,25 +511,7 @@ found:
 
 	if (h != NULL) {
 		c->host = h;
-
-		c->bev = bufferevent_new(fd, client_read, client_write,
-		    client_error, c);
-		if (c->bev == NULL)
-			fatal("%s: failed to allocate client buffer: %s",
-			    __func__, strerror(errno));
-
-		event_set(&c->bev->ev_read, c->fd, EV_READ,
-		    client_tls_readcb, c->bev);
-		event_set(&c->bev->ev_write, c->fd, EV_WRITE,
-		    client_tls_writecb, c->bev);
-
-#if HAVE_LIBEVENT2
-		evbuffer_unfreeze(c->bev->input, 0);
-		evbuffer_unfreeze(c->bev->output, 1);
-#endif
-
 		bufferevent_enable(c->bev, EV_READ);
-
 		return;
 	}
 
