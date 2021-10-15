@@ -74,7 +74,7 @@ gmid.linux.amd64: OK
 
 ## Change log for the last versions
 
-1.7.5 “Space-dye Vest” fourth bugfix release — Released October 15, 2021
+1.7.5 “Space-dye Vest” fifth bugfix release — Released October 15, 2021
 
 This version includes the following bugfix
 
