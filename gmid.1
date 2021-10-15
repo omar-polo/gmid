@@ -412,6 +412,19 @@ Set the param
 to
 .Ar value
 for FastCGI.
+.It Ic ocsp Ar file
+Specify an OCSP response to be stapled during TLS handshakes
+with this server.
+The
+.Ar file
+should contain a DER-format OCSP response retrieved from an
+OCSP server for the
+.Ic cert
+in use.
+If the OCSP response in
+.Ar file
+is empty, OCSP stapling will not be used.
+The default is to not use OCSP stapling.
 .It Ic root Pa directory
 Specify the root directory for this server
 .Pq alas the current Dq document root .

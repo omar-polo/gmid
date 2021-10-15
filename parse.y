@@ -120,7 +120,7 @@ typedef struct {
 %token	KEY
 %token	LANG LOCATION LOG
 %token	MAP MIME
-%token	OFF ON
+%token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTOCOLS
 %token	REQUIRE RETURN ROOT
 %token	SERVER SPAWN STRIP
@@ -271,6 +271,10 @@ servopt		: ALIAS string {
 			only_once(host->key, "key");
 			host->key  = ensure_absolute_path($2);
 		}
+		| OCSP string		{
+			only_once(host->ocsp, "ocsp");
+			host->ocsp = ensure_absolute_path($2);
+		}
 		| PARAM string '=' string {
 			add_param($2, $4, 0);
 		}
@@ -397,6 +401,7 @@ static struct keyword {
 	{"log", LOG},
 	{"map", MAP},
 	{"mime", MIME},
+	{"ocsp", OCSP},
 	{"off", OFF},
 	{"on", ON},
 	{"param", PARAM},

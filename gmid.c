@@ -194,6 +194,20 @@ make_socket(int port, int family)
 	return sock;
 }
 
+static void
+add_keypair(struct vhost *h)
+{
+	if (h->ocsp == NULL) {
+		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
+			fatal("failed to load the keypair (%s, %s)",
+			    h->cert, h->key);
+	} else {
+		if (tls_config_add_keypair_ocsp_file(tlsconf, h->cert, h->key, h->ocsp) == -1)
+			fatal("failed to load the keypair (%s, %s, %s)",
+			    h->cert, h->key, h->ocsp);
+	}
+}
+
 void
 setup_tls(void)
 {
@@ -218,12 +232,13 @@ setup_tls(void)
 	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))
 		fatal("tls_config_set_keypair_file failed for (%s, %s)",
 		    h->cert, h->key);
+	if (h->ocsp != NULL &&
+	    tls_config_set_ocsp_staple_file(tlsconf, h->ocsp) == -1)
+		fatal("tls_config_set_ocsp_staple_file failed for (%s)",
+		    h->ocsp);
 
-	while ((h = TAILQ_NEXT(h, vhosts)) != NULL) {
-		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
-			fatal("failed to load the keypair (%s, %s)",
-			    h->cert, h->key);
-	}
+	while ((h = TAILQ_NEXT(h, vhosts)) != NULL)
+		add_keypair(h);
 
 	if (tls_configure(ctx, tlsconf) == -1)
 		fatal("tls_configure: %s", tls_error(ctx));
