@@ -153,7 +153,7 @@
     <p>Source code and precompiled binaries for linux are available:</p>
     <ul>
       <li>
-        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid-1.7.4.tar.gz">gmid-1.7.4.tar.gz</a>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.5/gmid-1.7.5.tar.gz">gmid-1.7.5.tar.gz</a>
       </li>
     </ul>
     <ul>
@@ -169,10 +169,10 @@
     </ul>
     <ul>
       <li>
-        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid.linux.aarch64">gmid.linux.aarch64</a>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.5/gmid.linux.aarch64">gmid.linux.aarch64</a>
       </li>
       <li>
-        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid.linux.amd64">gmid.linux.amd64</a>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.5/gmid.linux.amd64">gmid.linux.amd64</a>
       </li>
     </ul>
     <p>
@@ -186,9 +186,9 @@
       <li>yacc or GNU bison</li>
     </ul>
     <p>Once all the dependencies are installed, building is as easy as:</p>
-    <pre>$ curl -LO https://github.com/omar-polo/gmid/releases/download/1.7.4/gmid-1.7.4.tar.gz
-$ tar xzvf gmid-1.7.4.tar.gz
-$ cd gmid-1.7.4
+    <pre>$ curl -LO https://github.com/omar-polo/gmid/releases/download/1.7.5/gmid-1.7.5.tar.gz
+$ tar xzvf gmid-1.7.5.tar.gz
+$ cd gmid-1.7.5
 $ ./configure
 $ make
 $ sudo make install # eventually</pre>
@@ -202,24 +202,30 @@ $ sudo make install # eventually</pre>
     </p>
     <ul>
       <li>
-        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/SHA256">SHA256</a>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.5/SHA256">SHA256</a>
       </li>
       <li>
-        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/SHA256.gpg">SHA256.gpg</a>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.5/SHA256.gpg">SHA256.gpg</a>
       </li>
       <li>
-        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.4/SHA256.sig">SHA256.sig</a>
+        <a href="https://github.com/omar-polo/gmid/releases/download/1.7.5/SHA256.sig">SHA256.sig</a>
       </li>
     </ul>
     <p>To verify the signatures with signify(1)</p>
     <pre>$ signify -C -p gmid-1.7.pub -x SHA256.sig
 Signature Verified
 gmid-1.7.pub: OK
-gmid-1.7.4.tar.gz: OK
+gmid-1.7.5.tar.gz: OK
 gmid-1.8.pub: OK
 gmid.linux.aarch64: OK
 gmid.linux.amd64: OK</pre>
     <h2>Changelog for the last versions</h2>
+    <p>1.7.5 “Space-dye Vest”  fourth bugfix release — Released October 15, 2021</p>
+    <p>This version includes the following bugfix:</p>
+    <ul>
+      <li>don't die when a connection is closed before being accepted by gmid (i.e. handle <code>ECONNRESET</code>)</li>
+    </ul>
+    <hr />
     <p>1.7.4 “Space-dye Vest”  fourth bugfix release — Released September 24, 2021</p>
     <p>This version includes the following bugfix:</p>
     <ul>
