@@ -202,7 +202,8 @@ add_keypair(struct vhost *h)
 			fatal("failed to load the keypair (%s, %s)",
 			    h->cert, h->key);
 	} else {
-		if (tls_config_add_keypair_ocsp_file(tlsconf, h->cert, h->key, h->ocsp) == -1)
+		if (tls_config_add_keypair_ocsp_file(tlsconf, h->cert, h->key,
+		    h->ocsp) == -1)
 			fatal("failed to load the keypair (%s, %s, %s)",
 			    h->cert, h->key, h->ocsp);
 	}
@@ -232,6 +233,8 @@ setup_tls(void)
 	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))
 		fatal("tls_config_set_keypair_file failed for (%s, %s)",
 		    h->cert, h->key);
+
+	/* same for OCSP */
 	if (h->ocsp != NULL &&
 	    tls_config_set_ocsp_staple_file(tlsconf, h->ocsp) == -1)
 		fatal("tls_config_set_ocsp_staple_file failed for (%s)",
