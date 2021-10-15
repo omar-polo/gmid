@@ -213,7 +213,8 @@ void
 log_request(struct client *c, char *meta, size_t l)
 {
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
-	char *t, *fmted;
+	char *fmted;
+	const char *t;
 	size_t len;
 	int ec;
 
@@ -244,7 +245,9 @@ log_request(struct client *c, char *meta, size_t l)
 			strlcat(b, c->iri.query, sizeof(b));
 		}
 	} else {
-		strlcpy(b, c->req, sizeof(b));
+		if ((t = c->req) == NULL)
+			t = "";
+		strlcpy(b, t, sizeof(b));
 	}
 
 	if ((t = gmid_strnchr(meta, '\r', l)) == NULL)
