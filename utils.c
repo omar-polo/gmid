@@ -122,7 +122,7 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	    host);
 
 	if ((pkey = EVP_PKEY_new()) == NULL)
-                fatal("couldn't create a new private key");
+		fatal("couldn't create a new private key");
 
 	if ((rsa = RSA_new()) == NULL)
 		fatal("couldn't generate rsa");
@@ -154,7 +154,7 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	X509_set_issuer_name(x509, name);
 
 	if (!X509_sign(x509, pkey, EVP_sha256()))
-                fatal("couldn't sign the certificate");
+		fatal("couldn't sign the certificate");
 
 	if ((f = fopen(keypath, "w")) == NULL)
 		fatal("fopen(%s): %s", keypath, strerror(errno));

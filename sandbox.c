@@ -29,7 +29,7 @@ sandbox_server_process(void)
 void
 sandbox_executor_process(void)
 {
-        log_notice(NULL, "Sandbox disabled!  "
+	log_notice(NULL, "Sandbox disabled!  "
 	    "Please report issues upstream instead of disabling the sandbox.");
 }
 
@@ -322,7 +322,7 @@ static struct sock_filter filter[] = {
 #endif
 #ifdef __NR_ioctl
 	/* allow ioctl on fd 1, glibc doing stuff? */
-        SC_ALLOW_ARG(__NR_ioctl, 0, 1),
+	SC_ALLOW_ARG(__NR_ioctl, 0, 1),
 	/* allow FIONREAD needed by libevent */
 	SC_ALLOW_ARG(__NR_ioctl, 1, FIONREAD),
 #endif
@@ -645,7 +645,7 @@ sandbox_executor_process(void)
 	}
 
 	for (i = 0; i < FCGI_MAX; i++) {
-                f = &fcgi[i];
+		f = &fcgi[i];
 		if (f->path != NULL) {
 			if (unveil(f->path, "rw") == -1)
 				fatal("unveil %s", f->path);

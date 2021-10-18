@@ -65,7 +65,7 @@ valid_multibyte_utf8(struct parser *p)
 {
 	uint32_t cp = 0, state = 0;
 
-        for (; *p->iri; p->iri++)
+	for (; *p->iri; p->iri++)
 		if (!utf8_decode(&state, &cp, *p->iri))
 			break;
 

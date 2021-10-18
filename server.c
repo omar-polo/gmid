@@ -540,7 +540,7 @@ static void
 fmt_sbuf(const char *fmt, struct client *c, const char *path)
 {
 	size_t i;
-        char buf[32];
+	char buf[32];
 
 	memset(buf, 0, sizeof(buf));
 	for (i = 0; *fmt; ++fmt) {
@@ -794,7 +794,7 @@ open_dir(struct client *c)
 		c->diroff = 0;
 		c->off = 0;
 
-                start_reply(c, SUCCESS, "text/gemini");
+		start_reply(c, SUCCESS, "text/gemini");
 		evbuffer_add_printf(EVBUFFER_OUTPUT(c->bev),
 		    "# Index of %s\n\n", c->iri.path);
 		return;
@@ -1093,7 +1093,7 @@ start_reply(struct client *c, int code, const char *meta)
 	    c->type != REQUEST_FCGI &&
 	    !strcmp(meta, "text/gemini") &&
 	    (lang = vhost_lang(c->host, c->iri.path)) != NULL) {
-                rr = evbuffer_add_printf(evb, ";lang=%s", lang);
+		rr = evbuffer_add_printf(evb, ";lang=%s", lang);
 		if (rr == -1)
 			goto err;
 		if (r + rr > 1027)

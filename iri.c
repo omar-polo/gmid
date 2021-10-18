@@ -229,7 +229,7 @@ path_elide_dotdot(char *path, char *i, int incr)
 	if (i == path)
 		return 0;
 	for (j = i-2; j != path && *j != '/'; j--)
-                /* noop */ ;
+		/* noop */ ;
 	if (*j == '/')
 		j++;
 	i += incr;
@@ -428,7 +428,7 @@ serialize_iri(struct iri *i, char *buf, size_t len)
 
 	strlcpy(buf, i->schema, len);
 	strlcat(buf, "://", len);
-        strlcat(buf, i->host, len);
+	strlcat(buf, i->host, len);
 	strlcat(buf, "/", len);
 
 	if (i->path != NULL)

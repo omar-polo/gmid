@@ -135,7 +135,7 @@ prepare_header(struct fcgi_header *h, int type, size_t size,
 	memset(h, 0, sizeof(*h));
 
 	h->version = FCGI_VERSION_1;
-        h->type = type;
+	h->type = type;
 	h->req_id1 = (id >> 8);
 	h->req_id0 = (id & 0xFF);
 	h->content_len1 = (size >> 8);
@@ -168,7 +168,7 @@ fcgi_send_param(struct bufferevent *bev, const char *name,
     const char *value)
 {
 	struct fcgi_header	h;
-        uint32_t		namlen, vallen, padlen;
+	uint32_t		namlen, vallen, padlen;
 	uint8_t			s[8];
 	size_t			size;
 	char			padding[8] = { 0 };
