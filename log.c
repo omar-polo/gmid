@@ -238,7 +238,8 @@ log_request(struct client *c, char *meta, size_t l)
 		else
 			strlcat(b, c->iri.host, sizeof(b));
 
-		strlcat(b, "/", sizeof(b));
+		if (*c->iri.path != '/')
+			strlcat(b, "/", sizeof(b));
 		strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
 		if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */
 			strlcat(b, "?", sizeof(b));
