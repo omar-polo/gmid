@@ -334,6 +334,7 @@ free_config(void)
 		free((char*)h->domain);
 		free((char*)h->cert);
 		free((char*)h->key);
+		free((char*)h->ocsp);
 		free((char*)h->cgi);
 		free((char*)h->entrypoint);
 
