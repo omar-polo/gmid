@@ -1,3 +1,7 @@
+2021-10-24  Omar Polo  <op@omarpolo.com>
+
+	* log.c (log_request): fix "double slash" in logs: gmid ended up printing two slashes between the hostname and the path when logging the request IRI.
+
 2021-10-15  Stephen Gregoratto  <dev@sgregoratto.me>
 
 	* gmid.c (add_keypair): implement OCSP stapling support
