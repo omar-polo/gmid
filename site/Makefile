@@ -12,7 +12,7 @@ serve-www:
 	python3 -m http.server 8888
 
 serve-gemini:
-	gmid -p 1966 .
+	../gmid -p 1966 .
 
 upload:
 	rsync --delete -a . op:sites/gmid.omarpolo.com
