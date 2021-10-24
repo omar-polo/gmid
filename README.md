@@ -165,10 +165,7 @@ only one that needs internet access and is sandboxed by default.  The
 executor process exists only to fork and execute CGI scripts, and
 optionally to connect to FastCGI applications.
 
-On OpenBSD, the listener runs with the `stdio recvfd rpath inet`
-pledges, while the executor has `stdio sendfd proc exec dns inet
-unix`; both have unveiled only the served directories.  The logger
-process has pledge `stdio recvfd`.
+On OpenBSD the processes are all `pledge(2)`d and `unveil(2)`ed.
 
 On FreeBSD, the listener and logger process are sandboxed with `capsicum(4)`.
 
