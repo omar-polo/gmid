@@ -167,18 +167,8 @@ __HEREDOC__
 
 	if ${COMP} -o "have/${1}" "have/${1}.c" ${3} ${LDFLAGS} 1>&3 2>&3
 	then
-		echo "partial result of ${n}: ${CC} succeeded" 1>&3
-	else
-		echo "tested ${n}: no (compilation failed)" 1>&2
-		echo "result of ${n}: ${CC} failed with exit status $?" 1>&3
-		echo "result of compiling ${n}: no" 1>&3
-		echo 1>&3
-		return 1
-	fi
-
-	if ./have/${1} 1>&3 2>&3; then
 		echo "tested ${n}: yes" 1>&2
-		echo "result of running ${n}: yes" 1>&3
+		echo "tested ${n}: yes" 1>&3
 		echo 1>&3
 		eval HAVE_${2}=1
 		[ "${3}" = "-D_GNU_SOURCE" ] && NEED_GNU_SOURCE=1
@@ -187,11 +177,10 @@ __HEREDOC__
 		rm "have/${1}"
 		return 0
 	else
-		echo "tested ${n}: no (execution failed)" 1>&2
-		echo "result of ${n}: execution failed with exit status $?" 1>&3
-		echo "result of running ${n}: no" 1>&3
+		echo "tested ${n}: no (compilation failed)" 1>&2
+		echo "result of ${n}: ${CC} failed with exit status $?" 1>&3
+		echo "result of compiling ${n}: no" 1>&3
 		echo 1>&3
-		rm "have/${1}"
 		return 1
 	fi
 }
