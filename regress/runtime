@@ -25,6 +25,8 @@ if [ $# -ne 0 ]; then
 	tests_done
 fi
 
+run_test test_punycode
+run_test test_iri
 run_test test_configless_mode
 run_test test_static_files
 run_test test_directory_redirect

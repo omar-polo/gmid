@@ -1,3 +1,13 @@
+test_punycode() {
+	dont_check=yes
+	./puny-test
+}
+
+test_iri() {
+	dont_check=yes
+	./iri_test
+}
+
 test_configless_mode() {
 	dont_check=yes
 

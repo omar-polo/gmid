@@ -6,12 +6,10 @@ include ../Makefile.local
 
 .PHONY: all data clean runtime
 
-all: data gg puny-test fcgi-test
-	./puny-test
-	./iri_test
+all: data gg puny-test iri_test fcgi-test
 	./runtime ${TESTS}
 
-data: testdata iri_test cert.pem testca.pem valid.crt invalid.cert.pem
+data: testdata cert.pem testca.pem valid.crt invalid.cert.pem
 
 gg: gg.o ../iri.o ../utf8.o ${COMPAT}
 	${CC} gg.o ../iri.o ../utf8.o ${COMPAT} -o $@ ${LDFLAGS}
