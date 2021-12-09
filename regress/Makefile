@@ -4,10 +4,10 @@ TESTS=
 
 include ../Makefile.local
 
-.PHONY: all data clean runtime
+.PHONY: all data clean regres
 
 all: data gg puny-test iri_test fcgi-test
-	./runtime ${TESTS}
+	./regress ${TESTS}
 
 data: testdata cert.pem testca.pem valid.crt invalid.cert.pem
 
@@ -86,6 +86,3 @@ testdata: fill-file
 	mkdir testdata/dir
 	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi
-
-runtime: testdata
-	./runtime
