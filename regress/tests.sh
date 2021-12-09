@@ -1,15 +1,15 @@
 test_punycode() {
-	dont_check=yes
+	dont_check_server_alive=yes
 	./puny-test
 }
 
 test_iri() {
-	dont_check=yes
+	dont_check_server_alive=yes
 	./iri_test
 }
 
 test_configless_mode() {
-	dont_check=yes
+	dont_check_server_alive=yes
 
 	$gmid -p $port -H localhost -d . testdata &
 	pid=$!
