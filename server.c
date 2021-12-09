@@ -963,8 +963,8 @@ client_read(struct bufferevent *bev, void *d)
 		return;
 	}
 
-	if (c->iri.port_no != conf.port ||
-	    strcmp(c->iri.schema, "gemini") ||
+	/* ignore the port number */
+	if (strcmp(c->iri.schema, "gemini") ||
 	    strcmp(decoded, c->domain)) {
 		start_reply(c, PROXY_REFUSED, "won't proxy request");
 		return;

@@ -1,5 +1,6 @@
 2021-12-09  Omar Polo  <op@omarpolo.com>
 
+	* server.c (client_read): don't check if the port in the request is the same we're listening on.  Suggested by Allen Sobot, thanks!
 	* configure: add --prefix=... long argument.
 
 2021-11-16  Omar Polo  <op@omarpolo.com>
