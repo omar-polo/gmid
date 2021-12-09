@@ -20,7 +20,7 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl 23bchNVv
+.Op Fl 23bchNOVv
 .Op Fl C Pa cert.pem Fl K Pa key.pem
 .Op Fl H Ar hostname
 .Op Fl T Ar timeout
@@ -55,6 +55,9 @@ Load the client certificate key, must be in PEM format.
 .It Fl N
 Don't check whether the peer certificate name matches the requested
 hostname.
+.It Fl O
+Require that a valid stapled OCSP response be provided during the TLS
+handshake.
 .It Fl T Ar timeout
 Kill
 .Nm

@@ -18,7 +18,7 @@
 
 #include <string.h>
 
-int flag2, flag3, bflag, cflag, hflag, Nflag, Vflag, vflag;
+int flag2, flag3, bflag, cflag, hflag, Nflag, Oflag, Vflag, vflag;
 const char *cert, *key;
 
 static void
@@ -42,7 +42,7 @@ main(int argc, char **argv)
 	ssize_t len;
 
 	hostname = NULL;
-	while ((ch = getopt(argc, argv, "23C:cbH:hK:NT:Vv")) != -1) {
+	while ((ch = getopt(argc, argv, "23C:cbH:hK:NOT:Vv")) != -1) {
 		switch (ch) {
 		case '2':
 			flag2 = 1;
@@ -70,6 +70,9 @@ main(int argc, char **argv)
 			break;
 		case 'N':
 			Nflag = 1;
+			break;
+		case 'O':
+			Oflag = 1;
 			break;
 		case 'T':
 			timer = strtonum(optarg, 1, 1000, &errstr);
@@ -124,6 +127,9 @@ main(int argc, char **argv)
 	tls_config_insecure_noverifycert(conf);
 	if (Nflag)
 		tls_config_insecure_noverifyname(conf);
+
+	if (Oflag)
+		tls_config_ocsp_require_stapling(conf);
 
 	if (flag2 && tls_config_set_protocols(conf, TLS_PROTOCOL_TLSv1_2) == -1)
 		errx(1, "cannot set TLSv1.2");
