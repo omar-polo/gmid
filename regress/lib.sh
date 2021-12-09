@@ -13,7 +13,7 @@ port $port
 "
 	hdr=
 	body=
-	dont_check=no
+	dont_check_server_alive=no
 
 	current_test=$1
 	rm -f reg.conf
@@ -25,7 +25,7 @@ port $port
 		echo "$1 passed"
 	fi
 
-	if [ "$dont_check" != 'no' ]; then
+	if [ "$dont_check_server_alive" != 'no' ]; then
 		return
 	fi
 
