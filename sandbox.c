@@ -374,6 +374,9 @@ static struct sock_filter filter[] = {
 #ifdef __NR_statx
 	SC_ALLOW(statx),
 #endif
+#ifdef __NR_ugetrlimit
+	SC_ALLOW(ugetrlimit),
+#endif
 #ifdef __NR_write
 	SC_ALLOW(write),
 #endif
