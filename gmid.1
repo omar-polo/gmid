@@ -406,7 +406,7 @@ A
 section may include most of the server configuration rules
 except
 .Ic alias , Ic cert , Ic cgi , Ic entrypoint , Ic env , Ic key ,
-.Ic location No and Ic param .
+.Ic location , Ic param No and Ic proxy .
 .It Ic log Ar bool
 Enable or disable the logging for the current server or location block.
 .It Ic param Ar name Cm = Ar value
@@ -428,6 +428,15 @@ If the OCSP response in
 .Ar file
 is empty, OCSP stapling will not be used.
 The default is to not use OCSP stapling.
+.It Ic proxy Cm relay-to Ar host : Ns Ar port
+Relay the request to the given
+.Ar host .
+.Nm
+will connect to
+.Ar host : Ns Ar port
+and repeat the gemini request; the response will then be sent as-is
+to the connected client.
+Port is 1965 by default.
 .It Ic root Pa directory
 Specify the root directory for this server
 .Pq alas the current Dq document root .
