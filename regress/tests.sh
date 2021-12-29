@@ -313,3 +313,21 @@ test_174_bugfix() {
 		check_reply "51 not found" || return 1
 	done
 }
+
+test_proxy_relay_to() {
+	gen_config '' ''
+	# append config for second host
+	cat <<EOF >> reg.conf
+server "localhost.local" {
+	cert "$PWD/cert.pem"
+	key  "$PWD/key.pem"
+	proxy relay-to "localhost:$port"
+}
+EOF
+	run
+
+	gg_flags="-P localhost:$port -H localhost.local"
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world"
+}
