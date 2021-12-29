@@ -121,7 +121,7 @@ check_reply() {
 
 	if [ "$body" != "$2" ]; then
 		echo "Body mismatch" >&2
-		echo "wants : $1"    >&2
+		echo "wants : $2"    >&2
 		echo "got   : $body" >&2
 		return 1
 	fi
