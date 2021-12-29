@@ -1284,7 +1284,7 @@ cgi_read(struct bufferevent *bev, void *d)
 		header = evbuffer_readln(src, &len, EVBUFFER_EOL_CRLF_STRICT);
 		if (header == NULL) {
 			/* max reply + \r\n */
-			if (EVBUFFER_LENGTH(src) > 1026) {
+			if (EVBUFFER_LENGTH(src) > 1029) {
 				log_warn(client, "CGI script is trying to "
 				    "send a header too long.");
 				cgi_error(bev, EVBUFFER_READ, client);
