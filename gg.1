@@ -1,0 +1,114 @@
+.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.Dd $Mdocdate: December 29 2021$
+.Dt GG 1
+.Os
+.Sh NAME
+.Nm gg
+.Nd gemini client
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Fl 23Nnv
+.Op Fl C Ar cert
+.Op Fl d Ar mode
+.Op Fl H Ar sni
+.Op Fl K Ar key
+.Op Fl P Ar host : Ns Oo Ar port Oc
+.Op Fl T Ar seconds
+.Ar gemini://...
+.Ek
+.Sh DESCRIPTION
+.Nm
+.Pq gemini get
+fetches the given gemini page and prints it to standard output.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl 2
+Accept only TLSv1.2.
+.It Fl 3
+Accept only TLSv1.3.
+.It Fl C Ar certificate
+Use the given client
+.Ar certificate .
+.It Fl d Ar mode
+Specify what
+.Nm
+should print.
+.Ar mode
+can be one of:
+.Bl -tag -width header -compact
+.It none
+print only the body of the reply
+.It code
+print only the response code
+.It header
+print only the response header
+.It meta
+print only the response meta
+.It whole
+print the whole response as-is.
+.El
+.It Fl H Ar sni
+Use the given
+.Ar sni
+host name instead of the one deducted by the IRI or proxy.
+.It Fl K Ar key
+Specify the key for the certificate.
+It's mandatory if
+.Fl C
+is used.
+.It Fl N
+Disables the server name verification.
+.It Fl n
+Check that the given IRI is valid, but don't make any requests.
+.It Fl P Ar host : Ns Op Ar port
+Connect to the given
+.Ar host
+and
+.Ar port
+to do the request instead of the ones extracted by the IRI.
+.Ar port
+is by default 1965.
+.It Fl T Ar seconds
+Kill
+.Nm
+after
+.Ar seconds .
+.El
+.Sh EXIT STATUS
+The
+.Nm
+utility exits with zero if the response code was in the 2x range.
+.Sh ACKNOWLEDGEMENTS
+.Nm
+uses the
+.Dq Flexible and Economical
+UTF-8 decoder written by
+.An Bjoern Hoehrmann .
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+utility was written by
+.An Omar Polo Aq Mt op@omarpolo.com .
+.Sh CAVEATS
+.Nm
+doesn't do any TOFU
+.Pq Trust On First Use
+or any X.509 certificate validation beyond the name verification.
+.Pp
+.Nm
+doesn't follow redirects.
