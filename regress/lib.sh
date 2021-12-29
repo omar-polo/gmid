@@ -1,6 +1,6 @@
 failed=
 
-gg="./gg"
+gg="./../gg"
 gmid="./../gmid"
 current_test=
 
@@ -78,19 +78,19 @@ setup_simple_test() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	$gg -T10 -b $ggflags "gemini://localhost:10965/$1"
+	$gg -T10 $ggflags "gemini://localhost:10965/$1" || true
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	$gg -T10 -h $ggflags "gemini://localhost:10965/$1"
+	$gg -T10 -d header $ggflags "gemini://localhost:10965/$1" || true
 }
 
 # usage: raw <path>
 # return both header and body
 raw() {
-	$gg -T10 $ggflags "gemini://localhost:10965/$1"
+	$gg -T10 -dwhole $ggflags "gemini://localhost:10965/$1" || true
 }
 
 # usage: fetch <path>
