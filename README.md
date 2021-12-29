@@ -15,6 +15,7 @@ featureful server.
  - automatic redirect/error pages (see `block return`)
  - IRI support (RFC3987)
  - automatic certificate generation for config-less mode
+ - reverse proxying
  - CGI and FastCGI support
  - virtual hosts
  - location rules

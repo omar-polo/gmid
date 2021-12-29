@@ -11,6 +11,7 @@
 * sandboxed by default on OpenBSD, FreeBSD and Linux
 * able to reload the configuration on-the-fly without loosing connections
 * punycode and IRI support
+* reverse proxying
 * CGI and FastCGI support
 * virtual hosts and per-location rules
 * low memory footprint
