@@ -72,6 +72,22 @@
 #define FCGI_MAX	32
 #define PROC_MAX	16
 
+struct iri {
+	char		*schema;
+	char		*host;
+	char		*port;
+	uint16_t	 port_no;
+	char		*path;
+	char		*query;
+	char		*fragment;
+};
+
+struct parser {
+	char		*iri;
+	struct iri	*parsed;
+	const char	*err;
+};
+
 struct fcgi {
 	int		 id;
 	char		*path;
@@ -168,22 +184,6 @@ extern struct conf conf;
 extern struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
 
 extern int servpipes[PROC_MAX];
-
-struct iri {
-	char		*schema;
-	char		*host;
-	char		*port;
-	uint16_t	 port_no;
-	char		*path;
-	char		*query;
-	char		*fragment;
-};
-
-struct parser {
-	char		*iri;
-	struct iri	*parsed;
-	const char	*err;
-};
 
 typedef void (imsg_handlerfn)(struct imsgbuf*, struct imsg*, size_t);
 
