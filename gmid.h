@@ -59,6 +59,7 @@
 #define TEMP_REDIRECT	30
 #define TEMP_FAILURE	40
 #define CGI_ERROR	42
+#define PROXY_ERROR	43
 #define NOT_FOUND	51
 #define PROXY_REFUSED	53
 #define BAD_REQUEST	59
@@ -109,6 +110,9 @@ struct location {
 	X509_STORE	*reqca;
 	int		 disable_log;
 	int		 fcgi;
+
+	char		*proxy_host;
+	const char	*proxy_port;
 
 	const char	*dir;
 	int		 dirfd;
@@ -193,10 +197,14 @@ enum {
 	REQUEST_DIR,
 	REQUEST_CGI,
 	REQUEST_FCGI,
+	REQUEST_PROXY,
 	REQUEST_DONE,
 };
 
-#define IS_INTERNAL_REQUEST(x)	((x) != REQUEST_CGI && (x) != REQUEST_FCGI)
+#define IS_INTERNAL_REQUEST(x) \
+	((x) != REQUEST_CGI && \
+	 (x) != REQUEST_FCGI && \
+	 (x) != REQUEST_PROXY)
 
 struct client {
 	uint32_t	 id;
@@ -210,6 +218,10 @@ struct client {
 	int		 type;
 
 	struct bufferevent *cgibev;
+
+	struct bufferevent *proxybev;
+	struct tls	*proxyctx;
+	struct event	 proxyev;
 
 	char		*header;
 
@@ -262,6 +274,12 @@ struct cgireq {
 	size_t		loc_off;
 };
 
+struct connreq {
+	char	host[NI_MAXHOST];
+	char	port[NI_MAXSERV];
+	int	flag;
+};
+
 enum {
 	FILE_EXISTS,
 	FILE_EXECUTABLE,
@@ -274,6 +292,8 @@ enum imsg_type {
 	IMSG_CGI_RES,
 	IMSG_FCGI_REQ,
 	IMSG_FCGI_FD,
+	IMSG_CONN_REQ,
+	IMSG_CONN_FD,
 	IMSG_LOG,
 	IMSG_LOG_REQUEST,
 	IMSG_LOG_TYPE,
@@ -322,6 +342,7 @@ const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
 int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
+struct location	*vhost_reverse_proxy(struct vhost *, const char *);
 int		 vhost_fastcgi(struct vhost*, const char*);
 int		 vhost_dirfd(struct vhost*, const char*, size_t*);
 int		 vhost_strip(struct vhost*, const char*);
@@ -377,6 +398,9 @@ char		*utf8_nth(char*, size_t);
 int		 parse_iri(char*, struct iri*, const char**);
 int		 serialize_iri(struct iri*, char*, size_t);
 char		*pct_decode_str(char *);
+
+/* proxy.c */
+int		 proxy_init(struct client *);
 
 /* puny.c */
 int		 puny_decode(const char*, char*, size_t, const char**);

@@ -302,6 +302,8 @@ free_config(void)
 			free((char*)l->block_fmt);
 			free((char*)l->dir);
 
+			free(l->proxy_host);
+
 			if (l->dirfd != -1)
 				close(l->dirfd);
 

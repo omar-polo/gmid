@@ -47,6 +47,7 @@ static void	 handle_handshake(int, short, void*);
 static const char *strip_path(const char*, int);
 static void	 fmt_sbuf(const char*, struct client*, const char*);
 static int	 apply_block_return(struct client*);
+static int	 apply_reverse_proxy(struct client *);
 static int	 apply_fastcgi(struct client*);
 static int	 apply_require_ca(struct client*);
 static size_t	 host_nth(struct vhost*);
@@ -72,6 +73,7 @@ static struct client *client_by_id(int);
 
 static void	 handle_imsg_cgi_res(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_imsg_fcgi_fd(struct imsgbuf*, struct imsg*, size_t);
+static void	 handle_imsg_conn_fd(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_dispatch_imsg(int, short, void *);
 static void	 handle_siginfo(int, short, void*);
@@ -80,6 +82,7 @@ static imsg_handlerfn *handlers[] = {
 	[IMSG_QUIT] = handle_imsg_quit,
 	[IMSG_CGI_RES] = handle_imsg_cgi_res,
 	[IMSG_FCGI_FD] = handle_imsg_fcgi_fd,
+	[IMSG_CONN_FD] = handle_imsg_conn_fd,
 };
 
 static uint32_t server_client_id;
@@ -202,6 +205,27 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 	*code = loc->block_code;
 	*fmt = loc->block_fmt;
 	return loc->block_code != 0;
+}
+
+struct location *
+vhost_reverse_proxy(struct vhost *v, const char *path)
+{
+	struct location *loc;
+
+	if (v == NULL || path == NULL)
+		return NULL;
+
+	loc = TAILQ_FIRST(&v->locations);
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
+		if (loc->proxy_host != NULL)
+			if (matches(loc->match, path))
+				return loc;
+	}
+
+	loc = TAILQ_FIRST(&v->locations);
+	if (loc->proxy_host != NULL)
+		return loc;
+	return NULL;
 }
 
 int
@@ -602,6 +626,30 @@ apply_block_return(struct client *c)
 	return 1;
 }
 
+/* 1 if matching a proxy relay-to (and apply it), 0 otherwise */
+static int
+apply_reverse_proxy(struct client *c)
+{
+	struct location *loc;
+	struct connreq r;
+
+	if ((loc = vhost_reverse_proxy(c->host, c->iri.path)) == NULL)
+		return 0;
+
+	log_debug(c, "opening proxy connection for %s:%s",
+	    loc->proxy_host, loc->proxy_port);
+
+	strlcpy(r.host, loc->proxy_host, sizeof(r.host));
+	strlcpy(r.port, loc->proxy_port, sizeof(r.port));
+
+	strlcpy(c->domain, loc->proxy_host, sizeof(c->domain));
+
+	imsg_compose(&exibuf, IMSG_CONN_REQ, c->id, 0, -1, &r, sizeof(r));
+	imsg_flush(&exibuf);
+
+	return 1;
+}
+
 /* 1 if matching `fcgi' (and apply it), 0 otherwise */
 static int
 apply_fastcgi(struct client *c)
@@ -963,6 +1011,9 @@ client_read(struct bufferevent *bev, void *d)
 		return;
 	}
 
+	if (apply_reverse_proxy(c))
+		return;
+
 	/* ignore the port number */
 	if (strcmp(c->iri.schema, "gemini") ||
 	    strcmp(decoded, c->domain)) {
@@ -1030,6 +1081,7 @@ client_write(struct bufferevent *bev, void *d)
 
 	case REQUEST_CGI:
 	case REQUEST_FCGI:
+	case REQUEST_PROXY:
 		/*
 		 *  Here we depend on on the cgi script or fastcgi
 		 *  connection to provide data.
@@ -1091,6 +1143,7 @@ start_reply(struct client *c, int code, const char *meta)
 
 	if (c->type != REQUEST_CGI &&
 	    c->type != REQUEST_FCGI &&
+	    c->type != REQUEST_PROXY &&
 	    !strcmp(meta, "text/gemini") &&
 	    (lang = vhost_lang(c->host, c->iri.path)) != NULL) {
 		rr = evbuffer_add_printf(evb, ";lang=%s", lang);
@@ -1155,6 +1208,29 @@ client_close_ev(int fd, short event, void *d)
 	c->fd = -1;
 }
 
+static void
+client_proxy_close(int fd, short event, void *d)
+{
+	struct tls *ctx = d;
+
+	if (ctx == NULL) {
+		close(fd);
+		return;
+	}
+
+	switch (tls_close(ctx)) {
+	case TLS_WANT_POLLIN:
+		event_once(fd, EV_READ, client_proxy_close, d, NULL);
+		break;
+	case TLS_WANT_POLLOUT:
+		event_once(fd, EV_WRITE, client_proxy_close, d, NULL);
+		break;
+	}
+
+	tls_free(ctx);
+	close(fd);
+}
+
 void
 client_close(struct client *c)
 {
@@ -1178,6 +1254,18 @@ client_close(struct client *c)
 	bufferevent_disable(c->bev, EVBUFFER_READ|EVBUFFER_WRITE);
 	bufferevent_free(c->bev);
 	c->bev = NULL;
+
+	if (c->proxybev != NULL) {
+		if (event_pending(&c->proxyev, EV_READ|EV_WRITE, NULL))
+			event_del(&c->proxyev);
+
+		if (c->pfd != -1) {
+			client_proxy_close(c->pfd, 0, c->proxyctx);
+			c->pfd = -1;
+		}
+
+		bufferevent_free(c->proxybev);
+	}
 
 	client_close_ev(c->fd, 0, c);
 }
@@ -1377,6 +1465,30 @@ handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 
 	bufferevent_enable(c->cgibev, EV_READ|EV_WRITE);
 	fcgi_req(c);
+}
+
+static void
+handle_imsg_conn_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
+{
+	struct client	*c;
+	int		 id;
+
+	id = imsg->hdr.peerid;
+	if ((c = try_client_by_id(id)) == NULL) {
+		if (imsg->fd != -1)
+			close(imsg->fd);
+		return;
+	}
+
+	if ((c->pfd = imsg->fd) == -1) {
+		start_reply(c, PROXY_ERROR, "proxy error");
+		return;
+	}
+
+	mark_nonblock(c->pfd);
+
+	if (proxy_init(c) == -1)
+		start_reply(c, PROXY_ERROR, "proxy error");
 }
 
 static void

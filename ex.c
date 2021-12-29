@@ -31,12 +31,14 @@
 
 static void	handle_imsg_cgi_req(struct imsgbuf*, struct imsg*, size_t);
 static void	handle_imsg_fcgi_req(struct imsgbuf*, struct imsg*, size_t);
+static void	handle_imsg_conn_req(struct imsgbuf *, struct imsg *, size_t);
 static void	handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
 static void	handle_dispatch_imsg(int, short, void*);
 
 static imsg_handlerfn *handlers[] = {
 	[IMSG_FCGI_REQ] = handle_imsg_fcgi_req,
 	[IMSG_CGI_REQ] = handle_imsg_cgi_req,
+	[IMSG_CONN_REQ] = handle_imsg_conn_req,
 	[IMSG_QUIT] = handle_imsg_quit,
 };
 
@@ -421,6 +423,62 @@ handle_imsg_fcgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 		fd = fcgi_open_sock(f);
 
 	imsg_compose(ibuf, IMSG_FCGI_FD, imsg->hdr.peerid, 0, fd, NULL, 0);
+	imsg_flush(ibuf);
+}
+
+static void
+handle_imsg_conn_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+{
+	struct addrinfo hints, *res, *res0;
+	struct connreq req;
+	int r, sock;
+
+	if (datalen != sizeof(req))
+		abort();
+	memcpy(&req, imsg->data, sizeof(req));
+	req.flag = 0;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	/* XXX: do this asynchronously if possible */
+	r = getaddrinfo(req.host, req.port, &hints, &res0);
+	if (r != 0) {
+		log_warn(NULL, "getaddrinfo(\"%s\", \"%s\"): %s",
+		    req.host, req.port, gai_strerror(r));
+		goto err;
+	}
+
+	for (res = res0; res; res = res->ai_next) {
+		sock = socket(res->ai_family, res->ai_socktype,
+		    res->ai_protocol);
+		if (sock == -1)
+			continue;
+
+		if (connect(sock, res->ai_addr, res->ai_addrlen) == -1) {
+			close(sock);
+			sock = -1;
+			continue;
+		}
+
+		break;
+	}
+
+	freeaddrinfo(res0);
+
+	if (sock == -1) {
+		log_warn(NULL, "can't connect to %s:%s", req.host,
+		    req.port);
+		goto err;
+	}
+
+	imsg_compose(ibuf, IMSG_CONN_FD, imsg->hdr.peerid, 0, sock, NULL, 0);
+	imsg_flush(ibuf);
+	return;
+
+err:
+	imsg_compose(ibuf, IMSG_CONN_FD, imsg->hdr.peerid, 0, -1, NULL, 0);
 	imsg_flush(ibuf);
 }
 

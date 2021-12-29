@@ -121,8 +121,8 @@ typedef struct {
 %token	LANG LOCATION LOG
 %token	MAP MIME
 %token	OCSP OFF ON
-%token	PARAM PORT PREFORK PROTOCOLS
-%token	REQUIRE RETURN ROOT
+%token	PARAM PORT PREFORK PROTOCOLS PROXY
+%token	RELAY_TO REQUIRE RETURN ROOT
 %token	SERVER SPAWN STRIP
 %token	TCP TOEXT TYPE USER
 
@@ -330,6 +330,24 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->lang = $2;
 		}
 		| LOG bool	{ loc->disable_log = !$2; }
+		| PROXY RELAY_TO string {
+			char		*at;
+			const char	*errstr;
+
+			only_once(loc->proxy_host, "proxy relay-to");
+			loc->proxy_host = $3;
+
+			if ((at = strchr($3, ':')) != NULL) {
+				*at++ = '\0';
+				loc->proxy_port = at;
+			} else
+				loc->proxy_port = "1965";
+
+			strtonum(loc->proxy_port, 1, UINT16_MAX, &errstr);
+			if (errstr != NULL)
+				yyerror("proxy port is %s: %s", errstr,
+				    loc->proxy_port);
+		}
 		| REQUIRE CLIENT CA string {
 			only_once(loc->reqca, "require client ca");
 			ensure_absolute_path($4);
@@ -408,6 +426,8 @@ static struct keyword {
 	{"port", PORT},
 	{"prefork", PREFORK},
 	{"protocols", PROTOCOLS},
+	{"proxy", PROXY},
+	{"relay-to", RELAY_TO},
 	{"require", REQUIRE},
 	{"return", RETURN},
 	{"root", ROOT},

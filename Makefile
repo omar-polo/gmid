@@ -15,7 +15,7 @@ y.tab.c: parse.y
 	${YACC} -b y parse.y
 
 SRCS = gmid.c iri.c utf8.c ex.c server.c sandbox.c mime.c puny.c \
-	utils.c log.c dirs.c fcgi.c
+	utils.c log.c dirs.c fcgi.c proxy.c
 OBJS = ${SRCS:.c=.o} y.tab.o ${COMPAT}
 
 gmid: ${OBJS}
