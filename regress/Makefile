@@ -6,13 +6,10 @@ include ../Makefile.local
 
 .PHONY: all data clean regres
 
-all: data gg puny-test iri_test fcgi-test
+all: data puny-test iri_test fcgi-test
 	./regress ${TESTS}
 
 data: testdata cert.pem testca.pem valid.crt invalid.cert.pem
-
-gg: gg.o ../iri.o ../utf8.o ${COMPAT}
-	${CC} gg.o ../iri.o ../utf8.o ${COMPAT} -o $@ ${LDFLAGS}
 
 puny-test: puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT}
 	${CC} puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT} \
@@ -72,7 +69,7 @@ clean:
 	rm -f *.o iri_test cert.pem key.pem
 	rm -f localhost.cert.pem localhost.key.pem
 	rm -f testca.* valid.csr valid.key valid.crt invalid.*pem
-	rm -rf testdata fill-file puny-test gg fcgi-test
+	rm -rf testdata fill-file puny-test fcgi-test
 	rm -f gmid.pid
 
 testdata: fill-file
