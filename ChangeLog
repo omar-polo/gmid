@@ -1,3 +1,7 @@
+2022-01-01  Omar Polo  <op@openbsd.org>
+
+	* proxy.c (proxy_init): add support for client certificate when proxying
+
 2021-12-29  Omar Polo  <op@omarpolo.com>
 
 	* proxy.c (proxy_init): add proxying support via `proxy relay-to'
