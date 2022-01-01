@@ -231,11 +231,41 @@ proxy_error(struct bufferevent *bev, short error, void *d)
 }
 
 static void
+proxy_enqueue_req(struct client *c)
+{
+	struct proxy *p = &c->host->proxy;
+	struct evbuffer	*evb;
+	char		 iribuf[GEMINI_URL_LEN];
+
+	c->proxybev = bufferevent_new(c->pfd, proxy_read, proxy_write,
+	    proxy_error, c);
+	if (c->proxybev == NULL)
+		fatal("can't allocate bufferevent: %s", strerror(errno));
+
+	if (!p->notls) {
+		event_set(&c->proxybev->ev_read, c->pfd, EV_READ,
+		    proxy_tls_readcb, c->proxybev);
+		event_set(&c->proxybev->ev_write, c->pfd, EV_WRITE,
+		    proxy_tls_writecb, c->proxybev);
+
+#if HAVE_LIBEVENT2
+		evbuffer_unfreeze(c->proxybev->input, 0);
+		evbuffer_unfreeze(c->proxybev->output, 1);
+#endif
+	}
+
+	serialize_iri(&c->iri, iribuf, sizeof(iribuf));
+
+	evb = EVBUFFER_OUTPUT(c->proxybev);
+	evbuffer_add_printf(evb, "%s\r\n", iribuf);
+
+	bufferevent_enable(c->proxybev, EV_READ|EV_WRITE);
+}
+
+static void
 proxy_handshake(int fd, short event, void *d)
 {
 	struct client	*c = d;
-	struct evbuffer	*evb;
-	char		 iribuf[GEMINI_URL_LEN];
 
 	if (event == EV_TIMEOUT) {
 		start_reply(c, PROXY_ERROR, "timeout");
@@ -258,36 +288,14 @@ proxy_handshake(int fd, short event, void *d)
 		return;
 	}
 
-	c->proxybev = bufferevent_new(c->pfd, proxy_read, proxy_write,
-	    proxy_error, c);
-	if (c->proxybev == NULL)
-		fatal("can't allocate bufferevent: %s", strerror(errno));
-
-	event_set(&c->proxybev->ev_read, c->pfd, EV_READ,
-	    proxy_tls_readcb, c->proxybev);
-	event_set(&c->proxybev->ev_write, c->pfd, EV_WRITE,
-	    proxy_tls_writecb, c->proxybev);
-
-#if HAVE_LIBEVENT2
-	evbuffer_unfreeze(c->proxybev->input, 0);
-	evbuffer_unfreeze(c->proxybev->output, 1);
-#endif
-
-	serialize_iri(&c->iri, iribuf, sizeof(iribuf));
-
-	evb = EVBUFFER_OUTPUT(c->proxybev);
-	evbuffer_add_printf(evb, "%s\r\n", iribuf);
-
-	bufferevent_enable(c->proxybev, EV_READ|EV_WRITE);
+	proxy_enqueue_req(c);
 }
 
-int
-proxy_init(struct client *c)
+static int
+proxy_setup_tls(struct client *c)
 {
 	struct proxy *p = &c->host->proxy;
 	struct tls_config *conf = NULL;
-
-	c->type = REQUEST_PROXY;
 
 	if ((conf = tls_config_new()) == NULL)
 		return -1;
@@ -327,7 +335,24 @@ proxy_init(struct client *c)
 
 err:
 	tls_config_free(conf);
-	if (c->proxyctx != NULL)
+	if (c->proxyctx != NULL) {
 		tls_free(c->proxyctx);
+		c->proxyctx = NULL;
+	}
 	return -1;
+}
+
+int
+proxy_init(struct client *c)
+{
+	struct proxy *p = &c->host->proxy;
+
+	c->type = REQUEST_PROXY;
+
+	if (p->notls) {
+		proxy_enqueue_req(c);
+		return 0;
+	}
+
+	return proxy_setup_tls(c);
 }

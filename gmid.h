@@ -100,6 +100,7 @@ extern struct fcgi fcgi[FCGI_MAX];
 struct proxy {
 	char		*host;
 	const char	*port;
+	int		 notls;
 	uint32_t	 protocols;
 	int		 noverifyname;
 	uint8_t		*cert;

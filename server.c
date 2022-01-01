@@ -1239,7 +1239,8 @@ client_close(struct client *c)
 		if (event_pending(&c->proxyev, EV_READ|EV_WRITE, NULL))
 			event_del(&c->proxyev);
 
-		if (c->pfd != -1) {
+		if (c->pfd != -1 && c->proxyctx != NULL) {
+			/* shut down the proxy TLS connection */
 			client_proxy_close(c->pfd, 0, c->proxyctx);
 			c->pfd = -1;
 		}
