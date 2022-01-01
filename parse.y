@@ -309,6 +309,12 @@ proxy_opt	: CERT string {
 			if (p->key == NULL)
 				yyerror("can't load key %s", $2);
 		}
+		| PROTOCOLS string {
+			struct proxy *p = &host->proxy;
+
+			if (tls_config_parse_protocols(&p->protocols, $2) == -1)
+				yyerror("invalid protocols string \"%s\"", $2);
+		}
 		| RELAY_TO string {
 			char		*at;
 			const char	*errstr;
@@ -961,7 +967,11 @@ symget(const char *nam)
 struct vhost *
 new_vhost(void)
 {
-	return xcalloc(1, sizeof(struct vhost));
+	struct vhost *v;
+
+	v = xcalloc(1, sizeof(*v));
+	v->proxy.protocols = TLS_PROTOCOLS_DEFAULT;
+	return v;
 }
 
 struct location *

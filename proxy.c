@@ -295,8 +295,8 @@ proxy_init(struct client *c)
 	if (p->noverifyname)
 		tls_config_insecure_noverifyname(conf);
 
-	/* TODO: tls_config_set_protocols here */
 	tls_config_insecure_noverifycert(conf);
+	tls_config_set_protocols(conf, p->protocols);
 
 	if (p->cert != NULL) {
 		int r;
