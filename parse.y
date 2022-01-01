@@ -125,6 +125,7 @@ typedef struct {
 %token	RELAY_TO REQUIRE RETURN ROOT
 %token	SERVER SPAWN STRIP
 %token	TCP TOEXT TYPE USER
+%token	VERIFYNAME
 
 %token	ERROR
 
@@ -327,6 +328,9 @@ proxy_opt	: CERT string {
 				yyerror("proxy port is %s: %s", errstr,
 				    p->port);
 		}
+		| VERIFYNAME bool {
+			host->proxy.noverifyname = !$2;
+		}
 		;
 
 locations	: /* empty */
@@ -468,6 +472,7 @@ static struct keyword {
 	{"to-ext", TOEXT},
 	{"type", TYPE},
 	{"user", USER},
+	{"verifyname", VERIFYNAME},
 };
 
 void
