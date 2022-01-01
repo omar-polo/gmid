@@ -330,24 +330,7 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->lang = $2;
 		}
 		| LOG bool	{ loc->disable_log = !$2; }
-		| PROXY RELAY_TO string {
-			char		*at;
-			const char	*errstr;
-
-			only_once(loc->proxy_host, "proxy relay-to");
-			loc->proxy_host = $3;
-
-			if ((at = strchr($3, ':')) != NULL) {
-				*at++ = '\0';
-				loc->proxy_port = at;
-			} else
-				loc->proxy_port = "1965";
-
-			strtonum(loc->proxy_port, 1, UINT16_MAX, &errstr);
-			if (errstr != NULL)
-				yyerror("proxy port is %s: %s", errstr,
-				    loc->proxy_port);
-		}
+		| proxy
 		| REQUIRE CLIENT CA string {
 			only_once(loc->reqca, "require client ca");
 			ensure_absolute_path($4);
@@ -360,6 +343,34 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->dir  = ensure_absolute_path($2);
 		}
 		| STRIP NUM		{ loc->strip = check_strip_no($2); }
+		;
+
+proxy		: PROXY proxy_opt
+		| PROXY '{' optnl proxy_opts '}'
+		;
+
+proxy_opts	: /* empty */
+		| proxy_opts proxy_opt optnl
+		;
+
+proxy_opt	: RELAY_TO string {
+			char		*at;
+			const char	*errstr;
+
+			only_once(loc->proxy_host, "proxy relay-to");
+			loc->proxy_host = $2;
+
+			if ((at = strchr($2, ':')) != NULL) {
+				*at++ = '\0';
+				loc->proxy_port = at;
+			} else
+				loc->proxy_port = "1965";
+
+			strtonum(loc->proxy_port, 1, UINT16_MAX, &errstr);
+			if (errstr != NULL)
+				yyerror("proxy port is %s: %s", errstr,
+				    loc->proxy_port);
+		}
 		;
 
 fastcgi		: SPAWN string {
