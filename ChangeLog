@@ -1,3 +1,7 @@
+2021-12-29  Omar Polo  <op@omarpolo.com>
+
+	* proxy.c (proxy_init): add proxying support via `proxy relay-to'
+
 2021-12-11  Max  <vdrummer@posteo.net>
 
 	* sandbox.c (filter): [seccomp]: allow ugetrlimit(2), needed by glibc on armv7l
