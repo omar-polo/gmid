@@ -326,7 +326,7 @@ server "localhost.local" {
 EOF
 	run
 
-	gg_flags="-P localhost:$port -H localhost.local"
+	ggflags="-P localhost:$port -H localhost.local"
 
 	fetch /
 	check_reply "20 text/gemini" "# hello world"
