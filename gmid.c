@@ -304,6 +304,9 @@ free_config(void)
 
 			free(l->proxy_host);
 
+			tls_unload_file(l->proxy_cert, l->proxy_cert_len);
+			tls_unload_file(l->proxy_key, l->proxy_key_len);
+
 			if (l->dirfd != -1)
 				close(l->dirfd);
 

@@ -353,7 +353,21 @@ proxy_opts	: /* empty */
 		| proxy_opts proxy_opt optnl
 		;
 
-proxy_opt	: RELAY_TO string {
+proxy_opt	: CERT string {
+			only_once(loc->proxy_cert, "proxy cert");
+			ensure_absolute_path($2);
+			loc->proxy_cert = tls_load_file($2, &loc->proxy_cert_len, NULL);
+			if (loc->proxy_cert == NULL)
+				yyerror("can't load cert %s", $2);
+		}
+		| KEY string {
+			only_once(loc->proxy_key, "proxy key");
+			ensure_absolute_path($2);
+			loc->proxy_key = tls_load_file($2, &loc->proxy_key_len, NULL);
+			if (loc->proxy_key == NULL)
+				yyerror("can't load key %s", $2);
+		}
+		| RELAY_TO string {
 			char		*at;
 			const char	*errstr;
 

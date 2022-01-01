@@ -292,8 +292,21 @@ proxy_init(struct client *c)
 		return -1;
 
 	/* TODO: tls_config_set_protocols here */
-	/* TODO: optionally load a client keypair here */
 	tls_config_insecure_noverifycert(conf);
+
+	if (c->l->proxy_cert != NULL) {
+		int r;
+
+		r = tls_config_set_cert_mem(conf, c->l->proxy_cert,
+		    c->l->proxy_cert_len);
+		if (r == -1)
+			goto err;
+
+		r = tls_config_set_key_mem(conf, c->l->proxy_key,
+		    c->l->proxy_key_len);
+		if (r == -1)
+			goto err;
+	}
 
 	if ((c->proxyctx = tls_client()) == NULL)
 		goto err;

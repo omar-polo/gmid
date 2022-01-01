@@ -636,6 +636,8 @@ apply_reverse_proxy(struct client *c)
 	if ((loc = vhost_reverse_proxy(c->host, c->iri.path)) == NULL)
 		return 0;
 
+	c->l = loc;
+
 	log_debug(c, "opening proxy connection for %s:%s",
 	    loc->proxy_host, loc->proxy_port);
 

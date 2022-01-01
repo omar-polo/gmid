@@ -113,6 +113,10 @@ struct location {
 
 	char		*proxy_host;
 	const char	*proxy_port;
+	uint8_t		*proxy_cert;
+	size_t		 proxy_cert_len;
+	uint8_t		*proxy_key;
+	size_t		 proxy_key_len;
 
 	const char	*dir;
 	int		 dirfd;
@@ -238,6 +242,7 @@ struct client {
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host they're talking to */
 	size_t		 loc;	/* location matched */
+	struct location	*l;
 
 	SPLAY_ENTRY(client) entry;
 };
