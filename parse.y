@@ -278,7 +278,55 @@ servopt		: ALIAS string {
 		| PARAM string '=' string {
 			add_param($2, $4, 0);
 		}
+		| proxy
 		| locopt
+		;
+
+proxy		: PROXY proxy_opt
+		| PROXY '{' optnl proxy_opts '}'
+		;
+
+proxy_opts	: /* empty */
+		| proxy_opts proxy_opt optnl
+		;
+
+proxy_opt	: CERT string {
+			struct proxy *p = &host->proxy;
+
+			only_once(p->cert, "proxy cert");
+			ensure_absolute_path($2);
+			p->cert = tls_load_file($2, &p->certlen, NULL);
+			if (p->cert == NULL)
+				yyerror("can't load cert %s", $2);
+		}
+		| KEY string {
+			struct proxy *p = &host->proxy;
+
+			only_once(p->key, "proxy key");
+			ensure_absolute_path($2);
+			p->key = tls_load_file($2, &p->keylen, NULL);
+			if (p->key == NULL)
+				yyerror("can't load key %s", $2);
+		}
+		| RELAY_TO string {
+			char		*at;
+			const char	*errstr;
+			struct proxy	*p = &host->proxy;
+
+			only_once(p->host, "proxy relay-to");
+			p->host = $2;
+
+			if ((at = strchr($2, ':')) != NULL) {
+				*at++ = '\0';
+				p->port = at;
+			} else
+				p->port = "1965";
+
+			strtonum(p->port, 1, UINT16_MAX, &errstr);
+			if (errstr != NULL)
+				yyerror("proxy port is %s: %s", errstr,
+				    p->port);
+		}
 		;
 
 locations	: /* empty */
@@ -330,7 +378,6 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->lang = $2;
 		}
 		| LOG bool	{ loc->disable_log = !$2; }
-		| proxy
 		| REQUIRE CLIENT CA string {
 			only_once(loc->reqca, "require client ca");
 			ensure_absolute_path($4);
@@ -343,48 +390,6 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->dir  = ensure_absolute_path($2);
 		}
 		| STRIP NUM		{ loc->strip = check_strip_no($2); }
-		;
-
-proxy		: PROXY proxy_opt
-		| PROXY '{' optnl proxy_opts '}'
-		;
-
-proxy_opts	: /* empty */
-		| proxy_opts proxy_opt optnl
-		;
-
-proxy_opt	: CERT string {
-			only_once(loc->proxy_cert, "proxy cert");
-			ensure_absolute_path($2);
-			loc->proxy_cert = tls_load_file($2, &loc->proxy_cert_len, NULL);
-			if (loc->proxy_cert == NULL)
-				yyerror("can't load cert %s", $2);
-		}
-		| KEY string {
-			only_once(loc->proxy_key, "proxy key");
-			ensure_absolute_path($2);
-			loc->proxy_key = tls_load_file($2, &loc->proxy_key_len, NULL);
-			if (loc->proxy_key == NULL)
-				yyerror("can't load key %s", $2);
-		}
-		| RELAY_TO string {
-			char		*at;
-			const char	*errstr;
-
-			only_once(loc->proxy_host, "proxy relay-to");
-			loc->proxy_host = $2;
-
-			if ((at = strchr($2, ':')) != NULL) {
-				*at++ = '\0';
-				loc->proxy_port = at;
-			} else
-				loc->proxy_port = "1965";
-
-			strtonum(loc->proxy_port, 1, UINT16_MAX, &errstr);
-			if (errstr != NULL)
-				yyerror("proxy port is %s: %s", errstr,
-				    loc->proxy_port);
-		}
 		;
 
 fastcgi		: SPAWN string {

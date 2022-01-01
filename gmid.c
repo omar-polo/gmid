@@ -302,11 +302,6 @@ free_config(void)
 			free((char*)l->block_fmt);
 			free((char*)l->dir);
 
-			free(l->proxy_host);
-
-			tls_unload_file(l->proxy_cert, l->proxy_cert_len);
-			tls_unload_file(l->proxy_key, l->proxy_key_len);
-
 			if (l->dirfd != -1)
 				close(l->dirfd);
 
@@ -342,6 +337,10 @@ free_config(void)
 		free((char*)h->ocsp);
 		free((char*)h->cgi);
 		free((char*)h->entrypoint);
+
+		free(h->proxy.host);
+		tls_unload_file(h->proxy.cert, h->proxy.certlen);
+		tls_unload_file(h->proxy.key, h->proxy.keylen);
 
 		TAILQ_REMOVE(&hosts, h, vhosts);
 		free(h);

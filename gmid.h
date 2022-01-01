@@ -97,6 +97,15 @@ struct fcgi {
 };
 extern struct fcgi fcgi[FCGI_MAX];
 
+struct proxy {
+	char		*host;
+	const char	*port;
+	uint8_t		*cert;
+	size_t		 certlen;
+	uint8_t		*key;
+	size_t		 keylen;
+};
+
 TAILQ_HEAD(lochead, location);
 struct location {
 	const char	*match;
@@ -110,13 +119,6 @@ struct location {
 	X509_STORE	*reqca;
 	int		 disable_log;
 	int		 fcgi;
-
-	char		*proxy_host;
-	const char	*proxy_port;
-	uint8_t		*proxy_cert;
-	size_t		 proxy_cert_len;
-	uint8_t		*proxy_key;
-	size_t		 proxy_key_len;
 
 	const char	*dir;
 	int		 dirfd;
@@ -158,6 +160,7 @@ struct vhost {
 	struct envhead	 env;
 	struct envhead	 params;
 	struct aliashead aliases;
+	struct proxy	 proxy;
 };
 
 struct etm {			/* extension to mime */
@@ -242,7 +245,6 @@ struct client {
 	struct sockaddr_storage	 addr;
 	struct vhost	*host;	/* host they're talking to */
 	size_t		 loc;	/* location matched */
-	struct location	*l;
 
 	SPLAY_ENTRY(client) entry;
 };
@@ -347,7 +349,6 @@ const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
 int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
-struct location	*vhost_reverse_proxy(struct vhost *, const char *);
 int		 vhost_fastcgi(struct vhost*, const char*);
 int		 vhost_dirfd(struct vhost*, const char*, size_t*);
 int		 vhost_strip(struct vhost*, const char*);

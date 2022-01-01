@@ -284,6 +284,7 @@ proxy_handshake(int fd, short event, void *d)
 int
 proxy_init(struct client *c)
 {
+	struct proxy *p = &c->host->proxy;
 	struct tls_config *conf = NULL;
 
 	c->type = REQUEST_PROXY;
@@ -294,16 +295,14 @@ proxy_init(struct client *c)
 	/* TODO: tls_config_set_protocols here */
 	tls_config_insecure_noverifycert(conf);
 
-	if (c->l->proxy_cert != NULL) {
+	if (p->cert != NULL) {
 		int r;
 
-		r = tls_config_set_cert_mem(conf, c->l->proxy_cert,
-		    c->l->proxy_cert_len);
+		r = tls_config_set_cert_mem(conf, p->cert, p->certlen);
 		if (r == -1)
 			goto err;
 
-		r = tls_config_set_key_mem(conf, c->l->proxy_key,
-		    c->l->proxy_key_len);
+		r = tls_config_set_key_mem(conf, p->key, p->keylen);
 		if (r == -1)
 			goto err;
 	}

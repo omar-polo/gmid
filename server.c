@@ -207,27 +207,6 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 	return loc->block_code != 0;
 }
 
-struct location *
-vhost_reverse_proxy(struct vhost *v, const char *path)
-{
-	struct location *loc;
-
-	if (v == NULL || path == NULL)
-		return NULL;
-
-	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->proxy_host != NULL)
-			if (matches(loc->match, path))
-				return loc;
-	}
-
-	loc = TAILQ_FIRST(&v->locations);
-	if (loc->proxy_host != NULL)
-		return loc;
-	return NULL;
-}
-
 int
 vhost_fastcgi(struct vhost *v, const char *path)
 {
@@ -630,21 +609,20 @@ apply_block_return(struct client *c)
 static int
 apply_reverse_proxy(struct client *c)
 {
-	struct location *loc;
-	struct connreq r;
+	struct proxy	*p;
+	struct connreq	 r;
 
-	if ((loc = vhost_reverse_proxy(c->host, c->iri.path)) == NULL)
+	p = &c->host->proxy;
+	if (p->host == NULL)
 		return 0;
 
-	c->l = loc;
-
 	log_debug(c, "opening proxy connection for %s:%s",
-	    loc->proxy_host, loc->proxy_port);
+	    p->host, p->port);
 
-	strlcpy(r.host, loc->proxy_host, sizeof(r.host));
-	strlcpy(r.port, loc->proxy_port, sizeof(r.port));
+	strlcpy(r.host, p->host, sizeof(r.host));
+	strlcpy(r.port, p->port, sizeof(r.port));
 
-	strlcpy(c->domain, loc->proxy_host, sizeof(c->domain));
+	strlcpy(c->domain, p->host, sizeof(c->domain));
 
 	imsg_compose(&exibuf, IMSG_CONN_REQ, c->id, 0, -1, &r, sizeof(r));
 	imsg_flush(&exibuf);
