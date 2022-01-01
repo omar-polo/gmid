@@ -331,3 +331,25 @@ EOF
 	fetch /
 	check_reply "20 text/gemini" "# hello world"
 }
+
+test_proxy_with_certs() {
+	gen_config '' 'require client ca "'$PWD'/testca.pem"'
+	# append config for second host
+	cat <<EOF >> reg.conf
+server "localhost.local" {
+	cert "$PWD/cert.pem"
+	key  "$PWD/key.pem"
+	proxy {
+		relay-to "localhost:$port"
+		cert "$PWD/valid.crt"
+		key "$PWD/valid.key"
+	}
+}
+EOF
+	run
+
+	ggflags="-P localhost:$port -H localhost.local"
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world"
+}
