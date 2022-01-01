@@ -209,6 +209,7 @@ option		: CHROOT string	{ conf.chroot = $2; }
 		| PROTOCOLS string {
 			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
 				yyerror("invalid protocols string \"%s\"", $2);
+			free($2);
 		}
 		| USER string		{ conf.user = $2; }
 		;
@@ -299,6 +300,7 @@ proxy_opt	: CERT string {
 			p->cert = tls_load_file($2, &p->certlen, NULL);
 			if (p->cert == NULL)
 				yyerror("can't load cert %s", $2);
+			free($2);
 		}
 		| KEY string {
 			struct proxy *p = &host->proxy;
@@ -308,12 +310,14 @@ proxy_opt	: CERT string {
 			p->key = tls_load_file($2, &p->keylen, NULL);
 			if (p->key == NULL)
 				yyerror("can't load key %s", $2);
+			free($2);
 		}
 		| PROTOCOLS string {
 			struct proxy *p = &host->proxy;
 
 			if (tls_config_parse_protocols(&p->protocols, $2) == -1)
 				yyerror("invalid protocols string \"%s\"", $2);
+			free($2);
 		}
 		| RELAY_TO string {
 			char		*at;
