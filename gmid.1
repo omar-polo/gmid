@@ -428,15 +428,34 @@ If the OCSP response in
 .Ar file
 is empty, OCSP stapling will not be used.
 The default is to not use OCSP stapling.
-.It Ic proxy Cm relay-to Ar host : Ns Ar port
-Relay the request to the given
-.Ar host .
+.It Ic proxy Ar option
+Enable requests proxying.
 .Nm
-will connect to
-.Ar host : Ns Ar port
-and repeat the gemini request; the response will then be sent as-is
-to the connected client.
-Port is 1965 by default.
+can forward Gemini requests to other hosts on behalf of the client
+if configured to do so.
+Multiple options may be specified within curly braces.
+Valid options are:
+.Bl -tag -width Ds
+.It Ic cert Ar file
+Specify the client certificate to use when making requests.
+.It Ic key Ar file
+Specify the client certificate key to use when making requests.
+.It Ic protocols Ar string
+Specify the TLS protocols allowed when making remote requests.
+Refer to the
+.Xr tls_config_parse_protocols 3
+function for the valid protocol string values.
+By default, both TLSv1.2 and TLSv1.3 are enabled.
+.It Ic relay-to Ar host : Ns Op Ar port
+Relay the request to the given
+.Ar host
+at the given
+.Ar port
+.Pq 1965 by default.
+.It Ic verifyname Ar bool
+Enable or disable the TLS server name verification
+.Pq enabled by default.
+.El
 .It Ic root Pa directory
 Specify the root directory for this server
 .Pq alas the current Dq document root .
