@@ -2,7 +2,7 @@
 # all.
 TESTS=
 
-.PHONY: all static clean regress install
+.PHONY: all static clean cleanall regress install
 
 all: Makefile.local gmid gg TAGS compile_flags.txt
 
@@ -33,6 +33,8 @@ TAGS: ${SRCS}
 clean:
 	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid
 	rm -f compile_flags.txt
+
+cleanall: clean
 	${MAKE} -C regress clean
 
 regress: gmid
