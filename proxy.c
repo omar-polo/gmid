@@ -233,7 +233,7 @@ proxy_error(struct bufferevent *bev, short error, void *d)
 static void
 proxy_enqueue_req(struct client *c)
 {
-	struct proxy *p = &c->host->proxy;
+	struct proxy *p = c->proxy;
 	struct evbuffer	*evb;
 	char		 iribuf[GEMINI_URL_LEN];
 
@@ -294,7 +294,7 @@ proxy_handshake(int fd, short event, void *d)
 static int
 proxy_setup_tls(struct client *c)
 {
-	struct proxy *p = &c->host->proxy;
+	struct proxy *p = c->proxy;
 	struct tls_config *conf = NULL;
 
 	if ((conf = tls_config_new()) == NULL)
@@ -324,7 +324,7 @@ proxy_setup_tls(struct client *c)
 	if (tls_configure(c->proxyctx, conf) == -1)
 		goto err;
 
-	if (tls_connect_socket(c->proxyctx, c->pfd, c->domain) == -1)
+	if (tls_connect_socket(c->proxyctx, c->pfd, p->host) == -1)
 		goto err;
 
 	event_set(&c->proxyev, c->pfd, EV_READ|EV_WRITE, proxy_handshake, c);
@@ -345,7 +345,7 @@ err:
 int
 proxy_init(struct client *c)
 {
-	struct proxy *p = &c->host->proxy;
+	struct proxy *p = c->proxy;
 
 	c->type = REQUEST_PROXY;
 

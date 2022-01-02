@@ -97,7 +97,12 @@ struct fcgi {
 };
 extern struct fcgi fcgi[FCGI_MAX];
 
+TAILQ_HEAD(proxyhead, proxy);
 struct proxy {
+	char		*match_proto;
+	char		*match_host;
+	const char	*match_port;
+
 	char		*host;
 	const char	*port;
 	int		 notls;
@@ -107,6 +112,8 @@ struct proxy {
 	size_t		 certlen;
 	uint8_t		*key;
 	size_t		 keylen;
+
+	TAILQ_ENTRY(proxy) proxies;
 };
 
 TAILQ_HEAD(lochead, location);
@@ -163,7 +170,7 @@ struct vhost {
 	struct envhead	 env;
 	struct envhead	 params;
 	struct aliashead aliases;
-	struct proxy	 proxy;
+	struct proxyhead proxies;
 };
 
 struct etm {			/* extension to mime */
@@ -229,6 +236,7 @@ struct client {
 
 	struct bufferevent *cgibev;
 
+	struct proxy	*proxy;
 	struct bufferevent *proxybev;
 	struct tls	*proxyctx;
 	struct event	 proxyev;

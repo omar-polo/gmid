@@ -81,6 +81,7 @@ char	*symget(const char *);
 
 struct vhost	*new_vhost(void);
 struct location	*new_location(void);
+struct proxy	*new_proxy(void);
 char		*ensure_absolute_path(char*);
 int		 check_block_code(int);
 char		*check_block_fmt(char*);
@@ -88,6 +89,8 @@ int		 check_strip_no(int);
 int		 check_port_num(int);
 int		 check_prefork_num(int);
 void		 advance_loc(void);
+void		 advance_proxy(void);
+void		 parsehp(char *, char **, const char **, const char *);
 void		 only_once(const void*, const char*);
 void		 only_oncei(int, const char*);
 int		 fastcgi_conf(char *, char *, char *);
@@ -95,6 +98,7 @@ void		 add_param(char *, char *, int);
 
 static struct vhost		*host;
 static struct location		*loc;
+static struct proxy		*proxy;
 static int			 errors;
 
 typedef struct {
@@ -115,13 +119,13 @@ typedef struct {
 %token	CA CERT CGI CHROOT CLIENT
 %token	DEFAULT
 %token	ENTRYPOINT ENV
-%token	FASTCGI
+%token	FASTCGI FOR_HOST
 %token	INCLUDE INDEX IPV6
 %token	KEY
 %token	LANG LOCATION LOG
 %token	MAP MIME
 %token	OCSP OFF ON
-%token	PARAM PORT PREFORK PROTOCOLS PROXY
+%token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
 %token	SERVER SPAWN STRIP
 %token	TCP TOEXT TYPE
@@ -222,6 +226,8 @@ vhost		: SERVER string {
 			loc = new_location();
 			TAILQ_INSERT_HEAD(&host->locations, loc, locations);
 
+			TAILQ_INIT(&host->proxies);
+
 			loc->match = xstrdup("*");
 			host->domain = $2;
 
@@ -229,15 +235,17 @@ vhost		: SERVER string {
 				yywarn("\"%s\" looks like punycode: you "
 				    "should use the decoded hostname", $2);
 			}
-		} '{' optnl servopts locations '}' {
+		} '{' optnl servbody '}' {
 			if (host->cert == NULL || host->key == NULL)
 				yyerror("invalid vhost definition: %s", $2);
 		}
 		| error '}'		{ yyerror("bad server directive"); }
 		;
 
-servopts	: /* empty */
-		| servopts servopt optnl
+servbody	: /* empty */
+		| servbody servopt optnl
+		| servbody location optnl
+		| servbody proxy optnl
 		;
 
 servopt		: ALIAS string {
@@ -281,12 +289,34 @@ servopt		: ALIAS string {
 		| PARAM string '=' string {
 			add_param($2, $4, 0);
 		}
-		| proxy
 		| locopt
 		;
 
-proxy		: PROXY proxy_opt
-		| PROXY '{' optnl proxy_opts '}'
+proxy		: PROXY { advance_proxy(); }
+		  proxy_matches '{' optnl proxy_opts '}' {
+			if (proxy->host == NULL)
+				yyerror("invalid proxy block: missing `relay-to' option");
+
+			if ((proxy->cert == NULL && proxy->key != NULL) ||
+			    (proxy->cert != NULL && proxy->key == NULL))
+				yyerror("invalid proxy block: missing cert or key");
+		}
+		;
+
+proxy_matches	: /* empty */
+		| proxy_matches proxy_match
+		;
+
+proxy_match	: PROTO string {
+			only_once(proxy->match_proto, "proxy proto");
+			free(proxy->match_proto);
+			proxy->match_proto = $2;
+		}
+		| FOR_HOST string {
+			only_once(proxy->match_host, "proxy for-host");
+			free(proxy->match_host);
+			parsehp($2, &proxy->match_host, &proxy->match_port, "10965");
+		}
 		;
 
 proxy_opts	: /* empty */
@@ -294,61 +324,39 @@ proxy_opts	: /* empty */
 		;
 
 proxy_opt	: CERT string {
-			struct proxy *p = &host->proxy;
-
-			only_once(p->cert, "proxy cert");
+			only_once(proxy->cert, "proxy cert");
+			tls_unload_file(proxy->cert, proxy->certlen);
 			ensure_absolute_path($2);
-			p->cert = tls_load_file($2, &p->certlen, NULL);
-			if (p->cert == NULL)
+			proxy->cert = tls_load_file($2, &proxy->certlen, NULL);
+			if (proxy->cert == NULL)
 				yyerror("can't load cert %s", $2);
 			free($2);
 		}
 		| KEY string {
-			struct proxy *p = &host->proxy;
-
-			only_once(p->key, "proxy key");
+			only_once(proxy->key, "proxy key");
+			tls_unload_file(proxy->key, proxy->keylen);
 			ensure_absolute_path($2);
-			p->key = tls_load_file($2, &p->keylen, NULL);
-			if (p->key == NULL)
+			proxy->key = tls_load_file($2, &proxy->keylen, NULL);
+			if (proxy->key == NULL)
 				yyerror("can't load key %s", $2);
 			free($2);
 		}
 		| PROTOCOLS string {
-			struct proxy *p = &host->proxy;
-
-			if (tls_config_parse_protocols(&p->protocols, $2) == -1)
+			if (tls_config_parse_protocols(&proxy->protocols, $2) == -1)
 				yyerror("invalid protocols string \"%s\"", $2);
 			free($2);
 		}
 		| RELAY_TO string {
-			char		*at;
-			const char	*errstr;
-			struct proxy	*p = &host->proxy;
-
-			only_once(p->host, "proxy relay-to");
-			p->host = $2;
-
-			if ((at = strchr($2, ':')) != NULL) {
-				*at++ = '\0';
-				p->port = at;
-			} else
-				p->port = "1965";
-
-			strtonum(p->port, 1, UINT16_MAX, &errstr);
-			if (errstr != NULL)
-				yyerror("proxy port is %s: %s", errstr,
-				    p->port);
+			only_once(proxy->host, "proxy relay-to");
+			free(proxy->host);
+			parsehp($2, &proxy->host, &proxy->port, "1965");
 		}
 		| USE_TLS bool {
-			host->proxy.notls = !$2;
+			proxy->notls = !$2;
 		}
 		| VERIFYNAME bool {
-			host->proxy.noverifyname = !$2;
+			proxy->noverifyname = !$2;
 		}
-		;
-
-locations	: /* empty */
-		| locations location optnl
 		;
 
 location	: LOCATION { advance_loc(); } string '{' optnl locopts '}' {
@@ -459,6 +467,7 @@ static struct keyword {
 	{"entrypoint", ENTRYPOINT},
 	{"env", ENV},
 	{"fastcgi", FASTCGI},
+	{"for-host", FOR_HOST},
 	{"index", INDEX},
 	{"ipv6", IPV6},
 	{"key", KEY},
@@ -473,6 +482,7 @@ static struct keyword {
 	{"param", PARAM},
 	{"port", PORT},
 	{"prefork", PREFORK},
+	{"proto", PROTO},
 	{"protocols", PROTOCOLS},
 	{"proxy", PROXY},
 	{"relay-to", RELAY_TO},
@@ -976,11 +986,7 @@ symget(const char *nam)
 struct vhost *
 new_vhost(void)
 {
-	struct vhost *v;
-
-	v = xcalloc(1, sizeof(*v));
-	v->proxy.protocols = TLS_PROTOCOLS_DEFAULT;
-	return v;
+	return xcalloc(1, sizeof(struct vhost));
 }
 
 struct location *
@@ -992,6 +998,16 @@ new_location(void)
 	l->dirfd = -1;
 	l->fcgi = -1;
 	return l;
+}
+
+struct proxy *
+new_proxy(void)
+{
+	struct proxy *p;
+
+	p = xcalloc(1, sizeof(*p));
+	p->protocols = TLS_PROTOCOLS_DEFAULT;
+	return p;
 }
 
 char *
@@ -1064,6 +1080,32 @@ advance_loc(void)
 {
 	loc = new_location();
 	TAILQ_INSERT_TAIL(&host->locations, loc, locations);
+}
+
+void
+advance_proxy(void)
+{
+	proxy = new_proxy();
+	TAILQ_INSERT_TAIL(&host->proxies, proxy, proxies);
+}
+
+void
+parsehp(char *str, char **host, const char **port, const char *def)
+{
+	char		*at;
+	const char	*errstr;
+
+	*host = str;
+
+	if ((at = strchr(str, ':')) != NULL) {
+		*at++ = '\0';
+		*port = at;
+	} else
+		*port = def;
+
+	strtonum(*port, 1, UINT16_MAX, &errstr);
+	if (errstr != NULL)
+		yyerror("port is %s: %s", errstr, *port);
 }
 
 void

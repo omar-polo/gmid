@@ -279,6 +279,7 @@ free_config(void)
 {
 	struct vhost *h, *th;
 	struct location *l, *tl;
+	struct proxy *p, *tp;
 	struct envlist *e, *te;
 	struct alist *a, *ta;
 	int v, i;
@@ -331,16 +332,23 @@ free_config(void)
 			free(a);
 		}
 
+		TAILQ_FOREACH_SAFE(p, &h->proxies, proxies, tp) {
+			TAILQ_REMOVE(&h->proxies, p, proxies);
+
+			free(p->match_proto);
+			free(p->match_host);
+			free(p->host);
+			tls_unload_file(p->cert, p->certlen);
+			tls_unload_file(p->key, p->keylen);
+			free(p);
+		}
+
 		free((char*)h->domain);
 		free((char*)h->cert);
 		free((char*)h->key);
 		free((char*)h->ocsp);
 		free((char*)h->cgi);
 		free((char*)h->entrypoint);
-
-		free(h->proxy.host);
-		tls_unload_file(h->proxy.cert, h->proxy.certlen);
-		tls_unload_file(h->proxy.key, h->proxy.keylen);
 
 		TAILQ_REMOVE(&hosts, h, vhosts);
 		free(h);

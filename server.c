@@ -605,6 +605,31 @@ apply_block_return(struct client *c)
 	return 1;
 }
 
+static struct proxy *
+matched_proxy(struct client *c)
+{
+	struct proxy	*p;
+	const char	*proto;
+	const char	*host;
+	const char	*port;
+
+	TAILQ_FOREACH(p, &c->host->proxies, proxies) {
+		if ((proto = p->match_proto) == NULL)
+			proto = "gemini";
+		if ((host = p->match_host) == NULL)
+			host = "*";
+		if ((port = p->match_port) == NULL)
+			port = "*";
+
+		if (matches(proto, c->iri.schema) &&
+		    matches(host, c->domain) &&
+		    matches(port, c->iri.port))
+			return p;
+	}
+
+	return NULL;
+}
+
 /* 1 if matching a proxy relay-to (and apply it), 0 otherwise */
 static int
 apply_reverse_proxy(struct client *c)
@@ -612,17 +637,16 @@ apply_reverse_proxy(struct client *c)
 	struct proxy	*p;
 	struct connreq	 r;
 
-	p = &c->host->proxy;
-	if (p->host == NULL)
+	if ((p = matched_proxy(c)) == NULL)
 		return 0;
+
+	c->proxy = p;
 
 	log_debug(c, "opening proxy connection for %s:%s",
 	    p->host, p->port);
 
 	strlcpy(r.host, p->host, sizeof(r.host));
 	strlcpy(r.port, p->port, sizeof(r.port));
-
-	strlcpy(c->domain, p->host, sizeof(c->domain));
 
 	imsg_compose(&exibuf, IMSG_CONN_REQ, c->id, 0, -1, &r, sizeof(r));
 	imsg_flush(&exibuf);
