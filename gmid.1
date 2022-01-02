@@ -1,4 +1,4 @@
-.\" Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+.\" Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd $Mdocdate: July 29 2021$
+.Dd $Mdocdate: January 02 2022$
 .Dt GMID 1
 .Os
 .Sh NAME
@@ -428,12 +428,28 @@ If the OCSP response in
 .Ar file
 is empty, OCSP stapling will not be used.
 The default is to not use OCSP stapling.
-.It Ic proxy Ar option
-Enable requests proxying.
-.Nm
-can forward Gemini requests to other hosts on behalf of the client
-if configured to do so.
-Multiple options may be specified within curly braces.
+.It Ic proxy Oo Cm proto Ar name Oc Oo Cm for-host Ar host : Ns Oo Ar port Oc Oc Brq ...
+Set up a reverse proxy.
+The optional matching rules
+.Cm proto
+and
+.Cm for-host
+can be used to enable proxying only for protocols matching
+.Ar name
+.Po Dq gemini
+by default
+.Pc
+and/or whose request IRI matches
+.Ar host
+and
+.Ar port
+.Pq 1965 by default .
+Matching happens using shell globbing rules.
+.Pp
+In case of multiple matching proxy blocks in the same context, the
+first matching proxy will be put into effect and the later ones
+ignored.
+.Pp
 Valid options are:
 .Bl -tag -width Ds
 .It Ic cert Ar file
@@ -450,14 +466,17 @@ By default, both TLSv1.2 and TLSv1.3 are enabled.
 Relay the request to the given
 .Ar host
 at the given
-.Ar port
-.Pq 1965 by default.
+.Ar port ,
+1965 by default.
+This is the only mandatory option in a
+.Ic proxy
+block.
 .It Ic use-tls Ar bool
 Specify whether to use TLS when connecting to the proxied host.
 Enabled by default.
 .It Ic verifyname Ar bool
-Enable or disable the TLS server name verification
-.Pq enabled by default.
+Enable or disable the TLS server name verification.
+Enabled by default.
 .El
 .It Ic root Pa directory
 Specify the root directory for this server
