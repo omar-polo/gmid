@@ -1,3 +1,9 @@
+2022-01-02  Omar Polo  <op@omarpolo.com>
+
+	* server.c (matched_proxy): allow to specify multiple proxy blocks and add matching rules
+
+	* parse.y (servbody): relax the strict ordering of options, location and proxy blocks
+
 2022-01-01  Omar Polo  <op@omarpolo.com>
 
 	* proxy.c (proxy_init): add support for client certificate when proxying
