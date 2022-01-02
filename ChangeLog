@@ -1,4 +1,4 @@
-2022-01-01  Omar Polo  <op@openbsd.org>
+2022-01-01  Omar Polo  <op@omarpolo.com>
 
 	* proxy.c (proxy_init): add support for client certificate when proxying
 
