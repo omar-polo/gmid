@@ -321,7 +321,7 @@ test_proxy_relay_to() {
 server "localhost.local" {
 	cert "$PWD/cert.pem"
 	key  "$PWD/key.pem"
-	proxy relay-to "localhost:$port"
+	proxy { relay-to "localhost:$port" }
 }
 EOF
 	run
