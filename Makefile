@@ -38,7 +38,7 @@ cleanall: clean
 	${MAKE} -C regress clean
 
 regress: gmid
-	${MAKE} TESTS=${TESTS} -C regress all
+	${MAKE} 'TESTS=${TESTS}' -C regress all
 
 install: gmid
 	mkdir -p ${DESTDIR}${BINDIR}
