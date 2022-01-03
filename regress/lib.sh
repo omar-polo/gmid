@@ -7,7 +7,7 @@ current_test=
 run_test() {
 	ggflags=
 	port=10965
-	config_common="
+	config_common="prefork 1
 ipv6 off
 port $port
 "
