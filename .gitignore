@@ -3,8 +3,11 @@
 TAGS
 gmid
 gg
+*.d
 *.o
 *.swp
+have/*.d
+compat/*.d
 compat/*.o
 docs
 y.tab.*
@@ -18,6 +21,7 @@ configure.local
 !contrib/gmid
 !contrib/vim/syntax_checkers/gmid
 regress/testdata
+regress/*.d
 regress/*.pem
 regress/*.key
 regress/*.crt
