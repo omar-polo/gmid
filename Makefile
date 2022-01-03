@@ -28,7 +28,7 @@ static: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS} ${STATIC}
 
 clean:
-	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid
+	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid gg
 	rm -f compile_flags.txt
 
 cleanall: clean
