@@ -64,7 +64,9 @@ EOF
 }
 
 checkconf() {
-	$gmid -n -c reg.conf >/dev/null
+	if ! $gmid -n -c reg.conf >/dev/null 2>&1; then
+		$gmid -n -c reg.conf
+	fi
 }
 
 # usage: setup_simple_test <global config> <server config>
