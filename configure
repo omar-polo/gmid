@@ -473,11 +473,11 @@ printf "\n\n"
 
 # Include dependency info
 for src in ${ALL_SRCS}; do
-	printf "-include ${src%.c}.d\n"
+	printf "%s\n" "-include ${src%.c}.d"
 done
 
 for comp in ${COMPAT}; do
-	printf "-include ${comp%.o}.d\n"
+	printf "%s\n" "-include ${comp%.o}.d"
 done
 
 echo "file Makefile.local: written" 1>&2
