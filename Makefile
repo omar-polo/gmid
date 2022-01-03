@@ -4,7 +4,7 @@ TESTS=
 
 .PHONY: all static clean cleanall regress install
 
-all: Makefile.local gmid gg TAGS compile_flags.txt
+all: Makefile.local gmid gg
 
 Makefile.local: configure
 	./configure
@@ -26,9 +26,6 @@ gg: gg.o iri.o utf8.o ${COMPAT}
 
 static: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS} ${STATIC}
-
-TAGS: ${SRCS}
-	@(etags ${SRCS} || true) 2>/dev/null
 
 clean:
 	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid
