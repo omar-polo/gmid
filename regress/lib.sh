@@ -63,6 +63,24 @@ EOF
 	fi
 }
 
+set_proxy() {
+	cat <<EOF >>reg.conf
+server "localhost.local" {
+	cert "$PWD/cert.pem"
+	key "$PWD/key.pem"
+	proxy {
+		relay-to "localhost:$port"
+		$1
+	}
+}
+EOF
+
+	if ! checkconf; then
+		echo "failed to parse the config" >&2
+		return 1
+	fi
+}
+
 checkconf() {
 	if ! $gmid -n -c reg.conf >/dev/null 2>&1; then
 		$gmid -n -c reg.conf
