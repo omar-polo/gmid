@@ -14,15 +14,11 @@ include Makefile.local
 y.tab.c: parse.y
 	${YACC} -b y parse.y
 
-SRCS = gmid.c iri.c utf8.c ex.c server.c sandbox.c mime.c puny.c \
-	utils.c log.c dirs.c fcgi.c proxy.c
-OBJS = ${SRCS:.c=.o} y.tab.o ${COMPAT}
+gmid: ${GMID_OBJS}
+	${CC} ${GMID_OBJS} -o $@ ${LDFLAGS}
 
-gmid: ${OBJS}
-	${CC} ${OBJS} -o gmid ${LDFLAGS}
-
-gg: gg.o iri.o utf8.o ${COMPAT}
-	${CC} gg.o iri.o utf8.o ${COMPAT} -o $@ ${LDFLAGS}
+gg: ${GG_OBJS}
+	${CC} ${GG_OBJS} -o $@ ${LDFLAGS}
 
 static: ${OBJS}
 	${CC} ${OBJS} -o gmid ${LDFLAGS} ${STATIC}

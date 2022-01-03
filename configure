@@ -220,6 +220,12 @@ else
 	echo 1>&3
 fi
 
+if runtest noop MMD -MMD; then
+	CFLAGS="${CFLAGS} -MMD"
+	echo "adding -MMD to CFLAGS" 1>&2
+	echo "adding -MMD to CFLAGS" 1>&3
+fi
+
 # --------
 # tests for config.h
 
@@ -407,6 +413,25 @@ echo "file config.h: written" 1>&3
 # --------
 # tests for Makefile.local
 
+GMID_SRCS="dirs.c ex.c fcgi.c gmid.c iri.c log.c mime.c proxy.c puny.c"
+GMID_SRCS="${GMID_SRCS} sandbox.c server.c utf8.c utils.c y.tab.c"
+
+GMID_OBJS=
+for src in ${GMID_SRCS}; do
+	GMID_OBJS="${GMID_OBJS} ${src%.c}.o"
+done
+GMID_OBJS="${GMID_OBJS} ${COMPAT}"
+
+GG_SRCS="gg.c iri.c utf8.c"
+
+GG_OBJS=
+for src in ${GG_SRCS}; do
+	GG_OBJS="${GG_OBJS} ${src%.c}.o"
+done
+GG_OBJS="${GG_OBJS} ${COMPAT}"
+
+ALL_SRCS="${GMID_SRCS} gg.c"
+
 exec > Makefile.local
 
 [ -z "${BINDIR}"          ] && BINDIR="${PREFIX}/bin"
@@ -433,6 +458,9 @@ INSTALL_LIB	= ${INSTALL_LIB}
 INSTALL_MAN	= ${INSTALL_MAN}
 INSTALL_DATA	= ${INSTALL_DATA}
 
+GMID_OBJS	= ${GMID_OBJS}
+GG_OBJS		= ${GG_OBJS}
+
 VERSION		= ${VERSION}
 
 __HEREDOC__
@@ -441,7 +469,16 @@ printf "COMPAT ="
 for comp in ${COMPAT}; do
 	printf " %s/%s" "$PWD" "$comp"
 done
-printf "\n"
+printf "\n\n"
+
+# Include dependency info
+for src in ${ALL_SRCS}; do
+	printf "-include ${src%.c}.d\n"
+done
+
+for comp in ${COMPAT}; do
+	printf "-include ${comp%.o}.d\n"
+done
 
 echo "file Makefile.local: written" 1>&2
 echo "file Makefile.local: written" 1>&3
