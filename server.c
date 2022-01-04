@@ -47,6 +47,7 @@ static void	 handle_handshake(int, short, void*);
 static const char *strip_path(const char*, int);
 static void	 fmt_sbuf(const char*, struct client*, const char*);
 static int	 apply_block_return(struct client*);
+static int	 check_matching_certificate(X509_STORE *, struct client *);
 static int	 apply_reverse_proxy(struct client *);
 static int	 apply_fastcgi(struct client*);
 static int	 apply_require_ca(struct client*);
