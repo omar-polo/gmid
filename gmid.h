@@ -112,6 +112,7 @@ struct proxy {
 	size_t		 certlen;
 	uint8_t		*key;
 	size_t		 keylen;
+	X509_STORE	*reqca;
 
 	TAILQ_ENTRY(proxy) proxies;
 };

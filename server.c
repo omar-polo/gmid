@@ -630,6 +630,26 @@ matched_proxy(struct client *c)
 	return NULL;
 }
 
+static int
+check_matching_certificate(X509_STORE *store, struct client *c)
+{
+	const uint8_t	*cert;
+	size_t		 len;
+
+	if (!tls_peer_cert_provided(c->ctx)) {
+		start_reply(c, CLIENT_CERT_REQ, "client certificate required");
+		return 1;
+	}
+
+	cert = tls_peer_cert_chain_pem(c->ctx, &len);
+	if (!validate_against_ca(store, cert, len)) {
+		start_reply(c, CERT_NOT_AUTH, "certificate not authorised");
+		return 1;
+	}
+
+	return 0;
+}
+
 /* 1 if matching a proxy relay-to (and apply it), 0 otherwise */
 static int
 apply_reverse_proxy(struct client *c)
@@ -641,6 +661,9 @@ apply_reverse_proxy(struct client *c)
 		return 0;
 
 	c->proxy = p;
+
+	if (p->reqca != NULL && check_matching_certificate(p->reqca, c))
+		return 1;
 
 	log_debug(c, "opening proxy connection for %s:%s",
 	    p->host, p->port);
@@ -680,24 +703,10 @@ static int
 apply_require_ca(struct client *c)
 {
 	X509_STORE	*store;
-	const uint8_t	*cert;
-	size_t		 len;
 
 	if ((store = vhost_require_ca(c->host, c->iri.path)) == NULL)
 		return 0;
-
-	if (!tls_peer_cert_provided(c->ctx)) {
-		start_reply(c, CLIENT_CERT_REQ, "client certificate required");
-		return 1;
-	}
-
-	cert = tls_peer_cert_chain_pem(c->ctx, &len);
-	if (!validate_against_ca(store, cert, len)) {
-		start_reply(c, CERT_NOT_AUTH, "certificate not authorised");
-		return 1;
-	}
-
-	return 0;
+	return check_matching_certificate(store, c);
 }
 
 static size_t

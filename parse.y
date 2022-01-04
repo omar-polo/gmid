@@ -351,6 +351,13 @@ proxy_opt	: CERT string {
 			free(proxy->host);
 			parsehp($2, &proxy->host, &proxy->port, "1965");
 		}
+		| REQUIRE CLIENT CA string {
+			only_once(proxy->reqca, "require client ca");
+			ensure_absolute_path($4);
+			if ((proxy->reqca = load_ca($4)) == NULL)
+				yyerror("couldn't load ca cert: %s", $4);
+			free($4);
+		}
 		| USE_TLS bool {
 			proxy->notls = !$2;
 		}
