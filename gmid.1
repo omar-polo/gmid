@@ -471,6 +471,10 @@ at the given
 This is the only mandatory option in a
 .Ic proxy
 block.
+.It Ic require Ic client Ic ca Ar file
+Allow the proxying only from clients that provide a certificate
+signed by the CA certificate in
+.Ar file .
 .It Ic use-tls Ar bool
 Specify whether to use TLS when connecting to the proxied host.
 Enabled by default.
