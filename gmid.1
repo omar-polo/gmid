@@ -28,11 +28,11 @@
 .Nm
 .Bk -words
 .Op Fl 6hVv
-.Op Fl d Pa certs-dir
+.Op Fl d Ar certs-dir
 .Op Fl H Ar hostname
 .Op Fl p Ar port
-.Op Fl x Pa cgi
-.Op Pa dir
+.Op Fl x Ar cgi
+.Op Ar dir
 .Ek
 .Sh DESCRIPTION
 .Nm
@@ -47,7 +47,7 @@ rereads the configuration file when it receives
 .Pp
 The options are as follows:
 .Bl -tag -width 14m
-.It Fl c Pa config
+.It Fl c Ar config
 Specify the configuration file.
 .It Fl D Ar macro Ns = Ns Ar value
 Define
@@ -64,7 +64,7 @@ Stays and logs on the foreground.
 Check that the configuration is valid, but don't start the server.
 If specified two or more time, dump the configuration in addition to
 verify it.
-.It Fl P Pa pidfile
+.It Fl P Ar pidfile
 Write daemon's pid to the given location.
 .Ar pidfile
 will also act as lock: if another process is holding a lock on that
@@ -82,7 +82,7 @@ and looks for the following options
 .Bl -tag -width 14m
 .It Fl 6
 Enable IPv6.
-.It Fl d Pa certs-path
+.It Fl d Ar certs-path
 Directory where certificates for the config-less mode are stored.
 By default it is
 .Pa $XDG_DATA_HOME/gmid ,
@@ -97,7 +97,7 @@ by default
 Certificates for the given
 .Ar hostname
 are searched inside the
-.Pa certs-dir
+.Ar certs-dir
 directory given with the
 .Fl d
 option.
@@ -118,7 +118,7 @@ Verbose mode.
 Multiple
 .Fl v
 options increase the verbosity.
-.It Fl x Pa path
+.It Fl x Ar path
 Enable execution of
 .Sx CGI
 scripts.
@@ -127,10 +127,10 @@ See the description of the
 option in the
 .Sq Servers
 section below to learn how
-.Pa path
+.Ar path
 is processed.
 Cannot be provided more than once.
-.It Pa dir
+.It Ar dir
 The root directory to serve.
 By default the current working directory is assumed.
 .El
@@ -222,10 +222,10 @@ server "foo" {
 .Ed
 .Ss Global Options
 .Bl -tag -width 12m
-.It Ic chroot Pa path
+.It Ic chroot Ar path
 .Xr chroot 2
 the process to the given
-.Pa path .
+.Ar path .
 The daemon has to be run with root privileges and thus the option
 .Ic user
 needs to be provided, so privileges can be dropped.
@@ -320,17 +320,16 @@ is replaced with the server port.
 .It \&%N
 is replaced with the server name.
 .El
-.It Ic cert Pa file
+.It Ic cert Ar file
 Path to the certificate to use for this server.
-The
-.Pa file
+.Ar file
 should contain a PEM encoded certificate.
 This option is mandatory.
-.It Ic cgi Pa path
+.It Ic cgi Ar path
 Execute
 .Sx CGI
 scripts that matches
-.Pa path
+.Ar path
 using shell globbing rules.
 .It Ic default type Ar string
 Set the default media type that is used if the media type for a
@@ -339,11 +338,11 @@ If not specified, the
 .Ic default type
 is set to
 .Dq application/octet-stream .
-.It Ic entrypoint Pa path
+.It Ic entrypoint Ar path
 Handle all the requests for the current virtual host using the
 .Sx CGI
 script at
-.Pa path ,
+.Ar path ,
 relative to the current document root.
 .It Ic env Ar name Cm = Ar value
 Set the environment variable
@@ -354,15 +353,15 @@ when executing CGI scripts.
 Can be provided more than once.
 .\" don't document the "spawn <prog>" form because it probably won't
 .\" be kept.
-.It Ic fastcgi Oo Ic tcp Oc Pa socket Oo Cm port Ar port Oc
+.It Ic fastcgi Oo Ic tcp Oc Ar socket Oo Cm port Ar port Oc
 Enable
 .Sx FastCGI
 instead of serving files.
 The
-.Pa socket
+.Ar socket
 can either be a UNIX-domain socket or a TCP socket.
 If the FastCGI application is listening on a UNIX domain socket,
-.Pa socket
+.Ar socket
 is a local path name within the
 .Xr chroot 2
 root directory of
@@ -370,7 +369,7 @@ root directory of
 Otherwise, the
 .Ic tcp
 keyword must be provided and
-.Pa socket
+.Ar socket
 is interpreted as a hostname or an IP address.
 .Ar port
 can be either a port number or the name of a service enclosed in
@@ -380,10 +379,9 @@ If not specified defaults to 9000.
 Set the directory index file.
 If not specified, it defaults to
 .Pa index.gmi .
-.It Ic key Pa file
+.It Ic key Ar file
 Specify the private key to use for this server.
-The
-.Pa file
+.Ar file
 should contain a PEM encoded private key.
 This option is mandatory.
 .It Ic lang Ar string
@@ -391,10 +389,9 @@ Specify the language tag for the text/gemini content served.
 If not specified, no
 .Dq lang
 parameter will be added in the response.
-.It Ic location Pa path Brq ...
+.It Ic location Ar path Brq ...
 Specify server configuration rules for a specific location.
-The
-.Pa path
+.Ar path
 argument will be matched against the request path with shell globbing
 rules.
 In case of multiple location statements in the same context, the first
@@ -482,14 +479,14 @@ Enabled by default.
 Enable or disable the TLS server name verification.
 Enabled by default.
 .El
-.It Ic root Pa directory
+.It Ic root Ar directory
 Specify the root directory for this server
 .Pq alas the current Dq document root .
 It's relative to the chroot if enabled.
-.It Ic require Ic client Ic ca Pa path
+.It Ic require Ic client Ic ca Ar path
 Allow requests only from clients that provide a certificate signed by
 the CA certificate in
-.Pa path .
+.Ar path .
 It needs to be a PEM-encoded certificate and it's not relative to the
 chroot.
 .It Ic strip Ar number
