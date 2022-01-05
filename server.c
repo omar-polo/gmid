@@ -1097,8 +1097,8 @@ client_write(struct bufferevent *bev, void *d)
 	case REQUEST_FCGI:
 	case REQUEST_PROXY:
 		/*
-		 *  Here we depend on on the cgi script or fastcgi
-		 *  connection to provide data.
+		 * Here we depend on the cgi/fastcgi or proxy
+		 * connection to provide data.
 		 */
 		break;
 
