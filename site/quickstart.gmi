@@ -19,9 +19,7 @@ gmid will then generate a certificate inside ~/.local/share/gmid and serve the g
 
 ## Setting up a capsule with gmid
 
-To host a Gemini capsule you need to run gmid in “daemon” mode.
-
-To run gmid in daemon mode a configuration file is needed.  The format of the configuration file is described in the manpage and is quite flexible, but something like the following should be enough to start:
+To host a Gemini capsule you need to run gmid in “daemon” mode, and so a configuration file is needed.  The format of the configuration file is described in the manpage and is quite flexible, but something like the following should be enough to start:
 
 ```sample configuration file
 # /etc/gmid.conf
