@@ -1004,6 +1004,14 @@ client_read(struct bufferevent *bev, void *d)
 
 	bufferevent_disable(bev, EVBUFFER_READ);
 
+	/*
+	 * libevent2 can still somehow call this function, even
+	 * though I never enable EV_READ in the bufferevent.  If
+	 * that's the case, bail out.
+	 */
+	if (c->type != REQUEST_UNDECIDED)
+		return;
+
 	/* max url len + \r\n */
 	if (EVBUFFER_LENGTH(src) > 1024 + 2) {
 		log_err(c, "too much data received");

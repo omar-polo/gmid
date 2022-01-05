@@ -362,3 +362,11 @@ test_proxy_with_certs() {
 	fetch /
 	check_reply "60 client certificate required" || return 1
 }
+
+test_unknown_host() {
+	setup_simple_test '' ''
+
+	ggflags="-N -H foobar"
+	fetch /
+	check_reply '59 Wrong/malformed host or missing SNI'
+}
