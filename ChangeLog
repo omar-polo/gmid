@@ -23,7 +23,7 @@
 
 2021-11-16  Omar Polo  <op@omarpolo.com>
 
-	* configure (singletest): fix the cross-compilation: don't run the test binaries just built
+	* configure (singletest): fix the cross-compilation: don't run the test binaries just built.  Suggested by Nikolay Korotkiy (@sikmir), thanks!
 
 2021-10-24  Omar Polo  <op@omarpolo.com>
 
