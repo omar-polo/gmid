@@ -305,7 +305,7 @@ static void __attribute__((noreturn))
 usage(void)
 {
 	fprintf(stderr, "usage: %s [-23Nnv] [-C cert] [-d mode] [-H sni] "
-	    "[-K key] [-P proxy]\n",
+	    "[-K key] [-P host[:port]]\n",
 	    getprogname());
 	fprintf(stderr, "          [-T seconds] gemini://...\n");
 	exit(1);
