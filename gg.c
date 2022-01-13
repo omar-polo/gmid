@@ -411,17 +411,17 @@ main(int argc, char **argv)
 		usage();
 	}
 
-	signal(SIGPIPE, SIG_IGN);
+	if (argc != 1)
+		usage();
 
 	load_tls_conf();
+
+	signal(SIGPIPE, SIG_IGN);
 
 #ifdef __OpenBSD__
 	if (pledge("stdio inet dns", NULL) == -1)
 		err(1, "pledge");
 #endif
-
-	if (argc != 1)
-		usage();
 
 	code = get(*argv);
 
