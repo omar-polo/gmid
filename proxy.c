@@ -347,12 +347,12 @@ proxy_init(struct client *c)
 {
 	struct proxy *p = c->proxy;
 
+	if (!p->notls && proxy_setup_tls(c) == -1)
+		return -1;
+	else if (p->notls)
+		proxy_enqueue_req(c);
+
 	c->type = REQUEST_PROXY;
 
-	if (p->notls) {
-		proxy_enqueue_req(c);
-		return 0;
-	}
-
-	return proxy_setup_tls(c);
+	return 0;
 }
