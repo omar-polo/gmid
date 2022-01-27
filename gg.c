@@ -28,7 +28,7 @@ enum debug {
 	DEBUG_CODE,
 	DEBUG_HEADER,
 	DEBUG_META,
-	DEBUG_WHOLE,
+	DEBUG_ALL,
 };
 
 /* flags */
@@ -278,7 +278,7 @@ get(const char *r)
 			goto close;
 		}
 
-		if (debug == DEBUG_WHOLE) {
+		if (debug == DEBUG_ALL) {
 			write(1, buf, len);
 			continue;
 		}
@@ -322,8 +322,8 @@ parse_debug(const char *arg)
 		return DEBUG_HEADER;
 	if (!strcmp(arg, "meta"))
 		return DEBUG_META;
-	if (!strcmp(arg, "whole"))
-		return DEBUG_WHOLE;
+	if (!strcmp(arg, "all"))
+		return DEBUG_ALL;
 	usage();
 }
 
