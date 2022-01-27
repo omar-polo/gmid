@@ -288,6 +288,7 @@ proxy_handshake(int fd, short event, void *d)
 		return;
 	}
 
+	c->proxyevset = 0;
 	proxy_enqueue_req(c);
 }
 
@@ -327,6 +328,7 @@ proxy_setup_tls(struct client *c)
 	if (tls_connect_socket(c->proxyctx, c->pfd, p->host) == -1)
 		goto err;
 
+	c->proxyevset = 1;
 	event_set(&c->proxyev, c->pfd, EV_READ|EV_WRITE, proxy_handshake, c);
 	event_add(&c->proxyev, &handshake_timeout);
 

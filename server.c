@@ -1277,18 +1277,20 @@ client_close(struct client *c)
 	bufferevent_free(c->bev);
 	c->bev = NULL;
 
-	if (c->proxybev != NULL) {
-		if (event_pending(&c->proxyev, EV_READ|EV_WRITE, NULL))
-			event_del(&c->proxyev);
-
-		if (c->pfd != -1 && c->proxyctx != NULL) {
-			/* shut down the proxy TLS connection */
-			client_proxy_close(c->pfd, 0, c->proxyctx);
-			c->pfd = -1;
-		}
-
-		bufferevent_free(c->proxybev);
+	if (c->proxyevset &&
+	    event_pending(&c->proxyev, EV_READ|EV_WRITE, NULL)) {
+		c->proxyevset = 0;
+		event_del(&c->proxyev);
 	}
+
+	if (c->pfd != -1 && c->proxyctx != NULL) {
+		/* shut down the proxy TLS connection */
+		client_proxy_close(c->pfd, 0, c->proxyctx);
+		c->pfd = -1;
+	}
+
+	if (c->proxybev != NULL)
+		bufferevent_free(c->proxybev);
 
 	client_close_ev(c->fd, 0, c);
 }

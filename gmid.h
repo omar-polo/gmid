@@ -240,6 +240,7 @@ struct client {
 	struct proxy	*proxy;
 	struct bufferevent *proxybev;
 	struct tls	*proxyctx;
+	int		 proxyevset;
 	struct event	 proxyev;
 
 	char		*header;
