@@ -1259,7 +1259,7 @@ client_close(struct client *c)
 	/*
 	 * We may end up calling client_close in various situations
 	 * and for the most unexpected reasons.  Therefore, we need to
-	 * ensure that everything is properly released once we reach
+	 * ensure that everything gets properly released once we reach
 	 * this point.
 	 */
 
