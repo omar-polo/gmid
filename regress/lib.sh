@@ -107,12 +107,6 @@ head() {
 	$gg -T10 -d header $ggflags "gemini://localhost:10965/$1" || true
 }
 
-# usage: raw <path>
-# return both header and body
-raw() {
-	$gg -T10 -dwhole $ggflags "gemini://localhost:10965/$1" || true
-}
-
 # usage: fetch <path>
 # fetches the header and the body.  They're returned in $hdr and
 # $body.
