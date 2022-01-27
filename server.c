@@ -1180,7 +1180,7 @@ start_reply(struct client *c, int code, const char *meta)
 	if (!vhost_disable_log(c->host, c->iri.path))
 		log_request(c, EVBUFFER_DATA(evb), EVBUFFER_LENGTH(evb));
 
-	if (code != 20 && IS_INTERNAL_REQUEST(c->type))
+	if (code != 20)
 		c->type = REQUEST_DONE;
 
 	return;
