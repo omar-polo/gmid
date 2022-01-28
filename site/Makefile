@@ -17,7 +17,8 @@ REPOLOGY_URL =		https://repology.org/project/gmid/versions
 SUBST =		./subst GITHUB=https://github.com/omar-polo/gmid \
 			VERS=1.7.5 \
 			CURV=1.7 \
-			NEXTV=1.8
+			NEXTV=1.8 \
+			TREE=https://git.omarpolo.com/gmid/tree
 
 SUBST_GEM =	${SUBST} MANEXT=txt  EXT=gmi  REPOLOGY=${REPOLOGY_URL}
 SUBST_WWW =	${SUBST} MANEXT=html EXT=html REPOLOGY=${REPOLOGY_BANNER}

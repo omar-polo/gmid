@@ -4,7 +4,7 @@ This directory is for additional contributed files which may be useful.
 
 ## Dockerfile
 
-=> https://git.omarpolo.com/gmid/tree/contrib/Dockerfile contrib/Dockerfile
+=> TREE/contrib/Dockerfile contrib/Dockerfile
 
 A sample Dockerfile.  The resulting image is a classic alpine linux image with a statically linked gmid installed as /bin/gmid.  Build the image with:
 
@@ -24,13 +24,13 @@ and then run it with something along the lines of:
 
 ## gencert
 
-=> https://git.omarpolo.com/gmid/tree/contrib/gencert contrib/gencert
+=> TREE/contrib/gencert contrib/gencert
 
 contrib/gencert is a simple script to generate self-signed certificates.
 
 ## OpenBSD rc file
 
-=> https://git.omarpolo.com/gmid/tree/contrib/gmid contrib/gmid
+=> TREE/contrib/gmid contrib/gmid
 
 contrib/gmid is a sample service file for OpenBSD rc(8).  To install it:
 
@@ -42,7 +42,7 @@ then the usual ‘rcctl [start|stop|enable|restart] gmid’ are available.
 
 ## systemd unit file
 
-=> https://git.omarpolo.com/gmid/tree/contrib/gmid.service contrib/gmid.service
+=> TREE/contrib/gmid.service contrib/gmid.service
 
 A simple service file for systemd.  To install it
 
@@ -68,7 +68,7 @@ Some things to keep in mind:
 
 ## renew certificates automatically
 
-=> https://git.omarpolo.com/gmid/tree/contrib/renew-certs contrib/renew-certs
+=> TREE/contrib/renew-certs contrib/renew-certs
 
 NB: this script requires features that are currently available only in the master branch.
 
@@ -78,7 +78,7 @@ Read the documentation with: perldoc renew-certs
 
 ## vim syntax files
 
-=> https://git.omarpolo.com/gmid/tree/contrib/vim contrib/vim
+=> TREE/contrib/vim contrib/vim
 
 contrib/vim contains a syntax highlighting for vim.  To install it, just copy the files to ~/.vim or to /usr/share/vim/vimfiles, e.g.:
 
