@@ -1,0 +1,114 @@
+#!/usr/bin/env perl
+#
+# Copyright (c) 2022 Omar Polo <op@openbsd.org>
+#
+# Permission to use, copy, modify, and distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+use v5.10;
+use strict;
+use warnings;
+
+my $in_pre = 0;
+my $in_list = 0;
+
+while (<>) {
+	chomp;
+	if ($in_pre && m/^```/) {
+		$in_pre = 0;
+		say "</pre>";
+	} elsif (!$in_pre && m/^```/) {
+		if ($in_list) {
+			$in_list = 0;
+			say "</ul>";
+		}
+		$in_pre = 1;
+		print "<pre>";
+	} elsif ($in_pre) {
+		say san($_);
+	} elsif ($in_list && m/^$/) {
+		say "</ul>";
+		$in_list = 0;
+	} elsif (m/^\*\s+(.*)/) { # NB: at least one space
+		if (!$in_list) {
+			$in_list = "item";
+			say "<ul>";
+		} elsif ($in_list eq "link") {
+			$in_list = "item";
+			say "</ul>";
+			say "<ul>";
+		}
+		output("li", $1);
+	} elsif (m/^=>\s*([^\s]*)\s*(.*)$/) {
+		my $href = $1;
+		my $alt = $2;
+
+		# special case: images
+		if ($1 =~ /\.(png|jpg|svg)$/) {
+			if ($in_list) {
+				say "</ul>";
+				$in_list = 0;
+			}
+			say "<img src='$href' alt='$alt' />";
+			next;
+		}
+
+		if (!$in_list) {
+			$in_list = "link";
+			say "<ul class='link-list'>";
+		} elsif ($in_list eq "item") {
+			$in_list = "link";
+			say "</ul>";
+			say "<ul class='link-list'>";
+		}
+		$_ = $alt || $href;
+		say "<li><a href='$href'>". san() ."</a></li>";
+	} elsif (m/^###\s*(.*)$/) {
+		output("h3", $1);
+	} elsif (m/^##\s*(.*)$/) {
+		output("h2", $1);
+	} elsif (m/^#\s*(.*)$/) {
+		output("h1", $1);
+	} elsif (m/^>\s*(.*)$/) {
+		output("blockquote", $1);
+	} else {
+		output("p", $_);
+	}
+}
+
+sub san {
+	s/&/\&amp;/g;
+	s/</\&lt;/g;
+	s/>/\&gt;/g;
+	return $_;
+}
+
+sub output {
+	my ($tn, $content) = @_;
+
+	if (!$in_list && $tn eq "li") {
+		$in_list = 1;
+		say "<ul>";
+	}
+
+	if ($in_list && $tn ne "li") {
+		$in_list = 0;
+		say "</ul>";
+	}
+
+	if ($tn eq "p" && $content eq "") {
+		return;
+	}
+
+	$_ = $content;
+	say "<$tn>". san() ."</$tn>";
+}
