@@ -1,8 +1,4 @@
-=> / Home
-=> contrib.gmi contrib
-=> /gmid.1.txt docs
-
-# gmid quickstart
+# gmid quickstart guide
 
 gmid can be run in two different “modes”:
 

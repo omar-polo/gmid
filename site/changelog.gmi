@@ -1,0 +1,92 @@
+# change log
+
+## 2021/10/15 - 1.7.5 “Space-dye Vest” fifth bugfix release
+
+This version includes the following bugfix
+
+* don’t die when a connection is closed before being accepted by gmid (i.e. handle ‘ECONNRESET’)
+
+
+## 2021/09/24 - 1.7.4 “Space-dye Vest” fourth bugfix release
+
+This version includes the following bugfix:
+
+* fix a possible out-of-bound access when handling a request for a non-existent file in the root directory of a vhost that's matched by the cgi option
+
+and the relative regression test.
+
+
+## 2021/09/19 - 1.7.3 “Space-dye Vest” third bugfix release
+
+### Improvements
+
+* follows symlinks
+* improved documentation and added key generation example (thanks! Anna)
+
+### Bugfix
+
+* fix syslog logging on FreeBSD.  Reported by Karl Jeacle, thanks!
+* don't crash if ``-c'' is missing in configtest mode (-n).  Reported by heph, thanks!
+* allow fstat64 on linux (needed by glibc on aarch64).  Reported by pine, thanks!
+
+
+## 2021/07/19 - 1.7.2 “Space-dye Vest” second bugfix release
+
+This version incudes the following bugfix:
+
+* an un-initialized field in the configless code path leads to a crash on the first request.
+
+and the relative regression test.
+
+
+## 2021/07/11 - 1.7.1 “Space-dye Vest” bugfix release
+
+This version includes two bugfixes:
+* use ${MAKE} to recursively call make.
+* fix the misleading example in the manpage: macros may not be reserved words
+
+
+## 2021/07/10 - 1.7 “Space-dye Vest”
+
+Starting from this version gmid doesn't depend on lex anymore, but yacc is still needed.
+
+### New features
+
+* initial fastcgi support!  (it's still young!)
+* added user-defined macros, either via ‘-Dname=val’ or directly in the configuration file.
+* new ‘include’ keyword to load additional configuration files.
+* new ‘env’ rule to define environment vars for CGI scripts.
+* new ‘alias’ rule to define hostname aliases for a server.
+* allow ‘root’ to be specified per-location block.
+* pidfile support with the new ‘-P’ cli flag.
+* define ‘TLS_VERSION’, ‘TLS_CIPHER’ and ‘TLS_CIPHER_STRENGTH’ for CGI scripts.
+
+### Improvements
+
+* remove limits on the number of virtual hosts and location blocks that can be defined.
+* print the datetime when logging to stderr.
+* use ‘text/x-patch’ for ‘.patch’ and ‘.diff’ files.
+* sort the auto index alphabetically.
+* various improvements to the log management.
+* drop the dependency on lex.
+* added ‘--help’ as synonym of ‘-h’ and ‘-V’/‘--version‘ to print the version.
+* c-like handling of strings in the configuration file: when two or more strings are next to each-others, are automatically joined into a single string.  This is particularly useful with $-macros.
+
+### Bug fixes
+
+* correctly handle CGI scripts that replies with the maxium header length allowed.
+* fixed the static target.
+* fixed recursive mkdirs for configless mode (i.e. create ‘~/.local/share/gmid’)
+* logs sent to syslog now have proper priority (before every message ended up as LOG_CRIT).  Found by Anna “CyberTailor”, thanks!
+* ensure ‘%p’ (path) is always absolute in ‘block return’ rules.
+* fix automatic certificate generation, it caused problems on some adroid devices.  Found by Gnuserland, thanks!
+* document the ‘log’ rule.
+* the seccomp filter was reworked and now it's known to work properly on a vast range of architectures (to be more specific: all the architectures supported by alpine linux), see github issue #4.  Prompted and tested by @begss, thanks!
+* various improvements to the configure script, notified and fixed by Anna “CyberTailor”, thanks!
+* added a timeout to the regression tests.
+
+### Breaking changes
+
+* if duplicate rules are found in the configuration file, an error is now raised instead of silently using only the last value.
+* (sort of) ‘gg’ moved to ‘regress’ as it's only used in the regression suite.
+* (notice) the “mime "mime-type" "extension"” rule was deprecated and replaced by the new “map "mime-type" to-ext "extension"”.  The ‘mime’ rule will be removed in a future version because its syntax is incompatible with the new string auto-concat mechanism.

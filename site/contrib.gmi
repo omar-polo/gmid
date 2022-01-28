@@ -1,8 +1,4 @@
-=> / Home
-=> /quickstart.gmi Quickstart
-=> /gmid.1.txt docs
-
-# Contrib
+# contributed files
 
 This directory is for additional contributed files which may be useful.
 
@@ -10,8 +6,7 @@ This directory is for additional contributed files which may be useful.
 
 => https://git.omarpolo.com/gmid/tree/contrib/Dockerfile contrib/Dockerfile
 
-A sample Dockerfile.  The resulting image is a classic alpine linux image with a statically linked gmid installed as /bin/gmid.
-To build the image:
+A sample Dockerfile.  The resulting image is a classic alpine linux image with a statically linked gmid installed as /bin/gmid.  Build the image with:
 
 ```instructions to build the image
 # docker build -f contrib/Dockerfile -t gmid .
@@ -45,9 +40,9 @@ contrib/gmid is a sample service file for OpenBSD rc(8).  To install it:
 
 then the usual ‘rcctl [start|stop|enable|restart] gmid’ are available.
 
-## Systemd unit file
+## systemd unit file
 
-=> https://git.omarpolo.com/gmid/tree/contrib/gmid.service gmid.service
+=> https://git.omarpolo.com/gmid/tree/contrib/gmid.service contrib/gmid.service
 
 A simple service file for systemd.  To install it
 
@@ -81,7 +76,7 @@ contrib/renew-certs is a script meant to be run in a crontab that watch for cert
 
 Read the documentation with: perldoc renew-certs
 
-## Vim syntax files
+## vim syntax files
 
 => https://git.omarpolo.com/gmid/tree/contrib/vim contrib/vim
 
