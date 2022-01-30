@@ -20,8 +20,8 @@ gmid: ${GMID_OBJS}
 gg: ${GG_OBJS}
 	${CC} ${GG_OBJS} -o $@ ${LDFLAGS}
 
-static: ${OBJS}
-	${CC} ${OBJS} -o gmid ${LDFLAGS} ${STATIC}
+static: ${GMID_OBJS}
+	${CC} ${GMID_OBJS} -o gmid ${LDFLAGS} ${STATIC}
 
 clean:
 	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid gg
