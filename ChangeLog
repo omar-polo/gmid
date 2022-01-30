@@ -1,5 +1,7 @@
 2022-01-30  Omar Polo  <op@omarpolo.com>
 
+	* configure (VERSION): 1.8 “Lightbulb Sun” tagged
+
 	* proxy.c (proxy_setup_tls): allow to specify a custom hostname as SNI for the TLS handshake with the proxied host.
 
 2022-01-02  Omar Polo  <op@omarpolo.com>
