@@ -472,6 +472,12 @@ block.
 Allow the proxying only from clients that provide a certificate
 signed by the CA certificate in
 .Ar file .
+.It Ic sni Ar hostname
+Use the given
+.Ar hostname
+instead of the one extracted from the
+.Ic relay-to
+rule for the TLS handshake with the proxied gemini server.
 .It Ic use-tls Ar bool
 Specify whether to use TLS when connecting to the proxied host.
 Enabled by default.

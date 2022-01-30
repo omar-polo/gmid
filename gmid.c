@@ -338,6 +338,7 @@ free_config(void)
 			free(p->match_proto);
 			free(p->match_host);
 			free(p->host);
+			free(p->sni);
 			tls_unload_file(p->cert, p->certlen);
 			tls_unload_file(p->key, p->keylen);
 			free(p);

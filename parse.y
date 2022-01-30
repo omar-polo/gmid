@@ -127,7 +127,7 @@ typedef struct {
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
-%token	SERVER SPAWN STRIP
+%token	SERVER SNI SPAWN STRIP
 %token	TCP TOEXT TYPE
 %token	USE_TLS USER
 %token	VERIFYNAME
@@ -358,6 +358,11 @@ proxy_opt	: CERT string {
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
+		| SNI string {
+			only_once(proxy->sni, "proxy sni");
+			free(proxy->sni);
+			proxy->sni = $2;
+		}
 		| USE_TLS bool {
 			proxy->notls = !$2;
 		}
@@ -497,6 +502,7 @@ static struct keyword {
 	{"return", RETURN},
 	{"root", ROOT},
 	{"server", SERVER},
+	{"sni", SNI},
 	{"spawn", SPAWN},
 	{"strip", STRIP},
 	{"tcp", TCP},

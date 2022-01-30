@@ -297,6 +297,7 @@ proxy_setup_tls(struct client *c)
 {
 	struct proxy *p = c->proxy;
 	struct tls_config *conf = NULL;
+	const char *hn;
 
 	if ((conf = tls_config_new()) == NULL)
 		return -1;
@@ -325,7 +326,9 @@ proxy_setup_tls(struct client *c)
 	if (tls_configure(c->proxyctx, conf) == -1)
 		goto err;
 
-	if (tls_connect_socket(c->proxyctx, c->pfd, p->host) == -1)
+	if ((hn = p->sni) == NULL)
+		hn = p->host;
+	if (tls_connect_socket(c->proxyctx, c->pfd, hn) == -1)
 		goto err;
 
 	c->proxyevset = 1;

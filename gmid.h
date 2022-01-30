@@ -105,6 +105,7 @@ struct proxy {
 
 	char		*host;
 	const char	*port;
+	char		*sni;
 	int		 notls;
 	uint32_t	 protocols;
 	int		 noverifyname;
