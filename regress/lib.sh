@@ -161,7 +161,7 @@ check() {
 	fi
 
 	pid="$(cat gmid.pid || true)"
-	if [ "$pid" == "" ]; then
+	if [ "$pid" = "" ]; then
 		return 1
 	fi
 
