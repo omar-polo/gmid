@@ -37,7 +37,9 @@ install: gmid
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	${INSTALL_PROGRAM} gmid ${DESTDIR}${BINDIR}
+	${INSTALL_PROGRAM} gg ${DESTDIR}${BINDIR}
 	${INSTALL_MAN} gmid.1 ${DESTDIR}${MANDIR}/man1
+	${INSTALL_MAN} gg.1 ${DESTDIR}${MANDIR}/man1
 
 compile_flags.txt:
 	printf "%s\n" ${CFLAGS} > compile_flags.txt
