@@ -1,5 +1,33 @@
 # change log
 
+## 2022/01/30 - 1.8 “Lightbulb Sun”
+
+### New Features
+
+* reverse proxying support: gmid now can relay gemini requests to other hosts.
+* install gg too: it's a simple gemini client ("gemini get") initially developed as part of the regression suite.
+* added OCSP stapling support (by @The-King-of-Toasters, thanks!)
+* add gencert, a simple script to generate self-signed certs.
+* add renew-certs, a script to automatically renew self-signed certs.
+* multiple -n partially dump the parsed configuration.
+
+### Improvements
+
+* reworked the fastcgi subsystem, now it's completely asynchronous.
+* refactored the internal of the server too.
+* refactored the regression suite (in particular reduced the timeout for single tests from 30 to 10 seconds.)
+* configure: add support for --prefix=... autoconf-style flag.
+* relax the "wont proxy" check: don't check that the port in the request is the same we're listening on.  Suggested and discussed with Allen Sobot, thanks!
+* relax the strict ordering of options, locations and proxy blocks inside a server block.
+
+### Bug fixes
+
+* don't pass through illegal replies from CGI scripts.
+* fix the "double slash" error in logs.
+* fix the configure for cross-compilation: don't run the test binaries just built.  Suggested by Nikolay Korotkiy (@sikmir), thanks!
+* (seccomp) allow ugetrlimit(2), needed by glibc on arm7l.  By Max, thanks!
+
+
 ## 2021/10/15 - 1.7.5 “Space-dye Vest” fifth bugfix release
 
 This version includes the following bugfix
