@@ -13,8 +13,8 @@ setlocal iskeyword+=-
 
 " Value Types: {{{2
 " ============
-syn keyword gmidBoolean on
-syn keyword gmidBoolean off
+syn keyword gmidBoolean on contained
+syn keyword gmidBoolean off contained
 
 syn match   gmidNumber "\<\d\+\>" display
 
@@ -69,9 +69,21 @@ syn keyword gmidDirective key
 syn keyword gmidDirective lang
 syn keyword gmidDirective log nextgroup=gmidBoolean skipwhite
 syn keyword gmidDirective param
+syn keyword gmidDirective ocsp
 syn keyword gmidDirective root
-syn match   gmidDirective "\<require\s\+client\s\+ca>" display
+syn match   gmidDirective "\<require\s\+client\s\+ca\>" display
 syn keyword gmidDirective strip nextgroup=gmidNumber skipwhite
+
+" Proxy Blocks: {{{3
+" =============
+syn keyword gmidDirectiveBlock proxy
+syn keyword gmidDirectiveContinuation proto
+syn keyword gmidDirectiveContinuation for-host
+
+syn keyword gmidDirective relay-to
+syn keyword gmidDirective sni
+syn keyword gmidDirective use-tls    nextgroup=gmidBoolean skipwhite
+syn keyword gmidDirective verifyname nextgroup=gmidBoolean skipwhite
 
 " Highlighting Settings: {{{1
 " ======================
