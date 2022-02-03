@@ -30,7 +30,7 @@ clean:
 cleanall: clean
 	${MAKE} -C regress clean
 
-regress: gmid
+regress: all
 	${MAKE} 'TESTS=${TESTS}' -C regress all
 
 install: gmid
