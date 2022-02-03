@@ -1,14 +1,5 @@
 #!/bin/sh
 
-if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
-	echo
-	echo "======================"
-	echo "runtime tests skipped!"
-	echo "======================"
-	echo
-	exit 0
-fi
-
 rm -f gmid.pid
 
 . ./lib.sh
@@ -25,8 +16,21 @@ if [ $# -ne 0 ]; then
 	tests_done
 fi
 
+# Run standalone unit tests.
 run_test test_punycode
 run_test test_iri
+
+if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
+	echo
+	echo "======================"
+	echo "runtime tests skipped!"
+	echo "======================"
+	echo
+
+	tests_done
+fi
+
+# Run regression tests for the gmid binary.
 run_test test_configless_mode
 run_test test_static_files
 run_test test_directory_redirect
