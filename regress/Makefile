@@ -4,7 +4,7 @@ TESTS=
 
 include ../Makefile.local
 
-.PHONY: all data clean regres
+.PHONY: all data clean regress
 
 all: data puny-test iri_test fcgi-test
 	./regress ${TESTS}
