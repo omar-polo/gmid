@@ -429,14 +429,20 @@ open_landlock(void)
 {
 	int fd;
 
-	/*
-	 * These are all the actions that we may want to
-	 * allow.  Anything not specified here is implicitly blocked
-	 * (e.g. LANDLOCK_ACCESS_FS_EXECUTE.)
-	 */
 	struct landlock_ruleset_attr attr = {
-		.handled_access_fs =	LANDLOCK_ACCESS_FS_READ_FILE	|
-					LANDLOCK_ACCESS_FS_READ_DIR,
+		.handled_access_fs =	LANDLOCK_ACCESS_FS_EXECUTE |
+					LANDLOCK_ACCESS_FS_READ_FILE |
+					LANDLOCK_ACCESS_FS_READ_DIR |
+					LANDLOCK_ACCESS_FS_WRITE_FILE |
+					LANDLOCK_ACCESS_FS_REMOVE_DIR |
+					LANDLOCK_ACCESS_FS_REMOVE_FILE |
+					LANDLOCK_ACCESS_FS_MAKE_CHAR |
+					LANDLOCK_ACCESS_FS_MAKE_DIR |
+					LANDLOCK_ACCESS_FS_MAKE_REG |
+					LANDLOCK_ACCESS_FS_MAKE_SOCK |
+					LANDLOCK_ACCESS_FS_MAKE_FIFO |
+					LANDLOCK_ACCESS_FS_MAKE_BLOCK |
+					LANDLOCK_ACCESS_FS_MAKE_SYM,
 	};
 
 	fd = landlock_create_ruleset(&attr, sizeof(attr), 0);
