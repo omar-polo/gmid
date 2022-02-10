@@ -1,5 +1,25 @@
 # change log
 
+## 2022/02/10 - 1.8.1 “Lightbulb Sun” bugfix release
+
+### Bug fixes
+
+* fix landlock usage on linux: don't assume that access capabilities not listed are implicitly denied, because they are not.  Mickaël Salaün, the landlock author, found the same error on game of trees:
+
+> In a nutshell, the ruleset's handled_access_fs is required for backward and forward compatibility (i.e. the kernel and user space may not know each other's supported restrictions), hence the need to be explicit about the denied-by-default access rights.
+
+In practice this affects only linux and only partially: thanks to the design of the daemon and the seccomp filter the effects of this mistake in handling landlock are fortunately limited.  However, in theory at least, gmid could be for e.g. tricked into truncating existing files, so it's highly suggested to update.
+
+## Improvements
+
+All by Anna “CyberTailor”, thanks!
+
+* don't skip unit tests when SKIP_RUNTIME_TEST is set
+* add `gg' to the regress target dependencies
+* fix the "implicit declaration of asprintf" warning
+* sync vim syntax
+
+
 ## 2022/01/30 - 1.8 “Lightbulb Sun”
 
 ### New Features
