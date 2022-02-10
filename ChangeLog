@@ -1,3 +1,9 @@
+2022-02-10  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): 1.8.1 tagged
+
+	* sandbox.c (open_landlock): fix landlock usage
+
 2022-01-30  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): 1.8 “Lightbulb Sun” tagged
