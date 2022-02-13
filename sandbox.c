@@ -354,7 +354,7 @@ static struct sock_filter filter[] = {
 	SC_ALLOW(oldfstat),
 #endif
 #ifdef __NR_openat
-	SC_ALLOW(openat),
+	SC_ALLOW_ARG(__NR_openat, 3, O_RDONLY),
 #endif
 #ifdef __NR_prlimit64
 	SC_ALLOW(prlimit64),
