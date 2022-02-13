@@ -344,6 +344,9 @@ static struct sock_filter filter[] = {
 #ifdef __NR_newfstatat
 	SC_ALLOW(newfstatat),
 #endif
+#ifdef __NR_fstatat64
+	SC_ALLOW(fstatat64),
+#endif
 #ifdef __NR_oldfstat
 	SC_ALLOW(oldfstat),
 #endif
@@ -382,6 +385,12 @@ static struct sock_filter filter[] = {
 #endif
 #ifdef __NR_writev
 	SC_ALLOW(writev),
+#endif
+#ifdef __NR__llseek
+	SC_ALLOW(_llseek),
+#endif
+#ifdef __NR_sigreturn
+	SC_ALLOW(sigreturn),
 #endif
 
 	/* disallow everything else */
