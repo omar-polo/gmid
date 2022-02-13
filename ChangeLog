@@ -1,3 +1,8 @@
+2022-02-13  Tobias Berger  <tobi.berger13@gmail.com>
+
+	* sandbox.c (filter): allow fstatat64, llseek and sigreturn;
+	needed by glibc on armv7
+
 2022-02-10  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): 1.8.1 tagged
