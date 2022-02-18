@@ -129,28 +129,13 @@ more information.
 
 [contrib-page]: https://gmid.omarpolo.com/contrib.html#dockerfile
 
-### Local libretls
-
-This is **NOT** recommended, please try to port LibreSSL/LibreTLS to
-your distribution of choice or use docker instead.
-
-However, it's possible to statically-link `gmid` to locally-installed
-libretls quite easily.  (It's how I test gmid on Fedora, for instance)
-
-Let's say you have compiled and installed libretls in `$LIBRETLS`,
-then you can build `gmid` with
-
-    ./configure CFLAGS="-I$LIBRETLS/include" \
-                LDFLAGS="$LIBRETLS/lib/libtls.a -lssl -lcrypto -lpthread -levent"
-    make
-
 ### Testing
 
 Execute
 
     make regress
 
-to start the suite.  Keep in mind that the regression tests will
+to start the suite.  Keep in mind that the regression tests needs to
 create files inside the `regress` directory and bind the 10965 port.
 
 
