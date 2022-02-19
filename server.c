@@ -1139,7 +1139,7 @@ client_error(struct bufferevent *bev, short error, void *d)
 		return;
 	}
 
-	log_err(c, "unknown bufferevent error: %s", strerror(errno));
+	log_err(c, "unknown bufferevent error %x", error);
 	client_close(c);
 }
 
