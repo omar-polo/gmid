@@ -480,6 +480,7 @@ static struct keyword {
 	{"env", ENV},
 	{"fastcgi", FASTCGI},
 	{"for-host", FOR_HOST},
+	{"include", INCLUDE},
 	{"index", INDEX},
 	{"ipv6", IPV6},
 	{"key", KEY},
