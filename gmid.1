@@ -145,6 +145,8 @@ Global settings for
 .Nm .
 .It Sy Servers
 Virtual hosts definition.
+.It Sy Types
+Media types and extensions.
 .El
 .Pp
 Within the sections, empty lines are ignored and comments can be put
@@ -505,6 +507,25 @@ It's also considered for the
 parameter in the scope of a
 .Ic block return .
 .El
+.Ss Types
+The
+.Ic types
+section must include one or more lines of the following syntax, enclosed
+in curly brances:
+.Bl -tag -width Ds
+.It Ar type/subtype Ar name Op Ar name ...
+Set the media
+.Ar type
+and
+.Ar subtype
+to the specified extension
+.Ar name .
+One or more names can be specified per line.
+Earch line may end with an optional semicolon.
+.It Ic include Ar file
+Include types definition from an external file, for example
+.Pa /usr/share/misc/mime.types .
+.El
 .Sh CGI
 When a request for an executable file matches the
 .Ic cgi
@@ -643,18 +664,20 @@ TLS_CLIENT_NOT_AFTER
 .Sh MEDIA TYPES
 To auto-detect the MIME type of the response
 .Nm
-looks at the file extension and consults its internal table.
-By default the following mappings are loaded, but they can be
-overridden or extended using the
-.Ic map
-configuration option.
+looks at the file extension and consults an internal table.
 If no MIME is found, the value of
 .Ic default type
 matching the file
 .Ic location
-will be used, which is
-.Dq application/octet-stream
-by default.
+will be used, or
+.Dq application/octet-stream .
+.Pp
+By default the following mappings are loaded, but they can be
+overridden or extended using the
+.Ic map
+option or the
+.Ic type Brq ...
+block.
 .Pp
 .Bl -tag -offset indent -width 14m -compact
 .It diff
