@@ -99,6 +99,7 @@ void		 add_param(char *, char *, int);
 static struct vhost		*host;
 static struct location		*loc;
 static struct proxy		*proxy;
+static char			*current_media;
 static int			 errors;
 
 typedef struct {
@@ -128,7 +129,7 @@ typedef struct {
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
 %token	SERVER SNI SPAWN STRIP
-%token	TCP TOEXT TYPE
+%token	TCP TOEXT TYPE TYPES
 %token	USE_TLS USER
 %token	VERIFYNAME
 
@@ -138,7 +139,7 @@ typedef struct {
 %token	<v.number>	NUM
 
 %type	<v.number>	bool
-%type	<v.string>	string
+%type	<v.string>	string numberstring
 
 %%
 
@@ -148,6 +149,7 @@ conf		: /* empty */
 		| conf varset '\n'
 		| conf option '\n'
 		| conf vhost '\n'
+		| conf types '\n'
 		| conf error '\n'		{ file->errors++; }
 		;
 
@@ -179,6 +181,17 @@ string		: string STRING	{
 			}
 			free($1);
 			free($2);
+		}
+		| STRING
+		;
+
+numberstring	: NUM {
+			char *s;
+			if (asprintf(&s, "%d", $1) == -1) {
+				yyerror("asprintf: number");
+				YYERROR;
+			}
+			$$ = s;
 		}
 		| STRING
 		;
@@ -455,9 +468,34 @@ fastcgi		: SPAWN string {
 		}
 		;
 
+types		: TYPES '{' optnl mediaopts_l '}'
+		;
+
+mediaopts_l	: mediaopts_l mediaoptsl nl
+		| mediaoptsl nl
+		;
+
+mediaoptsl	: STRING { current_media = $1; } medianames_l optsemicolon
+		| include
+		;
+
+medianames_l	: medianames_l medianamesl
+		| medianamesl
+		;
+
+medianamesl	: numberstring { add_mime(&conf.mime, current_media, $1); }
+		;
+
+nl		: '\n' optnl
+		;
+
 optnl		: '\n' optnl		/* zero or more newlines */
 		| ';' optnl		/* semicolons too */
 		| /*empty*/
+		;
+
+optsemicolon	: ';'
+		|
 		;
 
 %%
@@ -509,6 +547,7 @@ static struct keyword {
 	{"tcp", TCP},
 	{"to-ext", TOEXT},
 	{"type", TYPE},
+	{"types", TYPES},
 	{"use-tls", USE_TLS},
 	{"user", USER},
 	{"verifyname", VERIFYNAME},
