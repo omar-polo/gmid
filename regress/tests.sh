@@ -370,3 +370,16 @@ test_unknown_host() {
 	fetch /
 	check_reply '59 Wrong/malformed host or missing SNI'
 }
+
+test_include_mime() {
+	setup_simple_test "types { include '$PWD/example.mime.types' }" ""
+
+	fetch_hdr /
+	check_reply '20 text/gemini'
+
+	fetch_hdr /test.m3u8
+	check_reply '20 application/vnd.apple.mpegurl'
+
+	fetch_hdr /foo.1
+	check_reply '20 text/x-mandoc'
+}

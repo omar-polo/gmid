@@ -58,5 +58,6 @@ run_test test_174_bugfix
 run_test test_proxy_relay_to
 run_test test_proxy_with_certs
 run_test test_unknown_host
+run_test test_include_mime
 
 tests_done

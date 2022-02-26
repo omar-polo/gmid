@@ -83,3 +83,4 @@ testdata: fill-file
 	mkdir testdata/dir
 	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi
+	touch testdata/test.m3u8 testdata/foo.1
