@@ -1,3 +1,7 @@
+2022-02-26  Omar Polo  <op@omarpolo.com>
+
+	* parse.y: add the types block
+
 2022-02-13  Omar Polo  <op@openbsd.org>
 
 	* sandbox.c (filter): tightens seccomp policy wrt openat: allow
