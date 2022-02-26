@@ -2,7 +2,7 @@
 
 	* parse.y: add the types block
 
-2022-02-13  Omar Polo  <op@openbsd.org>
+2022-02-13  Omar Polo  <op@omarpolo.com>
 
 	* sandbox.c (filter): tightens seccomp policy wrt openat: allow
 	only with the O_RDONLY flag.
