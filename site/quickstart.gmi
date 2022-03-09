@@ -81,6 +81,12 @@ Ideally, gmid should be started as root and drop privileges to a local user.  Th
 # useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
 ```
 
+If you use systemd-sysusers:
+
+```how to create the gmid user, using systemd-sysusers
+# systemd-sysusers contrib/gmid.sysusers
+```
+
 Please consult your OS documentation for more information on the matter.
 
 The configuration then needs to be adjusted to include the ‘user’ directive at the top:
