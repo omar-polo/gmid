@@ -17,6 +17,10 @@ gmid.service
 
 	Simple systemd service file.
 
+gmid.sysusers
+
+	Sample systemd-sysusers' config file.
+
 renew-certs
 
 	Flexible script meant to be run in a cronjob to watch for cert
