@@ -43,6 +43,7 @@ then the usual ‘rcctl [start|stop|enable|restart] gmid’ are available.
 ## systemd unit file
 
 => TREE/contrib/gmid.service contrib/gmid.service
+=> TREE/contrib/gmid.sysusers contrib/gmid.sysusers
 
 A simple service file for systemd.  To install it
 
@@ -54,9 +55,11 @@ then the usual ‘systemctl [status|start|enable|stop] gmid’ commands can be u
 
 Some things to keep in mind:
 * the ExecStart path may depend on the installation
-* a ‘gmid’ user needs to be create for e.g. with
+* a ‘gmid’ user needs to be created with systemd-sysusers or useradd:
 
 ```how to create a dedicated user
+# systemd-sysusers contrib/gmid.sysusers
+ or
 # useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
 ```
 
