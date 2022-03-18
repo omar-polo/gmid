@@ -72,7 +72,7 @@ add_library() {
 }
 
 # try to auto detect CFLAGS and LDFLAGS
-if which pkg-config 2>/dev/null 1>&2; then
+if command -v pkg-config >/dev/null; then
 	add_library "libtls"
 	add_library "openssl"
 
@@ -96,11 +96,11 @@ if which pkg-config 2>/dev/null 1>&2; then
 fi
 
 # auto detect yacc/bison
-which ${YACC} 2>/dev/null 1>&2 || {
+command -v ${YACC} >/dev/null || {
 	echo "${YACC} not found: trying bison" 1>&2
 	echo "${YACC} not found: trying bison" 1>&3
 	YACC=bison
-	which ${YACC} 2>/dev/null 1>&2 || {
+	command -v ${YACC} >/dev/null || {
 		echo "${YACC} not found: giving up" 1>&2
 		echo "${YACC} not found: giving up" 1>&3
 	}
