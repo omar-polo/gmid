@@ -132,6 +132,7 @@ for keyvals in "$@"; do
 		CFLAGS)   CFLAGS="$val" ;;
 		DESTDIR)  DESTDIR="$val" ;;
 		LDFLAGS)  LDFLAGS="$val" ;;
+		MANDIR)   MANDIR="$val" ;;
 		PREFIX)   PREFIX="$val" ;;
 		YACC)     YACC="$val" ;;
 		--prefix) PREFIX="$val" ;;
