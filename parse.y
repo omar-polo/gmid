@@ -500,7 +500,7 @@ optsemicolon	: ';'
 
 %%
 
-static struct keyword {
+static const struct keyword {
 	const char *word;
 	int token;
 } keywords[] = {

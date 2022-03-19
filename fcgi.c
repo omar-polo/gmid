@@ -171,7 +171,7 @@ fcgi_send_param(struct bufferevent *bev, const char *name,
 	uint32_t		namlen, vallen, padlen;
 	uint8_t			s[8];
 	size_t			size;
-	char			padding[8] = { 0 };
+	const char		padding[8] = { 0 };
 
 	namlen = strlen(name);
 	vallen = strlen(value);

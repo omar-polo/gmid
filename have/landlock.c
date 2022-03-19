@@ -20,7 +20,7 @@ int
 main(void)
 {
 	int rfd;
-	struct landlock_ruleset_attr rsattr = {
+	const struct landlock_ruleset_attr rsattr = {
 		.handled_access_fs =	LANDLOCK_ACCESS_FS_READ_FILE |
 					LANDLOCK_ACCESS_FS_READ_DIR
 	};

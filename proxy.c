@@ -22,7 +22,7 @@
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
-static struct timeval handshake_timeout = { 5, 0 };
+static const struct timeval handshake_timeout = { 5, 0 };
 
 static void	proxy_tls_readcb(int, short, void *);
 static void	proxy_tls_writecb(int, short, void *);

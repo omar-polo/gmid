@@ -23,7 +23,7 @@
 struct conf conf;
 struct imsgbuf logibuf, servibuf[PROC_MAX];
 
-struct suite {
+const struct suite {
 	const char	*src;
 	const char	*res;
 } t[] = {
@@ -58,7 +58,7 @@ sandbox_logger_process(void)
 int
 main(int argc, char **argv)
 {
-	struct suite *i;
+	const struct suite *i;
 	int failed;
 	char buf[64];		/* name len */
 	const char *parse_err;

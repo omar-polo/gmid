@@ -29,7 +29,7 @@
 
 static const char	*opts = "6c:D:d:fH:hnP:p:Vvx:";
 
-static struct option longopts[] = {
+static const struct option longopts[] = {
 	{"help",	no_argument,		NULL,	'h'},
 	{"version",	no_argument,		NULL,	'V'},
 	{NULL,		0,			NULL,	0},

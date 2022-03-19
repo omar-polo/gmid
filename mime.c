@@ -55,7 +55,7 @@ add_mime(struct mime *mime, const char *mt, const char *ext)
 void
 load_default_mime(struct mime *mime)
 {
-	struct etm *i, m[] = {
+	const struct etm *i, m[] = {
 		{"application/pdf",	"pdf"},
 		{"image/gif",		"gif"},
 		{"image/jpeg",		"jpg"},

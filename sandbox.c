@@ -246,7 +246,7 @@ sandbox_logger_process(void)
 #  error "Platform does not support seccomp filter yet"
 #endif
 
-static struct sock_filter filter[] = {
+static const struct sock_filter filter[] = {
 	/* load the *current* architecture */
 	BPF_STMT(BPF_LD | BPF_W | BPF_ABS,
 	    (offsetof(struct seccomp_data, arch))),
@@ -438,7 +438,7 @@ open_landlock(void)
 {
 	int fd;
 
-	struct landlock_ruleset_attr attr = {
+	const struct landlock_ruleset_attr attr = {
 		.handled_access_fs =	LANDLOCK_ACCESS_FS_EXECUTE |
 					LANDLOCK_ACCESS_FS_READ_FILE |
 					LANDLOCK_ACCESS_FS_READ_DIR |
@@ -556,7 +556,7 @@ logger_landlock(void)
 void
 sandbox_server_process(void)
 {
-	struct sock_fprog prog = {
+	const struct sock_fprog prog = {
 		.len = (unsigned short) (sizeof(filter) / sizeof(filter[0])),
 		.filter = filter,
 	};
