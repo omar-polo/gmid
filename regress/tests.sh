@@ -375,11 +375,11 @@ test_include_mime() {
 	setup_simple_test "types { include '$PWD/example.mime.types' }" ""
 
 	fetch_hdr /
-	check_reply '20 text/gemini'
+	check_reply '20 text/gemini' || return 1
 
 	fetch_hdr /test.m3u8
-	check_reply '20 application/vnd.apple.mpegurl'
+	check_reply '20 application/vnd.apple.mpegurl' || return 1
 
 	fetch_hdr /foo.1
-	check_reply '20 text/x-mandoc'
+	check_reply '20 text/x-mandoc' || return 1
 }
