@@ -2,7 +2,7 @@
 # all.
 TESTS=
 
-.PHONY: all static clean cleanall regress install
+.PHONY: all static clean cleanall test regress install
 
 all: Makefile.local gmid gg
 
@@ -30,6 +30,7 @@ clean:
 cleanall: clean
 	${MAKE} -C regress clean
 
+test: regress
 regress: all
 	${MAKE} 'TESTS=${TESTS}' -C regress all
 
