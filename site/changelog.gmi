@@ -1,5 +1,24 @@
 # change log
 
+## 2022/03/26 - 1.8.2 “Lightbulb Sun” bugfix release
+
+### Bug fixes
+
+* fix a CGI timing issue: if a connection handled by a CGI scripts is interrupted with the right timing it causes the server process to exit with "fatal in client_by_id: invalid id X".
+
+### New Features
+
+* add a new block `type { ... }' to define mime types mapping.
+
+### Improvements
+
+* use shell built-in `command' instead of which(1), prodded by cage and Allen Sobot.
+* configure script: allow to set MANDIR from cmdline (Allen Sobot)
+* add systemd-sysusers sample file in contrib/ (Nakaya)
+* [linux/seccomp] allow fstatat64(2), llseek(2) and sigreturn(2), needed by glibc on armv7.  (Tobias Berger)
+* [linux/seccomp] tightens rules by allowing openat(2) only with the O_RDONLY flag.
+
+
 ## 2022/02/10 - 1.8.1 “Lightbulb Sun” bugfix release
 
 ### Bug fixes
