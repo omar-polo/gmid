@@ -373,7 +373,7 @@ void		 mark_nonblock(int);
 void		 client_write(struct bufferevent *, void *);
 void		 start_reply(struct client*, int, const char*);
 void		 client_close(struct client *);
-struct client	*try_client_by_id(int);
+struct client	*client_by_id(int);
 void		 loop(struct tls*, int, int, struct imsgbuf*);
 
 int		 client_tree_cmp(struct client *, struct client *);

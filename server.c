@@ -70,7 +70,6 @@ static void	 cgi_write(struct bufferevent *, void *);
 static void	 cgi_error(struct bufferevent *, short, void *);
 
 static void	 do_accept(int, short, void*);
-static struct client *client_by_id(int);
 
 static void	 handle_imsg_cgi_res(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_imsg_fcgi_fd(struct imsgbuf*, struct imsg*, size_t);
@@ -1421,18 +1420,8 @@ do_accept(int sock, short et, void *d)
 	connected_clients++;
 }
 
-static struct client *
-client_by_id(int id)
-{
-	struct client *c;
-
-	if ((c = try_client_by_id(id)) == NULL)
-		fatal("in client_by_id: invalid id %d", id);
-	return c;
-}
-
 struct client *
-try_client_by_id(int id)
+client_by_id(int id)
 {
 	struct client find;
 
@@ -1445,7 +1434,11 @@ handle_imsg_cgi_res(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 {
 	struct client *c;
 
-	c = client_by_id(imsg->hdr.peerid);
+	if ((c = client_by_id(imsg->hdr.peerid)) == NULL) {
+		if (imsg->fd != -1)
+			close(imsg->fd);
+		return;
+	}
 
 	if ((c->pfd = imsg->fd) == -1) {
 		start_reply(c, TEMP_FAILURE, "internal server error");
@@ -1468,7 +1461,7 @@ handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 
 	id = imsg->hdr.peerid;
 
-	if ((c = try_client_by_id(id)) == NULL) {
+	if ((c = client_by_id(id)) == NULL) {
 		if (imsg->fd != -1)
 			close(imsg->fd);
 		return;
@@ -1499,7 +1492,7 @@ handle_imsg_conn_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
 	int		 id;
 
 	id = imsg->hdr.peerid;
-	if ((c = try_client_by_id(id)) == NULL) {
+	if ((c = client_by_id(id)) == NULL) {
 		if (imsg->fd != -1)
 			close(imsg->fd);
 		return;
