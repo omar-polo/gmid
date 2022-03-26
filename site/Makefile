@@ -57,8 +57,8 @@ serve-gemini:
 	gmid -p 1966 ./gemini
 
 upload:
-	rsync --delete -a www/ op:sites/gmid.omarpolo.com
-	rsync --delete -a gemini/ op:gemini/gmid.omarpolo.com
+	openrsync --rsync-path=openrsync --del -a www/ antartica:/var/www/gmid.omarpolo.com
+	openrsync --rsync-path=openrsync --del -a gemini/ antartica:/var/gemini/gmid.omarpolo.com
 
 titles-gem:
 .for p in ${PAGES}
