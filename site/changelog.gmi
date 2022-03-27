@@ -1,5 +1,12 @@
 # change log
 
+## 2022/03/27 - 1.8.3 “Lightbulb Sun” bugfix release
+
+### Bug fixes
+
+* fix a possible out-of-bound access in the CGI handling.  It was introduced last October during a refactoring, but due to how many malloc(3) implementations works this hasn't been found until now.  Otto' malloc is more strict fortunately.
+
+
 ## 2022/03/26 - 1.8.2 “Lightbulb Sun” bugfix release
 
 ### Bug fixes
