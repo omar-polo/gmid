@@ -15,7 +15,7 @@ REPOLOGY_BANNER =	https://repology.org/badge/vertical-allrepos/gmid.svg
 REPOLOGY_URL =		https://repology.org/project/gmid/versions
 
 SUBST =		./subst GITHUB=https://github.com/omar-polo/gmid \
-			VERS=1.8.2 \
+			VERS=1.8.3 \
 			CURV=1.8 \
 			NEXTV=1.9 \
 			TREE=https://git.omarpolo.com/gmid/tree
