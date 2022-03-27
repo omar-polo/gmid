@@ -288,7 +288,7 @@ handle_imsg_cgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 	if (datalen != sizeof(req))
 		abort();
 
-	memcpy(&req, imsg->data, datalen);
+	memcpy(&req, imsg->data, sizeof(req));
 
 	iri.schema = req.iri_schema_off + req.buf;
 	iri.host = req.iri_host_off + req.buf;
@@ -409,7 +409,7 @@ handle_imsg_fcgi_req(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 
 	if (datalen != sizeof(id))
 		abort();
-	memcpy(&id, imsg->data, datalen);
+	memcpy(&id, imsg->data, sizeof(id));
 
 	if (id > FCGI_MAX || (fcgi[id].path == NULL && fcgi[id].prog == NULL))
 		abort();
