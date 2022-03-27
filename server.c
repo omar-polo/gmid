@@ -743,7 +743,7 @@ start_cgi(const char *spath, const char *relpath, struct client *c)
 
 	memset(&req, 0, sizeof(req));
 
-	memcpy(req.buf, c->req, sizeof(req.buf));
+	memcpy(req.buf, c->req, c->reqlen);
 
 	req.iri_schema_off = c->iri.schema - c->req;
 	req.iri_host_off = c->iri.host - c->req;
@@ -1022,6 +1022,12 @@ client_read(struct bufferevent *bev, void *d)
 	if (c->req == NULL) {
 		/* not enough data yet. */
 		bufferevent_enable(bev, EVBUFFER_READ);
+		return;
+	}
+	c->reqlen = strlen(c->req);
+	if (c->reqlen > 1024+2) {
+		log_err(c, "URL too long");
+		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
 

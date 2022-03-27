@@ -229,6 +229,7 @@ struct client {
 	uint32_t	 id;
 	struct tls	*ctx;
 	char		*req;
+	size_t		 reqlen;
 	struct iri	 iri;
 	char		 domain[DOMAIN_NAME_LEN];
 
