@@ -28,6 +28,7 @@ Some distros provide a package — thanks to the maintainers!
 Source code and precompiled binaries for linux are available:
 
 => GITHUB/releases/download/VERS/gmid-VERS.tar.gz	gmid-VERS.tar.gz
+=> GITHUB/releases/download/VERS/gmid-VERS.tar.bz2	gmid-VERS.tar.bz2
 
 => https://git.omarpolo.com/gmid/		git repository
 => gemini://git.omarpolo.com/gmid.git/		git repository via Gemini
