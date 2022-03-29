@@ -131,6 +131,14 @@ to start the suite.  Keep in mind that the regression tests needs to
 create files inside the `regress` directory and bind the 10965 port.
 
 
+## Contributing
+
+Any form of contribution is welcome, not only patches or bug reports.
+If you have a sample configuration for some specific use-case, a
+script or anything that could be useful to others, consider adding it
+to the `contrib` directory.
+
+
 ## Architecture/Security considerations
 
 gmid is composed by four processes: the parent process, the logger,
