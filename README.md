@@ -121,14 +121,6 @@ testing on various platform is done to ensure that everything is
 working as intended.
 
 
-### Docker
-
-If you have trouble installing LibreSSL or libretls, in `contrib`
-there's a sample Dockerfile.  See [the contrib page][contrib-page] for
-more information.
-
-[contrib-page]: https://gmid.omarpolo.com/contrib.html#dockerfile
-
 ### Testing
 
 Execute
