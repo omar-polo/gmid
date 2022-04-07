@@ -1,0 +1,77 @@
+# Frequently Asked Questions
+
+## How can I report a bug, suggest a feature or send a patch?
+
+Just drop an email to <gmid [at] omarpolo [dot] com> or open a GitHub issue/pull request.
+
+When reporting a bug please include the relevant information to reproduce the issue you're facing: your configuration file, the gmid version, your distro version at least.
+
+
+## How can I define the right MIME types for my files?
+
+gmid, like many other servers, uses a list of known file extensions to decide what MIME type use.  A few of them are built-in for convenience but it's quite easy to add custom ones:
+
+``` example of how to use the type rule in the configuration file
+types {
+	application/postscript	ps eps ai
+	application/rss+xml	rss
+
+	# it's also possible to just include a file here
+	include "/usr/share/misc/mime.types"
+}
+```
+
+
+## CGI scripts don't work
+
+There may be various reasons for it
+
+* make sure the `cgi' rule in the `server' block matches the CGI script
+* if using a chroot, make sure that all the libraries and executable are available inside the chroot (e.g. sh, python, perl, ...)
+
+
+## (linux) gmid doesn't seem to work / some tests are failing
+
+gmid uses a security feature of the linux kernel called "seccomp".
+
+Seccomp allows to define a set of allowed system calls (in layman's term "things that a program can do") and terminate the program if it attempts to do something else.  While this is cool, sometimes the kernel developers may add some new system calls, or the libraries used by gmid could start using others system calls to achieve the same thing, so the seccomp filter may need adjustments over the time.
+
+Simptoms of a possible failure due seccomp are gmid not seeming to work or hangs/failure as soon as some features of gmid (cgi scripts, reverse proxying, ...) are used.
+
+To debug a (supposed) seccomp issue, decomment SC_DEBUG in sandbox.c
+
+```
+/* uncomment to enable debugging.  ONLY FOR DEVELOPMENT */
+/* #define SC_DEBUG */
+```
+
+so that it becomes
+
+```
+/* uncomment to enable debugging.  ONLY FOR DEVELOPMENT */
+#define SC_DEBUG
+```
+
+then recompile gmid and run the regress suite:
+
+```
+$ ./configure
+$ make
+$ make regress
+```
+
+If it's indeed a seccomp failure it should print something like:
+
+```
+unexpected system call (arch:...,syscall:... @ ...)
+```
+
+Please attach the `make regress' output, the distro you're using and `uname -m' in the bug report (either on github or via email.)
+
+If you're technically inclined, you could also try to write a patch to fix the issue and attach it to the bug report: receiving patches makes me really happy!
+
+You can get the syscall name from the numbers by looking in the linux kernel headers.  Unfortunately the exact position differs from distro to distro, but they should be somewhere under /usr/local.  Once you know the name of the syscall, you can add it to the list in the `filter' array and reiterate the whole procedure until it works.
+
+Providing a patch *is not expected* and *is not a requirement* either.  It's just nice to do if you have the skill, time and patience to do so.
+
+Don't forget to comment SC_DEBUG after playing with it if you're gonna use the executable.

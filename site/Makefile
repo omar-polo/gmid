@@ -4,12 +4,14 @@ MANPAGES =	../gmid.1 \
 PAGES =		index.gmi \
 		changelog.gmi \
 		contrib.gmi \
-		quickstart.gmi
+		quickstart.gmi \
+		faq.gmi
 
 TITLE_index.gmi =	home
 TITLE_changelog.gmi =	changelog
 TITLE_contrib.gmi =	contrib
 TITLE_quickstart.gmi =	quickstart
+TITLE_faq.gmi =		FAQ
 
 REPOLOGY_BANNER =	https://repology.org/badge/vertical-allrepos/gmid.svg
 REPOLOGY_URL =		https://repology.org/project/gmid/versions
