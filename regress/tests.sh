@@ -62,7 +62,11 @@ test_dont_execute_scripts() {
 }
 
 test_custom_mime() {
-	setup_simple_test 'map "text/x-funny" to-ext "gmi"' ''
+	setup_simple_test '
+types {
+	text/x-funny gmi
+}
+' ''
 
 	fetch_hdr /
 	check_reply "20 text/x-funny"
