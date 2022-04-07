@@ -218,10 +218,15 @@ option		: CHROOT string	{ conf.chroot = $2; }
 		| MIME STRING string	{
 			yywarn("`mime MIME EXT' is deprecated and will be "
 			    "removed in a future version, please use the new "
-			    "syntax: `map MIME to-ext EXT'");
+			    "`types' block.");
 			add_mime(&conf.mime, $2, $3);
 		}
-		| MAP string TOEXT string { add_mime(&conf.mime, $2, $4); }
+		| MAP string TOEXT string {
+			yywarn("`map mime to-ext' is deprecated and will be "
+			    "removed in a future version, please use the new "
+			    "`types' block.");
+			add_mime(&conf.mime, $2, $4);
+		}
 		| PORT NUM		{ conf.port = check_port_num($2); }
 		| PREFORK NUM		{ conf.prefork = check_prefork_num($2); }
 		| PROTOCOLS string {
