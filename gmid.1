@@ -241,12 +241,6 @@ Future version of
 may enforce this.
 .It Ic ipv6 Ar bool
 Enable or disable IPv6 support, off by default.
-.It Ic map Ar mime-type Cm to-ext Ar file-extension
-Map
-.Ar mime-type
-to the given
-.Ar file-extension .
-Both argument are strings.
 .It Ic port Ar portno
 The port to listen on.
 1965 by default.
@@ -674,8 +668,6 @@ will be used, or
 .Pp
 By default the following mappings are loaded, but they can be
 overridden or extended using the
-.Ic map
-option or the
 .Ic type Brq ...
 block.
 .Pp
@@ -772,15 +764,17 @@ In the example above, a certificate is valid for one hundred years from
 the date it was created, which is normal for TOFU.
 .Pp
 The following is an example of a possible configuration for a site
-that enables only TLSv1.3, adds a mime type for the file extension
-.Qq rtf
+that enables only TLSv1.3, adds the MIME types mapping from
+.Pa /usr/share/misc/mime.types
 and defines two virtual host:
 .Bd -literal -offset indent
 ipv6 on		# enable ipv6
 
 protocols "tlsv1.3"
 
-map "application/rtf" to-ext "rtf"
+types {
+	include "/usr/share/misc/mime.types"
+}
 
 server "example.com" {
 	cert "/etc/ssl/example.com.crt"
