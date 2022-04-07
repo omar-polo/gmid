@@ -1,4 +1,5 @@
 MANPAGES =	../gmid.1 \
+		../gmid.conf.5 \
 		../gg.1
 
 PAGES =		index.gmi \

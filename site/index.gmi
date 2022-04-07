@@ -17,6 +17,7 @@
 gmid also bundles a small gemini client called ‘gg’ (gemini get)
 
 => gmid.1.MANEXT	gmid(1) manpage
+=> gmid.conf.5.MANEXT	gmid.conf(5) manpage
 => gg.1.MANEXT		gg(1) manpage
 
 ## Install
