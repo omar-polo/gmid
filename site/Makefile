@@ -10,7 +10,7 @@ PAGES =		index.gmi \
 TITLE_index.gmi =	home
 TITLE_changelog.gmi =	changelog
 TITLE_contrib.gmi =	contrib
-TITLE_quickstart.gmi =	quickstart
+TITLE_quickstart.gmi =	guide
 TITLE_faq.gmi =		FAQ
 
 REPOLOGY_BANNER =	https://repology.org/badge/vertical-allrepos/gmid.svg
