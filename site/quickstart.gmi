@@ -1,8 +1,8 @@
 # gmid quickstart guide
 
-gmid can be run in two different “modes”:
+gmid can be run in two different modes:
 
-* configless: a quick way to serve a directory tree from the shell, useful for testing a capsule before uploading it
+* configless: a quick way to serve a directory tree from the shell, useful for testing purposes
 * daemon mode: gmid reads the configuration file and runs in the background
 
 To run gmid in the “configless” mode, just type:
@@ -12,6 +12,7 @@ $ gmid path/to/dir
 ```
 
 gmid will then generate a certificate inside ~/.local/share/gmid and serve the given directory locally.
+
 
 ## Setting up a capsule with gmid
 
@@ -29,7 +30,9 @@ server "example.com" {
 }
 ```
 
-A certificate is needed for the capsule.  Generate one for e.g. using contrib/gencert:
+A TLS certificate is also needed.  There are many way to obtain one (acme-client, certbot, ...) but within the Geminispace is common to use self-signed ones.
+
+One way to generate self-signed certificates is to use openssl(1), but contrib/gencert is easier to use:
 
 => https://git.omarpolo.com/gmid/tree/contrib/gencert contrib/gencert
 
@@ -48,7 +51,7 @@ Generated files:
 
 Move ‘example.com.pem’ and ‘example.com.key’ to a safe place and double check that the ‘cert’ and ‘key’ options in the configuration points to these files.
 
-For example, save them in ‘/etc/ssl/’ (as root)
+One place could be ‘/etc/ssl/’
 
 ```how to save the certificate and private key in /etc/ssl
 # mkdir -p /etc/ssl/private
@@ -60,7 +63,7 @@ For example, save them in ‘/etc/ssl/’ (as root)
 Then running gmid is as easy as
 
 ```running gmid
-$ gmid -c /etc/gmid.conf
+# gmid -c /etc/gmid.conf
 ```
 
 Congratulations, your capsule is online!
@@ -68,14 +71,16 @@ Congratulations, your capsule is online!
 
 ## Securing your gmid installation
 
-gmid employs various techniques to prevent the damage caused by bugs, but some steps needs to be done manually.
+gmid employs various techniques to prevent the damage caused by bugs but some steps needs to be done manually.
 
-If gmid was installed from your distribution package manager, chance are that it already does all of this and is also providing a service to run gmid automatically (e.g. a rc script, a systemd unit file, …)  Otherwise, it’s heavily suggested to create at least a dedicated user.
+If gmid was installed from your distribution package manager chance are that it already does all of this and is also providing a service to easily run gmid (e.g. a rc script, a systemd unit file, …)  Otherwise, it’s heavily suggested to create at least a dedicated user.
 
 
 ### A dedicated user
 
-Ideally, gmid should be started as root and drop privileges to a local user.  This way, the certificates can be readable only by root.  For example, on GNU/linux systems a ‘gmid’ user can be created with:
+Ideally, gmid should be started as root and then drop privileges.  This allows to save the certificates in a directory that's readable only by root
+
+For example, on GNU/linux systems a ‘gmid’ user can be created with:
 
 ```how to create the gmid user
 # useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
