@@ -49,6 +49,7 @@ A simple service file for systemd.  To install it
 
 ```instructions to install the system file
 # cp contrib/gmid.service /etc/systemd/system/gmid.service
+# systemctl daemon-reload
 ```
 
 then the usual ‘systemctl [status|start|enable|stop] gmid’ commands can be used to manage the server.
