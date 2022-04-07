@@ -48,7 +48,7 @@ then the usual ‘rcctl [start|stop|enable|restart] gmid’ are available.
 A simple service file for systemd.  To install it
 
 ```instructions to install the system file
-# cp contrib/gmid.service /lib/systemd/system/gmid.service
+# cp contrib/gmid.service /etc/systemd/system/gmid.service
 ```
 
 then the usual ‘systemctl [status|start|enable|stop] gmid’ commands can be used to manage the server.
