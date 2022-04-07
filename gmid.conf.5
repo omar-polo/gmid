@@ -1,0 +1,621 @@
+.\" Copyright (c) 2022 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.Dd $Mdocdate: April 7 2022$
+.Dt GMID.CONF 5
+.Os
+.Sh NAME
+.Nm gmid.conf
+.Nd gmid Gemini server configuration file
+.Sh DESCRIPTION
+.Nm
+is the configuration file format for the
+.Xr gmid 1
+Gemini server.
+.Pp
+The configuration file is divided into three sections:
+.Bl -tag -width xxxx
+.It Sy Macros
+User-defined variables may be defined and used later, simplifying the
+configuration file.
+.It Sy Global Options
+Global settings for
+.Nm .
+.It Sy Servers
+Virtual hosts definition.
+.It Sy Types
+Media types and extensions.
+.El
+.Pp
+Within the sections, empty lines are ignored and comments can be put
+anywhere in the file using a hash mark
+.Pq Sq # ,
+and extend to the end of the current line.
+A boolean is either the symbol
+.Sq on
+or
+.Sq off .
+A string is a sequence of characters wrapped in double quotes,
+.Dq like this .
+Multiple strings one next to the other are joined into a single
+string:
+.Bd -literal -offset indent
+# equivalent to "temporary-failure"
+block return 40 "temporary" "-" "failure"
+.Ed
+.Pp
+Furthermore, quoting is necessary only when a string needs to contain
+special characters
+.Pq like spaces or punctuation ,
+something that looks like a number or a reserved keyword.
+The last example could have been written also as:
+.Bd -literal -offset indent
+block return 40 temporary "-" failure
+.Ed
+.Pp
+Strict ordering of the sections is not enforced, so that is possible
+to mix macros, options and
+.Ic server
+blocks.
+However, defining all the
+.Ic server
+blocks after the macros and the global options is recommended.
+.Pp
+Newlines are often optional, except around top-level instructions, and
+semicolons
+.Dq \&;
+can also be optionally used to separate options.
+.Pp
+Additional configuration files can be included with the
+.Ic include
+keyword, for example:
+.Bd -literal -offset indent
+include "/etc/gmid.conf.local"
+.Ed
+.Ss Macros
+Macros can be defined that will later be expanded in context.
+Macro names must start with a letter, digit or underscore and may
+contain any of those characters.
+Macros names may not be reserved words.
+Macros are not expanded inside quotes.
+.Pp
+Two kinds of macros are supported: variable-like and proper macros.
+When a macro is invoked with a
+.Dq $
+before its name its expanded as a string, whereas when it's invoked
+with a
+.Dq @
+its expanded in-place.
+.Pp
+For example:
+.Bd -literal -offset indent
+dir = "/var/gemini"
+certdir = "/etc/keys"
+common = "lang it; auto index on"
+
+server "foo" {
+	root $dir "/foo"         # -> /var/gemini/foo
+	cert $certdir "/foo.pem" # -> /etc/keys/foo.pem
+	key  $certdir "/foo.key" # -> /etc/keys/foo.key
+	@common
+}
+.Ed
+.Ss Global Options
+.Bl -tag -width 12m
+.It Ic chroot Ar path
+.Xr chroot 2
+the process to the given
+.Ar path .
+The daemon has to be run with root privileges and thus the option
+.Ic user
+needs to be provided, so privileges can be dropped.
+Note that
+.Nm
+will enter the chroot after loading the TLS keys, but before opening
+the virtual host root directories.
+It's recommended to keep the TLS keys outside the chroot.
+Future version of
+.Nm
+may enforce this.
+.It Ic ipv6 Ar bool
+Enable or disable IPv6 support, off by default.
+.It Ic port Ar portno
+The port to listen on.
+1965 by default.
+.It Ic prefork Ar number
+Run the specified number of server processes.
+This increases the performance and prevents delays when connecting to
+a server.
+When not in config-less mode,
+.Nm
+runs 3 server processes by default.
+The maximum number allowed is 16.
+.It Ic protocols Ar string
+Specify the TLS protocols to enable.
+Refer to
+.Xr tls_config_parse_protocols 3
+for the valid protocol string values.
+By default, both TLSv1.3 and TLSv1.2 are enabled.
+Use
+.Dq tlsv1.3
+to enable only TLSv1.3.
+.It Ic user Ar string
+Run the daemon as the given user.
+.El
+.Ss Servers
+Every virtual host is defined by a
+.Ic server
+block:
+.Bl -tag -width Ds
+.It Ic server Ar hostname Brq ...
+Match the server name using shell globbing rules.
+It can be an explicit name,
+.Ar www.example.com ,
+or a name including a wildcards,
+.Ar *.example.com .
+.El
+.Pp
+Followed by a block of options that is enclosed in curly brackets:
+.Bl -tag -width Ds
+.It Ic alias Ar name
+Specify an additional alias
+.Ar name
+for this server.
+.It Ic auto Ic index Ar bool
+If no index file is found, automatically generate a directory listing.
+Disabled by default.
+.It Ic block Op Ic return Ar code Op Ar meta
+Send a reply and close the connection;
+by default
+.Ar code
+is 40
+and
+.Ar meta
+is
+.Dq temporary failure .
+If
+.Ar code
+is in the 3x range, then
+.Ar meta
+is mandatory.
+Inside
+.Ar meta ,
+the following special sequences are supported:
+.Bl -tag -width Ds -compact
+.It \&%\&%
+is replaced with a single
+.Sq \&% .
+.It \&%p
+is replaced with the request path.
+.It \&%q
+is replaced with the query string of the request.
+.It \&%P
+is replaced with the server port.
+.It \&%N
+is replaced with the server name.
+.El
+.It Ic cert Ar file
+Path to the certificate to use for this server.
+.Ar file
+should contain a PEM encoded certificate.
+This option is mandatory.
+.It Ic cgi Ar path
+Execute
+.Sx CGI
+scripts that matches
+.Ar path
+using shell globbing rules.
+.Pp
+The CGI scripts are executed in the directory they reside and inherit
+the environment from
+.Nm gmid
+with these additional variables set:
+.Bl -tag -width 24m
+.It Ev GATEWAY_INTERFACE
+.Dq CGI/1.1
+.It Ev GEMINI_DOCUMENT_ROOT
+The root directory of the virtual host.
+.It Ev GEMINI_SCRIPT_FILENAME
+Full path to the CGI script being executed.
+.It Ev GEMINI_URL
+The full IRI of the request.
+.It Ev GEMINI_URL_PATH
+The path of the request.
+.It Ev PATH_INFO
+The portion of the requested path that is derived from the the IRI
+path hierarchy following the part that identifies the script itself.
+Can be unset.
+.It Ev PATH_TRANSLATED
+Present if and only if
+.Ev PATH_INFO
+is set.
+It represent the translation of the
+.Ev PATH_INFO .
+.Nm gmid
+builds this by appending the
+.Ev PATH_INFO
+to the virtual host directory root.
+.It Ev QUERY_STRING
+The decoded query string.
+.It Ev REMOTE_ADDR , Ev REMOTE_HOST
+Textual representation of the client IP.
+.It Ev REQUEST_METHOD
+This is present only for RFC3875 (CGI) compliance.
+It's always set to the empty string.
+.It Ev SCRIPT_NAME
+The part of the
+.Ev GEMINI_URL_PATH
+that identifies the current CGI script.
+.It Ev SERVER_NAME
+The name of the server
+.It Ev SERVER_PORT
+The port the server is listening on.
+.It Ev SERVER_PROTOCOL
+.Dq GEMINI
+.It Ev SERVER_SOFTWARE
+The name and version of the server, i.e.
+.Dq gmid/1.8.3
+.It Ev AUTH_TYPE
+The string "Certificate" if the client used a certificate, otherwise
+unset.
+.It Ev REMOTE_USER
+The subject of the client certificate if provided, otherwise unset.
+.It Ev TLS_CLIENT_ISSUER
+The is the issuer of the client certificate if provided, otherwise
+unset.
+.It Ev TLS_CLIENT_HASH
+The hash of the client certificate if provided, otherwise unset.
+The format is
+.Dq ALGO:HASH .
+.It Ev TLS_VERSION
+The TLS version negotiated with the peer.
+.It Ev TLS_CIPHER
+The cipher suite negotiated with the peer.
+.It Ev TLS_CIPHER_STRENGTH
+The strength in bits for the symmetric cipher that is being used with
+the peer.
+.It Ev TLS_CLIENT_NOT_AFTER
+The time corresponding to the end of the validity period of the peer
+certificate in the ISO 8601 format
+.Pq e.g. Dq 2021-02-07T20:17:41Z .
+.It Ev TLS_CLIENT_NOT_BEFORE
+The time corresponding to the start of the validity period of the peer
+certificate in the ISO 8601 format.
+.El
+.It Ic default type Ar string
+Set the default media type that is used if the media type for a
+specified extension is not found.
+If not specified, the
+.Ic default type
+is set to
+.Dq application/octet-stream .
+.It Ic entrypoint Ar path
+Handle all the requests for the current virtual host using the
+.Sx CGI
+script at
+.Ar path ,
+relative to the current document root.
+.It Ic env Ar name Cm = Ar value
+Set the environment variable
+.Ar name
+to
+.Ar value
+when executing CGI scripts.
+Can be provided more than once.
+.\" don't document the "spawn <prog>" form because it probably won't
+.\" be kept.
+.It Ic fastcgi Oo Ic tcp Oc Ar socket Oo Cm port Ar port Oc
+Enable
+.Sx FastCGI
+instead of serving files.
+The
+.Ar socket
+can either be a UNIX-domain socket or a TCP socket.
+If the FastCGI application is listening on a UNIX domain socket,
+.Ar socket
+is a local path name within the
+.Xr chroot 2
+root directory of
+.Nm .
+Otherwise, the
+.Ic tcp
+keyword must be provided and
+.Ar socket
+is interpreted as a hostname or an IP address.
+.Ar port
+can be either a port number or the name of a service enclosed in
+double quotes.
+If not specified defaults to 9000.
+.It Ic index Ar string
+Set the directory index file.
+If not specified, it defaults to
+.Pa index.gmi .
+.It Ic key Ar file
+Specify the private key to use for this server.
+.Ar file
+should contain a PEM encoded private key.
+This option is mandatory.
+.It Ic lang Ar string
+Specify the language tag for the text/gemini content served.
+If not specified, no
+.Dq lang
+parameter will be added in the response.
+.It Ic location Ar path Brq ...
+Specify server configuration rules for a specific location.
+.Ar path
+argument will be matched against the request path with shell globbing
+rules.
+In case of multiple location statements in the same context, the first
+matching location will be put into effect and the later ones ignored.
+Therefore is advisable to match for more specific paths first and for
+generic ones later on.
+A
+.Ic location
+section may include most of the server configuration rules
+except
+.Ic alias , Ic cert , Ic cgi , Ic entrypoint , Ic env , Ic key ,
+.Ic location , Ic param No and Ic proxy .
+.It Ic log Ar bool
+Enable or disable the logging for the current server or location block.
+.It Ic param Ar name Cm = Ar value
+Set the param
+.Ar name
+to
+.Ar value
+for FastCGI.
+By default the following variables
+.Pq parameters
+are sent, and carry the same semantics as with CGI:
+.Pp
+.Bl -bullet -compact
+.It
+GATEWAY_INTERFACE
+.It
+GEMINI_URL_PATH
+.It
+QUERY_STRING
+.It
+REMOTE_ADDR
+.It
+REMOTE_HOST
+.It
+REQUEST_METHOD
+.It
+SERVER_NAME
+.It
+SERVER_PROTOCOL
+.It
+SERVER_SOFTWARE
+.It
+AUTH_TYPE
+.It
+REMOTE_USER
+.It
+TLS_CLIENT_ISSUER
+.It
+TLS_CLIENT_HASH
+.It
+TLS_VERSION
+.It
+TLS_CIPHER
+.It
+TLS_CIPHER_STRENGTH
+.It
+TLS_CLIENT_NOT_BEFORE
+.It
+TLS_CLIENT_NOT_AFTER
+.El
+.It Ic ocsp Ar file
+Specify an OCSP response to be stapled during TLS handshakes
+with this server.
+The
+.Ar file
+should contain a DER-format OCSP response retrieved from an
+OCSP server for the
+.Ic cert
+in use.
+If the OCSP response in
+.Ar file
+is empty, OCSP stapling will not be used.
+The default is to not use OCSP stapling.
+.It Ic proxy Oo Cm proto Ar name Oc Oo Cm for-host Ar host : Ns Oo Ar port Oc Oc Brq ...
+Set up a reverse proxy.
+The optional matching rules
+.Cm proto
+and
+.Cm for-host
+can be used to enable proxying only for protocols matching
+.Ar name
+.Po Dq gemini
+by default
+.Pc
+and/or whose request IRI matches
+.Ar host
+and
+.Ar port
+.Pq 1965 by default .
+Matching happens using shell globbing rules.
+.Pp
+In case of multiple matching proxy blocks in the same context, the
+first matching proxy will be put into effect and the later ones
+ignored.
+.Pp
+Valid options are:
+.Bl -tag -width Ds
+.It Ic cert Ar file
+Specify the client certificate to use when making requests.
+.It Ic key Ar file
+Specify the client certificate key to use when making requests.
+.It Ic protocols Ar string
+Specify the TLS protocols allowed when making remote requests.
+Refer to the
+.Xr tls_config_parse_protocols 3
+function for the valid protocol string values.
+By default, both TLSv1.2 and TLSv1.3 are enabled.
+.It Ic relay-to Ar host : Ns Op Ar port
+Relay the request to the given
+.Ar host
+at the given
+.Ar port ,
+1965 by default.
+This is the only mandatory option in a
+.Ic proxy
+block.
+.It Ic require Ic client Ic ca Ar file
+Allow the proxying only from clients that provide a certificate
+signed by the CA certificate in
+.Ar file .
+.It Ic sni Ar hostname
+Use the given
+.Ar hostname
+instead of the one extracted from the
+.Ic relay-to
+rule for the TLS handshake with the proxied gemini server.
+.It Ic use-tls Ar bool
+Specify whether to use TLS when connecting to the proxied host.
+Enabled by default.
+.It Ic verifyname Ar bool
+Enable or disable the TLS server name verification.
+Enabled by default.
+.El
+.It Ic root Ar directory
+Specify the root directory for this server
+.Pq alas the current Dq document root .
+It's relative to the chroot if enabled.
+.It Ic require Ic client Ic ca Ar path
+Allow requests only from clients that provide a certificate signed by
+the CA certificate in
+.Ar path .
+It needs to be a PEM-encoded certificate and it's not relative to the
+chroot.
+.It Ic strip Ar number
+Strip
+.Ar number
+components from the beginning of the path before doing a lookup in the
+root directory.
+It's also considered for the
+.Ar meta
+parameter in the scope of a
+.Ic block return .
+.El
+.Ss Types
+The
+.Ic types
+section must include one or more lines of the following syntax, enclosed
+in curly brances:
+.Bl -tag -width Ds
+.It Ar type/subtype Ar name Op Ar name ...
+Set the media
+.Ar type
+and
+.Ar subtype
+to the specified extension
+.Ar name .
+One or more names can be specified per line.
+Earch line may end with an optional semicolon.
+.It Ic include Ar file
+Include types definition from an external file, for example
+.Pa /usr/share/misc/mime.types .
+.El
+.Pp
+By default
+.Nm gmid
+has built-in media types for
+.Bl -tag -offset indent -width 15m -compact
+.It application/pdf
+pdf
+.It image/gif
+gif
+.It image/jpeg
+jpg
+.It image/png
+png
+.It image/svg+xml
+svg
+.It text/gemini
+gemini gmi
+.It text/markdown
+markdown md
+.It text/x-patch
+diff patch
+.It text/xml
+xml
+.El
+.Sh EXAMPLES
+The following is an example of a possible configuration for a site
+that enables only TLSv1.3, adds the MIME types mapping from
+.Pa /usr/share/misc/mime.types
+and defines two virtual host:
+.Bd -literal -offset indent
+ipv6 on		# enable ipv6
+
+protocols "tlsv1.3"
+
+types {
+	include "/usr/share/misc/mime.types"
+}
+
+server "example.com" {
+	cert "/etc/ssl/example.com.pem"
+	key  "/etc/ssl/private/example.com.key"
+	root "/var/gemini/example.com"
+}
+
+server "example.it" {
+	cert "/etc/ssl/example.it.pem"
+	key  "/etc/ssl/private/example.it.key"
+	root "/var/gemini/example.it"
+
+	# execute cgi scripts inside "cgi-bin"
+	cgi  "/cgi-bin/*"
+
+	# set the language for text/gemini files
+	lang "it"
+}
+.Ed
+.Pp
+Yet another example, showing how to enable a
+.Ic chroot
+and use
+.Ic location
+rule
+.Bd -literal -offset indent
+chroot "/var/gemini"
+user "_gmid"
+
+server "example.com" {
+	# absolute paths:
+	cert "/etc/ssl/example.com.pem"
+	key  "/etc/ssl/private/example.com.key"
+
+	# relative to the chroot:
+	root "/example.com"
+
+	location "/static/*" {
+		# load the following rules only for
+		# requests that matches "/static/*"
+
+		auto index on
+		index "index.gemini"
+	}
+}
+.Ed
+.Sh SEE ALSO
+.Xr gmid 1 ,
+.Xr slowcgi 8
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm gmid
+program was written by
+.An Omar Polo Aq Mt op@omarpolo.com .
