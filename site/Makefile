@@ -11,7 +11,7 @@ TITLE_index.gmi =	home
 TITLE_changelog.gmi =	changelog
 TITLE_contrib.gmi =	contrib
 TITLE_quickstart.gmi =	guide
-TITLE_faq.gmi =		FAQ
+TITLE_faq.gmi =		faq
 
 REPOLOGY_BANNER =	https://repology.org/badge/vertical-allrepos/gmid.svg
 REPOLOGY_URL =		https://repology.org/project/gmid/versions
