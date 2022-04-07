@@ -4,6 +4,22 @@
 
 	* parse.y (option): deprecate `map' rule in favour of the `types' block
 
+2022-03-27  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): 1.8.3 tagged
+
+	* server.c (start_cgi): fix a possible out-of-bound access in the
+	CGI handling.
+
+2022-03-26  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): 1.8.2 tagged
+
+	* server.c (handle_imsg_cgi_res): fix a CGI timing issue: if a
+	connection handled by a CGI scripts is interrupted with the right
+	timing it causes the server process to exit with "fatal in
+	client_by_id: invalid id X"
+
 2022-02-26  Omar Polo  <op@omarpolo.com>
 
 	* parse.y: add the types block
