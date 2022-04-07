@@ -6,7 +6,7 @@ This directory is for additional contributed files which may be useful.
 
 => TREE/contrib/Dockerfile contrib/Dockerfile
 
-A sample Dockerfile.  The resulting image is a classic alpine linux image with a statically linked gmid installed as /bin/gmid.  Build the image with:
+A sample Dockerfile that builds an alpine linux-based image with a statically linked gmid installed as /bin/gmid.  To build the image:
 
 ```instructions to build the image
 # docker build -f contrib/Dockerfile -t gmid .
