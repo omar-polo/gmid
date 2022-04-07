@@ -74,8 +74,6 @@ Some things to keep in mind:
 
 => TREE/contrib/renew-certs contrib/renew-certs
 
-NB: this script requires features that are currently available only in the master branch.
-
 contrib/renew-certs is a script meant to be run in a crontab that watch for certificate expiration.  It can optionally renew the certs and restart gmid too.
 
 Read the documentation with: perldoc renew-certs
