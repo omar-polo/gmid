@@ -176,8 +176,8 @@ struct vhost {
 };
 
 struct etm {			/* extension to mime */
-	const char	*mime;
-	const char	*ext;
+	char	*mime;
+	char	*ext;
 };
 
 struct mime {
@@ -353,9 +353,10 @@ int		 logger_main(int, struct imsgbuf*);
 
 /* mime.c */
 void		 init_mime(struct mime*);
-void		 add_mime(struct mime*, const char*, const char*);
-void		 load_default_mime(struct mime*);
+int		 add_mime(struct mime*, const char*, const char*);
+int		 load_default_mime(struct mime*);
 const char	*mime(struct vhost*, const char*);
+void		 free_mime(struct mime *);
 
 /* server.c */
 extern int	shutting_down;

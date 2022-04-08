@@ -219,13 +219,15 @@ option		: CHROOT string	{ conf.chroot = $2; }
 			yywarn("`mime MIME EXT' is deprecated and will be "
 			    "removed in a future version, please use the new "
 			    "`types' block.");
-			add_mime(&conf.mime, $2, $3);
+			if (add_mime(&conf.mime, $2, $3) == -1)
+				err(1, "add_mime");
 		}
 		| MAP string TOEXT string {
 			yywarn("`map mime to-ext' is deprecated and will be "
 			    "removed in a future version, please use the new "
 			    "`types' block.");
-			add_mime(&conf.mime, $2, $4);
+			if (add_mime(&conf.mime, $2, $4) == -1)
+				err(1, "add_mime");
 		}
 		| PORT NUM		{ conf.port = check_port_num($2); }
 		| PREFORK NUM		{ conf.prefork = check_prefork_num($2); }
@@ -488,7 +490,10 @@ medianames_l	: medianames_l medianamesl
 		| medianamesl
 		;
 
-medianamesl	: numberstring { add_mime(&conf.mime, current_media, $1); }
+medianamesl	: numberstring {
+			if (add_mime(&conf.mime, current_media, $1) == -1)
+				err(1, "add_mime");
+		}
 		;
 
 nl		: '\n' optnl

@@ -251,7 +251,8 @@ static int
 listener_main(struct imsgbuf *ibuf)
 {
 	drop_priv();
-	load_default_mime(&conf.mime);
+	if (load_default_mime(&conf.mime) == -1)
+		fatal("load_default_mime: %s", strerror(errno));
 	load_vhosts();
 	loop(ctx, sock4, sock6, ibuf);
 	return 0;
@@ -286,6 +287,7 @@ free_config(void)
 
 	v = conf.verbose;
 
+	free_mime(&conf.mime);
 	free(conf.chroot);
 	free(conf.user);
 	memset(&conf, 0, sizeof(conf));

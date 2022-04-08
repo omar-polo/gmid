@@ -32,30 +32,44 @@ init_mime(struct mime *mime)
 }
 
 /* register mime for the given extension */
-void
+int
 add_mime(struct mime *mime, const char *mt, const char *ext)
 {
-	size_t oldcap;
+	char *mimetype, *extension;
+	struct etm *t;
+	size_t newcap;
 
 	if (mime->len == mime->cap) {
-		oldcap = mime->cap;
-		mime->cap *= 1.5;
-		mime->t = recallocarray(mime->t, oldcap, mime->cap,
+		newcap = mime->cap * 1.5;
+		t = recallocarray(mime->t, mime->cap, newcap,
 		    sizeof(struct etm));
-		if (mime->t == NULL)
-			err(1, "recallocarray");
+		if (t == NULL)
+			return -1;
+		mime->t = t;
+		mime->cap = newcap;
 	}
 
-	mime->t[mime->len].mime = mt;
-	mime->t[mime->len].ext  = ext;
+	if ((mimetype = strdup(mt)) == NULL)
+		return -1;
+	if ((extension = strdup(ext)) == NULL) {
+		free(mimetype);
+		return -1;
+	}
+
+	mime->t[mime->len].mime = mimetype;
+	mime->t[mime->len].ext  = extension;
 	mime->len++;
+	return 0;
 }
 
 /* load a default set of common mime-extension associations */
-void
+int
 load_default_mime(struct mime *mime)
 {
-	const struct etm *i, m[] = {
+	const struct mapping {
+		const char *mime;
+		const char *ext;
+	} m[] = {
 		{"application/pdf",	"pdf"},
 		{"image/gif",		"gif"},
 		{"image/jpeg",		"jpg"},
@@ -71,10 +85,14 @@ load_default_mime(struct mime *mime)
 		{"text/x-patch",	"patch"},
 		{"text/xml",		"xml"},
 		{NULL, NULL}
-	};
+	}, *i;
 
-	for (i = m; i->mime != NULL; ++i)
-		add_mime(mime, i->mime, i->ext);
+	for (i = m; i->mime != NULL; ++i) {
+		if (add_mime(mime, i->mime, i->ext) == -1)
+			return -1;
+	}
+
+	return 0;
 }
 
 static const char *
@@ -109,4 +127,17 @@ mime(struct vhost *host, const char *path)
 			return t->mime;
 
 	return def;
+}
+
+void
+free_mime(struct mime *m)
+{
+	struct etm *t;
+
+	for (t = m->t; t->mime != NULL; ++t) {
+		free(t->mime);
+		free(t->ext);
+	}
+
+	free(m->t);
 }
