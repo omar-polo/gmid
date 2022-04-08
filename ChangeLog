@@ -2,7 +2,7 @@
 
 	* mime.c (add_mime): fix memory leak in the mime handling
 
-2022-04-07  Omar Polo  <op@venera>
+2022-04-07  Omar Polo  <op@omarpolo.com>
 
 	* gmid.conf.5: move config file documentation into a new man page
 
