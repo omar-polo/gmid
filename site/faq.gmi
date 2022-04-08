@@ -58,7 +58,7 @@ then recompile gmid and run the regress suite:
 $ make regress
 ```
 
-If it's indeed a seccomp failure it should print something like:
+If it's indeed a seccomp failure it should print something like the following among the other logs:
 
 ```
 unexpected system call (arch:...,syscall:... @ ...)
