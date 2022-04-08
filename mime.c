@@ -111,6 +111,29 @@ path_ext(const char *path)
 	return NULL;
 }
 
+static int
+mime_comp(const void *a, const void *b)
+{
+	const struct etm *x = a, *y = b;
+
+	return strcmp(x->ext, y->ext);
+}
+
+void
+sort_mime(struct mime *m)
+{
+	qsort(m->t, m->len, sizeof(*m->t), mime_comp);
+}
+
+static int
+mime_find(const void *a, const void *b)
+{
+	const char *ext = a;
+	const struct etm *x = b;
+
+	return strcmp(ext, x->ext);
+}
+
 const char *
 mime(struct vhost *host, const char *path)
 {
@@ -122,10 +145,10 @@ mime(struct vhost *host, const char *path)
 	if ((ext = path_ext(path)) == NULL)
 		return def;
 
-	for (t = conf.mime.t; t->mime != NULL; ++t)
-		if (!strcmp(ext, t->ext))
-			return t->mime;
-
+	t = bsearch(ext, conf.mime.t, conf.mime.len, sizeof(*conf.mime.t),
+	    mime_find);
+	if (t != NULL)
+		return t->mime;
 	return def;
 }
 

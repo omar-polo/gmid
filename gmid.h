@@ -362,6 +362,7 @@ int		 logger_main(int, struct imsgbuf*);
 void		 init_mime(struct mime*);
 int		 add_mime(struct mime*, const char*, const char*);
 int		 load_default_mime(struct mime*);
+void		 sort_mime(struct mime *);
 const char	*mime(struct vhost*, const char*);
 void		 free_mime(struct mime *);
 
