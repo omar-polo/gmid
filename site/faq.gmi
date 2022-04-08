@@ -68,7 +68,7 @@ Please attach the `make regress' output, the distro you're using and `uname -m' 
 
 If you're technically inclined, you could also try to write a patch to fix the issue and attach it to the bug report: receiving patches makes me really happy!
 
-You can get the syscall name from the numbers by looking in the linux kernel headers.  Unfortunately the exact position differs from distro to distro, but they should be somewhere under /usr/local.  Once you know the name of the syscall, you can add it to the list in the `filter' array and reiterate the whole procedure until it works.
+You can get the syscall name from the numbers by looking in the linux kernel headers.  Unfortunately, the exact position differs from distro to distro, but they should be somewhere under /usr/include.  Once you know the name of the syscall, you can add it to the list in the `filter' array and reiterate the whole procedure until it works.
 
 Providing a patch *is not expected* and *is not a requirement* either.  It's just nice to do if you have the skill, time and patience to do so.
 
