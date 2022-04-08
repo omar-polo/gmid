@@ -149,6 +149,8 @@ mime(struct vhost *host, const char *path)
 	    mime_find);
 	if (t != NULL)
 		return t->mime;
+	if (!strcmp(ext, "gmi") || !strcmp(ext, "gemini"))
+		return "text/gemini";
 	return def;
 }
 
