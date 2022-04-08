@@ -532,7 +532,7 @@ By default
 .Nm gmid
 uses the following mapping if no
 .Ic types
-block is used:
+block is defined:
 .Bl -tag -offset indent -width 15m -compact
 .It application/pdf
 pdf
@@ -553,6 +553,16 @@ diff patch
 .It text/xml
 xml
 .El
+.Pp
+As an exception,
+.Nm gmid
+uses the MIME type
+.Ar text/gemini
+for file extensions
+.Ar gemini
+or
+.Ar gmi
+if no mapping was found.
 .Sh EXAMPLES
 The following is an example of a possible configuration for a site
 that enables only TLSv1.3, adds the MIME types mapping from
@@ -564,8 +574,6 @@ ipv6 on		# enable ipv6
 protocols "tlsv1.3"
 
 types {
-	text/gemini	gemini gmi
-
 	include "/usr/share/misc/mime.types"
 }
 
