@@ -35,7 +35,6 @@ Source code and precompiled binaries for linux are available:
 => gemini://git.omarpolo.com/gmid.git/		git repository via Gemini
 => GITHUB					GitHub mirror
 
-=> GITHUB/releases/download/VERS/gmid.linux.aarch64	gmid.linux.aarch64
 => GITHUB/releases/download/VERS/gmid.linux.amd64	gmid.linux.amd64
 
 When in doubt, compile from source: it’s easy and takes less than a minute on a raspberry pi 3.  The dependencies are:
