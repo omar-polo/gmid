@@ -1,3 +1,7 @@
+2022-04-08  Omar Polo  <op@omarpolo.com>
+
+	* mime.c (add_mime): fix memory leak in the mime handling
+
 2022-04-07  Omar Polo  <op@venera>
 
 	* gmid.conf.5: move config file documentation into a new man page
