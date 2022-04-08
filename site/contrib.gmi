@@ -70,6 +70,20 @@ Some things to keep in mind:
 # journalctl -t gmid
 ```
 
+## mime.types
+
+=> TREE/contrib/renew-certs contrib/mime.types
+
+A copy of OpenBSD' /usr/share/misc/mime.types to be used as
+
+```
+# /etc/gmid.conf
+
+types {
+	include "/path/to/mime.types"
+}
+```
+
 ## renew certificates automatically
 
 => TREE/contrib/renew-certs contrib/renew-certs
