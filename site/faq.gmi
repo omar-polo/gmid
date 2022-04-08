@@ -55,8 +55,6 @@ so that it becomes
 then recompile gmid and run the regress suite:
 
 ```
-$ ./configure
-$ make
 $ make regress
 ```
 
