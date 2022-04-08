@@ -475,7 +475,9 @@ fastcgi		: SPAWN string {
 		}
 		;
 
-types		: TYPES '{' optnl mediaopts_l '}'
+types		: TYPES '{' optnl mediaopts_l '}' {
+			conf.mime.skip_defaults = 1;
+		}
 		;
 
 mediaopts_l	: mediaopts_l mediaoptsl nl

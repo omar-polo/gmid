@@ -182,8 +182,15 @@ struct etm {			/* extension to mime */
 
 struct mime {
 	struct etm	*t;
-	size_t		len;
-	size_t		cap;
+	size_t		 len;
+	size_t		 cap;
+
+	/*
+	 * Backward compatibility: types override the built-in list,
+	 * but the deprecated `mime' and `map' don't.  It's still too
+	 * early to remove `mime' and `map' from the config parser.
+	 */
+	int		 skip_defaults;
 };
 
 struct conf {
