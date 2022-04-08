@@ -1,7 +1,6 @@
 2022-04-08  Omar Polo  <op@omarpolo.com>
 
-	* mime.c (mime): sort the MIME mappings and do a binary search to
-	match
+	* mime.c (mime): do a binary search to match the MIME time
 
 	* gmid.c (listener_main): don't load the default mime listing when
 	`types' is used.  (text/gemini -> gmi/gemini is still hardcoded)
