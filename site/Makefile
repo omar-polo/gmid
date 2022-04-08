@@ -21,7 +21,7 @@ SUBST =		./subst GITHUB=https://github.com/omar-polo/gmid \
 			VERS=1.8.3 \
 			CURV=1.8 \
 			NEXTV=1.9 \
-			TREE=https://git.omarpolo.com/gmid/tree
+			TREE=https://github.com/omar-polo/gmid/blob/master
 
 SUBST_GEM =	${SUBST} MANEXT=txt  EXT=gmi  REPOLOGY=${REPOLOGY_URL}
 SUBST_WWW =	${SUBST} MANEXT=html EXT=html REPOLOGY=${REPOLOGY_BANNER}
