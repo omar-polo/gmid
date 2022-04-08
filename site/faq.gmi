@@ -4,7 +4,7 @@
 
 Just drop an email to <gmid [at] omarpolo [dot] com> or open a GitHub issue/pull request.
 
-When reporting a bug please include the relevant information to reproduce the issue you're facing: your configuration file, the gmid version, your distro version at least.
+When reporting a bug please include the relevant information to reproduce the issue you're facing: your configuration file, the gmid version, and your distro.
 
 
 ## How can I define the right MIME types for my files?
@@ -13,6 +13,8 @@ gmid, like many other servers, uses a list of known file extensions to decide wh
 
 ``` example of how to use the type rule in the configuration file
 types {
+	text/gemini		gemini gmi
+
 	application/postscript	ps eps ai
 	application/rss+xml	rss
 
