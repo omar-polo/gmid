@@ -182,29 +182,26 @@ $ chmod +x docs/cgi/hello
 $ gmid -x '/cgi/*' docs
 .Ed
 .Pp
-An X.509 certificate must be provided to run
+To run
 .Nm
-using a configuration file.
-First, the RSA certificate is created using a wildcard common name:
+as a deamon a configuration file and a X.509 certificate must be provided.
+A self-signed certificate, which are commonly used in the Geminispace,
+can be generated using for e.g.\&
+.Xr openssl 1 :
 .Bd -literal -offset indent
-# openssl genrsa \-out /etc/ssl/private/example.com.key 4096
-# openssl req \-new \-x509 \e
-	\-key /etc/ssl/private/example.com.key \e
-	\-out /etc/ssl/example.com.crt \e
-	\-days 36500 \-nodes \e
-	\-subj "/CN=example.com"
+# openssl req \-x509 \-newkey rsa:4096 \-nodes \e
+	\-keyout /etc/ssl/private/example.com.key \e
+	\-out /etc/ssl/example.com.pem \e
+	\-days 365 \-subj "/CN=example.com"
 # chmod 600 /etc/ssl/example.com.crt
 # chmod 600 /etc/ssl/private/example.com.key
 .Ed
 .Pp
-In the example above, a certificate is valid for one hundred years from
-the date it was created, which is normal for TOFU.
-.Pp
-Then, to run
+Then
 .Nm
-as a daemon:
+can be started with
 .Bd -literal -offset indent
-$ gmid -c /etc/gmid.conf
+# gmid -c /etc/gmid.conf
 .Ed
 .Sh SEE ALSO
 .Xr gmid.conf 5
