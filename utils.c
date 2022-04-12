@@ -171,6 +171,8 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	BN_free(e);
 	X509_free(x509);
 	RSA_free(rsa);
+
+	log_notice(NULL, "certificate successfully generated");
 }
 
 X509_STORE *
