@@ -80,13 +80,19 @@ If gmid was installed from your distribution package manager chance are that it 
 
 Ideally, gmid should be started as root and then drop privileges.  This allows to save the certificates in a directory that's readable only by root
 
-For example, on GNU/linux systems a ‘gmid’ user can be created with:
+For example, on OpenBSD a ‘_gmid’ user can be created with:
+
+```
+# useradd -c gmid -d /var/empty -s /sbin/nologin _gmid
+```
+
+while on most GNU/linux systems it's:
 
 ```how to create the gmid user
 # useradd --system --no-create-home -s /bin/nologin -c "gmid Gemini server" gmid
 ```
 
-If you use systemd-sysusers:
+or if you use systemd-sysusers:
 
 ```how to create the gmid user, using systemd-sysusers
 # systemd-sysusers contrib/gmid.sysusers
@@ -103,7 +109,7 @@ user "gmid"
 server "example.com" { … }
 ```
 
-gmid then needs to be started with root privileges, but will then switch to the provided user automatically.  If by accident the ‘user’ option is omitted and gmid is running as root, it will complain loudly in the logs.
+Now gmid needs to be started with root privileges but will switch to the provided user automatically.  If by accident the ‘user’ option is omitted and gmid is running as root, it will complain loudly in the logs.
 
 
 ### chroot
