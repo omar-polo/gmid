@@ -55,10 +55,9 @@ $ make
 $ sudo make install # eventually
 ```
 
-A SHA256 file is available.  However, that only checks for accidental corruption: you can use signify (SHA256.sig and the public key gmid-CURV.pub) or GPG.  The hash of the signify public key is also included in the SHA256 file and thus signed with my GPG.  The signify public key for the next release ‘gmid-NEXTV.pub’ is also included.
+A SHA256 file is available.  However, that only checks for accidental corruption: you can use signify (SHA256.sig and the public key gmid-CURV.pub).  The signify public key for the next release ‘gmid-NEXTV.pub’ is also included.
 
 => GITHUB/releases/download/VERS/SHA256		SHA256
-=> GITHUB/releases/download/VERS/SHA256		SHA256.gpg
 => GITHUB/releases/download/VERS/SHA256.sig	SHA256.sig
 
 To verify the signatures with signify(1)
