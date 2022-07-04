@@ -1098,9 +1098,13 @@ client_write(struct bufferevent *bev, void *d)
 	case REQUEST_DIR:
 		/* TODO: handle big big directories better */
 		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff) {
+			const char *sufx = "";
+
 			encode_path(nam, sizeof(nam),
 			    c->dir[c->diroff]->d_name);
-			evbuffer_add_printf(out, "=> ./%s\n", nam);
+			if (c->dir[c->diroff]->d_type == DT_DIR)
+				sufx = "/";
+			evbuffer_add_printf(out, "=> ./%s%s\n", nam, sufx);
 			free(c->dir[c->diroff]);
 		}
 		free(c->dir);
