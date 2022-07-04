@@ -177,7 +177,7 @@ test_auto_index() {
 	cat <<EOF > listing.expected
 # Index of /dir/
 
-=> ./..
+=> ./../
 => ./current%20date
 => ./foo.gmi
 => ./hello
