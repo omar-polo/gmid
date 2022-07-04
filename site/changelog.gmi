@@ -1,5 +1,25 @@
 # change log
 
+## 2022/07/04 - 1.8.4 “Lightbulb Sun” bugfix release
+
+### Bug fixes
+
+* allow "@" and ":" in paths; spotted by freezr
+* URL-encode the file names in the directory index; reported by cage
+
+### Improvements
+
+* move the documentation about the config file in its own manual page: gmid.conf.5
+* improvements to the mime handling: fixed a memory leak and improve lookup speed.
+* log (with low priority) when gmid failed to open a file because of its permissions.
+* include a trailing "/" for dirs in the auto-generated directory index.
+
+### Breaking Changes
+
+* deprecated the `map' rule in favour of the new `types' block.
+* the default list is not loaded anymore when `types' is used; except for the text/gemini to ".gmi"/".gemini" mappings.
+
+
 ## 2022/03/27 - 1.8.3 “Lightbulb Sun” bugfix release
 
 ### Bug fixes
