@@ -20,6 +20,19 @@
 
 #include "../gmid.h"
 
+#define ENCTEST(buf, len, raw, exp)				\
+	if (encode_path(buf, len, raw) == -1) {			\
+		fprintf(stderr, "%s:%d: failed to encode: %s\n", \
+		    __FILE__, __LINE__, raw);			\
+		exit(1);					\
+	}							\
+	if (strcmp(buf, exp) != 0) {				\
+		fprintf(stderr, "%s:%d: error: "		\
+		    "unexpected encoding: got %s, want %s\n",	\
+		    __FILE__, __LINE__, buf, exp);		\
+		exit(1);					\
+	}
+
 #define TEST(iri, fail, exp, descr)				\
 	if (!run_test(iri, fail, exp)) {			\
 		fprintf(stderr, "%s:%d: error: %s\n",		\
@@ -90,7 +103,12 @@ done:
 int
 main(void)
 {
+	char buf[32];
 	struct iri empty = IRI("", "", "", "", "", "");
+
+	ENCTEST(buf, sizeof(buf), "hello world", "hello%20world");
+	ENCTEST(buf, sizeof(buf), "hello\nworld", "hello%0Aworld");
+	ENCTEST(buf, sizeof(buf), "hello\r\nworld", "hello%0D%0Aworld");
 
 	TEST("http://omarpolo.com",
 	    PASS,
