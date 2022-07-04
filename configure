@@ -1,6 +1,8 @@
 #!/bin/sh
 #
 # Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+# Copyright (c) 2011, 2013-2022 Ingo Schwarze <schwarze@openbsd.org>
+# Copyright (c) 2010, 2011, 2012 Kristaps Dzonsons <kristaps@bsd.lv>
 #
 # Permission to use, copy, modify, and distribute this software for any
 # purpose with or without fee is hereby granted, provided that the above
@@ -13,9 +15,6 @@
 # WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-# adapted from mandoc configure and oconfigure, thanks schwarze@ and
-# kristaps@!
 
 set -e
 
