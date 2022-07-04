@@ -16,7 +16,7 @@
 
 #include "../config.h"
 
-#ifdef HAVE_PROGRAM_INVOCATION_SHORT_NAME
+#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
 
 #include <errno.h>
 
