@@ -1,6 +1,7 @@
 2022-07-04  Omar Polo  <op@omarpolo.com>
 
 	* server.c (check_path): log when it fails to open a file because of permissions
+	(client_write): encode file names in the directory index, spotted by cage
 
 	* iri.c (parse_path): allow '@' and ':' in paths
 
