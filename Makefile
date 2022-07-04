@@ -30,7 +30,6 @@ TESTSRCS =	have/err.c \
 		have/libevent2.c \
 		have/libtls.c \
 		have/noop.c \
-		have/noop.d \
 		have/openssl.c \
 		have/pr_set_name.c \
 		have/program_invocation_short_name.c \
