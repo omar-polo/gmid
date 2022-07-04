@@ -81,6 +81,7 @@ testdata: fill-file
 	cp hello slow err invalid serve-bigfile env testdata/
 	cp max-length-reply testdata
 	mkdir testdata/dir
+	date > 'testdata/dir/current date'
 	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi
 	touch testdata/test.m3u8 testdata/foo.1

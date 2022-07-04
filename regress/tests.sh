@@ -171,20 +171,27 @@ test_auto_index() {
 	check_reply "30 /dir/" || return 1
 
 	fetch_hdr /dir/
-	check_reply "20 text/gemini"
+	check_reply "20 text/gemini" || return 1
 
-	# we expect 5 lines from the auto index
+	get /dir/ > listing || return 1
+	cat <<EOF > listing.expected
+# Index of /dir/
 
-	body="$(get /dir/ | count)"
-	if [ $? -ne 0 ]; then
-		echo 'failed to get /dir/'
-		return 1
+=> ./..
+=> ./current%20date
+=> ./foo.gmi
+=> ./hello
+EOF
+
+	cmp -s listing.expected listing
+	ret=$?
+	if [ $ret -ne 0 ]; then
+		echo 'unexpected dir content:'
+		diff -u listing.expected listing
 	fi
+	rm listing listing.expected
 
-	if [ "$body" -ne 5 ]; then
-		echo "expected five lines from the auto index, got $body"
-		return 1
-	fi
+	return $ret
 }
 
 test_block() {
