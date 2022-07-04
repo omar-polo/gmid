@@ -35,7 +35,7 @@ test: regress
 regress: all
 	${MAKE} 'TESTS=${TESTS}' -C regress all
 
-install: gmid
+install: gmid gg
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	mkdir -p ${DESTDIR}${MANDIR}/man5
