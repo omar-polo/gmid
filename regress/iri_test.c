@@ -198,6 +198,10 @@ main(void)
 	    PASS,
 	    IRI("http", "a", "", "", "", ""),
 	    "avoid infinite loops (see v1.6.1)");
+	TEST("gemini://example.com/@f:b!(z$&)/baz",
+	    PASS,
+	    IRI("gemini", "example.com", "", "@f:b!(z$&)/baz", "", ""),
+	    "allow @, :, !, (), $ and & in paths");
 
 	/* query */
 	TEST("foo://example.com/foo/?gne",

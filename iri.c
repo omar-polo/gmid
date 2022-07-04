@@ -352,6 +352,8 @@ parse_path(struct parser *p)
 
 	while (unreserved(*p->iri)
 	    || sub_delimiters(*p->iri)
+	    || *p->iri == '@'
+	    || *p->iri == ':'
 	    || *p->iri == '/'
 	    || parse_pct_encoded(p)
 	    || valid_multibyte_utf8(p))
