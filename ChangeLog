@@ -1,3 +1,7 @@
+2022-07-04  Omar Polo  <op@omarpolo.com>
+
+	* iri.c (parse_path): allow '@' and ':' in paths
+
 2022-04-08  Omar Polo  <op@omarpolo.com>
 
 	* mime.c (mime): do a binary search to match the MIME time
