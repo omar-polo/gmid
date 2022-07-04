@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+# Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
 # Copyright (c) 2011, 2013-2022 Ingo Schwarze <schwarze@openbsd.org>
 # Copyright (c) 2010, 2011, 2012 Kristaps Dzonsons <kristaps@bsd.lv>
 #

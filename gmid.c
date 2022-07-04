@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2020, 2021, 2022 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
