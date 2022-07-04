@@ -2,6 +2,7 @@
 
 	* server.c (check_path): log when it fails to open a file because of permissions
 	(client_write): encode file names in the directory index, spotted by cage
+	(client_write): add a trailing / for dirs in the directory index.
 
 	* iri.c (parse_path): allow '@' and ':' in paths
 
