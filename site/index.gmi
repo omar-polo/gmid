@@ -31,6 +31,7 @@ Otherwise, compile it from source: it’s easy and takes less than a minute on a
 => GITHUB/releases/download/VERS/gmid-VERS.tar.gz	gmid-VERS.tar.gz
 
 => https://git.omarpolo.com/gmid/		git repository
+=> https://codeberg.org/op/gmid/		Codeberg mirror
 => GITHUB					GitHub mirror
 
 The dependencies are:
