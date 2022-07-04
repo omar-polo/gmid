@@ -28,18 +28,6 @@ and then run it with something along the lines of:
 
 contrib/gencert is a simple script to generate self-signed certificates.
 
-## OpenBSD rc file
-
-=> TREE/contrib/gmid contrib/gmid
-
-contrib/gmid is a sample service file for OpenBSD rc(8).  To install it:
-
-```command to install the rc file
-# cp contrib/gmid /etc/rc.d
-```
-
-then the usual ‘rcctl [start|stop|enable|restart] gmid’ are available.
-
 ## systemd unit file
 
 => TREE/contrib/gmid.service contrib/gmid.service

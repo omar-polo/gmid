@@ -9,10 +9,6 @@ gencert
 
 	Simple shell script to generate self-signed certificates.
 
-gmid
-
-	Sample rc(8) script for OpenBSD, to be placed in /etc/rc.d.
-
 gmid.service
 
 	Simple systemd service file.
