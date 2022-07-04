@@ -53,6 +53,8 @@ LD_IMSG=
 STATIC=
 YACC=yacc
 
+COBJS=
+
 DISABLE_SANDBOX=0
 
 NEED_GNU_SOURCE=0
@@ -142,6 +144,20 @@ for keyvals in "$@"; do
 done
 
 # --------
+# Allow configure.local to override all variables, default settings,
+# command-line arguments, and tested features, above.
+
+if [ -r ./configure.local ]; then
+	echo "configure.local: reading..." 1>&2
+	echo "configure.local: reading..." 1>&3
+	cat ./configure.local 1>&3
+	. ./configure.local
+else
+	echo "configure.local: no (fully automatic configuration)" 1>&2
+	echo "configure.local: no (fully automatic configuration)" 1>&3
+fi
+
+# --------
 # tests functions
 
 # Check whether this HAVE_ setting is manually overridden.
@@ -218,12 +234,6 @@ else
 	echo "selected STATIC=\"${STATIC}\"" 1>&2
 	echo "selected STATIC=\"${STATIC}\"" 1>&3
 	echo 1>&3
-fi
-
-if runtest noop MMD -MMD; then
-	CFLAGS="${CFLAGS} -MMD"
-	echo "adding -MMD to CFLAGS" 1>&2
-	echo "adding -MMD to CFLAGS" 1>&3
 fi
 
 # --------
@@ -352,85 +362,66 @@ if [ ${HAVE_ERR} -eq 0 ]; then
 	echo "extern	void	 errx(int, const char*, ...);"
 	echo "extern	void	 warn(const char*, ...);"
 	echo "extern	void	 warnx(const char*, ...);"
-	COMPAT="${COMPAT} compat/err.o"
+	COBJS="${COBJS} compat/err.o"
 else
 	echo "#include <err.h>"
 fi
 if [ ${HAVE_EXPLICIT_BZERO} -eq 0 ]; then
 	echo "extern	void	 explicit_bzero(void*, size_t);"
-	COMPAT="${COMPAT} compat/explicit_bzero.o"
+	COBJS="${COBJS} compat/explicit_bzero.o"
 fi
 if [ ${HAVE_FREEZERO} -eq 0 ]; then
 	echo "extern	void	 freezero(void*, size_t);"
-	COMPAT="${COMPAT} compat/freezero.o"
+	COBJS="${COBJS} compat/freezero.o"
 fi
 if [ ${HAVE_GETDTABLECOUNT} -eq 0 ]; then
 	echo "extern	int	 getdtablecount(void);"
-	COMPAT="${COMPAT} compat/getdtablecount.o"
+	COBJS="${COBJS} compat/getdtablecount.o"
 fi
 if [ ${HAVE_GETDTABLESIZE} -eq 0 ]; then
 	echo "extern	int	 getdtablesize(void);"
-	COMPAT="${COMPAT} compat/getdtablesize.o"
+	COBJS="${COBJS} compat/getdtablesize.o"
 fi
 if [ ${HAVE_GETPROGNAME} -eq 0 ]; then
 	echo "extern	const char *getprogname(void);"
-	COMPAT="${COMPAT} compat/getprogname.o"
+	COBJS="${COBJS} compat/getprogname.o"
 fi
 if [ ${HAVE_IMSG} -eq 0 ]; then
-	COMPAT="${COMPAT} compat/imsg.o compat/imsg-buffer.o"
+	COBJS="${COBJS} compat/imsg.o compat/imsg-buffer.o"
 fi
 if [ ${HAVE_REALLOCARRAY} -eq 0 ]; then
 	echo "extern	void	*reallocarray(void*, size_t, size_t);"
-	COMPAT="${COMPAT} compat/reallocarray.o"
+	COBJS="${COBJS} compat/reallocarray.o"
 fi
 if [ ${HAVE_RECALLOCARRAY} -eq 0 ]; then
 	echo "extern	void	*recallocarray(void*, size_t, size_t, size_t);"
-	COMPAT="${COMPAT} compat/recallocarray.o"
+	COBJS="${COBJS} compat/recallocarray.o"
 fi
 if [ ${HAVE_SETPROCTITLE} -eq 0 ]; then
 	echo "extern	void	 setproctitle(const char *fmt, ...);"
-	COMPAT="${COMPAT} compat/setproctitle.o"
+	COBJS="${COBJS} compat/setproctitle.o"
 fi
 if [ ${HAVE_STRLCAT} -eq 0 ]; then
 	echo "extern	size_t	 strlcat(char*, const char*, size_t);"
-	COMPAT="${COMPAT} compat/strlcat.o"
+	COBJS="${COBJS} compat/strlcat.o"
 fi
 if [ ${HAVE_STRLCPY} -eq 0 ]; then
 	echo "extern	size_t	 strlcpy(char*, const char*, size_t);"
-	COMPAT="${COMPAT} compat/strlcpy.o"
+	COBJS="${COBJS} compat/strlcpy.o"
 fi
 if [ ${HAVE_STRTONUM} -eq 0 ]; then
 	echo "extern	long long strtonum(const char*, long long, long long, const char**);"
-	COMPAT="${COMPAT} compat/strtonum.o"
+	COBJS="${COBJS} compat/strtonum.o"
 fi
 if [ ${HAVE_VASPRINTF} -eq 0 ]; then
 	echo "extern	int	 vasprintf(char**, const char*, va_list);"
-	COMPAT="${COMPAT} compat/vasprintf.o"
+	COBJS="${COBJS} compat/vasprintf.o"
 fi
 echo "file config.h: written" 1>&2
 echo "file config.h: written" 1>&3
 
 # --------
 # tests for Makefile.local
-
-GMID_SRCS="dirs.c ex.c fcgi.c gmid.c iri.c log.c mime.c proxy.c puny.c"
-GMID_SRCS="${GMID_SRCS} sandbox.c server.c utf8.c utils.c y.tab.c"
-
-GMID_OBJS=
-for src in ${GMID_SRCS}; do
-	GMID_OBJS="${GMID_OBJS} ${src%.c}.o"
-done
-GMID_OBJS="${GMID_OBJS} ${COMPAT}"
-
-GG_SRCS="gg.c iri.c utf8.c"
-
-GG_OBJS=
-for src in ${GG_SRCS}; do
-	GG_OBJS="${GG_OBJS} ${src%.c}.o"
-done
-GG_OBJS="${GG_OBJS} ${COMPAT}"
-
-ALL_SRCS="${GMID_SRCS} gg.c"
 
 exec > Makefile.local
 
@@ -458,27 +449,11 @@ INSTALL_LIB	= ${INSTALL_LIB}
 INSTALL_MAN	= ${INSTALL_MAN}
 INSTALL_DATA	= ${INSTALL_DATA}
 
-GMID_OBJS	= ${GMID_OBJS}
-GG_OBJS		= ${GG_OBJS}
+COBJS		= ${COBJS}
 
 VERSION		= ${VERSION}
 
 __HEREDOC__
-
-printf "COMPAT ="
-for comp in ${COMPAT}; do
-	printf " %s/%s" "$PWD" "$comp"
-done
-printf "\n\n"
-
-# Include dependency info
-for src in ${ALL_SRCS}; do
-	printf "%s\n" "-include ${src%.c}.d"
-done
-
-for comp in ${COMPAT}; do
-	printf "%s\n" "-include ${comp%.o}.d"
-done
 
 echo "file Makefile.local: written" 1>&2
 echo "file Makefile.local: written" 1>&3

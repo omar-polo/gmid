@@ -4,6 +4,8 @@ TESTS=
 
 include ../Makefile.local
 
+COMPAT= ${COBJS:%=../%}
+
 .PHONY: all data clean regress
 
 all: data puny-test iri_test fcgi-test
