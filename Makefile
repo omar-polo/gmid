@@ -137,6 +137,7 @@ Makefile.local config.h: configure ${TESTSRCS}
 	@exit 1
 
 include Makefile.local
+include Makefile.depend
 
 y.tab.c: parse.y
 	${YACC} -b y parse.y
