@@ -117,6 +117,7 @@ EXTRAS =	ChangeLog \
 		README.md \
 		configure \
 		configure.local.example \
+		gg.1 \
 		gmid.1 \
 		gmid.conf.5
 
