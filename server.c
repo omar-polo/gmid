@@ -335,8 +335,11 @@ check_path(struct client *c, const char *path, int *fd)
 	dirfd = vhost_dirfd(c->host, path, &c->loc);
 	log_debug(c, "check_path: strip=%d path=%s original=%s",
 	    strip, p, path);
-	if (*fd == -1 && (*fd = openat(dirfd, p, O_RDONLY)) == -1)
+	if (*fd == -1 && (*fd = openat(dirfd, p, O_RDONLY)) == -1) {
+		if (errno == EACCES)
+			log_info(c, "can't open %s: %s", p, strerror(errno));
 		return FILE_MISSING;
+	}
 
 	if (fstat(*fd, &sb) == -1) {
 		log_notice(c, "failed stat for %s: %s", path, strerror(errno));
