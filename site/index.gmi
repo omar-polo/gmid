@@ -62,7 +62,7 @@ To verify the signatures with signify(1)
 ```Example of how to verify the signature with signify
 % signify -C -p gmid-1.8.pub -x SHA256.sig
 Signature Verified
-gmid-1.8.2.tar.gz: OK
-gmid-1.8.pub: OK
-gmid-1.9.pub: OK
+gmid-VERS.tar.gz: OK
+gmid-CURV.pub: OK
+gmid-NEXTV.pub: OK
 ```
