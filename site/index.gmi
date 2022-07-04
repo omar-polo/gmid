@@ -26,18 +26,14 @@ Some distros provide a package — thanks to the maintainers!
 
 => REPOLOGY	Repology: packaging status for gmid
 
-Source code and precompiled binaries for linux are available:
+Otherwise, compile it from source: it’s easy and takes less than a minute on a raspberry pi 3
 
 => GITHUB/releases/download/VERS/gmid-VERS.tar.gz	gmid-VERS.tar.gz
-=> GITHUB/releases/download/VERS/gmid-VERS.tar.bz2	gmid-VERS.tar.bz2
 
 => https://git.omarpolo.com/gmid/		git repository
-=> gemini://git.omarpolo.com/gmid.git/		git repository via Gemini
 => GITHUB					GitHub mirror
 
-=> GITHUB/releases/download/VERS/gmid.linux.amd64	gmid.linux.amd64
-
-When in doubt, compile from source: it’s easy and takes less than a minute on a raspberry pi 3.  The dependencies are:
+The dependencies are:
 
 * libevent
 * OpenSSL/LibreSSL
@@ -65,10 +61,7 @@ To verify the signatures with signify(1)
 ```Example of how to verify the signature with signify
 % signify -C -p gmid-1.8.pub -x SHA256.sig
 Signature Verified
-gg.linux.amd64: OK
-gmid-1.8.2-binaries.tar.gz: OK
 gmid-1.8.2.tar.gz: OK
 gmid-1.8.pub: OK
 gmid-1.9.pub: OK
-gmid.linux.amd64: OK
 ```
