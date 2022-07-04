@@ -444,6 +444,43 @@ serialize_iri(struct iri *i, char *buf, size_t len)
 	return l < len;
 }
 
+int
+encode_path(char *buf, size_t len, const char *path)
+{
+	char *p = buf;
+	int a, b;
+
+	memset(buf, 0, len);
+	while (*path != '\0') {
+		if (len == 1)	/* NUL */
+			return -1;
+
+		if (unreserved(*path) ||
+		    sub_delimiters(*path) ||
+		    *path == '@' ||
+		    *path == ':' ||
+		    *path == '/') {
+			*p++ = *path++;
+			len--;
+		} else if (len < 4)
+			return -1;
+		else {
+			a = (*path & 0xF0) >> 4;
+			b = (*path & 0x0F);
+
+			p[0] = '%';
+			p[1] = a <= 9 ? ('0' + a) : ('7' + a);
+			p[2] = b <= 9 ? ('0' + b) : ('7' + b);
+
+			path++;
+			p += 3;
+			len -= 3;
+		}
+	}
+
+	return 0;
+}
+
 char *
 pct_decode_str(char *s)
 {

@@ -427,6 +427,7 @@ char		*utf8_nth(char*, size_t);
 /* iri.c */
 int		 parse_iri(char*, struct iri*, const char**);
 int		 serialize_iri(struct iri*, char*, size_t);
+int		 encode_path(char *, size_t, const char *);
 char		*pct_decode_str(char *);
 
 /* proxy.c */

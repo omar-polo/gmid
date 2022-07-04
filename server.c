@@ -1070,6 +1070,7 @@ client_write(struct bufferevent *bev, void *d)
 {
 	struct client	*c = d;
 	struct evbuffer	*out = EVBUFFER_OUTPUT(bev);
+	char		 nam[PATH_MAX];
 	char		 buf[BUFSIZ];
 	ssize_t		 r;
 
@@ -1097,8 +1098,9 @@ client_write(struct bufferevent *bev, void *d)
 	case REQUEST_DIR:
 		/* TODO: handle big big directories better */
 		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff) {
-			evbuffer_add_printf(out, "=> %s\n",
+			encode_path(nam, sizeof(nam),
 			    c->dir[c->diroff]->d_name);
+			evbuffer_add_printf(out, "=> ./%s\n", nam);
 			free(c->dir[c->diroff]);
 		}
 		free(c->dir);
