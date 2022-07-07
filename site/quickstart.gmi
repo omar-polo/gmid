@@ -34,7 +34,7 @@ A TLS certificate is also needed.  There are many way to obtain one (acme-client
 
 One way to generate self-signed certificates is to use openssl(1), but contrib/gencert is easier to use:
 
-=> https://git.omarpolo.com/gmid/tree/contrib/gencert contrib/gencert
+=> TREE/contrib/gencert contrib/gencert
 
 ```generate a certificate using contrib/gencert
 $ ./contrib/gencert example.com
