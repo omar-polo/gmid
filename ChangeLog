@@ -1,5 +1,7 @@
 2022-07-07  Omar Polo  <op@omarpolo.com>
 
+	* log.c (logger_main): fix timestamps in log files.  Reported by Karl Jeacle, thanks!
+
 	* dirs.c (scandir_fd): drop d_reclen; it's not available on DragonflyBSD (at least.)
 
 2022-07-07  Anna “CyberTailor”
