@@ -334,6 +334,7 @@ logger_main(int fd, struct imsgbuf *ibuf)
 	log = stderr;
 
 	openlog(getprogname(), LOG_NDELAY, LOG_DAEMON);
+	tzset();
 
 	event_init();
 
