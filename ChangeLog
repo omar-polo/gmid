@@ -4,6 +4,8 @@
 
 2022-07-04  Omar Polo  <op@omarpolo.com>
 
+	* configure (VERSION): 1.8.4 tagged
+
 	* server.c (check_path): log when it fails to open a file because of permissions
 	(client_write): encode file names in the directory index, spotted by cage
 	(client_write): add a trailing / for dirs in the directory index.
