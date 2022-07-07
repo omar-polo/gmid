@@ -2,6 +2,10 @@
 
 	* dirs.c (scandir_fd): drop d_reclen; it's not available on DragonflyBSD (at least.)
 
+2022-07-07  Anna “CyberTailor”
+
+	* Makefile: include contrib/ in dist
+
 2022-07-04  Omar Polo  <op@omarpolo.com>
 
 	* contrib/gmid: remove OpenBSD' rc file: it's now maintained in the ports tree
