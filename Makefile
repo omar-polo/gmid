@@ -121,7 +121,21 @@ EXTRAS =	ChangeLog \
 		gmid.1 \
 		gmid.conf.5
 
+CONTRIB =	contrib/Dockerfile \
+		contrib/gencert \
+		contrib/gmid.service \
+		contrib/gmid.sysusers \
+		contrib/mime.types \
+		contrib/README \
+		contrib/renew-certs \
+		contrib/vim/ftdetect/gmid.vim \
+		contrib/vim/ftplugin/gmid.vim \
+		contrib/vim/indent/gmid.vim \
+		contrib/vim/syntax_checkers/gmid/gmid.vim \
+		contrib/vim/syntax/gmid.vim
+
 DISTFILES =	${EXTRAS} \
+		${CONTRIB} \
 		${COMPATS} \
 		${REGRESSFILES} \
 		${SRCS} \
@@ -202,6 +216,9 @@ ${DISTNAME}.tar.gz: ${DISTFILES}
 	mkdir -p .dist/${DISTNAME}/
 	${INSTALL} -m 0644 ${SRCS} ${EXTRAS} .dist/${DISTNAME}
 	cd .dist/${DISTNAME} && chmod 755 configure
+	mkdir -p .dist/${DISTNAME}/contrib
+	${INSTALL} -m 0644 ${CONTRIB} .dist/${DISTNAME}/contrib
+	cd .dist/${DISTNAME}/contrib && chmod 755 gencert renew-certs
 	mkdir -p .dist/${DISTNAME}/compat
 	${INSTALL} -m 0644 ${COMPATS} .dist/${DISTNAME}/compat
 	mkdir -p .dist/${DISTNAME}/have
