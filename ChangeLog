@@ -4,6 +4,8 @@
 
 2022-07-04  Omar Polo  <op@omarpolo.com>
 
+	* contrib/gmid: remove OpenBSD' rc file: it's now maintained in the ports tree
+
 	* configure (VERSION): 1.8.4 tagged
 
 	* server.c (check_path): log when it fails to open a file because of permissions
