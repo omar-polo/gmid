@@ -1,3 +1,5 @@
+ran_no=0
+failed_no=0
 failed=
 
 gg="./../gg"
@@ -15,12 +17,15 @@ port $port
 	body=
 	dont_check_server_alive=no
 
+	ran_no=$((ran_no + 1))
+
 	current_test=$1
 	rm -f reg.conf
 
 	if ! $1; then
 		echo "$1 failed"
 		failed="$failed $1"
+		failed_no=$((failed_no + 1))
 	else
 		echo "$1 passed"
 	fi
@@ -32,10 +37,14 @@ port $port
 	if ! check; then
 		echo "gmid crashed?"
 		failed="$failed $1"
+		failed_no=$((failed_no + 1))
 	fi
 }
 
 tests_done() {
+	ok=$((ran_no - failed_no))
+	echo
+	echo "tests: $ran_no / passed: $ok / failed: $failed_no"
 	if [ "$failed" != "" ]; then
 		echo
 		echo "failed tests:$failed"
