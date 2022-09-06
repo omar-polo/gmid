@@ -1378,7 +1378,7 @@ loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 	signal_set(&sigusr2, SIGUSR2, &handle_siginfo, NULL);
 	signal_add(&sigusr2, NULL);
 
-	sandbox_server_process();
+	sandbox_server_process(conf.can_open_sockets);
 	event_dispatch();
 	_exit(0);
 }

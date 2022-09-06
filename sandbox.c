@@ -21,7 +21,7 @@
 #warning "Sandbox disabled! Please report issues upstream instead of disabling the sandbox."
 
 void
-sandbox_server_process(void)
+sandbox_server_process(int can_open_sockets)
 {
 	return;
 }
@@ -37,8 +37,12 @@ sandbox_logger_process(void)
 #include <sys/capsicum.h>
 
 void
-sandbox_server_process(void)
+sandbox_server_process(int can_open_sockets)
 {
+	/* can't capsicum if fastcgi or proxying are used. */
+	if (can_open_sockets)
+		return;
+
 	if (cap_enter() == -1)
 		fatal("cap_enter");
 }
@@ -537,12 +541,17 @@ logger_landlock(void)
 #endif
 
 void
-sandbox_server_process(void)
+sandbox_server_process(int can_open_sockets)
 {
 	const struct sock_fprog prog = {
 		.len = (unsigned short) (sizeof(filter) / sizeof(filter[0])),
 		.filter = filter,
 	};
+
+	/* can't seccomp/landlock if fastcgi or proxying are used. */
+	if (can_open_sockets)
+		return;
+
 
 #ifdef SC_DEBUG
 	sandbox_seccomp_catch_sigsys();
@@ -592,7 +601,7 @@ sandbox_logger_process(void)
 #include <unistd.h>
 
 void
-sandbox_server_process(void)
+sandbox_server_process(int can_open_sockets)
 {
 	struct vhost	*h;
 	struct location	*l;
@@ -625,7 +634,7 @@ sandbox_logger_process(void)
 #warning "No sandbox method known for this OS"
 
 void
-sandbox_server_process(void)
+sandbox_server_process(int can_open_sockets)
 {
 	return;
 }

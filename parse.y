@@ -1050,6 +1050,8 @@ new_proxy(void)
 {
 	struct proxy *p;
 
+	conf.can_open_sockets = 1;
+
 	p = xcalloc(1, sizeof(*p));
 	p->protocols = TLS_PROTOCOLS_DEFAULT;
 	return p;
@@ -1172,6 +1174,8 @@ fastcgi_conf(char *path, char *port, char *prog)
 {
 	struct fcgi	*f;
 	int		i;
+
+	conf.can_open_sockets = 1;
 
 	for (i = 0; i < FCGI_MAX; ++i) {
 		f = &fcgi[i];
