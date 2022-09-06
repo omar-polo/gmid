@@ -278,7 +278,6 @@ struct connreq {
 
 enum {
 	FILE_EXISTS,
-	FILE_EXECUTABLE,
 	FILE_DIRECTORY,
 	FILE_MISSING,
 };
