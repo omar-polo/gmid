@@ -27,13 +27,6 @@ sandbox_server_process(void)
 }
 
 void
-sandbox_executor_process(void)
-{
-	log_notice(NULL, "Sandbox disabled!  "
-	    "Please report issues upstream instead of disabling the sandbox.");
-}
-
-void
 sandbox_logger_process(void)
 {
 	return;
@@ -48,16 +41,6 @@ sandbox_server_process(void)
 {
 	if (cap_enter() == -1)
 		fatal("cap_enter");
-}
-
-void
-sandbox_executor_process(void)
-{
-	/*
-	 * We cannot capsicum the executor process because it needs to
-	 * fork(2)+execve(2) cgi scripts
-	 */
-	return;
 }
 
 void
@@ -581,18 +564,6 @@ sandbox_server_process(void)
 }
 
 void
-sandbox_executor_process(void)
-{
-	/*
-	 * We cannot use seccomp for the executor process because we
-	 * don't know what the child will do.  Also, our filter will
-	 * be inherited so the child cannot set its own seccomp
-	 * policy.
-	 */
-	return;
-}
-
-void
 sandbox_logger_process(void)
 {
 	/*
@@ -643,48 +614,6 @@ sandbox_server_process(void)
 }
 
 void
-sandbox_executor_process(void)
-{
-	struct vhost	*h;
-	struct location	*l;
-	struct fcgi	*f;
-	size_t		 i;
-
-	TAILQ_FOREACH(h, &hosts, vhosts) {
-		TAILQ_FOREACH(l, &h->locations, locations) {
-			if (l->dir == NULL)
-				continue;
-
-			/* r so we can chdir into the directory */
-			if (unveil(l->dir, "rx") == -1)
-				fatal("unveil %s for domain %s",
-				    l->dir, h->domain);
-		}
-	}
-
-	for (i = 0; i < FCGI_MAX; i++) {
-		f = &fcgi[i];
-		if (f->path != NULL) {
-			if (unveil(f->path, "rw") == -1)
-				fatal("unveil %s", f->path);
-		}
-
-		if (f->prog != NULL) {
-			if (unveil(f->prog, "rx") == -1)
-				fatal("unveil %s", f->prog);
-		}
-	}
-
-	/*
-	 * rpath: to chdir into the correct directory
-	 * proc exec: CGI
-	 * dns inet unix: FastCGI
-	 */
-	if (pledge("stdio rpath sendfd proc exec dns inet unix", NULL))
-		err(1, "pledge");
-}
-
-void
 sandbox_logger_process(void)
 {
 	if (pledge("stdio recvfd", NULL) == -1)
@@ -699,12 +628,6 @@ void
 sandbox_server_process(void)
 {
 	return;
-}
-
-void
-sandbox_executor_process(void)
-{
-	log_notice(NULL, "no sandbox method known for this OS");
 }
 
 void

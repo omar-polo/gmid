@@ -368,7 +368,6 @@ void		 fcgi_req(struct client *);
 
 /* sandbox.c */
 void		 sandbox_server_process(void);
-void		 sandbox_executor_process(void);
 void		 sandbox_logger_process(void);
 
 /* utf8.c */
