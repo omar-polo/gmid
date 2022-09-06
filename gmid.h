@@ -157,7 +157,6 @@ struct vhost {
 	const char	*cert;
 	const char	*key;
 	const char	*ocsp;
-	const char	*cgi;
 	const char	*entrypoint;
 
 	TAILQ_ENTRY(vhost) vhosts;
@@ -221,14 +220,12 @@ enum {
 	REQUEST_UNDECIDED,
 	REQUEST_FILE,
 	REQUEST_DIR,
-	REQUEST_CGI,
 	REQUEST_FCGI,
 	REQUEST_PROXY,
 	REQUEST_DONE,
 };
 
 #define IS_INTERNAL_REQUEST(x) \
-	((x) != REQUEST_CGI && \
 	 (x) != REQUEST_FCGI && \
 	 (x) != REQUEST_PROXY)
 
@@ -273,36 +270,6 @@ struct client {
 SPLAY_HEAD(client_tree_id, client);
 extern struct client_tree_id clients;
 
-struct cgireq {
-	char		buf[GEMINI_URL_LEN];
-
-	size_t		iri_schema_off;
-	size_t		iri_host_off;
-	size_t		iri_port_off;
-	size_t		iri_path_off;
-	size_t		iri_query_off;
-	size_t		iri_fragment_off;
-	int		iri_portno;
-
-	char		spath[PATH_MAX+1];
-	char		relpath[PATH_MAX+1];
-	char		addr[NI_MAXHOST+1];
-
-	/* AFAIK there isn't an upper limit for these two fields. */
-	char		subject[64+1];
-	char		issuer[64+1];
-
-	char		hash[128+1];
-	char		version[8];
-	char		cipher[32];
-	int		cipher_strength;
-	time_t		notbefore;
-	time_t		notafter;
-
-	size_t		host_off;
-	size_t		loc_off;
-};
-
 struct connreq {
 	char	host[NI_MAXHOST];
 	char	port[NI_MAXSERV];
@@ -317,8 +284,6 @@ enum {
 };
 
 enum imsg_type {
-	IMSG_CGI_REQ,
-	IMSG_CGI_RES,
 	IMSG_FCGI_REQ,
 	IMSG_FCGI_FD,
 	IMSG_CONN_REQ,
@@ -331,7 +296,7 @@ enum imsg_type {
 
 /* gmid.c */
 char		*data_dir(void);
-void		 load_local_cert(const char*, const char*);
+void		 load_local_cert(struct vhost*, const char*, const char*);
 void		 load_vhosts(void);
 int		 make_socket(int, int);
 void		 setup_tls(void);
@@ -394,20 +359,6 @@ int		 scandir_fd(int, struct dirent***, int(*)(const struct dirent*),
 		    int(*)(const struct dirent**, const struct dirent**));
 int		 select_non_dot(const struct dirent*);
 int		 select_non_dotdot(const struct dirent*);
-
-/* ex.c */
-int		 send_string(int, const char*);
-int		 recv_string(int, char**);
-int		 send_iri(int, struct iri*);
-int		 recv_iri(int, struct iri*);
-void		 free_recvd_iri(struct iri*);
-int		 send_vhost(int, struct vhost*);
-int		 recv_vhost(int, struct vhost**);
-int		 send_time(int, time_t);
-int		 recv_time(int, time_t*);
-int		 send_fd(int, int);
-int		 recv_fd(int);
-int		 executor_main(struct imsgbuf*);
 
 /* fcgi.c */
 void		 fcgi_read(struct bufferevent *, void *);

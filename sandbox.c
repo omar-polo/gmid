@@ -638,7 +638,7 @@ sandbox_server_process(void)
 		}
 	}
 
-	if (pledge("stdio recvfd rpath inet", NULL) == -1)
+	if (pledge("stdio recvfd rpath inet dns", NULL) == -1)
 		fatal("pledge");
 }
 

@@ -92,61 +92,6 @@ test_parse_custom_lang_per_location() {
 	# can parse multiple locations
 }
 
-test_cgi_scripts() {
-	setup_simple_test '' 'cgi "*"'
-
-	fetch /hello
-	check_reply "20 text/gemini" "# hello world" || return 1
-
-	fetch /slow
-	check_reply "20 text/gemini" "# hello world" || return 1
-
-	fetch /err
-	check_reply "42 CGI error" || return 1
-
-	fetch /invalid
-	check_reply "42 CGI error" || return 1
-}
-
-test_cgi_big_replies() {
-	setup_simple_test '' 'cgi "*"'
-
-	hdr="$(head /serve-bigfile)"
-	get /bigfile > bigfile
-	./sha bigfile bigfile.sha
-	body="$(cat bigfile.sha)"
-	check_reply "20 application/octet-stream" "$(cat testdata/bigfile.sha)"
-}
-
-test_cgi_split_query() {
-	setup_simple_test '' 'cgi "*"'
-
-	for s in "1" "2 ?foo" "3 ?foo+bar" "1 ?foo+bar=5" "3 ?foo+bar%3d5"; do
-		exp="$(echo $s | sed 's/ .*//')"
-		qry="$(echo $s | sed 's/^..//')"
-
-		if [ "$exp" = "$qry" ]; then
-			# the "1" case yields exp == qry
-			qry=''
-		fi
-
-		url="/env$qry"
-
-		n="$(get "$url" | awk /^-/ | count)"
-		if [ $? -ne 0 ]; then
-			echo "failed to get /$url"
-			return 1
-		fi
-
-		if [ "$n" -ne $exp ]; then
-			echo "Unexpected number of args"
-			echo "want : $exp"
-			echo "got  : $n"
-			return 1
-		fi
-	done
-}
-
 test_custom_index() {
 	setup_simple_test '' 'index "foo.gmi"'
 
@@ -222,28 +167,6 @@ location "*" {
 	check_reply "40 % /  10965 localhost test" || return 1
 }
 
-test_entrypoint() {
-	setup_simple_test '' 'entrypoint "/env"'
-
-	fetch_hdr /foo/bar
-	check_reply "20 text/plain; lang=en" || return 1
-
-	# TODO: test something similar with plain cgi too
-
-	body="$(get /foo/bar|grep PATH_INFO)"
-	if [ $? -ne 0 ]; then
-		echo "failed to get /foo/bar"
-		return 1
-	fi
-
-	if [ "$body" != "PATH_INFO=/foo/bar" ]; then
-		echo "Invalid PATH_INFO generated"
-		echo "want : PATH_INFO=/foo/bar"
-		echo "got  : $body"
-		return 1
-	fi
-}
-
 test_require_client_ca() {
 	setup_simple_test '' 'require client ca "'$PWD'/testca.pem"'
 
@@ -311,18 +234,6 @@ EOF
 
 	fetch /
 	check_reply "20 text/gemini" "# hello world"
-}
-
-# 1.7.4 bugfix: check_for_cgi goes out-of-bound processing a string
-# that doesn't contain a '/'
-test_174_bugfix() {
-	setup_simple_test '' 'cgi "*"'
-
-	# thanks cage :)
-	for i in 0 1 2 3 4 5 6 7 8 9; do
-		fetch /favicon.txt
-		check_reply "51 not found" || return 1
-	done
 }
 
 test_proxy_relay_to() {

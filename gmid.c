@@ -43,7 +43,7 @@ int sock4, sock6;
 
 struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
 
-const char *config_path, *certs_dir, *hostname, *pidfile, *cgi;
+const char *config_path, *certs_dir, *hostname, *pidfile;
 
 struct conf conf;
 
@@ -103,10 +103,9 @@ data_dir(void)
 }
 
 void
-load_local_cert(const char *hostname, const char *dir)
+load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 {
 	char *cert, *key;
-	struct vhost *h;
 
 	if (asprintf(&cert, "%s/%s.cert.pem", dir, hostname) == -1)
 		errx(1, "asprintf");
@@ -116,7 +115,6 @@ load_local_cert(const char *hostname, const char *dir)
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
 		gen_certificate(hostname, cert, key);
 
-	h = TAILQ_FIRST(&hosts);
 	h->cert = cert;
 	h->key = key;
 	h->domain = hostname;
@@ -351,7 +349,6 @@ free_config(void)
 		free((char*)h->cert);
 		free((char*)h->key);
 		free((char*)h->ocsp);
-		free((char*)h->cgi);
 		free((char*)h->entrypoint);
 
 		TAILQ_REMOVE(&hosts, h, vhosts);
@@ -423,7 +420,7 @@ usage(void)
 	fprintf(stderr,
 	    "Version: " GMID_STRING "\n"
 	    "Usage: %s [-fnv] [-c config] [-D macro=value] [-P pidfile]\n"
-	    "       %s [-6hVv] [-d certs-dir] [-H hostname] [-p port] [-x cgi] [dir]\n",
+	    "       %s [-6hVv] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
 	    getprogname(),
 	    getprogname());
 }
@@ -453,42 +450,10 @@ logger_init(void)
 	}
 }
 
-static int
-serve(int argc, char **argv, struct imsgbuf *ibuf)
+static void
+serve(void)
 {
-	char		 path[PATH_MAX];
-	int		 i, p[2];
-	struct vhost	*h;
-	struct location	*l;
-
-	if (config_path == NULL) {
-		if (hostname == NULL)
-			hostname = "localhost";
-		if (certs_dir == NULL)
-			certs_dir = data_dir();
-		load_local_cert(hostname, certs_dir);
-
-		h = TAILQ_FIRST(&hosts);
-		h->domain = "*";
-
-		l = TAILQ_FIRST(&h->locations);
-		l->auto_index = 1;
-		l->match = "*";
-
-		switch (argc) {
-		case 0:
-			l->dir = getcwd(path, sizeof(path));
-			break;
-		case 1:
-			l->dir = absolutify_path(argv[0]);
-			break;
-		default:
-			usage();
-			return 1;
-		}
-
-		log_notice(NULL, "serving %s on port %d", l->dir, conf.port);
-	}
+	int i, p[2];
 
 	/* setup tls before dropping privileges: we don't want user
 	 * to put private certs inside the chroot. */
@@ -512,10 +477,6 @@ serve(int argc, char **argv, struct imsgbuf *ibuf)
 			imsg_init(&servibuf[i], p[0]);
 		}
 	}
-
-	setproctitle("executor");
-	drop_priv();
-	_exit(executor_main(ibuf));
 }
 
 static int
@@ -547,23 +508,35 @@ write_pidfile(const char *pidfile)
 }
 
 static void
-setup_configless(int argc, char **argv, const char *cgi)
+setup_configless(const char *path)
 {
+	char p[PATH_MAX];
 	struct vhost	*host;
 	struct location	*loc;
 
+	if (hostname == NULL)
+		hostname = "localhost";
+	if (certs_dir == NULL)
+		certs_dir = data_dir();
+
 	host = xcalloc(1, sizeof(*host));
-	host->cgi = cgi;
 	TAILQ_INSERT_HEAD(&hosts, host, vhosts);
 
 	loc = xcalloc(1, sizeof(*loc));
 	loc->fcgi = -1;
 	TAILQ_INSERT_HEAD(&host->locations, loc, locations);
 
-	serve(argc, argv, NULL);
+	load_local_cert(host, hostname, certs_dir);
 
-	imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
-	imsg_flush(&logibuf);
+	host->domain = "*";
+	loc->auto_index = 1;
+	loc->match = "*";
+	if (path == NULL)
+		loc->dir = getcwd(p, sizeof(p));
+	else
+		loc->dir = absolutify_path(path);
+
+	log_notice(NULL, "serving %s on port %d", loc->dir, conf.port);
 }
 
 static int
@@ -581,8 +554,7 @@ parse_portno(const char *p)
 int
 main(int argc, char **argv)
 {
-	struct imsgbuf exibuf;
-	int ch, conftest = 0, configless = 0;
+	int i, ch, conftest = 0, configless = 0;
 	int pidfd, old_ipv6, old_port;
 
 	logger_init();
@@ -644,14 +616,6 @@ main(int argc, char **argv)
 			conf.verbose++;
 			break;
 
-		case 'x':
-			/* drop the starting / (if any) */
-			if (*optarg == '/')
-				optarg++;
-			cgi = optarg;
-			configless = 1;
-			break;
-
 		default:
 			usage();
 			return 1;
@@ -666,6 +630,9 @@ main(int argc, char **argv)
 		conf.prefork = 1;
 		conf.verbose++;
 	}
+
+	if (argc > 1 || (configless && argc != 0))
+		usage();
 
 	if (config_path != NULL && (argc > 0 || configless))
 		fatal("can't specify options in config mode.");
@@ -691,6 +658,8 @@ main(int argc, char **argv)
 
 	if (config_path != NULL)
 		parse_conf(config_path);
+	else
+		setup_configless(*argv);
 
 	sock4 = make_socket(conf.port, AF_INET);
 	sock6 = -1;
@@ -698,12 +667,6 @@ main(int argc, char **argv)
 		sock6 = make_socket(conf.port, AF_INET6);
 
 	signal(SIGPIPE, SIG_IGN);
-	signal(SIGCHLD, SIG_IGN);
-
-	if (configless) {
-		setup_configless(argc, argv, cgi);
-		return 0;
-	}
 
 	pidfd = write_pidfile(pidfile);
 
@@ -718,33 +681,19 @@ main(int argc, char **argv)
 
 	/* wait a sighup and reload the daemon */
 	for (;;) {
-		int p[2];
+		serve();
 
-		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
-		    PF_UNSPEC, p) == -1)
-			fatal("socketpair: %s", strerror(errno));
-
-		switch (fork()) {
-		case -1:
-			fatal("fork: %s", strerror(errno));
-		case 0:
-			close(p[0]);
-			imsg_init(&exibuf, p[1]);
-			_exit(serve(argc, argv, &exibuf));
-		}
-
-		close(p[1]);
-		imsg_init(&exibuf, p[0]);
-
-		if (!wait_signal())
+		if (!wait_signal() || configless)
 			break;
 
 		log_info(NULL, "reloading configuration %s", config_path);
 
-		/* close the executor (it'll close the servers too) */
-		imsg_compose(&exibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
-		imsg_flush(&exibuf);
-		close(p[0]);
+		/* close the servers */
+		for (i = 0; i < conf.prefork; ++i) {
+			imsg_compose(&servibuf[i], IMSG_QUIT, 0, 0, -1, NULL, 0);
+			imsg_flush(&servibuf[i]);
+			close(servibuf[i].fd);
+		}
 
 		old_ipv6 = conf.ipv6;
 		old_port = conf.port;

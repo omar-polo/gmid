@@ -31,13 +31,12 @@
 .Op Fl d Ar certs-dir
 .Op Fl H Ar hostname
 .Op Fl p Ar port
-.Op Fl x Ar cgi
 .Op Ar dir
 .Ek
 .Sh DESCRIPTION
 .Nm
 is a simple and minimal gemini server that can serve static files,
-execute CGI scripts and talk to FastCGI applications.
+talk to FastCGI applications and act as a gemini reverse proxy.
 It can run without a configuration file with a limited set of features
 available.
 .Pp
@@ -118,18 +117,6 @@ Verbose mode.
 Multiple
 .Fl v
 options increase the verbosity.
-.It Fl x Ar path
-Enable execution of
-.Sx CGI
-scripts.
-See the description of the
-.Ic cgi
-option in the
-.Sq Servers
-section below to learn how
-.Ar path
-is processed.
-Cannot be provided more than once.
 .It Ar dir
 The root directory to serve.
 By default the current working directory is assumed.
@@ -165,21 +152,6 @@ Response meta
 Serve the current directory
 .Bd -literal -offset indent
 $ gmid .
-.Ed
-.Pp
-To serve the directory
-.Pa docs
-and enable CGI scripts inside
-.Pa docs/cgi
-.Bd -literal -offset indent
-$ mkdir docs/cgi
-$ cat <<EOF > docs/cgi/hello
-#!/bin/sh
-printf "20 text/plain\er\en"
-echo "hello world"
-EOF
-$ chmod +x docs/cgi/hello
-$ gmid -x '/cgi/*' docs
 .Ed
 .Pp
 To run

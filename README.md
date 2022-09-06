@@ -16,7 +16,7 @@ featureful server.
  - IRI support (RFC3987)
  - automatic certificate generation for config-less mode
  - reverse proxying
- - CGI and FastCGI support
+ - FastCGI support
  - virtual hosts
  - location rules
  - event-based asynchronous I/O model
@@ -74,9 +74,6 @@ server "example.com" {
 
 	# lang for text/gemini files
 	lang "en"
-
-	# execute CGI scripts in /cgi/
-	cgi "/cgi/*"
 
 	# only for locations that matches /files/*
 	location "/files/*" {
@@ -140,6 +137,9 @@ to the `contrib` directory.
 
 
 ## Architecture/Security considerations
+
+**outdated: revisit for gmid 2.0**
+
 
 gmid is composed by four processes: the parent process, the logger,
 the listener and the executor.  The parent process is the only one

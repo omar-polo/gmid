@@ -117,9 +117,8 @@ typedef struct {
 
 %token	ALIAS AUTO
 %token	BLOCK
-%token	CA CERT CGI CHROOT CLIENT
+%token	CA CERT CHROOT CLIENT
 %token	DEFAULT
-%token	ENTRYPOINT ENV
 %token	FASTCGI FOR_HOST
 %token	INCLUDE INDEX IPV6
 %token	KEY
@@ -281,22 +280,6 @@ servopt		: ALIAS string {
 		| CERT string		{
 			only_once(host->cert, "cert");
 			host->cert = ensure_absolute_path($2);
-		}
-		| CGI string		{
-			only_once(host->cgi, "cgi");
-			/* drop the starting '/', if any */
-			if (*$2 == '/')
-				memmove($2, $2+1, strlen($2));
-			host->cgi = $2;
-		}
-		| ENTRYPOINT string {
-			only_once(host->entrypoint, "entrypoint");
-			while (*$2 == '/')
-				memmove($2, $2+1, strlen($2));
-			host->entrypoint = $2;
-		}
-		| ENV string '=' string {
-			add_param($2, $4, 1);
 		}
 		| KEY string		{
 			only_once(host->key, "key");
@@ -522,12 +505,9 @@ static const struct keyword {
 	{"block", BLOCK},
 	{"ca", CA},
 	{"cert", CERT},
-	{"cgi", CGI},
 	{"chroot", CHROOT},
 	{"client", CLIENT},
 	{"default", DEFAULT},
-	{"entrypoint", ENTRYPOINT},
-	{"env", ENV},
 	{"fastcgi", FASTCGI},
 	{"for-host", FOR_HOST},
 	{"include", INCLUDE},

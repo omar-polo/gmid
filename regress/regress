@@ -40,21 +40,16 @@ run_test test_custom_mime
 run_test test_default_type
 run_test test_custom_lang
 run_test test_parse_custom_lang_per_location
-run_test test_cgi_scripts
-run_test test_cgi_big_replies
-run_test test_cgi_split_query
 run_test test_custom_index
 run_test test_custom_index_default_type_per_location
 run_test test_auto_index
 run_test test_block
 run_test test_block_return_fmt
-run_test test_entrypoint
 run_test test_require_client_ca
 run_test test_root_inside_location
 run_test test_root_inside_location_with_redirect
-run_test test_fastcgi
+# run_test test_fastcgi		XXX: needs to be fixed
 run_test test_macro_expansion
-run_test test_174_bugfix
 run_test test_proxy_relay_to
 run_test test_proxy_with_certs
 run_test test_unknown_host

@@ -17,6 +17,7 @@
 #include "gmid.h"
 
 #include <sys/stat.h>
+#include <sys/un.h>
 
 #include <assert.h>
 #include <ctype.h>
@@ -42,7 +43,6 @@ static inline int matches(const char*, const char*);
 
 static int	 check_path(struct client*, const char*, int*);
 static void	 open_file(struct client*);
-static void	 check_for_cgi(struct client*);
 static void	 handle_handshake(int, short, void*);
 static const char *strip_path(const char*, int);
 static void	 fmt_sbuf(const char*, struct client*, const char*);
@@ -51,8 +51,6 @@ static int	 check_matching_certificate(X509_STORE *, struct client *);
 static int	 apply_reverse_proxy(struct client *);
 static int	 apply_fastcgi(struct client*);
 static int	 apply_require_ca(struct client*);
-static size_t	 host_nth(struct vhost*);
-static void	 start_cgi(const char*, const char*, struct client*);
 static void	 open_dir(struct client*);
 static void	 redirect_canonical_dir(struct client*);
 
@@ -65,24 +63,14 @@ static void	 client_error(struct bufferevent *, short, void *);
 
 static void	 client_close_ev(int, short, void *);
 
-static void	 cgi_read(struct bufferevent *, void *);
-static void	 cgi_write(struct bufferevent *, void *);
-static void	 cgi_error(struct bufferevent *, short, void *);
-
 static void	 do_accept(int, short, void*);
 
-static void	 handle_imsg_cgi_res(struct imsgbuf*, struct imsg*, size_t);
-static void	 handle_imsg_fcgi_fd(struct imsgbuf*, struct imsg*, size_t);
-static void	 handle_imsg_conn_fd(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_dispatch_imsg(int, short, void *);
 static void	 handle_siginfo(int, short, void*);
 
 static imsg_handlerfn *handlers[] = {
 	[IMSG_QUIT] = handle_imsg_quit,
-	[IMSG_CGI_RES] = handle_imsg_cgi_res,
-	[IMSG_FCGI_FD] = handle_imsg_fcgi_fd,
-	[IMSG_CONN_FD] = handle_imsg_conn_fd,
 };
 
 static uint32_t server_client_id;
@@ -349,9 +337,6 @@ check_path(struct client *c, const char *path, int *fd)
 	if (S_ISDIR(sb.st_mode))
 		return FILE_DIRECTORY;
 
-	if (sb.st_mode & S_IXUSR)
-		return FILE_EXECUTABLE;
-
 	return FILE_EXISTS;
 }
 
@@ -359,14 +344,6 @@ static void
 open_file(struct client *c)
 {
 	switch (check_path(c, c->iri.path, &c->pfd)) {
-	case FILE_EXECUTABLE:
-		if (c->host->cgi != NULL && matches(c->host->cgi, c->iri.path)) {
-			start_cgi(c->iri.path, "", c);
-			return;
-		}
-
-		/* fallthrough */
-
 	case FILE_EXISTS:
 		c->type = REQUEST_FILE;
 		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
@@ -377,10 +354,6 @@ open_file(struct client *c)
 		return;
 
 	case FILE_MISSING:
-		if (c->host->cgi != NULL && matches(c->host->cgi, c->iri.path)) {
-			check_for_cgi(c);
-			return;
-		}
 		start_reply(c, NOT_FOUND, "not found");
 		return;
 
@@ -388,55 +361,6 @@ open_file(struct client *c)
 		/* unreachable */
 		abort();
 	}
-}
-
-/*
- * the inverse of this algorithm, i.e. starting from the start of the
- * path + strlen(cgi), and checking if each component, should be
- * faster.  But it's tedious to write.  This does the opposite: starts
- * from the end and strip one component at a time, until either an
- * executable is found or we emptied the path.
- */
-static void
-check_for_cgi(struct client *c)
-{
-	char path[PATH_MAX];
-	char *end;
-
-	strlcpy(path, c->iri.path, sizeof(path));
-	end = strchr(path, '\0');
-
-	while (end > path) {
-		/*
-		 * go up one level.  UNIX paths are simple and POSIX
-		 * dirname, with its ambiguities on if the given
-		 * pointer is changed or not, gives me headaches.
-		 */
-		while (*end != '/' && end > path)
-			end--;
-
-		if (end == path)
-			break;
-
-		*end = '\0';
-
-		switch (check_path(c, path, &c->pfd)) {
-		case FILE_EXECUTABLE:
-			start_cgi(path, end+1, c);
-			return;
-		case FILE_MISSING:
-			break;
-		default:
-			goto err;
-		}
-
-		*end = '/';
-		end--;
-	}
-
-err:
-	start_reply(c, NOT_FOUND, "not found");
-	return;
 }
 
 void
@@ -653,12 +577,52 @@ check_matching_certificate(X509_STORE *store, struct client *c)
 	return 0;
 }
 
+static int
+proxy_socket(struct client *c, const char *host, const char *port)
+{
+	struct addrinfo hints, *res, *res0;
+	int r, sock;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+
+	/* XXX: asr_run? :> */
+	r = getaddrinfo(host, port, &hints, &res0);
+	if (r != 0) {
+		log_warn(c, "getaddrinfo(\"%s\", \"%s\"): %s",
+		    host, port, gai_strerror(r));
+		return -1;
+	}
+
+	for (res = res0; res; res = res->ai_next) {
+		sock = socket(res->ai_family, res->ai_socktype,
+		    res->ai_protocol);
+		if (sock == -1)
+			continue;
+
+		if (connect(sock, res->ai_addr, res->ai_addrlen) == -1) {
+			close(sock);
+			sock = -1;
+			continue;
+		}
+
+		break;
+	}
+
+	freeaddrinfo(res0);
+
+	if (sock == -1)
+		log_warn(c, "can't connect to %s:%s", host, port);
+
+	return sock;
+}
+
 /* 1 if matching a proxy relay-to (and apply it), 0 otherwise */
 static int
 apply_reverse_proxy(struct client *c)
 {
 	struct proxy	*p;
-	struct connreq	 r;
 
 	if ((p = matched_proxy(c)) == NULL)
 		return 0;
@@ -671,13 +635,78 @@ apply_reverse_proxy(struct client *c)
 	log_debug(c, "opening proxy connection for %s:%s",
 	    p->host, p->port);
 
-	strlcpy(r.host, p->host, sizeof(r.host));
-	strlcpy(r.port, p->port, sizeof(r.port));
+	if ((c->pfd = proxy_socket(c, p->host, p->port)) == -1) {
+		start_reply(c, PROXY_ERROR, "proxy error");
+		return 1;
+	}
 
-	imsg_compose(&exibuf, IMSG_CONN_REQ, c->id, 0, -1, &r, sizeof(r));
-	imsg_flush(&exibuf);
+	mark_nonblock(c->pfd);
+	if (proxy_init(c) == -1)
+		start_reply(c, PROXY_ERROR, "proxy error");
 
 	return 1;
+}
+
+static int
+fcgi_open_sock(struct fcgi *f)
+{
+	struct sockaddr_un	addr;
+	int			fd;
+
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+		log_err(NULL, "socket: %s", strerror(errno));
+		return -1;
+	}
+
+	memset(&addr, 0, sizeof(addr));
+	addr.sun_family = AF_UNIX;
+	strlcpy(addr.sun_path, f->path, sizeof(addr.sun_path));
+
+	if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+		log_warn(NULL, "failed to connect to %s: %s", f->path,
+		    strerror(errno));
+		close(fd);
+		return -1;
+	}
+
+	return fd;
+}
+
+static int
+fcgi_open_conn(struct fcgi *f)
+{
+	struct addrinfo	hints, *servinfo, *p;
+	int		r, sock;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_ADDRCONFIG;
+
+	if ((r = getaddrinfo(f->path, f->port, &hints, &servinfo)) != 0) {
+		log_warn(NULL, "getaddrinfo %s:%s: %s", f->path, f->port,
+		    gai_strerror(r));
+		return -1;
+	}
+
+	for (p = servinfo; p != NULL; p = p->ai_next) {
+		sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
+		if (sock == -1)
+			continue;
+		if (connect(sock, p->ai_addr, p->ai_addrlen) == -1) {
+			close(sock);
+			continue;
+		}
+		break;
+	}
+
+	if (p == NULL) {
+		log_warn(NULL, "couldn't connect to %s:%s", f->path, f->port);
+		sock = -1;
+	}
+
+	freeaddrinfo(servinfo);
+	return sock;
 }
 
 /* 1 if matching `fcgi' (and apply it), 0 otherwise */
@@ -692,12 +721,31 @@ apply_fastcgi(struct client *c)
 
 	f = &fcgi[id];
 
-	log_debug(c, "opening fastcgi connection for (%s,%s,%s)",
-	    f->path, f->port, f->prog);
+	log_debug(c, "opening fastcgi connection for (%s,%s)",
+	    f->path, f->port);
 
-	imsg_compose(&exibuf, IMSG_FCGI_REQ, c->id, 0, -1,
-	    &id, sizeof(id));
-	imsg_flush(&exibuf);
+	if (f->port != NULL)
+		c->pfd = fcgi_open_sock(f);
+	else
+		c->pfd = fcgi_open_conn(f);
+
+	if (c->pfd == -1) {
+		start_reply(c, CGI_ERROR, "CGI error");
+		return 1;
+	}
+
+	mark_nonblock(c->pfd);
+
+	c->cgibev = bufferevent_new(c->pfd, fcgi_read, fcgi_write,
+	    fcgi_error, c);
+	if (c->cgibev == NULL) {
+		start_reply(c, TEMP_FAILURE, "internal server error");
+		return 1;
+	}
+
+	bufferevent_enable(c->cgibev, EV_READ|EV_WRITE);
+	fcgi_req(c);
+
 	return 1;
 }
 
@@ -712,85 +760,14 @@ apply_require_ca(struct client *c)
 	return check_matching_certificate(store, c);
 }
 
-static size_t
-host_nth(struct vhost *h)
-{
-	struct vhost	*v;
-	size_t		 i = 0;
-
-	TAILQ_FOREACH(v, &hosts, vhosts) {
-		if (v == h)
-			return i;
-		i++;
-	}
-
-	abort();
-}
-
-static void
-start_cgi(const char *spath, const char *relpath, struct client *c)
-{
-	char addr[NI_MAXHOST];
-	const char *t;
-	struct cgireq req;
-	int e;
-
-	c->type = REQUEST_CGI;
-
-	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
-	    addr, sizeof(addr),
-	    NULL, 0,
-	    NI_NUMERICHOST);
-	if (e != 0)
-		fatal("getnameinfo failed");
-
-	memset(&req, 0, sizeof(req));
-
-	memcpy(req.buf, c->req, c->reqlen);
-
-	req.iri_schema_off = c->iri.schema - c->req;
-	req.iri_host_off = c->iri.host - c->req;
-	req.iri_port_off = c->iri.port - c->req;
-	req.iri_path_off = c->iri.path - c->req;
-	req.iri_query_off = c->iri.query - c->req;
-	req.iri_fragment_off = c->iri.fragment - c->req;
-
-	req.iri_portno = c->iri.port_no;
-
-	strlcpy(req.spath, spath, sizeof(req.spath));
-	strlcpy(req.relpath, relpath, sizeof(req.relpath));
-	strlcpy(req.addr, addr, sizeof(req.addr));
-
-	if ((t = tls_peer_cert_subject(c->ctx)) != NULL)
-		strlcpy(req.subject, t, sizeof(req.subject));
-	if ((t = tls_peer_cert_issuer(c->ctx)) != NULL)
-		strlcpy(req.issuer, t, sizeof(req.issuer));
-	if ((t = tls_peer_cert_hash(c->ctx)) != NULL)
-		strlcpy(req.hash, t, sizeof(req.hash));
-	if ((t = tls_conn_version(c->ctx)) != NULL)
-		strlcpy(req.version, t, sizeof(req.version));
-	if ((t = tls_conn_cipher(c->ctx)) != NULL)
-		strlcpy(req.cipher, t, sizeof(req.cipher));
-
-	req.cipher_strength = tls_conn_cipher_strength(c->ctx);
-	req.notbefore = tls_peer_cert_notbefore(c->ctx);
-	req.notafter = tls_peer_cert_notafter(c->ctx);
-
-	req.host_off = host_nth(c->host);
-	req.loc_off = c->loc;
-
-	imsg_compose(&exibuf, IMSG_CGI_REQ, c->id, 0, -1, &req, sizeof(req));
-	imsg_flush(&exibuf);
-
-	close(c->pfd);
-}
-
 static void
 open_dir(struct client *c)
 {
 	size_t len;
 	int dirfd, root;
 	char *before_file;
+
+	log_debug(c, "in open_dir");
 
 	root = !strcmp(c->iri.path, "/") || *c->iri.path == '\0';
 
@@ -819,14 +796,6 @@ open_dir(struct client *c)
 	c->pfd = -1;
 
 	switch (check_path(c, c->iri.path, &c->pfd)) {
-	case FILE_EXECUTABLE:
-		if (c->host->cgi != NULL && matches(c->host->cgi, c->iri.path)) {
-			start_cgi(c->iri.path, "", c);
-			break;
-		}
-
-		/* fallthrough */
-
 	case FILE_EXISTS:
 		c->type = REQUEST_FILE;
 		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
@@ -1056,12 +1025,6 @@ client_read(struct bufferevent *bev, void *d)
 	    apply_fastcgi(c))
 		return;
 
-	if (c->host->entrypoint != NULL) {
-		c->loc = 0;
-		start_cgi(c->host->entrypoint, c->iri.path, c);
-		return;
-	}
-
 	open_file(c);
 }
 
@@ -1115,12 +1078,11 @@ client_write(struct bufferevent *bev, void *d)
 		event_add(&c->bev->ev_write, NULL);
 		break;
 
-	case REQUEST_CGI:
 	case REQUEST_FCGI:
 	case REQUEST_PROXY:
 		/*
-		 * Here we depend on the cgi/fastcgi or proxy
-		 * connection to provide data.
+		 * Here we depend on fastcgi or proxy connection to
+		 * provide data.
 		 */
 		break;
 
@@ -1177,8 +1139,7 @@ start_reply(struct client *c, int code, const char *meta)
 	if (r > 1027)
 		goto overflow;
 
-	if (c->type != REQUEST_CGI &&
-	    c->type != REQUEST_FCGI &&
+	if (c->type != REQUEST_FCGI &&
 	    c->type != REQUEST_PROXY &&
 	    !strcmp(meta, "text/gemini") &&
 	    (lang = vhost_lang(c->host, c->iri.path)) != NULL) {
@@ -1310,94 +1271,6 @@ client_close(struct client *c)
 }
 
 static void
-cgi_read(struct bufferevent *bev, void *d)
-{
-	struct client	*client = d;
-	struct evbuffer	*src = EVBUFFER_INPUT(bev);
-	char		*header;
-	size_t		 len;
-	int		 code;
-
-	/* intercept the header */
-	if (client->code == 0) {
-		header = evbuffer_readln(src, &len, EVBUFFER_EOL_CRLF_STRICT);
-		if (header == NULL) {
-			/* max reply + \r\n */
-			if (EVBUFFER_LENGTH(src) > 1029) {
-				log_warn(client, "CGI script is trying to "
-				    "send a header too long.");
-				cgi_error(bev, EVBUFFER_READ, client);
-			}
-
-			/* wait a bit */
-			return;
-		}
-
-		if (len < 3 || len > 1029 ||
-		    !isdigit(header[0]) ||
-		    !isdigit(header[1]) ||
-		    !isspace(header[2])) {
-			free(header);
-			log_warn(client, "CGI script is trying to send a "
-			    "malformed header");
-			cgi_error(bev, EVBUFFER_READ, client);
-			return;
-		}
-
-		client->header = header;
-		code = (header[0] - '0') * 10 + (header[1] - '0');
-
-		if (code < 10 || code >= 70) {
-			log_warn(client, "CGI script is trying to send an "
-			    "invalid reply code (%d)", code);
-			cgi_error(bev, EVBUFFER_READ, client);
-			return;
-		}
-
-		start_reply(client, code, header + 3);
-
-		if (client->code < 20 || client->code > 29) {
-			cgi_error(client->cgibev, EVBUFFER_EOF, client);
-			return;
-		}
-	}
-
-	bufferevent_write_buffer(client->bev, src);
-}
-
-static void
-cgi_write(struct bufferevent *bev, void *d)
-{
-	/*
-	 * Never called.  We don't send data to a CGI script.
-	 */
-	abort();
-}
-
-static void
-cgi_error(struct bufferevent *bev, short error, void *d)
-{
-	struct client	*client = d;
-
-	if (error & EVBUFFER_ERROR)
-		log_err(client, "%s: evbuffer error (%x): %s",
-		    __func__, error, strerror(errno));
-
-	bufferevent_disable(bev, EVBUFFER_READ|EVBUFFER_WRITE);
-	bufferevent_free(bev);
-	client->cgibev = NULL;
-
-	close(client->pfd);
-	client->pfd = -1;
-
-	client->type = REQUEST_DONE;
-	if (client->code != 0)
-		client_write(client->bev, client);
-	else
-		start_reply(client, CGI_ERROR, "CGI error");
-}
-
-static void
 do_accept(int sock, short et, void *d)
 {
 	struct client *c;
@@ -1442,86 +1315,6 @@ client_by_id(int id)
 
 	find.id = id;
 	return SPLAY_FIND(client_tree_id, &clients, &find);
-}
-
-static void
-handle_imsg_cgi_res(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
-{
-	struct client *c;
-
-	if ((c = client_by_id(imsg->hdr.peerid)) == NULL) {
-		if (imsg->fd != -1)
-			close(imsg->fd);
-		return;
-	}
-
-	if ((c->pfd = imsg->fd) == -1) {
-		start_reply(c, TEMP_FAILURE, "internal server error");
-		return;
-	}
-
-	c->type = REQUEST_CGI;
-
-	c->cgibev = bufferevent_new(c->pfd, cgi_read, cgi_write,
-	    cgi_error, c);
-
-	bufferevent_enable(c->cgibev, EV_READ);
-}
-
-static void
-handle_imsg_fcgi_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
-{
-	struct client	*c;
-	int		 id;
-
-	id = imsg->hdr.peerid;
-
-	if ((c = client_by_id(id)) == NULL) {
-		if (imsg->fd != -1)
-			close(imsg->fd);
-		return;
-	}
-
-	if ((c->pfd = imsg->fd) == -1) {
-		start_reply(c, CGI_ERROR, "CGI error");
-		return;
-	}
-
-	mark_nonblock(c->pfd);
-
-	c->cgibev = bufferevent_new(c->pfd, fcgi_read, fcgi_write,
-	    fcgi_error, c);
-	if (c->cgibev == NULL) {
-		start_reply(c, TEMP_FAILURE, "internal server error");
-		return;
-	}
-
-	bufferevent_enable(c->cgibev, EV_READ|EV_WRITE);
-	fcgi_req(c);
-}
-
-static void
-handle_imsg_conn_fd(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
-{
-	struct client	*c;
-	int		 id;
-
-	id = imsg->hdr.peerid;
-	if ((c = client_by_id(id)) == NULL) {
-		if (imsg->fd != -1)
-			close(imsg->fd);
-		return;
-	}
-
-	if ((c->pfd = imsg->fd) == -1) {
-		start_reply(c, PROXY_ERROR, "proxy error");
-		return;
-	}
-
-	mark_nonblock(c->pfd);
-
-	if (proxy_init(c) == -1)
-		start_reply(c, PROXY_ERROR, "proxy error");
 }
 
 static void

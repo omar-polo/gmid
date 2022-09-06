@@ -63,7 +63,6 @@ COMPATS =	compat/err.c \
 		compat/vasprintf.c
 
 GMID_SRCS =	dirs.c \
-		ex.c \
 		fcgi.c \
 		gmid.c \
 		iri.c \
