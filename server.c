@@ -1367,8 +1367,11 @@ loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 		event_add(&e6, NULL);
 	}
 
-	event_set(&imsgev, ibuf->fd, EV_READ | EV_PERSIST, handle_dispatch_imsg, ibuf);
-	event_add(&imsgev, NULL);
+	if (ibuf) {
+		event_set(&imsgev, ibuf->fd, EV_READ | EV_PERSIST,
+		    handle_dispatch_imsg, ibuf);
+		event_add(&imsgev, NULL);
+	}
 
 #ifdef SIGINFO
 	has_siginfo = 1;

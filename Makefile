@@ -78,6 +78,21 @@ GMID_SRCS =	dirs.c \
 
 GMID_OBJS =	${GMID_SRCS:.c=.o} ${COBJS}
 
+GE_SRCS =	dirs.c \
+		fcgi.c \
+		ge.c \
+		iri.c \
+		log.c \
+		mime.c \
+		proxy.c \
+		puny.c \
+		sandbox.c \
+		server.c \
+		utf8.c \
+		utils.c
+
+GE_OBJS =	${GE_SRCS:.c=.o} ${COBJS}
+
 GG_SRCS =	gg.c \
 		iri.c \
 		utf8.c
@@ -88,6 +103,7 @@ SRCS =		gmid.h \
 		landlock_shim.h \
 		parse.y \
 		${GMID_SRCS} \
+		${GE_SRCS} \
 		${GG_SRCS}
 
 REGRESSFILES =	regress/Makefile \
@@ -142,7 +158,7 @@ DISTFILES =	${EXTRAS} \
 
 DISTNAME =	gmid-${VERSION}
 
-all: Makefile.local gmid gg
+all: Makefile.local gmid ge gg
 .PHONY: all static clean cleanall test regress install
 
 Makefile.local config.h: configure ${TESTSRCS}
@@ -158,15 +174,19 @@ y.tab.c: parse.y
 gmid: ${GMID_OBJS}
 	${CC} ${GMID_OBJS} -o $@ ${LDFLAGS}
 
+ge: ${GE_OBJS}
+	${CC} ${GE_OBJS} -o $@ ${LDFLAGS}
+
 gg: ${GG_OBJS}
 	${CC} ${GG_OBJS} -o $@ ${LDFLAGS}
 
-static: ${GMID_OBJS} ${GG_OBJS}
+static: ${GMID_OBJS} ${GE_OBJS} ${GG_OBJS}
 	${CC} ${GMID_OBJS} -o gmid ${LDFLAGS} ${STATIC}
+	${CC} ${GG_OBJS} -o ge ${LDFLAGS} ${STATIC}
 	${CC} ${GG_OBJS} -o gg ${LDFLAGS} ${STATIC}
 
 clean:
-	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid gg
+	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid ge gg
 	rm -f compile_flags.txt
 	${MAKE} -C regress clean
 
@@ -185,6 +205,7 @@ install: gmid gg
 	${INSTALL_PROGRAM} gg ${DESTDIR}${BINDIR}
 	${INSTALL_MAN} gmid.1 ${DESTDIR}${MANDIR}/man1
 	${INSTALL_MAN} gmid.conf.5 ${DESTDIR}${MANDIR}/man5
+	${INSTALL_MAN} ge.1 ${DESTDIR}${MANDIR}/man1
 	${INSTALL_MAN} gg.1 ${DESTDIR}${MANDIR}/man1
 
 uninstall:

@@ -1,0 +1,87 @@
+.\" Copyright (c) 2022 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.Dd September 7, 2022
+.Dt GE 1
+.Os
+.Sh NAME
+.Nm ge
+.Nd export a directory over Gemini
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Fl hV
+.Op Fl d Ar certs-dir
+.Op Fl H Ar hostname
+.Op Fl p Ar port
+.Op Ar directory
+.Ek
+.Sh DESCRIPTION
+.Nm
+exports the given
+.Ar directory
+over the Gemini protocol.
+It's intended to be used interactively mostly for testing purposes,
+for a full-fledged daemon look for
+.Xr gmid 8 .
+.Pp
+The arguments are as follows:
+.Bl -tag -width Ds
+.It Fl d Ar certs-path
+Directory where certificates are stored.
+By default is
+.Pa $XDG_DATA_HOME/gmid ,
+i.e.\&
+.Pa ~/.local/share/gmid .
+.It Fl H Ar hostname
+The
+.Ar hostname
+to use,
+.Ar localhost
+by default.
+Certificates for the given
+.Ar hostname
+are searched inside the
+.Ar certs-dir
+specified with the
+.Fl d
+option.
+The certificate files are named
+.Ar hostname Ns .pem
+and
+.Ar hostname Ns .key
+and are implicitly generated if not found.
+.It Fl h , Fl -help
+Print the usage and exit.
+.It Fl p Ar port
+The port to bind to, 1965 by default.
+.It Fl V , Fl -version
+Print the version and exit.
+.It Ar directory
+The root directory to serve, or the current working directory if not
+specified.
+.El
+.Sh SEE ALSO
+.Xr gmid 8
+.Sh ACKNOWLEDGEMENTS
+.Nm
+uses the
+.Dq Flexible and Economical
+UTF-8 decoder written by
+.An Bjoern Hoehrmann .
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+program was written by
+.An Omar Polo Aq Mt op@omarpolo.com .
