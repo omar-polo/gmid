@@ -1,3 +1,12 @@
+2022-09-07  Omar Polo  <op@omarpolo.com>
+
+	* ge.c (main): add `ge': small program to quickly export a directory over Gemini.
+
+2022-09-06  Omar Polo  <op@omarpolo.com>
+
+	* server.c: drop CGI support.
+	* sandbox.c: optionally disable the sandbox on non-OpenBSD when fastcgi or proxy are used.  New sockets can't be opened under FreeBSD' capsicum(4) and a huge pain in the arse under Linux' seccomp/landlock.  Patches welcome!
+
 2022-07-07  Omar Polo  <op@omarpolo.com>
 
 	* log.c (logger_main): fix timestamps in log files.  Reported by Karl Jeacle, thanks!
