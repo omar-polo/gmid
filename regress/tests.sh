@@ -8,10 +8,10 @@ test_iri() {
 	./iri_test
 }
 
-test_configless_mode() {
+test_ge() {
 	dont_check_server_alive=yes
 
-	$gmid -p $port -H localhost -d . testdata &
+	$ge -p $port -d . testdata &
 	pid=$!
 	sleep 1
 

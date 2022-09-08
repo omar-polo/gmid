@@ -2,6 +2,7 @@ ran_no=0
 failed_no=0
 failed=
 
+ge="./../ge"
 gg="./../gg"
 gmid="./../gmid"
 current_test=
