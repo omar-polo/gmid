@@ -11,8 +11,8 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd $Mdocdate: April 7 2022$
-.Dt GMID 1
+.Dd September 8, 2022
+.Dt GMID 8
 .Os
 .Sh NAME
 .Nm gmid
@@ -20,18 +20,10 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl fnv
+.Op Fl fhnVv
 .Op Fl c Ar config
 .Op Fl D Ar macro Ns = Ns Ar value
 .Op Fl P Ar pidfile
-.Ek
-.Nm
-.Bk -words
-.Op Fl 6hVv
-.Op Fl d Ar certs-dir
-.Op Fl H Ar hostname
-.Op Fl p Ar port
-.Op Ar dir
 .Ek
 .Sh DESCRIPTION
 .Nm
@@ -47,7 +39,9 @@ rereads the configuration file when it receives
 The options are as follows:
 .Bl -tag -width 14m
 .It Fl c Ar config
-Specify the configuration file.
+Specifies the configuration file.
+The default is
+.Pa /etc/gmid.conf .
 .It Fl D Ar macro Ns = Ns Ar value
 Define
 .Ar macro
@@ -59,6 +53,8 @@ Overrides the definition of
 in the config file if present.
 .It Fl f
 Stays and logs on the foreground.
+.It Fl h , Fl -help
+Print the usage and exit.
 .It Fl n
 Check that the configuration is valid, but don't start the server.
 If specified two or more time, dump the configuration in addition to
@@ -70,46 +66,6 @@ will also act as lock: if another process is holding a lock on that
 file,
 .Nm
 will refuse to start.
-.El
-.Pp
-If no configuration file is given,
-.Nm
-runs in
-.Dq config-less mode
-.Pq i.e. runs in the foreground to serve a directory from the shell
-and looks for the following options
-.Bl -tag -width 14m
-.It Fl 6
-Enable IPv6.
-.It Fl d Ar certs-path
-Directory where certificates for the config-less mode are stored.
-By default it is
-.Pa $XDG_DATA_HOME/gmid ,
-i.e.
-.Pa ~/.local/share/gmid .
-.It Fl H Ar hostname
-The hostname
-.Po
-.Ar localhost
-by default
-.Pc .
-Certificates for the given
-.Ar hostname
-are searched inside the
-.Ar certs-dir
-directory given with the
-.Fl d
-option.
-They have the form
-.Pa hostname.cert.pem
-and
-.Pa hostname.key.pem .
-If a certificate or a key doesn't exist for a given hostname, they
-will be generated automatically.
-.It Fl h , Fl -help
-Print the usage and exit.
-.It Fl p Ar port
-The port to listen on, by default 1965.
 .It Fl V , Fl -version
 Print the version and exit.
 .It Fl v
@@ -117,9 +73,6 @@ Verbose mode.
 Multiple
 .Fl v
 options increase the verbosity.
-.It Ar dir
-The root directory to serve.
-By default the current working directory is assumed.
 .El
 .Sh LOGGING
 Messages and requests are logged by
@@ -149,14 +102,9 @@ Response status
 Response meta
 .El
 .Sh EXAMPLES
-Serve the current directory
-.Bd -literal -offset indent
-$ gmid .
-.Ed
-.Pp
 To run
 .Nm
-as a deamon a configuration file and a X.509 certificate must be provided.
+a configuration file and a X.509 certificate must be provided.
 A self-signed certificate, which are commonly used in the Geminispace,
 can be generated using for e.g.\&
 .Xr openssl 1 :

@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd $Mdocdate: April 7 2022$
+.Dd September 8, 2022
 .Dt GMID.CONF 5
 .Os
 .Sh NAME
@@ -20,7 +20,7 @@
 .Sh DESCRIPTION
 .Nm
 is the configuration file format for the
-.Xr gmid 1
+.Xr gmid 8
 Gemini server.
 .Pp
 The configuration file is divided into three sections:
@@ -209,89 +209,6 @@ Path to the certificate to use for this server.
 .Ar file
 should contain a PEM encoded certificate.
 This option is mandatory.
-.It Ic cgi Ar path
-Execute
-.Sx CGI
-scripts that matches
-.Ar path
-using shell globbing rules.
-.Pp
-The CGI scripts are executed in the directory they reside and inherit
-the environment from
-.Nm gmid
-with these additional variables set:
-.Bl -tag -width 24m
-.It Ev GATEWAY_INTERFACE
-.Dq CGI/1.1
-.It Ev GEMINI_DOCUMENT_ROOT
-The root directory of the virtual host.
-.It Ev GEMINI_SCRIPT_FILENAME
-Full path to the CGI script being executed.
-.It Ev GEMINI_URL
-The full IRI of the request.
-.It Ev GEMINI_URL_PATH
-The path of the request.
-.It Ev PATH_INFO
-The portion of the requested path that is derived from the the IRI
-path hierarchy following the part that identifies the script itself.
-Can be unset.
-.It Ev PATH_TRANSLATED
-Present if and only if
-.Ev PATH_INFO
-is set.
-It represent the translation of the
-.Ev PATH_INFO .
-.Nm gmid
-builds this by appending the
-.Ev PATH_INFO
-to the virtual host directory root.
-.It Ev QUERY_STRING
-The decoded query string.
-.It Ev REMOTE_ADDR , Ev REMOTE_HOST
-Textual representation of the client IP.
-.It Ev REQUEST_METHOD
-This is present only for RFC3875 (CGI) compliance.
-It's always set to the empty string.
-.It Ev SCRIPT_NAME
-The part of the
-.Ev GEMINI_URL_PATH
-that identifies the current CGI script.
-.It Ev SERVER_NAME
-The name of the server
-.It Ev SERVER_PORT
-The port the server is listening on.
-.It Ev SERVER_PROTOCOL
-.Dq GEMINI
-.It Ev SERVER_SOFTWARE
-The name and version of the server, i.e.
-.Dq gmid/1.8.4
-.It Ev AUTH_TYPE
-The string "Certificate" if the client used a certificate, otherwise
-unset.
-.It Ev REMOTE_USER
-The subject of the client certificate if provided, otherwise unset.
-.It Ev TLS_CLIENT_ISSUER
-The is the issuer of the client certificate if provided, otherwise
-unset.
-.It Ev TLS_CLIENT_HASH
-The hash of the client certificate if provided, otherwise unset.
-The format is
-.Dq ALGO:HASH .
-.It Ev TLS_VERSION
-The TLS version negotiated with the peer.
-.It Ev TLS_CIPHER
-The cipher suite negotiated with the peer.
-.It Ev TLS_CIPHER_STRENGTH
-The strength in bits for the symmetric cipher that is being used with
-the peer.
-.It Ev TLS_CLIENT_NOT_AFTER
-The time corresponding to the end of the validity period of the peer
-certificate in the ISO 8601 format
-.Pq e.g. Dq 2021-02-07T20:17:41Z .
-.It Ev TLS_CLIENT_NOT_BEFORE
-The time corresponding to the start of the validity period of the peer
-certificate in the ISO 8601 format.
-.El
 .It Ic default type Ar string
 Set the default media type that is used if the media type for a
 specified extension is not found.
@@ -299,21 +216,6 @@ If not specified, the
 .Ic default type
 is set to
 .Dq application/octet-stream .
-.It Ic entrypoint Ar path
-Handle all the requests for the current virtual host using the
-.Sx CGI
-script at
-.Ar path ,
-relative to the current document root.
-.It Ic env Ar name Cm = Ar value
-Set the environment variable
-.Ar name
-to
-.Ar value
-when executing CGI scripts.
-Can be provided more than once.
-.\" don't document the "spawn <prog>" form because it probably won't
-.\" be kept.
 .It Ic fastcgi Oo Ic tcp Oc Ar socket Oo Cm port Ar port Oc
 Enable
 .Sx FastCGI
@@ -363,8 +265,7 @@ A
 .Ic location
 section may include most of the server configuration rules
 except
-.Ic alias , Ic cert , Ic cgi , Ic entrypoint , Ic env , Ic key ,
-.Ic location , Ic param No and Ic proxy .
+.Ic alias , Ic cert , Ic key , Ic location , Ic param No and Ic proxy .
 .It Ic log Ar bool
 Enable or disable the logging for the current server or location block.
 .It Ic param Ar name Cm = Ar value
@@ -373,47 +274,76 @@ Set the param
 to
 .Ar value
 for FastCGI.
-By default the following variables
-.Pq parameters
-are sent, and carry the same semantics as with CGI:
-.Pp
-.Bl -bullet -compact
-.It
-GATEWAY_INTERFACE
-.It
-GEMINI_URL_PATH
-.It
-QUERY_STRING
-.It
-REMOTE_ADDR
-.It
-REMOTE_HOST
-.It
-REQUEST_METHOD
-.It
-SERVER_NAME
-.It
-SERVER_PROTOCOL
-.It
-SERVER_SOFTWARE
-.It
-AUTH_TYPE
-.It
-REMOTE_USER
-.It
-TLS_CLIENT_ISSUER
-.It
-TLS_CLIENT_HASH
-.It
-TLS_VERSION
-.It
-TLS_CIPHER
-.It
-TLS_CIPHER_STRENGTH
-.It
-TLS_CLIENT_NOT_BEFORE
-.It
-TLS_CLIENT_NOT_AFTER
+By default the following parameters are defined:
+.Bl -tag -width 24m
+.It Ev GATEWAY_INTERFACE
+.Dq CGI/1.1
+.It Ev GEMINI_DOCUMENT_ROOT
+The root directory of the virtual host.
+.It Ev GEMINI_SCRIPT_FILENAME
+Full path to the FastCGI script being executed.
+.It Ev GEMINI_URL
+The full IRI of the request.
+.It Ev GEMINI_URL_PATH
+The path of the request.
+.It Ev PATH_INFO
+The portion of the requested path that is derived from the the IRI
+path hierarchy following the part that identifies the script itself.
+Can be unset.
+.It Ev PATH_TRANSLATED
+Present if and only if
+.Ev PATH_INFO
+is set.
+It represent the translation of the
+.Ev PATH_INFO .
+.Nm gmid
+builds this by appending the
+.Ev PATH_INFO
+to the virtual host directory root.
+.It Ev QUERY_STRING
+The decoded query string.
+.It Ev REMOTE_ADDR , Ev REMOTE_HOST
+Textual representation of the client IP.
+.It Ev REQUEST_METHOD
+This is present only for RFC3875 (CGI) compliance.
+It's always set to the empty string.
+.It Ev SCRIPT_NAME
+The virtual URI path to the script.
+.It Ev SERVER_NAME
+The name of the server
+.It Ev SERVER_PORT
+The port the server is listening on.
+.It Ev SERVER_PROTOCOL
+.Dq GEMINI
+.It Ev SERVER_SOFTWARE
+The name and version of the server, i.e.
+.Dq gmid/1.8.4
+.It Ev AUTH_TYPE
+The string "Certificate" if the client used a certificate, otherwise
+unset.
+.It Ev REMOTE_USER
+The subject of the client certificate if provided, otherwise unset.
+.It Ev TLS_CLIENT_ISSUER
+The is the issuer of the client certificate if provided, otherwise
+unset.
+.It Ev TLS_CLIENT_HASH
+The hash of the client certificate if provided, otherwise unset.
+The format is
+.Dq ALGO:HASH .
+.It Ev TLS_VERSION
+The TLS version negotiated with the peer.
+.It Ev TLS_CIPHER
+The cipher suite negotiated with the peer.
+.It Ev TLS_CIPHER_STRENGTH
+The strength in bits for the symmetric cipher that is being used with
+the peer.
+.It Ev TLS_CLIENT_NOT_AFTER
+The time corresponding to the end of the validity period of the peer
+certificate in the ISO 8601 format
+.Pq e.g. Dq 2021-02-07T20:17:41Z .
+.It Ev TLS_CLIENT_NOT_BEFORE
+The time corresponding to the start of the validity period of the peer
+certificate in the ISO 8601 format.
 .El
 .It Ic ocsp Ar file
 Specify an OCSP response to be stapled during TLS handshakes
@@ -588,9 +518,6 @@ server "example.it" {
 	key  "/etc/ssl/private/example.it.key"
 	root "/var/gemini/example.it"
 
-	# execute cgi scripts inside "cgi-bin"
-	cgi  "/cgi-bin/*"
-
 	# set the language for text/gemini files
 	lang "it"
 }
@@ -623,7 +550,7 @@ server "example.com" {
 }
 .Ed
 .Sh SEE ALSO
-.Xr gmid 1 ,
+.Xr gmid 8 ,
 .Xr slowcgi 8
 .Sh AUTHORS
 .An -nosplit
