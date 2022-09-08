@@ -27,7 +27,7 @@
 #include <signal.h>
 #include <string.h>
 
-static const char	*opts = "6c:D:d:fH:hnP:p:Vvx:";
+static const char	*opts = "c:D:fhnP:Vv";
 
 static const struct option longopts[] = {
 	{"help",	no_argument,		NULL,	'h'},
@@ -43,7 +43,8 @@ int sock4, sock6;
 
 struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
 
-const char *config_path, *certs_dir, *hostname, *pidfile;
+const char *config_path = "/etc/gmid.conf";
+const char *pidfile;
 
 struct conf conf;
 
@@ -54,70 +55,6 @@ static void
 dummy_handler(int signo)
 {
 	return;
-}
-
-/* wrapper around dirname(3).  dn must be PATH_MAX+1 at least. */
-static void
-pdirname(const char *path, char *dn)
-{
-	char	 p[PATH_MAX+1];
-	char	*t;
-
-	strlcpy(p, path, sizeof(p));
-	t = dirname(p);
-	memmove(dn, t, strlen(t)+1);
-}
-
-static void
-mkdirs(const char *path, mode_t mode)
-{
-	char	dname[PATH_MAX+1];
-
-	pdirname(path, dname);
-	if (!strcmp(dname, "/"))
-		return;
-	mkdirs(dname, mode);
-	if (mkdir(path, mode) != 0 && errno != EEXIST)
-		fatal("can't mkdir %s: %s", path, strerror(errno));
-}
-
-/* $XDG_DATA_HOME/gmid */
-char *
-data_dir(void)
-{
-	const char *home, *xdg;
-	char *t;
-
-	if ((xdg = getenv("XDG_DATA_HOME")) == NULL) {
-		if ((home = getenv("HOME")) == NULL)
-			errx(1, "XDG_DATA_HOME and HOME both empty");
-		if (asprintf(&t, "%s/.local/share/gmid", home) == -1)
-			err(1, "asprintf");
-	} else {
-		if (asprintf(&t, "%s/gmid", xdg) == -1)
-			err(1, "asprintf");
-	}
-
-	mkdirs(t, 0755);
-	return t;
-}
-
-void
-load_local_cert(struct vhost *h, const char *hostname, const char *dir)
-{
-	char *cert, *key;
-
-	if (asprintf(&cert, "%s/%s.cert.pem", dir, hostname) == -1)
-		errx(1, "asprintf");
-	if (asprintf(&key, "%s/%s.key.pem", dir, hostname) == -1)
-		errx(1, "asprintf");
-
-	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
-		gen_certificate(hostname, cert, key);
-
-	h->cert = cert;
-	h->key = key;
-	h->domain = hostname;
 }
 
 void
@@ -419,9 +356,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "Version: " GMID_STRING "\n"
-	    "Usage: %s [-fnv] [-c config] [-D macro=value] [-P pidfile]\n"
-	    "       %s [-6hVv] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
-	    getprogname(),
+	    "Usage: %s [-fnv] [-c config] [-D macro=value] [-P pidfile]\n",
 	    getprogname());
 }
 
@@ -507,54 +442,10 @@ write_pidfile(const char *pidfile)
 	return fd;
 }
 
-static void
-setup_configless(const char *path)
-{
-	char p[PATH_MAX];
-	struct vhost	*host;
-	struct location	*loc;
-
-	if (hostname == NULL)
-		hostname = "localhost";
-	if (certs_dir == NULL)
-		certs_dir = data_dir();
-
-	host = xcalloc(1, sizeof(*host));
-	TAILQ_INSERT_HEAD(&hosts, host, vhosts);
-
-	loc = xcalloc(1, sizeof(*loc));
-	loc->fcgi = -1;
-	TAILQ_INSERT_HEAD(&host->locations, loc, locations);
-
-	load_local_cert(host, hostname, certs_dir);
-
-	host->domain = "*";
-	loc->auto_index = 1;
-	loc->match = "*";
-	if (path == NULL)
-		loc->dir = getcwd(p, sizeof(p));
-	else
-		loc->dir = absolutify_path(path);
-
-	log_notice(NULL, "serving %s on port %d", loc->dir, conf.port);
-}
-
-static int
-parse_portno(const char *p)
-{
-	const char *errstr;
-	int n;
-
-	n = strtonum(p, 0, UINT16_MAX, &errstr);
-	if (errstr != NULL)
-		yyerror("port number is %s: %s", errstr, p);
-	return n;
-}
-
 int
 main(int argc, char **argv)
 {
-	int i, ch, conftest = 0, configless = 0;
+	int i, ch, conftest = 0;
 	int pidfd, old_ipv6, old_port;
 
 	logger_init();
@@ -562,11 +453,6 @@ main(int argc, char **argv)
 
 	while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 		switch (ch) {
-		case '6':
-			conf.ipv6 = 1;
-			configless = 1;
-			break;
-
 		case 'c':
 			config_path = absolutify_path(optarg);
 			break;
@@ -577,18 +463,8 @@ main(int argc, char **argv)
 				    optarg);
 			break;
 
-		case 'd':
-			certs_dir = optarg;
-			configless = 1;
-			break;
-
 		case 'f':
 			conf.foreground = 1;
-			break;
-
-		case 'H':
-			hostname = optarg;
-			configless = 1;
 			break;
 
 		case 'h':
@@ -601,11 +477,6 @@ main(int argc, char **argv)
 
 		case 'P':
 			pidfile = optarg;
-			break;
-
-		case 'p':
-			conf.port = parse_portno(optarg);
-			configless = 1;
 			break;
 
 		case 'V':
@@ -624,30 +495,19 @@ main(int argc, char **argv)
 	argc -= optind;
 	argv += optind;
 
-	if (config_path == NULL) {
-		configless = 1;
-		conf.foreground = 1;
-		conf.prefork = 1;
-		conf.verbose++;
-	}
-
-	if (argc > 1 || (configless && argc != 0))
+	if (argc != 0)
 		usage();
 
-	if (config_path != NULL && (argc > 0 || configless))
-		fatal("can't specify options in config mode.");
+	parse_conf(config_path);
 
 	if (conftest) {
-		if (config_path == NULL)
-			fatal("missing configuration");
-		parse_conf(config_path);
 		fprintf(stderr, "config OK\n");
 		if (conftest > 1)
 			print_conf();
 		return 0;
 	}
 
-	if (!conf.foreground && !configless) {
+	if (!conf.foreground) {
 		/* log to syslog */
 		imsg_compose(&logibuf, IMSG_LOG_TYPE, 0, 0, -1, NULL, 0);
 		imsg_flush(&logibuf);
@@ -655,11 +515,6 @@ main(int argc, char **argv)
 		if (daemon(1, 1) == -1)
 			fatal("daemon: %s", strerror(errno));
 	}
-
-	if (config_path != NULL)
-		parse_conf(config_path);
-	else
-		setup_configless(*argv);
 
 	sock4 = make_socket(conf.port, AF_INET);
 	sock6 = -1;
@@ -683,7 +538,7 @@ main(int argc, char **argv)
 	for (;;) {
 		serve();
 
-		if (!wait_signal() || configless)
+		if (!wait_signal())
 			break;
 
 		log_info(NULL, "reloading configuration %s", config_path);
