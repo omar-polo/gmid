@@ -417,6 +417,14 @@ if [ ${HAVE_VASPRINTF} -eq 0 ]; then
 	echo "extern	int	 vasprintf(char**, const char*, va_list);"
 	COBJS="${COBJS} compat/vasprintf.o"
 fi
+
+cat <<__HEREDOC__
+
+#ifndef __dead
+#define __dead __attribute__((noreturn))
+#endif
+__HEREDOC__
+
 echo "file config.h: written" 1>&2
 echo "file config.h: written" 1>&3
 
