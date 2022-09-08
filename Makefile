@@ -132,8 +132,9 @@ EXTRAS =	ChangeLog \
 		README.md \
 		configure \
 		configure.local.example \
+		ge.1 \
 		gg.1 \
-		gmid.1 \
+		gmid.8 \
 		gmid.conf.5
 
 CONTRIB =	contrib/Dockerfile \
@@ -197,23 +198,27 @@ test: regress
 regress: all
 	${MAKE} 'TESTS=${TESTS}' -C regress all
 
-install: gmid gg
+install: gmid gg ge
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	mkdir -p ${DESTDIR}${MANDIR}/man5
+	mkdir -p ${DESTDIR}${MANDIR}/man8
 	${INSTALL_PROGRAM} gmid ${DESTDIR}${BINDIR}
 	${INSTALL_PROGRAM} gg ${DESTDIR}${BINDIR}
-	${INSTALL_MAN} gmid.1 ${DESTDIR}${MANDIR}/man1
+	${INSTALL_PROGRAM} ge ${DESTDIR}${BINDIR}
+	${INSTALL_MAN} gmid.8 ${DESTDIR}${MANDIR}/man8
 	${INSTALL_MAN} gmid.conf.5 ${DESTDIR}${MANDIR}/man5
 	${INSTALL_MAN} ge.1 ${DESTDIR}${MANDIR}/man1
 	${INSTALL_MAN} gg.1 ${DESTDIR}${MANDIR}/man1
 
 uninstall:
+	rm ${DESTDIR}${BINDIR}/ge
 	rm ${DESTDIR}${BINDIR}/gg
 	rm ${DESTDIR}${BINDIR}/gmid
+	rm ${DESTDIR}${MANDIR}/man1/ge.1
 	rm ${DESTDIR}${MANDIR}/man1/gg.1
-	rm ${DESTDIR}${MANDIR}/man1/gmid.1
 	rm ${DESTDIR}${MANDIR}/man5/gmid.conf.5
+	rm ${DESTDIR}${MANDIR}/man8/gmid.8
 
 # make sure we pass -o to ${CC}.  OpenBSD default suffix rule doesn't
 .SUFFIXES: .c .o
