@@ -1,3 +1,7 @@
+2022-09-08  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): change the flags to be consisent with other OpenBSD daemons
+
 2022-09-07  Omar Polo  <op@omarpolo.com>
 
 	* ge.c (main): add `ge': small program to quickly export a directory over Gemini.
