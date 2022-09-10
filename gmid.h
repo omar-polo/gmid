@@ -205,7 +205,7 @@ struct conf {
 extern const char *config_path;
 extern struct conf conf;
 
-extern struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
+extern struct imsgbuf logibuf, servibuf[PROC_MAX];
 
 extern int servpipes[PROC_MAX];
 

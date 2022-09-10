@@ -41,7 +41,7 @@ struct vhosthead hosts;
 
 int sock4, sock6;
 
-struct imsgbuf logibuf, exibuf, servibuf[PROC_MAX];
+struct imsgbuf logibuf, servibuf[PROC_MAX];
 
 const char *config_path = "/etc/gmid.conf";
 const char *pidfile;
@@ -390,9 +390,9 @@ serve(void)
 			fatal("fork: %s", strerror(errno));
 		case 0:		/* child */
 			close(p[0]);
-			imsg_init(&exibuf, p[1]);
+			imsg_init(&servibuf[i], p[1]);
 			setproctitle("server");
-			_exit(listener_main(&exibuf));
+			_exit(listener_main(&servibuf[i]));
 		default:
 			close(p[1]);
 			imsg_init(&servibuf[i], p[0]);
@@ -561,11 +561,15 @@ main(int argc, char **argv)
 			sock6 = make_socket(conf.port, AF_INET6);
 	}
 
-	imsg_compose(&exibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
-	imsg_flush(&exibuf);
+	for (i = 0; i < conf.prefork; ++i) {
+		imsg_compose(&servibuf[i], IMSG_QUIT, 0, 0, -1, NULL, 0);
+		imsg_flush(&servibuf[i]);
+		close(servibuf[i].fd);
+	}
 
 	imsg_compose(&logibuf, IMSG_QUIT, 0, 0, -1, NULL, 0);
 	imsg_flush(&logibuf);
+	close(logibuf.fd);
 
 	if (pidfd != -1)
 		close(pidfd);
