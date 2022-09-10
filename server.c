@@ -65,13 +65,8 @@ static void	 client_close_ev(int, short, void *);
 
 static void	 do_accept(int, short, void*);
 
-static void	 handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
 static void	 handle_dispatch_imsg(int, short, void *);
 static void	 handle_siginfo(int, short, void*);
-
-static imsg_handlerfn *handlers[] = {
-	[IMSG_QUIT] = handle_imsg_quit,
-};
 
 static uint32_t server_client_id;
 
@@ -1318,29 +1313,49 @@ client_by_id(int id)
 }
 
 static void
-handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t len)
-{
-	/*
-	 * don't call event_loopbreak since we want to finish to
-	 * handle the ongoing connections.
-	 */
-
-	shutting_down = 1;
-
-	event_del(&e4);
-	if (has_ipv6)
-		event_del(&e6);
-	if (has_siginfo)
-		signal_del(&siginfo);
-	event_del(&imsgev);
-	signal_del(&sigusr2);
-}
-
-static void
 handle_dispatch_imsg(int fd, short ev, void *d)
 {
-	struct imsgbuf *ibuf = d;
-	dispatch_imsg(ibuf, handlers, sizeof(handlers));
+	struct imsgbuf	*ibuf = d;
+	struct imsg	 imsg;
+	ssize_t		 n;
+
+	if ((n = imsg_read(ibuf)) == -1) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK)
+			return;
+		fatal("imsg_read");
+	}
+
+	if (n == 0)
+		fatal("connection closed.");	/* XXX: fatalx */
+
+	for (;;) {
+		if ((n = imsg_get(ibuf, &imsg)) == -1)
+			fatal("imsg_get");
+		if (n == 0)
+			return;
+
+		switch (imsg.hdr.type) {
+		case IMSG_QUIT:
+			/*
+			 * Don't call event_loopbreak since we want to
+			 * finish handling the ongoing connections.
+			 */
+			shutting_down = 1;
+
+			event_del(&e4);
+			if (has_ipv6)
+				event_del(&e6);
+			if (has_siginfo)
+				signal_del(&siginfo);
+			event_del(&imsgev);
+			signal_del(&sigusr2);
+			break;
+		default:
+			/* XXX: fatalx */
+			fatal("Unknown message %d", imsg.hdr.type);
+		}
+		imsg_free(&imsg);
+	}
 }
 
 static void
