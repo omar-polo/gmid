@@ -212,7 +212,12 @@ varset		: STRING '=' string		{
 		}
 		;
 
-option		: CHROOT string	{ conf.chroot = $2; }
+option		: CHROOT string	{
+			if (strlcpy(conf.chroot, $2, sizeof(conf.chroot)) >=
+			    sizeof(conf.chroot))
+				yyerror("chroot path too long");
+			free($2);
+		}
 		| IPV6 bool		{ conf.ipv6 = $2; }
 		| MIME STRING string	{
 			yywarn("`mime MIME EXT' is deprecated and will be "
@@ -235,7 +240,12 @@ option		: CHROOT string	{ conf.chroot = $2; }
 				yyerror("invalid protocols string \"%s\"", $2);
 			free($2);
 		}
-		| USER string		{ conf.user = $2; }
+		| USER string {
+			if (strlcpy(conf.user, $2, sizeof(conf.user)) >=
+			    sizeof(conf.user))
+				yyerror("user name too long");
+			free($2);
+		}
 		;
 
 vhost		: SERVER string {
@@ -949,14 +959,14 @@ print_conf(void)
 	/* struct envlist	*e; */
 	/* struct alist	*a; */
 
-	if (conf.chroot != NULL)
+	if (*conf.chroot != '\0')
 		printf("chroot \"%s\"\n", conf.chroot);
 	printf("ipv6 %s\n", conf.ipv6 ? "on" : "off");
 	/* XXX: defined mimes? */
 	printf("port %d\n", conf.port);
 	printf("prefork %d\n", conf.prefork);
 	/* XXX: protocols? */
-	if (conf.user != NULL)
+	if (*conf.user != '\0')
 		printf("user \"%s\"\n", conf.user);
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {

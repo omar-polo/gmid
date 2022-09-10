@@ -205,9 +205,6 @@ init_config(void)
 
 	init_mime(&conf.mime);
 
-	conf.chroot = NULL;
-	conf.user = NULL;
-
 	conf.prefork = 3;
 }
 
@@ -224,8 +221,6 @@ free_config(void)
 	v = conf.verbose;
 
 	free_mime(&conf.mime);
-	free(conf.chroot);
-	free(conf.user);
 	memset(&conf, 0, sizeof(conf));
 
 	conf.verbose = v;
@@ -328,15 +323,15 @@ drop_priv(void)
 {
 	struct passwd *pw = NULL;
 
-	if (conf.chroot != NULL && conf.user == NULL)
+	if (*conf.chroot != '\0' && *conf.user == '\0')
 		fatal("can't chroot without an user to switch to after.");
 
-	if (conf.user != NULL) {
+	if (*conf.user != '\0') {
 		if ((pw = getpwnam(conf.user)) == NULL)
 			fatal("can't find user %s", conf.user);
 	}
 
-	if (conf.chroot != NULL) {
+	if (*conf.chroot != '\0') {
 		if (chroot(conf.chroot) != 0 || chdir("/") != 0)
 			fatal("%s: %s", conf.chroot, strerror(errno));
 	}

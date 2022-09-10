@@ -203,8 +203,8 @@ struct conf {
 	int		 ipv6;
 	uint32_t	 protos;
 	struct mime	 mime;
-	char		*chroot;
-	char		*user;
+	char		 chroot[PATH_MAX];
+	char		 user[LOGIN_NAME_MAX];
 	int		 prefork;
 };
 
