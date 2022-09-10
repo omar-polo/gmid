@@ -226,7 +226,8 @@ uninstall:
 	${CC} ${CFLAGS} -c $< -o $@
 
 depend: config.h y.tab.c
-	mkdep -f Makefile.tmp1 ${CFLAGS} ${GMID_SRCS} ${GG_SRCS} ${COBJSx:.o=.c}
+	mkdep -f Makefile.tmp1 ${CFLAGS} ${GE_SRCS} ${GG_SRCS} ${GMID_SRCS} \
+		${COBJSx:.o=.c}
 	perl -e 'undef $$/; $$_ = <>; s|/usr/include/\S+||g; \
 		s|\\\n||g; s|  +| |g; s| $$||mg; print;' \
 		Makefile.tmp1 > Makefile.tmp2
