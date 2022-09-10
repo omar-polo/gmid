@@ -35,7 +35,6 @@ init_mime(struct mime *mime)
 int
 add_mime(struct mime *mime, const char *mt, const char *ext)
 {
-	char *mimetype, *extension;
 	struct etm *t;
 	size_t newcap;
 
@@ -49,15 +48,11 @@ add_mime(struct mime *mime, const char *mt, const char *ext)
 		mime->cap = newcap;
 	}
 
-	if ((mimetype = strdup(mt)) == NULL)
+	t = &mime->t[mime->len];
+	if (strlcpy(t->mime, mt, sizeof(t->mime)) >= sizeof(t->mime))
 		return -1;
-	if ((extension = strdup(ext)) == NULL) {
-		free(mimetype);
+	if (strlcpy(t->ext, ext, sizeof(t->ext)) >= sizeof(t->ext))
 		return -1;
-	}
-
-	mime->t[mime->len].mime = mimetype;
-	mime->t[mime->len].ext  = extension;
 	mime->len++;
 	return 0;
 }
@@ -157,12 +152,5 @@ mime(struct vhost *host, const char *path)
 void
 free_mime(struct mime *m)
 {
-	struct etm *t;
-
-	for (t = m->t; t->mime != NULL; ++t) {
-		free(t->mime);
-		free(t->ext);
-	}
-
 	free(m->t);
 }

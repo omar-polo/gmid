@@ -70,6 +70,9 @@
 #define DOMAIN_NAME_LEN	(253+1)
 #define LABEL_LEN	(63+1)
 
+#define MEDIATYPE_NAMEMAX	128	/* file name extension */
+#define MEDIATYPE_TYPEMAX	128	/* length of type/subtype */
+
 #define FCGI_MAX	32
 #define PROC_MAX	16
 
@@ -175,8 +178,8 @@ struct vhost {
 };
 
 struct etm {			/* extension to mime */
-	char	*mime;
-	char	*ext;
+	char	 mime[MEDIATYPE_TYPEMAX];
+	char	 ext[MEDIATYPE_NAMEMAX];
 };
 
 struct mime {

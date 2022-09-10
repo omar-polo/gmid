@@ -225,6 +225,8 @@ option		: CHROOT string	{
 			    "`types' block.");
 			if (add_mime(&conf.mime, $2, $3) == -1)
 				err(1, "add_mime");
+			free($2);
+			free($3);
 		}
 		| MAP string TOEXT string {
 			yywarn("`map mime to-ext' is deprecated and will be "
@@ -232,6 +234,8 @@ option		: CHROOT string	{
 			    "`types' block.");
 			if (add_mime(&conf.mime, $2, $4) == -1)
 				err(1, "add_mime");
+			free($2);
+			free($4);
 		}
 		| PORT NUM		{ conf.port = check_port_num($2); }
 		| PREFORK NUM		{ conf.prefork = check_prefork_num($2); }
@@ -477,7 +481,10 @@ mediaopts_l	: mediaopts_l mediaoptsl nl
 		| mediaoptsl nl
 		;
 
-mediaoptsl	: STRING { current_media = $1; } medianames_l optsemicolon
+mediaoptsl	: STRING {
+			free(current_media);
+			current_media = $1;
+		} medianames_l optsemicolon
 		| include
 		;
 
@@ -488,6 +495,7 @@ medianames_l	: medianames_l medianamesl
 medianamesl	: numberstring {
 			if (add_mime(&conf.mime, current_media, $1) == -1)
 				err(1, "add_mime");
+			free($1);
 		}
 		;
 
