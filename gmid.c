@@ -444,35 +444,27 @@ main(int argc, char **argv)
 				fatal("could not parse macro definition: %s",
 				    optarg);
 			break;
-
 		case 'd':
 			conf.foreground = 1;
 			break;
-
 		case 'f':
 			config_path = absolutify_path(optarg);
 			break;
-
 		case 'h':
 			usage();
 			return 0;
-
 		case 'n':
 			conftest++;
 			break;
-
 		case 'P':
 			pidfile = optarg;
 			break;
-
 		case 'V':
 			puts("Version: " GMID_STRING);
 			return 0;
-
 		case 'v':
 			conf.verbose++;
 			break;
-
 		default:
 			usage();
 			return 1;
