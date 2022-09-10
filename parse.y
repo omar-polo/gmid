@@ -94,7 +94,7 @@ void		 parsehp(char *, char **, const char **, const char *);
 void		 only_once(const void*, const char*);
 void		 only_oncei(int, const char*);
 int		 fastcgi_conf(char *, char *, char *);
-void		 add_param(char *, char *, int);
+void		 add_param(char *, char *);
 
 static struct vhost		*host;
 static struct location		*loc;
@@ -285,7 +285,7 @@ servopt		: ALIAS string {
 			host->ocsp = ensure_absolute_path($2);
 		}
 		| PARAM string '=' string {
-			add_param($2, $4, 0);
+			add_param($2, $4);
 		}
 		| locopt
 		;
@@ -1197,15 +1197,10 @@ fastcgi_conf(char *path, char *port, char *prog)
 }
 
 void
-add_param(char *name, char *val, int env)
+add_param(char *name, char *val)
 {
 	struct envlist *e;
-	struct envhead *h;
-
-	if (env)
-		h = &host->env;
-	else
-		h = &host->params;
+	struct envhead *h = &host->params;
 
 	e = xcalloc(1, sizeof(*e));
 	e->name = name;
