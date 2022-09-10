@@ -267,10 +267,7 @@ servopt		: ALIAS string {
 
 			a = xcalloc(1, sizeof(*a));
 			a->alias = $2;
-			if (TAILQ_EMPTY(&host->aliases))
-				TAILQ_INSERT_HEAD(&host->aliases, a, aliases);
-			else
-				TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
+			TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
 		}
 		| CERT string		{
 			only_once(host->cert, "cert");
@@ -1025,7 +1022,14 @@ symget(const char *nam)
 struct vhost *
 new_vhost(void)
 {
-	return xcalloc(1, sizeof(struct vhost));
+	struct vhost *h;
+
+	h = xcalloc(1, sizeof(*h));
+	TAILQ_INIT(&h->locations);
+	TAILQ_INIT(&h->params);
+	TAILQ_INIT(&h->aliases);
+	TAILQ_INIT(&h->proxies);
+	return h;
 }
 
 struct location *
@@ -1205,8 +1209,5 @@ add_param(char *name, char *val)
 	e = xcalloc(1, sizeof(*e));
 	e->name = name;
 	e->value = val;
-	if (TAILQ_EMPTY(h))
-		TAILQ_INSERT_HEAD(h, e, envs);
-	else
-		TAILQ_INSERT_TAIL(h, e, envs);
+	TAILQ_INSERT_TAIL(h, e, envs);
 }
