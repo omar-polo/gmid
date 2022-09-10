@@ -186,7 +186,7 @@ static int
 listener_main(struct imsgbuf *ibuf)
 {
 	drop_priv();
-	if (!conf.mime.skip_defaults && load_default_mime(&conf.mime) == -1)
+	if (load_default_mime(&conf.mime) == -1)
 		fatal("load_default_mime: %s", strerror(errno));
 	sort_mime(&conf.mime);
 	load_vhosts();

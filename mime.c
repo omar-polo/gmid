@@ -82,6 +82,10 @@ load_default_mime(struct mime *mime)
 		{NULL, NULL}
 	}, *i;
 
+	/* don't load the default if `types' was used. */
+	if (mime->len != 0)
+		return 0;
+
 	for (i = m; i->mime != NULL; ++i) {
 		if (add_mime(mime, i->mime, i->ext) == -1)
 			return -1;

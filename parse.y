@@ -123,7 +123,6 @@ typedef struct {
 %token	INCLUDE INDEX IPV6
 %token	KEY
 %token	LANG LOCATION LOG
-%token	MAP MIME
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
@@ -219,24 +218,6 @@ option		: CHROOT string	{
 			free($2);
 		}
 		| IPV6 bool		{ conf.ipv6 = $2; }
-		| MIME STRING string	{
-			yywarn("`mime MIME EXT' is deprecated and will be "
-			    "removed in a future version, please use the new "
-			    "`types' block.");
-			if (add_mime(&conf.mime, $2, $3) == -1)
-				err(1, "add_mime");
-			free($2);
-			free($3);
-		}
-		| MAP string TOEXT string {
-			yywarn("`map mime to-ext' is deprecated and will be "
-			    "removed in a future version, please use the new "
-			    "`types' block.");
-			if (add_mime(&conf.mime, $2, $4) == -1)
-				err(1, "add_mime");
-			free($2);
-			free($4);
-		}
 		| PORT NUM		{ conf.port = check_port_num($2); }
 		| PREFORK NUM		{ conf.prefork = check_prefork_num($2); }
 		| PROTOCOLS string {
@@ -472,10 +453,7 @@ fastcgi		: SPAWN string {
 		}
 		;
 
-types		: TYPES '{' optnl mediaopts_l '}' {
-			conf.mime.skip_defaults = 1;
-		}
-		;
+types		: TYPES '{' optnl mediaopts_l '}' ;
 
 mediaopts_l	: mediaopts_l mediaoptsl nl
 		| mediaoptsl nl
@@ -535,8 +513,6 @@ static const struct keyword {
 	{"lang", LANG},
 	{"location", LOCATION},
 	{"log", LOG},
-	{"map", MAP},
-	{"mime", MIME},
 	{"ocsp", OCSP},
 	{"off", OFF},
 	{"on", ON},
