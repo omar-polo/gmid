@@ -184,7 +184,7 @@ static __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "Version: " GMID_STRING "\n"
+	    "Version: " GE_STRING "\n"
 	    "Usage: %s [-hVv] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
 	    getprogname());
 	exit(1);
@@ -221,7 +221,7 @@ main(int argc, char **argv)
 				fatal("port number is %s: %s", errstr, optarg);
 			break;
 		case 'V':
-			puts("Version: " GMID_STRING);
+			puts("Version: " GE_STRING);
 			return 0;
 		default:
 			usage();

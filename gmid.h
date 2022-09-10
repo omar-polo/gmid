@@ -50,7 +50,11 @@
 # include <event.h>
 #endif
 
-#define GMID_STRING	"gmid " VERSION
+#define VERSION_STR(n)	n " " VERSION
+#define GE_STRING	VERSION_STR("ge")
+#define GG_STRING	VERSION_STR("gg")
+#define GMID_STRING	VERSION_STR("gmid")
+
 #define GMID_VERSION	"gmid/" VERSION
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */

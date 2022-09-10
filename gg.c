@@ -304,6 +304,7 @@ close:
 static void __attribute__((noreturn))
 usage(void)
 {
+	fprintf(stderr, "version: " GG_STRING "\n");
 	fprintf(stderr, "usage: %s [-23Nnv] [-C cert] [-d mode] [-H sni] "
 	    "[-K key] [-P host[:port]]\n",
 	    getprogname());
