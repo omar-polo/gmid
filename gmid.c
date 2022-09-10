@@ -273,7 +273,6 @@ free_config(void)
 		free((char*)h->cert);
 		free((char*)h->key);
 		free((char*)h->ocsp);
-		free((char*)h->entrypoint);
 
 		TAILQ_REMOVE(&hosts, h, vhosts);
 		free(h);

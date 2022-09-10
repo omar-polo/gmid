@@ -160,7 +160,6 @@ struct vhost {
 	const char	*cert;
 	const char	*key;
 	const char	*ocsp;
-	const char	*entrypoint;
 
 	TAILQ_ENTRY(vhost) vhosts;
 
