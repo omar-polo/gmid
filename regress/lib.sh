@@ -27,6 +27,7 @@ port $port
 		echo "$1 failed"
 		failed="$failed $1"
 		failed_no=$((failed_no + 1))
+		return
 	else
 		echo "$1 passed"
 	fi
