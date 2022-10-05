@@ -1185,7 +1185,6 @@ fastcgi_conf(char *path, char *port, char *prog)
 			return i;
 		}
 
-		/* XXX: what to do with prog? */
 		if (!strcmp(f->path, path) &&
 		    ((port == NULL && f->port == NULL) ||
 		     !strcmp(f->port, port))) {
