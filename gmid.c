@@ -279,15 +279,13 @@ free_config(void)
 	}
 
 	for (i = 0; i < FCGI_MAX; ++i) {
-		if (fcgi[i].path == NULL && fcgi[i].prog == NULL)
+		if (fcgi[i].path == NULL)
 			break;
 		free(fcgi[i].path);
 		free(fcgi[i].port);
-		free(fcgi[i].prog);
 
 		fcgi[i].path = NULL;
 		fcgi[i].port = NULL;
-		fcgi[i].prog = NULL;
 	}
 
 	tls_free(ctx);

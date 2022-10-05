@@ -1182,7 +1182,6 @@ fastcgi_conf(char *path, char *port, char *prog)
 			f->id = i;
 			f->path = path;
 			f->port = port;
-			f->prog = prog;
 			return i;
 		}
 

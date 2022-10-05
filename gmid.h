@@ -100,7 +100,6 @@ struct fcgi {
 	int		 id;
 	char		*path;
 	char		*port;
-	char		*prog;
 };
 extern struct fcgi fcgi[FCGI_MAX];
 
