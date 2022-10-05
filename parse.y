@@ -92,7 +92,7 @@ int		 check_prefork_num(int);
 void		 advance_loc(void);
 void		 advance_proxy(void);
 void		 parsehp(char *, char **, const char **, const char *);
-int		 fastcgi_conf(const char *, const char *, char *);
+int		 fastcgi_conf(const char *, const char *);
 void		 add_param(char *, char *);
 int		 getservice(const char *);
 
@@ -126,7 +126,7 @@ typedef struct {
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
-%token	SERVER SNI SPAWN STRIP
+%token	SERVER SNI STRIP
 %token	TCP TOEXT TYPE TYPES
 %token	USE_TLS USER
 %token	VERIFYNAME
@@ -440,27 +440,23 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 		| STRIP NUM		{ loc->strip = check_strip_no($2); }
 		;
 
-fastcgi		: SPAWN string {
-			loc->fcgi = fastcgi_conf(NULL, NULL, $2);
-			free($2);
-		}
-		| string {
-			loc->fcgi = fastcgi_conf($1, NULL, NULL);
+fastcgi		: string {
+			loc->fcgi = fastcgi_conf($1, NULL);
 			free($1);
 		}
 		| TCP string PORT NUM {
 			char *c;
 			if (asprintf(&c, "%d", $4) == -1)
 				err(1, "asprintf");
-			loc->fcgi = fastcgi_conf($2, c, NULL);
+			loc->fcgi = fastcgi_conf($2, c);
 			free($2);
 		}
 		| TCP string {
-			loc->fcgi = fastcgi_conf($2, "9000", NULL);
+			loc->fcgi = fastcgi_conf($2, "9000");
 			free($2);
 		}
 		| TCP string PORT string {
-			loc->fcgi = fastcgi_conf($2, $4, NULL);
+			loc->fcgi = fastcgi_conf($2, $4);
 			free($2);
 			free($4);
 		}
@@ -541,7 +537,6 @@ static const struct keyword {
 	{"root", ROOT},
 	{"server", SERVER},
 	{"sni", SNI},
-	{"spawn", SPAWN},
 	{"strip", STRIP},
 	{"tcp", TCP},
 	{"to-ext", TOEXT},
@@ -1170,7 +1165,7 @@ parsehp(char *str, char **host, const char **port, const char *def)
 }
 
 int
-fastcgi_conf(const char *path, const char *port, char *prog)
+fastcgi_conf(const char *path, const char *port)
 {
 	struct fcgi	*f;
 	int		i;
