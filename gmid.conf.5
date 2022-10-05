@@ -358,7 +358,7 @@ If the OCSP response in
 .Ar file
 is empty, OCSP stapling will not be used.
 The default is to not use OCSP stapling.
-.It Ic proxy Oo Cm proto Ar name Oc Oo Cm for-host Ar host : Ns Oo Ar port Oc Oc Brq ...
+.It Ic proxy Oo Cm proto Ar name Oc Oo Cm for-host Ar host Oo Cm port Ar port Oc Oc Brq ...
 Set up a reverse proxy.
 The optional matching rules
 .Cm proto
@@ -392,7 +392,7 @@ Refer to the
 .Xr tls_config_parse_protocols 3
 function for the valid protocol string values.
 By default, both TLSv1.2 and TLSv1.3 are enabled.
-.It Ic relay-to Ar host : Ns Op Ar port
+.It Ic relay-to Ar host Op Cm port Ar port
 Relay the request to the given
 .Ar host
 at the given
