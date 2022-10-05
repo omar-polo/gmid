@@ -27,6 +27,7 @@
 
 #include <ctype.h>
 #include <errno.h>
+#include <netdb.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -91,10 +92,9 @@ int		 check_prefork_num(int);
 void		 advance_loc(void);
 void		 advance_proxy(void);
 void		 parsehp(char *, char **, const char **, const char *);
-void		 only_once(const void*, const char*);
-void		 only_oncei(int, const char*);
-int		 fastcgi_conf(char *, char *, char *);
+int		 fastcgi_conf(const char *, const char *, char *);
 void		 add_param(char *, char *);
+int		 getservice(const char *);
 
 static struct vhost		*host;
 static struct location		*loc;
@@ -136,7 +136,7 @@ typedef struct {
 %token	<v.string>	STRING
 %token	<v.number>	NUM
 
-%type	<v.number>	bool
+%type	<v.number>	bool proxy_port
 %type	<v.string>	string numberstring
 
 %%
@@ -242,15 +242,17 @@ vhost		: SERVER string {
 
 			TAILQ_INIT(&host->proxies);
 
-			loc->match = xstrdup("*");
-			host->domain = $2;
+			(void) strlcpy(loc->match, "*", sizeof(loc->match));
+			(void) strlcpy(host->domain, $2, sizeof(host->domain));
 
 			if (strstr($2, "xn--") != NULL) {
 				yywarn("\"%s\" looks like punycode: you "
 				    "should use the decoded hostname", $2);
 			}
+
+			free($2);
 		} '{' optnl servbody '}' {
-			if (host->cert == NULL || host->key == NULL)
+			if (*host->cert == '\0' || *host->key == '\0')
 				yyerror("invalid vhost definition: %s", $2);
 		}
 		| error '}'		{ yyerror("bad server directive"); }
@@ -266,20 +268,24 @@ servopt		: ALIAS string {
 			struct alist *a;
 
 			a = xcalloc(1, sizeof(*a));
-			a->alias = $2;
+			(void) strlcpy(a->alias, $2, sizeof(a->alias));
+			free($2);
 			TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
 		}
 		| CERT string		{
-			only_once(host->cert, "cert");
-			host->cert = ensure_absolute_path($2);
+			ensure_absolute_path($2);
+			(void) strlcpy(host->cert, $2, sizeof(host->cert));
+			free($2);
 		}
 		| KEY string		{
-			only_once(host->key, "key");
-			host->key  = ensure_absolute_path($2);
+			ensure_absolute_path($2);
+			(void) strlcpy(host->key, $2, sizeof(host->key));
+			free($2);
 		}
 		| OCSP string		{
-			only_once(host->ocsp, "ocsp");
-			host->ocsp = ensure_absolute_path($2);
+			ensure_absolute_path($2);
+			(void) strlcpy(host->ocsp, $2, sizeof(host->ocsp));
+			free($2);
 		}
 		| PARAM string '=' string {
 			add_param($2, $4);
@@ -289,7 +295,7 @@ servopt		: ALIAS string {
 
 proxy		: PROXY { advance_proxy(); }
 		  proxy_matches '{' optnl proxy_opts '}' {
-			if (proxy->host == NULL)
+			if (*proxy->host == '\0')
 				yyerror("invalid proxy block: missing `relay-to' option");
 
 			if ((proxy->cert == NULL && proxy->key != NULL) ||
@@ -302,15 +308,24 @@ proxy_matches	: /* empty */
 		| proxy_matches proxy_match
 		;
 
-proxy_match	: PROTO string {
-			only_once(proxy->match_proto, "proxy proto");
-			free(proxy->match_proto);
-			proxy->match_proto = $2;
+proxy_port	: /* empty */	{ $$ = 1965; }
+		| PORT STRING {
+			if (($$ = getservice($2)) == -1)
+				yyerror("invalid port number %s", $2);
+			free($2);
 		}
-		| FOR_HOST string {
-			only_once(proxy->match_host, "proxy for-host");
-			free(proxy->match_host);
-			parsehp($2, &proxy->match_host, &proxy->match_port, "10965");
+		| PORT NUM	{ $$ = $2; }
+		;
+
+proxy_match	: PROTO string {
+			(void) strlcpy(proxy->match_proto, $2, sizeof(proxy->match_proto));
+			free($2);
+		}
+		| FOR_HOST string proxy_port {
+			(void) strlcpy(proxy->match_host, $2, sizeof(proxy->match_host));
+			(void) snprintf(proxy->match_port, sizeof(proxy->match_port),
+			    "%d", $3);
+			free($2);
 		}
 		;
 
@@ -319,7 +334,6 @@ proxy_opts	: /* empty */
 		;
 
 proxy_opt	: CERT string {
-			only_once(proxy->cert, "proxy cert");
 			tls_unload_file(proxy->cert, proxy->certlen);
 			ensure_absolute_path($2);
 			proxy->cert = tls_load_file($2, &proxy->certlen, NULL);
@@ -328,7 +342,6 @@ proxy_opt	: CERT string {
 			free($2);
 		}
 		| KEY string {
-			only_once(proxy->key, "proxy key");
 			tls_unload_file(proxy->key, proxy->keylen);
 			ensure_absolute_path($2);
 			proxy->key = tls_load_file($2, &proxy->keylen, NULL);
@@ -341,22 +354,21 @@ proxy_opt	: CERT string {
 				yyerror("invalid protocols string \"%s\"", $2);
 			free($2);
 		}
-		| RELAY_TO string {
-			only_once(proxy->host, "proxy relay-to");
-			free(proxy->host);
-			parsehp($2, &proxy->host, &proxy->port, "1965");
+		| RELAY_TO string proxy_port {
+			(void) strlcpy(proxy->host, $2, sizeof(proxy->host));
+			(void) snprintf(proxy->port, sizeof(proxy->port),
+			    "%d", $3);
+			free($2);
 		}
 		| REQUIRE CLIENT CA string {
-			only_once(proxy->reqca, "require client ca");
 			ensure_absolute_path($4);
 			if ((proxy->reqca = load_ca($4)) == NULL)
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
 		| SNI string {
-			only_once(proxy->sni, "proxy sni");
-			free(proxy->sni);
-			proxy->sni = $2;
+			(void) strlcpy(proxy->sni, $2, sizeof(proxy->sni));
+			free($2);
 		}
 		| USE_TLS bool {
 			proxy->notls = !$2;
@@ -370,7 +382,8 @@ location	: LOCATION { advance_loc(); } string '{' optnl locopts '}' {
 			/* drop the starting '/' if any */
 			if (*$3 == '/')
 				memmove($3, $3+1, strlen($3));
-			loc->match = $3;
+			(void) strlcpy(loc->match, $3, sizeof(loc->match));
+			free($3);
 		}
 		| error '}'
 		;
@@ -381,72 +394,75 @@ locopts		: /* empty */
 
 locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 		| BLOCK RETURN NUM string {
-			only_once(loc->block_fmt, "block");
-			loc->block_fmt = check_block_fmt($4);
+			check_block_fmt($4);
+			(void) strlcpy(loc->block_fmt, $4, sizeof(loc->block_fmt));
 			loc->block_code = check_block_code($3);
+			free($4);
 		}
 		| BLOCK RETURN NUM {
-			only_once(loc->block_fmt, "block");
-			loc->block_fmt = xstrdup("temporary failure");
+			(void) strlcpy(loc->block_fmt, "temporary failure",
+			    sizeof(loc->block_fmt));
 			loc->block_code = check_block_code($3);
 			if ($3 >= 30 && $3 < 40)
 				yyerror("missing `meta' for block return %d", $3);
 		}
 		| BLOCK {
-			only_once(loc->block_fmt, "block");
-			loc->block_fmt = xstrdup("temporary failure");
+			(void) strlcpy(loc->block_fmt, "temporary failure",
+			    sizeof(loc->block_fmt));
 			loc->block_code = 40;
 		}
 		| DEFAULT TYPE string {
-			only_once(loc->default_mime, "default type");
-			loc->default_mime = $3;
+			(void) strlcpy(loc->default_mime, $3,
+			    sizeof(loc->default_mime));
+			free($3);
 		}
 		| FASTCGI fastcgi
 		| INDEX string {
-			only_once(loc->index, "index");
-			loc->index = $2;
+			(void) strlcpy(loc->index, $2, sizeof(loc->index));
+			free($2);
 		}
 		| LANG string {
-			only_once(loc->lang, "lang");
-			loc->lang = $2;
+			(void) strlcpy(loc->lang, $2,
+			    sizeof(loc->lang));
+			free($2);
 		}
 		| LOG bool	{ loc->disable_log = !$2; }
 		| REQUIRE CLIENT CA string {
-			only_once(loc->reqca, "require client ca");
 			ensure_absolute_path($4);
 			if ((loc->reqca = load_ca($4)) == NULL)
 				yyerror("couldn't load ca cert: %s", $4);
 			free($4);
 		}
 		| ROOT string		{
-			only_once(loc->dir, "root");
-			loc->dir  = ensure_absolute_path($2);
+			(void) strlcpy(loc->dir, $2, sizeof(loc->dir));
+			free($2);
 		}
 		| STRIP NUM		{ loc->strip = check_strip_no($2); }
 		;
 
 fastcgi		: SPAWN string {
-			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf(NULL, NULL, $2);
+			free($2);
 		}
 		| string {
-			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($1, NULL, NULL);
+			free($1);
 		}
 		| TCP string PORT NUM {
 			char *c;
 			if (asprintf(&c, "%d", $4) == -1)
 				err(1, "asprintf");
-			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, c, NULL);
+			free($2);
 		}
 		| TCP string {
-			only_oncei(loc->fcgi, "fastcgi");
-			loc->fcgi = fastcgi_conf($2, xstrdup("9000"), NULL);
+			loc->fcgi = fastcgi_conf($2, "9000", NULL);
+			free($2);
 		}
 		| TCP string PORT string {
-			only_oncei(loc->fcgi, "fastcgi");
 			loc->fcgi = fastcgi_conf($2, $4, NULL);
+			free($2);
+			free($4);
 		}
 		;
 
@@ -1153,22 +1169,8 @@ parsehp(char *str, char **host, const char **port, const char *def)
 		yyerror("port is %s: %s", errstr, *port);
 }
 
-void
-only_once(const void *ptr, const char *name)
-{
-	if (ptr != NULL)
-		yyerror("`%s' specified more than once", name);
-}
-
-void
-only_oncei(int i, const char *name)
-{
-	if (i != -1)
-		yyerror("`%s' specified more than once", name);
-}
-
 int
-fastcgi_conf(char *path, char *port, char *prog)
+fastcgi_conf(const char *path, const char *port, char *prog)
 {
 	struct fcgi	*f;
 	int		i;
@@ -1178,20 +1180,17 @@ fastcgi_conf(char *path, char *port, char *prog)
 	for (i = 0; i < FCGI_MAX; ++i) {
 		f = &fcgi[i];
 
-		if (f->path == NULL) {
+		if (*f->path == '\0') {
 			f->id = i;
-			f->path = path;
-			f->port = port;
+			(void) strlcpy(f->path, path, sizeof(f->path));
+			(void) strlcpy(f->port, port, sizeof(f->port));
 			return i;
 		}
 
 		if (!strcmp(f->path, path) &&
-		    ((port == NULL && f->port == NULL) ||
-		     !strcmp(f->port, port))) {
-			free(path);
-			free(port);
+		    ((port == NULL && *f->port == '\0') ||
+		     !strcmp(f->port, port)))
 			return i;
-		}
 	}
 
 	yyerror("too much `fastcgi' rules defined.");
@@ -1205,7 +1204,27 @@ add_param(char *name, char *val)
 	struct envhead *h = &host->params;
 
 	e = xcalloc(1, sizeof(*e));
-	e->name = name;
-	e->value = val;
+	(void) strlcpy(e->name, name, sizeof(e->name));
+	(void) strlcpy(e->value, val, sizeof(e->value));
 	TAILQ_INSERT_TAIL(h, e, envs);
+}
+
+int
+getservice(const char *n)
+{
+	struct servent	*s;
+	const char	*errstr;
+	long long	 llval;
+
+	llval = strtonum(n, 0, UINT16_MAX, &errstr);
+	if (errstr) {
+		s = getservbyname(n, "tcp");
+		if (s == NULL)
+			s = getservbyname(n, "udp");
+		if (s == NULL)
+			return (-1);
+		return (ntohs(s->s_port));
+	}
+
+	return ((unsigned short)llval);
 }

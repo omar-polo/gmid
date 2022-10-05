@@ -80,7 +80,7 @@ server "localhost.local" {
 	cert "$PWD/cert.pem"
 	key "$PWD/key.pem"
 	proxy {
-		relay-to "localhost:$port"
+		relay-to localhost port $port
 		$1
 	}
 }

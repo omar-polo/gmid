@@ -514,7 +514,7 @@ server_landlock(void)
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
-			if (l->dir == NULL)
+			if (*l->dir == '\0')
 				continue;
 
 			if (landlock_unveil_path(fd, l->dir, perms) == -1)
@@ -608,7 +608,7 @@ sandbox_server_process(int can_open_sockets)
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
-			if (l->dir == NULL)
+			if (*l->dir == '\0')
 				continue;
 
 			if (unveil(l->dir, "r") == -1)

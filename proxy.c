@@ -326,7 +326,7 @@ proxy_setup_tls(struct client *c)
 	if (tls_configure(c->proxyctx, conf) == -1)
 		goto err;
 
-	if ((hn = p->sni) == NULL)
+	if (*(hn = p->sni) == '\0')
 		hn = p->host;
 	if (tls_connect_socket(c->proxyctx, c->pfd, hn) == -1)
 		goto err;

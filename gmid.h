@@ -77,6 +77,9 @@
 #define MEDIATYPE_NAMEMAX	128	/* file name extension */
 #define MEDIATYPE_TYPEMAX	128	/* length of type/subtype */
 
+#define FCGI_NAME_MAX		511
+#define FCGI_VAL_MAX		511
+
 #define FCGI_MAX	32
 #define PROC_MAX	16
 
@@ -98,20 +101,20 @@ struct parser {
 
 struct fcgi {
 	int		 id;
-	char		*path;
-	char		*port;
+	char		 path[PATH_MAX];
+	char		 port[32];
 };
 extern struct fcgi fcgi[FCGI_MAX];
 
 TAILQ_HEAD(proxyhead, proxy);
 struct proxy {
-	char		*match_proto;
-	char		*match_host;
-	const char	*match_port;
+	char		 match_proto[32];
+	char		 match_host[HOST_NAME_MAX + 1];
+	char		 match_port[32];
 
-	char		*host;
-	const char	*port;
-	char		*sni;
+	char		 host[HOST_NAME_MAX + 1];
+	char		 port[32];
+	char		 sni[HOST_NAME_MAX];
 	int		 notls;
 	uint32_t	 protocols;
 	int		 noverifyname;
@@ -126,19 +129,19 @@ struct proxy {
 
 TAILQ_HEAD(lochead, location);
 struct location {
-	const char	*match;
-	const char	*lang;
-	const char	*default_mime;
-	const char	*index;
+	char		 match[128];
+	char		 lang[32];
+	char		 default_mime[MEDIATYPE_TYPEMAX];
+	char		 index[PATH_MAX];
 	int		 auto_index; /* 0 auto, -1 off, 1 on */
 	int		 block_code;
-	const char	*block_fmt;
+	char		 block_fmt[GEMINI_URL_LEN];
 	int		 strip;
 	X509_STORE	*reqca;
 	int		 disable_log;
 	int		 fcgi;
 
-	const char	*dir;
+	char		 dir[PATH_MAX];
 	int		 dirfd;
 
 	TAILQ_ENTRY(location) locations;
@@ -146,23 +149,23 @@ struct location {
 
 TAILQ_HEAD(envhead, envlist);
 struct envlist {
-	char		*name;
-	char		*value;
+	char		 name[FCGI_NAME_MAX];
+	char		 value[FCGI_VAL_MAX];
 	TAILQ_ENTRY(envlist) envs;
 };
 
 TAILQ_HEAD(aliashead, alist);
 struct alist {
-	char		*alias;
+	char		alias[HOST_NAME_MAX + 1];
 	TAILQ_ENTRY(alist) aliases;
 };
 
 extern TAILQ_HEAD(vhosthead, vhost) hosts;
 struct vhost {
-	const char	*domain;
-	const char	*cert;
-	const char	*key;
-	const char	*ocsp;
+	char		 domain[HOST_NAME_MAX + 1];
+	char		 cert[PATH_MAX];
+	char		 key[PATH_MAX];
+	char		 ocsp[PATH_MAX];
 
 	TAILQ_ENTRY(vhost) vhosts;
 

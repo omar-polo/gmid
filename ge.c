@@ -53,9 +53,9 @@ load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
 		gen_certificate(hostname, cert, key);
 
-	h->cert = cert;
-	h->key = key;
-	h->domain = hostname;
+	strlcpy(h->cert, cert, sizeof(h->cert));
+	strlcpy(h->key, key, sizeof(h->key));
+	strlcpy(h->domain, hostname, sizeof(h->domain));
 }
 
 /* wrapper around dirname(3).  dn must be PATH_MAX+1 at least. */
@@ -256,16 +256,21 @@ main(int argc, char **argv)
 
 	load_local_cert(host, hostname, certs_dir);
 
-	host->domain = "*";
+	strlcpy(host->domain, "*", sizeof(host->domain));
 	loc->auto_index = 1;
-	loc->match = "*";
+	strlcpy(loc->match, "*", sizeof(loc->match));
 
 	if (*argv == NULL) {
 		if (getcwd(path, sizeof(path)) == NULL)
 			fatal("getcwd");
-		loc->dir = path;
-	} else
-		loc->dir = absolutify_path(*argv);
+		strlcpy(loc->dir, path, sizeof(loc->dir));
+	} else {
+		char	*tmp;
+
+		tmp = absolutify_path(*argv);
+		strlcpy(loc->dir, tmp, sizeof(loc->dir));
+		free(tmp);
+	}
 
 	if ((loc->dirfd = open(loc->dir, O_RDONLY|O_DIRECTORY)) == -1)
 		fatal("can't open %s", loc->dir);

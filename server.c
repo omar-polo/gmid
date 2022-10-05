@@ -90,13 +90,16 @@ vhost_lang(struct vhost *v, const char *path)
 
 	loc = TAILQ_FIRST(&v->locations);
 	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->lang != NULL) {
+		if (*loc->lang != '\0') {
 			if (matches(loc->match, path))
 				return loc->lang;
 		}
 	}
 
-	return TAILQ_FIRST(&v->locations)->lang;
+	loc = TAILQ_FIRST(&v->locations);
+	if (*loc->lang == '\0')
+		return NULL;
+	return loc->lang;
 }
 
 const char *
@@ -110,14 +113,14 @@ vhost_default_mime(struct vhost *v, const char *path)
 
 	loc = TAILQ_FIRST(&v->locations);
 	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->default_mime != NULL) {
+		if (*loc->default_mime != '\0') {
 			if (matches(loc->match, path))
 				return loc->default_mime;
 		}
 	}
 
 	loc = TAILQ_FIRST(&v->locations);
-	if (loc->default_mime != NULL)
+	if (*loc->default_mime != '\0')
 		return loc->default_mime;
 	return default_mime;
 }
@@ -133,14 +136,14 @@ vhost_index(struct vhost *v, const char *path)
 
 	loc = TAILQ_FIRST(&v->locations);
 	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->index != NULL) {
+		if (*loc->index != '\0') {
 			if (matches(loc->match, path))
 				return loc->index;
 		}
 	}
 
 	loc = TAILQ_FIRST(&v->locations);
-	if (loc->index != NULL)
+	if (*loc->index != '\0')
 		return loc->index;
 	return index;
 }
@@ -536,11 +539,11 @@ matched_proxy(struct client *c)
 	const char	*port;
 
 	TAILQ_FOREACH(p, &c->host->proxies, proxies) {
-		if ((proto = p->match_proto) == NULL)
+		if (*(proto = p->match_proto) == '\0')
 			proto = "gemini";
-		if ((host = p->match_host) == NULL)
+		if (*(host = p->match_host) == '\0')
 			host = "*";
-		if ((port = p->match_port) == NULL)
+		if (*(port = p->match_port) == '\0')
 			port = "*";
 
 		if (matches(proto, c->iri.schema) &&
@@ -719,7 +722,7 @@ apply_fastcgi(struct client *c)
 	log_debug(c, "opening fastcgi connection for (%s,%s)",
 	    f->path, f->port);
 
-	if (f->port != NULL)
+	if (*f->port != '\0')
 		c->pfd = fcgi_open_sock(f);
 	else
 		c->pfd = fcgi_open_conn(f);

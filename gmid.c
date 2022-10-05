@@ -65,7 +65,7 @@ load_vhosts(void)
 
 	TAILQ_FOREACH(h, &hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
-			if (l->dir == NULL)
+			if (*l->dir == '\0')
 				continue;
 			if ((l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY)) == -1)
 				fatal("open %s for domain %s: %s", l->dir, h->domain,
@@ -132,7 +132,7 @@ make_socket(int port, int family)
 static void
 add_keypair(struct vhost *h)
 {
-	if (h->ocsp == NULL) {
+	if (*h->ocsp == '\0') {
 		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
 			fatal("failed to load the keypair (%s, %s)",
 			    h->cert, h->key);
@@ -170,7 +170,7 @@ setup_tls(void)
 		    h->cert, h->key);
 
 	/* same for OCSP */
-	if (h->ocsp != NULL &&
+	if (*h->ocsp != '\0' &&
 	    tls_config_set_ocsp_staple_file(tlsconf, h->ocsp) == -1)
 		fatal("tls_config_set_ocsp_staple_file failed for (%s)",
 		    h->ocsp);
@@ -216,7 +216,7 @@ free_config(void)
 	struct proxy *p, *tp;
 	struct envlist *e, *te;
 	struct alist *a, *ta;
-	int v, i;
+	int v;
 
 	v = conf.verbose;
 
@@ -229,13 +229,6 @@ free_config(void)
 		TAILQ_FOREACH_SAFE(l, &h->locations, locations, tl) {
 			TAILQ_REMOVE(&h->locations, l, locations);
 
-			free((char*)l->match);
-			free((char*)l->lang);
-			free((char*)l->default_mime);
-			free((char*)l->index);
-			free((char*)l->block_fmt);
-			free((char*)l->dir);
-
 			if (l->dirfd != -1)
 				close(l->dirfd);
 
@@ -244,49 +237,26 @@ free_config(void)
 
 		TAILQ_FOREACH_SAFE(e, &h->params, envs, te) {
 			TAILQ_REMOVE(&h->params, e, envs);
-
-			free(e->name);
-			free(e->value);
 			free(e);
 		}
 
 		TAILQ_FOREACH_SAFE(a, &h->aliases, aliases, ta) {
 			TAILQ_REMOVE(&h->aliases, a, aliases);
-
-			free(a->alias);
 			free(a);
 		}
 
 		TAILQ_FOREACH_SAFE(p, &h->proxies, proxies, tp) {
 			TAILQ_REMOVE(&h->proxies, p, proxies);
-
-			free(p->match_proto);
-			free(p->match_host);
-			free(p->host);
-			free(p->sni);
 			tls_unload_file(p->cert, p->certlen);
 			tls_unload_file(p->key, p->keylen);
 			free(p);
 		}
 
-		free((char*)h->domain);
-		free((char*)h->cert);
-		free((char*)h->key);
-		free((char*)h->ocsp);
-
 		TAILQ_REMOVE(&hosts, h, vhosts);
 		free(h);
 	}
 
-	for (i = 0; i < FCGI_MAX; ++i) {
-		if (fcgi[i].path == NULL)
-			break;
-		free(fcgi[i].path);
-		free(fcgi[i].port);
-
-		fcgi[i].path = NULL;
-		fcgi[i].port = NULL;
-	}
+	memset(fcgi, 0, sizeof(fcgi));
 
 	tls_free(ctx);
 	tls_config_free(tlsconf);
