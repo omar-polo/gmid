@@ -368,6 +368,10 @@ fcgi_req(struct client *c)
 	fcgi_send_param(c->cgibev, "SERVER_PROTOCOL", "GEMINI");
 	fcgi_send_param(c->cgibev, "SERVER_SOFTWARE", GMID_VERSION);
 
+	TAILQ_FOREACH(p, &c->host->params, envs) {
+		fcgi_send_param(c->cgibev, p->name, p->value);
+	}
+
 	if (tls_peer_cert_provided(c->ctx)) {
 		fcgi_send_param(c->cgibev, "AUTH_TYPE", "CERTIFICATE");
 		fcgi_send_param(c->cgibev, "REMOTE_USER",
@@ -395,9 +399,6 @@ fcgi_req(struct client *c)
 		    gmtime_r(&tim, &tminfo));
 		fcgi_send_param(c->cgibev, "TLS_CLIENT_NOT_AFTER", buf);
 
-		TAILQ_FOREACH(p, &c->host->params, envs) {
-			fcgi_send_param(c->cgibev, p->name, p->value);
-		}
 	} else
 		fcgi_send_param(c->cgibev, "AUTH_TYPE", "");
 
