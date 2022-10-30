@@ -319,6 +319,7 @@ echo "#include <sys/types.h>"
 echo "#include <sys/uio.h>"
 echo "#include <stdint.h>"
 echo "#include <imsg.h>"
+echo "#include <limits.h>"
 
 cat <<__HEREDOC__
 
@@ -422,6 +423,17 @@ cat <<__HEREDOC__
 
 #ifndef __dead
 #define __dead __attribute__((noreturn))
+#endif
+
+/* Linux and OpenBSD have LOGIN_NAME_MAX, FreeBSD MAXLOGNAME. */
+#ifndef LOGIN_NAME_MAX
+# if defined(MAXLOGNAME)
+#  define LOGIN_NAME_MAX MAXLOGNAME
+# elif defined(_POSIX_LOGIN_NAME_MAX)
+#  define LOGIN_NAME_MAX _POSIX_LOGIN_NAME_MAX
+# else
+#  define LOGIN_NAME_MAX 32
+# endif
 #endif
 __HEREDOC__
 
