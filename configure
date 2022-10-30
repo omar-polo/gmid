@@ -435,6 +435,13 @@ cat <<__HEREDOC__
 #  define LOGIN_NAME_MAX 32
 # endif
 #endif
+
+#ifndef HOST_NAME_MAX
+# if defined(_POSIX_HOST_NAME_MAX)
+#  define HOST_NAME_MAX _POSIX_HOST_NAME_MAX
+# else
+#  define HOST_NAME_MAX 255
+#endif
 __HEREDOC__
 
 echo "file config.h: written" 1>&2
