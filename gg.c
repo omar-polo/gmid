@@ -39,7 +39,6 @@ int		 flag3;
 int		 nop;
 int		 redirects = 5;
 int		 timer;
-int		 verbose;
 const char	*cert;
 const char	*key;
 const char	*proxy_host;
@@ -231,9 +230,6 @@ get(const char *r)
 		}
 	}
 
-	if (verbose)
-		printf("%s", req);
-
 	doreq(ctx, req);
 
 	for (;;) {
@@ -305,7 +301,7 @@ static void __attribute__((noreturn))
 usage(void)
 {
 	fprintf(stderr, "version: " GG_STRING "\n");
-	fprintf(stderr, "usage: %s [-23Nnv] [-C cert] [-d mode] [-H sni] "
+	fprintf(stderr, "usage: %s [-23Nn] [-C cert] [-d mode] [-H sni] "
 	    "[-K key] [-P host[:port]]\n",
 	    getprogname());
 	fprintf(stderr, "          [-T seconds] gemini://...\n");
@@ -353,7 +349,7 @@ main(int argc, char **argv)
 	int		 ch, code;
 	const char	*errstr;
 
-	while ((ch = getopt(argc, argv, "23C:d:H:K:NP:T:v")) != -1) {
+	while ((ch = getopt(argc, argv, "23C:d:H:K:NP:T:")) != -1) {
 		switch (ch) {
 		case '2':
 			flag2 = 1;
@@ -390,9 +386,6 @@ main(int argc, char **argv)
 				    errstr, optarg);
 			signal(SIGALRM, timeout);
 			alarm(timer);
-			break;
-		case 'v':
-			verbose++;
 			break;
 		default:
 			usage();
