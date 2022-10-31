@@ -8,6 +8,7 @@ DISTFILES =	Makefile \
 		imsg-buffer.c \
 		imsg.c \
 		imsg.h \
+		memmem.c \
 		queue.h \
 		reallocarray.c \
 		recallocarray.c \

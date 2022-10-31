@@ -10,6 +10,7 @@ DISTFILES =	Makefile \
 		libevent.c \
 		libevent2.c \
 		libtls.c \
+		memmem.c \
 		noop.c \
 		openssl.c \
 		pr_set_name.c \
