@@ -18,50 +18,6 @@
 # all.
 TESTS=
 
-TESTSRCS =	have/err.c \
-		have/explicit_bzero.c \
-		have/freezero.c \
-		have/getdtablecount.c \
-		have/getdtablesize.c \
-		have/getprogname.c \
-		have/imsg.c \
-		have/landlock.c \
-		have/libevent.c \
-		have/libevent2.c \
-		have/libtls.c \
-		have/noop.c \
-		have/openssl.c \
-		have/pr_set_name.c \
-		have/program_invocation_short_name.c \
-		have/queue_h.c \
-		have/reallocarray.c \
-		have/recallocarray.c \
-		have/setproctitle.c \
-		have/strlcat.c \
-		have/strlcpy.c \
-		have/strtonum.c \
-		have/tree_h.c \
-		have/vasprintf.c
-
-COMPATS =	compat/err.c \
-		compat/explicit_bzero.c \
-		compat/freezero.c \
-		compat/getdtablecount.c \
-		compat/getdtablesize.c \
-		compat/getprogname.c \
-		compat/imsg-buffer.c \
-		compat/imsg.c \
-		compat/imsg.h \
-		compat/queue.h \
-		compat/reallocarray.c \
-		compat/recallocarray.c \
-		compat/setproctitle.c \
-		compat/strlcat.c \
-		compat/strlcpy.c \
-		compat/strtonum.c \
-		compat/tree.h \
-		compat/vasprintf.c
-
 GMID_SRCS =	dirs.c \
 		fcgi.c \
 		gmid.c \
@@ -106,63 +62,12 @@ SRCS =		gmid.h \
 		${GE_SRCS} \
 		${GG_SRCS}
 
-REGRESSFILES =	regress/Makefile \
-		regress/env \
-		regress/err \
-		regress/example.mime.types \
-		regress/fcgi-test.c \
-		regress/fill-file.c \
-		regress/hello \
-		regress/invalid \
-		regress/iri_test.c \
-		regress/lib.sh \
-		regress/max-length-reply \
-		regress/puny-test.c \
-		regress/regress \
-		regress/serve-bigfile \
-		regress/sha \
-		regress/slow \
-		regress/tests.sh \
-		regress/valid.ext
-
-EXTRAS =	ChangeLog \
-		LICENSE \
-		Makefile \
-		Makefile.depend \
-		README.md \
-		configure \
-		configure.local.example \
-		ge.1 \
-		gg.1 \
-		gmid.8 \
-		gmid.conf.5
-
-CONTRIB =	contrib/Dockerfile \
-		contrib/gencert \
-		contrib/gmid.service \
-		contrib/gmid.sysusers \
-		contrib/mime.types \
-		contrib/README \
-		contrib/renew-certs \
-		contrib/vim/ftdetect/gmid.vim \
-		contrib/vim/ftplugin/gmid.vim \
-		contrib/vim/indent/gmid.vim \
-		contrib/vim/syntax_checkers/gmid/gmid.vim \
-		contrib/vim/syntax/gmid.vim
-
-DISTFILES =	${EXTRAS} \
-		${CONTRIB} \
-		${COMPATS} \
-		${REGRESSFILES} \
-		${SRCS} \
-		${TESTSRCS}
-
 DISTNAME =	gmid-${VERSION}
 
 all: Makefile.local gmid ge gg
 .PHONY: all static clean cleanall test regress install
 
-Makefile.local config.h: configure ${TESTSRCS}
+Makefile.local config.h: configure
 	@echo "$@ is out of date; please run ./configure"
 	@exit 1
 
@@ -225,6 +130,41 @@ uninstall:
 .c.o:
 	${CC} ${CFLAGS} -c $< -o $@
 
+# -- maintainer targets --
+
+DISTFILES =	.cirrus.yml \
+		.dockerignore \
+		.gitignore \
+		ChangeLog \
+		LICENSE \
+		Makefile \
+		Makefile.depend \
+		README.md \
+		configure \
+		configure.local.example \
+		dirs.c \
+		fcgi.c \
+		ge.1 \
+		ge.c \
+		gg.1 \
+		gg.c \
+		gmid.8 \
+		gmid.c \
+		gmid.conf.5 \
+		gmid.h \
+		iri.c \
+		landlock_shim.h \
+		log.c \
+		mime.c \
+		parse.y \
+		proxy.c \
+		puny.c \
+		sandbox.c \
+		server.c \
+		utf8.c \
+		utils.c \
+		y.tab.c
+
 depend: config.h y.tab.c
 	mkdep -f Makefile.tmp1 ${CFLAGS} ${GE_SRCS} ${GG_SRCS} ${GMID_SRCS} \
 		${COBJSx:.o=.c}
@@ -240,18 +180,11 @@ ${DISTNAME}.sha256: ${DISTNAME}.tar.gz
 
 ${DISTNAME}.tar.gz: ${DISTFILES}
 	mkdir -p .dist/${DISTNAME}/
-	${INSTALL} -m 0644 ${SRCS} ${EXTRAS} .dist/${DISTNAME}
+	${INSTALL} -m 0644 ${DISTFILES} .dist/${DISTNAME}/
 	cd .dist/${DISTNAME} && chmod 755 configure
-	mkdir -p .dist/${DISTNAME}/contrib
-	${INSTALL} -m 0644 ${CONTRIB} .dist/${DISTNAME}/contrib
-	cd .dist/${DISTNAME}/contrib && chmod 755 gencert renew-certs
-	mkdir -p .dist/${DISTNAME}/compat
-	${INSTALL} -m 0644 ${COMPATS} .dist/${DISTNAME}/compat
-	mkdir -p .dist/${DISTNAME}/have
-	${INSTALL} -m 0644 ${TESTSRCS} .dist/${DISTNAME}/have
-	mkdir -p .dist/${DISTNAME}/regress
-	${INSTALL} -m 0644 ${REGRESSFILES} .dist/${DISTNAME}/regress
-	cd .dist/${DISTNAME}/regress && chmod 755 env err hello invalid \
-	    max-length-reply regress sha slow
+	${MAKE} -C compat	DESTDIR=${PWD}/.dist/${DISTNAME}/compat dist
+	${MAKE} -C contrib	DESTDIR=${PWD}/.dist/${DISTNAME}/contrib dist
+	${MAKE} -C have		DESTDIR=${PWD}/.dist/${DISTNAME}/have dist
+	${MAKE} -C regress	DESTDIR=${PWD}/.dist/${DISTNAME}/regress dist
 	cd .dist/ && tar zcf ../$@ ${DISTNAME}
 	rm -rf .dist/
