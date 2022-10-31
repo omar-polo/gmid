@@ -2,11 +2,30 @@
 # all.
 TESTS=
 
+DISTFILES =	Makefile \
+		env \
+		err \
+		example.mime.types \
+		fcgi-test.c \
+		fill-file.c \
+		hello \
+		invalid \
+		iri_test.c \
+		lib.sh \
+		max-length-reply \
+		puny-test.c \
+		regress \
+		serve-bigfile \
+		sha \
+		slow \
+		tests.sh \
+		valid.ext
+
 include ../Makefile.local
 
 COMPAT= ${COBJS:%=../%}
 
-.PHONY: all data clean regress
+.PHONY: all data clean dist
 
 all: data puny-test iri_test fcgi-test
 	./regress ${TESTS}
@@ -87,3 +106,9 @@ testdata: fill-file
 	cp hello testdata/dir
 	cp testdata/index.gmi testdata/dir/foo.gmi
 	touch testdata/test.m3u8 testdata/foo.1
+
+dist: ${DISTFILES}
+	mkdir -p ${DESTDIR}/
+	${INSTALL} -m 0644 ${DISTFILES} ${DESTDIR}/
+	cd ${DESTDIR}/ && chmod +x env err hello invalid \
+		max-length-reply regress sha slow
