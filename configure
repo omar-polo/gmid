@@ -250,6 +250,7 @@ runtest landlock	LANDLOCK	|| true
 runtest libevent	LIBEVENT	|| true
 runtest libevent2	LIBEVENT2	|| true
 runtest libtls		LIBTLS		|| true
+runtest memmem		MEMMEM		"" -D_GNU_SOURCE || true
 runtest openssl		OPENSSL		|| true
 runtest pr_set_name	PR_SET_NAME	|| true
 runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME "" -D_GNU_SOURCE || true
@@ -388,6 +389,10 @@ if [ ${HAVE_GETPROGNAME} -eq 0 ]; then
 fi
 if [ ${HAVE_IMSG} -eq 0 ]; then
 	COBJS="${COBJS} compat/imsg.o compat/imsg-buffer.o"
+fi
+if [ ${HAVE_MEMMEM} -eq 0 ]; then
+	echo "extern void *memmem(const void *, size_t, const void *, size_t);"
+	COBJS="${COBJS} compat/memmem.o"
 fi
 if [ ${HAVE_REALLOCARRAY} -eq 0 ]; then
 	echo "extern	void	*reallocarray(void*, size_t, size_t);"
