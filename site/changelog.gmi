@@ -1,5 +1,14 @@
 # change log
 
+## 2022/11/01 - 1.8.5 “Lightbulb Sun” bugfix release
+
+### Bug fixes
+
+* removed OpenBSD' rc file because now is maintained in the ports tree
+* (hopefully) fix build on DragonflyBSD
+* call tzset(3) to fix times in logs
+* always send custom list of fcgi parameters (alex)
+
 ## 2022/07/04 - 1.8.4 “Lightbulb Sun” bugfix release
 
 ### Bug fixes
