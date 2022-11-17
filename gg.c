@@ -248,7 +248,9 @@ get(const char *r)
 
 		if (memmem(buf, len, "\r\n", 2) == NULL)
 			errx(1, "invalid reply: no \\r\\n");
-		if (!isdigit(buf[0]) || !isdigit(buf[1]) || buf[2] != ' ')
+		if (!isdigit((unsigned char)buf[0]) ||
+		    !isdigit((unsigned char)buf[1]) ||
+		    buf[2] != ' ')
 			errx(1, "invalid reply: invalid response format");
 
 		code = (buf[0] - '0') * 10 + buf[1] - '0';

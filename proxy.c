@@ -160,9 +160,9 @@ proxy_read(struct bufferevent *bev, void *d)
 		}
 
 		if (len < 3 || len > 1029 ||
-		    !isdigit(hdr[0]) ||
-		    !isdigit(hdr[1]) ||
-		    !isspace(hdr[2])) {
+		    !isdigit((unsigned char)hdr[0]) ||
+		    !isdigit((unsigned char)hdr[1]) ||
+		    !isspace((unsigned char)hdr[2])) {
 			free(hdr);
 			log_warn(c, "upstream server is trying to send a "
 			    "header that's too long.");

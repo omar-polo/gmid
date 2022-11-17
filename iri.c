@@ -51,7 +51,8 @@ valid_pct_enc_string(char *s)
 	if (*s != '%')
 		return 1;
 
-	if (!isxdigit(s[1]) || !isxdigit(s[2]))
+	if (!isxdigit((unsigned char)s[1]) ||
+	    !isxdigit((unsigned char)s[2]))
 		return 0;
 
 	if (s[1] == '0' && s[2] == '0')
@@ -153,7 +154,7 @@ parse_port(struct parser *p)
 
 	p->parsed->port = p->iri;
 
-	for (; isdigit(*p->iri); p->iri++) {
+	for (; isdigit((unsigned char)*p->iri); p->iri++) {
 		i = i * 10 + *p->iri - '0';
 		if (i > UINT16_MAX) {
 			p->err = "port number too large";
