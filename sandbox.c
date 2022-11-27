@@ -611,14 +611,14 @@ sandbox_server_process(int can_open_sockets)
 			if (*l->dir == '\0')
 				continue;
 
-			if (unveil(l->dir, "r") == -1)
+			if (unveil(l->dir, "rw") == -1)
 				fatal("unveil %s for domain %s",
 				    l->dir,
 				    h->domain);
 		}
 	}
 
-	if (pledge("stdio recvfd rpath inet dns", NULL) == -1)
+	if (pledge("stdio recvfd rpath unix inet dns", NULL) == -1)
 		fatal("pledge");
 }
 
