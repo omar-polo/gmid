@@ -722,7 +722,7 @@ apply_fastcgi(struct client *c)
 	log_debug(c, "opening fastcgi connection for (%s,%s)",
 	    f->path, f->port);
 
-	if (*f->port != '\0')
+	if (*f->port == '\0')
 		c->pfd = fcgi_open_sock(f);
 	else
 		c->pfd = fcgi_open_conn(f);
