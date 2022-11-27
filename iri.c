@@ -488,7 +488,9 @@ pct_decode_str(char *s)
 	char *t;
 
 	for (t = s; *t; ++t) {
-		if (*t == '%' && valid_pct_enc_string(t))
+		if (*t == '+')
+			*t = ' ';
+		else if (*t == '%' && valid_pct_enc_string(t))
 			pct_decode(t);
 	}
 

@@ -286,6 +286,12 @@ Full path to the FastCGI script being executed.
 The full IRI of the request.
 .It Ev GEMINI_URL_PATH
 The path of the request.
+.It Ev GEMINI_SEARCH_STRING
+The decoded
+.Ev QUERY_STRING
+if defined in the request and if it doesn't contain any unencoded
+.Sq =
+characters, otherwise unset.
 .It Ev PATH_INFO
 The portion of the requested path that is derived from the the IRI
 path hierarchy following the part that identifies the script itself.

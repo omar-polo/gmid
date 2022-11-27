@@ -344,6 +344,7 @@ void
 fcgi_req(struct client *c)
 {
 	char		 addr[NI_MAXHOST], buf[22];
+	char		*qs;
 	int		 e;
 	time_t		 tim;
 	struct tm	 tminfo;
@@ -367,6 +368,14 @@ fcgi_req(struct client *c)
 	fcgi_send_param(c->cgibev, "SERVER_NAME", c->iri.host);
 	fcgi_send_param(c->cgibev, "SERVER_PROTOCOL", "GEMINI");
 	fcgi_send_param(c->cgibev, "SERVER_SOFTWARE", GMID_VERSION);
+
+	if (*c->iri.query != '\0' &&
+	    strchr(c->iri.query, '=') == NULL &&
+	    (qs = strdup(c->iri.query)) != NULL) {
+		pct_decode_str(qs);
+		fcgi_send_param(c->cgibev, "GEMINI_SEARCH_STRING", qs);
+		free(qs);
+	}
 
 	TAILQ_FOREACH(p, &c->host->params, envs) {
 		fcgi_send_param(c->cgibev, p->name, p->value);
