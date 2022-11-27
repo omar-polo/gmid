@@ -1178,7 +1178,8 @@ fastcgi_conf(const char *path, const char *port)
 		if (*f->path == '\0') {
 			f->id = i;
 			(void) strlcpy(f->path, path, sizeof(f->path));
-			(void) strlcpy(f->port, port, sizeof(f->port));
+			if (port != NULL)
+				(void) strlcpy(f->port, port, sizeof(f->port));
 			return i;
 		}
 
