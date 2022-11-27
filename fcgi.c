@@ -290,7 +290,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 			/* TODO: do something with the status? */
 			c->type = REQUEST_DONE;
 			client_write(c->bev, c);
-			break;
+			return;
 
 		case FCGI_STDERR:
 			/* discard stderr (for now) */
