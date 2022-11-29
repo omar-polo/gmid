@@ -145,6 +145,18 @@ test_cgi_split_query() {
 			return 1
 		fi
 	done
+
+	if ! n="$(get "/env?foo+bar%3d5" | grep GEMINI_SEARCH_STRING)"; then
+		echo "failed to get /env"
+		return 1
+	fi
+
+	if [ "$n" != "GEMINI_SEARCH_STRING=foo bar=5" ]; then
+		echo "wrong value for GEMINI_SEARCH_STRING"
+		echo "want : foo bar=5"
+		echo "got  : $n"
+		return 1
+	fi
 }
 
 test_custom_index() {

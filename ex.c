@@ -147,7 +147,7 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 		return -1;
 
 	case 0: {		/* child */
-		char *ex, *pwd;
+		char *ex, *pwd, *qs;
 		char iribuf[GEMINI_URL_LEN];
 		char path[PATH_MAX];
 		struct envlist *e;
@@ -183,6 +183,14 @@ launch_cgi(struct iri *iri, struct cgireq *req, struct vhost *vhost,
 			strlcat(path, "/", sizeof(path));
 			strlcat(path, req->relpath, sizeof(path));
 			safe_setenv("PATH_TRANSLATED", path);
+		}
+
+		if (iri->query != NULL &&
+		    strchr(iri->query, '=') == NULL &&
+		    (qs = strdup(iri->query)) != NULL) {
+			pct_decode_str(qs);
+			safe_setenv("GEMINI_SEARCH_STRING", qs);
+			free(qs);
 		}
 
 		safe_setenv("QUERY_STRING", iri->query);
