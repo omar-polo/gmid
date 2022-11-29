@@ -408,9 +408,10 @@ drop_priv(void)
 	}
 
 	if (pw != NULL) {
-		if (setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) == -1)
-			fatal("setresuid(%d): %s", pw->pw_uid,
-			    strerror(errno));
+		if (setgroups(1, &pw->pw_gid) == -1 ||
+		    setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) == -1 ||
+		    setresuid(pw->pw_uid, pw->pw_uid, pw->pw_uid) == -1)
+			fatal("cannot drop privileges");
 	}
 
 	if (getuid() == 0)
