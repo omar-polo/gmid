@@ -1334,9 +1334,9 @@ cgi_read(struct bufferevent *bev, void *d)
 		}
 
 		if (len < 3 || len > 1029 ||
-		    !isdigit(header[0]) ||
-		    !isdigit(header[1]) ||
-		    !isspace(header[2])) {
+		    !isdigit((unsigned char)header[0]) ||
+		    !isdigit((unsigned char)header[1]) ||
+		    !isspace((unsigned char)header[2])) {
 			free(header);
 			log_warn(client, "CGI script is trying to send a "
 			    "malformed header");

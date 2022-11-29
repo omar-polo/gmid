@@ -22,7 +22,7 @@
 static inline int
 unreserved(int p)
 {
-	return isalnum(p)
+	return isalnum((unsigned char)p)
 		|| p == '-'
 		|| p == '.'
 		|| p == '_'
@@ -51,7 +51,8 @@ valid_pct_enc_string(char *s)
 	if (*s != '%')
 		return 1;
 
-	if (!isxdigit(s[1]) || !isxdigit(s[2]))
+	if (!isxdigit((unsigned char)s[1]) ||
+	    !isxdigit((unsigned char)s[2]))
 		return 0;
 
 	if (s[1] == '0' && s[2] == '0')
@@ -108,7 +109,7 @@ parse_scheme(struct parser *p)
 {
 	p->parsed->schema = p->iri;
 
-	if (!isalpha(*p->iri)) {
+	if (!isalpha((unsigned char)*p->iri)) {
 		p->err = "illegal character in scheme";
 		return 0;
 	}
@@ -125,7 +126,7 @@ parse_scheme(struct parser *p)
 		 */
 		*p->iri = tolower(*p->iri);
 		p->iri++;
-	} while (isalnum(*p->iri)
+	} while (isalnum((unsigned char)*p->iri)
 	    || *p->iri == '+'
 	    || *p->iri == '-'
 	    || *p->iri == '.');
@@ -153,7 +154,7 @@ parse_port(struct parser *p)
 
 	p->parsed->port = p->iri;
 
-	for (; isdigit(*p->iri); p->iri++) {
+	for (; isdigit((unsigned char)*p->iri); p->iri++) {
 		i = i * 10 + *p->iri - '0';
 		if (i > UINT16_MAX) {
 			p->err = "port number too large";
