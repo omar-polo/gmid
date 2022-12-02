@@ -258,6 +258,8 @@ runtest queue_h		QUEUE_H		|| true
 runtest reallocarray	REALLOCARRAY	|| true
 runtest recallocarray	RECALLOCARRAY	|| true
 runtest setproctitle	SETPROCTITLE	|| true
+runtest setresgid	SETRESGID	"" -D_GNU_SOURCE || true
+runtest setresuid	SETRESUID	"" -D_GNU_SOURCE || true
 runtest strlcat		STRLCAT		|| true
 runtest strlcpy		STRLCPY		|| true
 runtest strtonum	STRTONUM	|| true
@@ -343,6 +345,8 @@ cat <<__HEREDOC__
 #define HAVE_REALLOCARRAY	${HAVE_REALLOCARRAY}
 #define HAVE_RECALLOCARRAY	${HAVE_RECALLOCARRAY}
 #define HAVE_SETPROCTITLE	${HAVE_SETPROCTITLE}
+#define HAVE_SETRESGID		${HAVE_SETRESGID}
+#define HAVE_SETRESUID		${HAVE_SETRESUID}
 #define HAVE_STRLCAT		${HAVE_STRLCAT}
 #define HAVE_STRLCPY		${HAVE_STRLCPY}
 #define HAVE_STRTONUM		${HAVE_STRTONUM}
@@ -358,6 +362,9 @@ __HEREDOC__
   ${HAVE_STRLCAT} -eq 0 -o \
   ${HAVE_STRLCPY} -eq 0 -o \
   ${HAVE_STRTONUM} -eq 0 ] && echo "#include <stddef.h>"
+
+[ ${HAVE_SETRESGID} -eq 0 -o \
+  ${HAVE_SETRESUID} -eq 0 ] && echo "#include <unistd.h>"
 
 if [ ${HAVE_ERR} -eq 0 ]; then
 	echo "extern	void	 err(int, const char*, ...);"
@@ -406,6 +413,14 @@ fi
 if [ ${HAVE_SETPROCTITLE} -eq 0 ]; then
 	echo "extern	void	 setproctitle(const char *fmt, ...);"
 	COBJS="${COBJS} compat/setproctitle.o"
+fi
+if [ ${HAVE_SETRESGID} -eq 0 ]; then
+	echo "extern	int	 setresgid(gid_t, gid_t, gid_t);"
+	COBJS="${COBJS} compat/setresgid.o"
+fi
+if [ ${HAVE_SETRESUID} -eq 0 ]; then
+	echo "extern	int	 setresuid(uid_t, uid_t, uid_t);"
+	COBJS="${COBJS} compat/setresuid.o"
 fi
 if [ ${HAVE_STRLCAT} -eq 0 ]; then
 	echo "extern	size_t	 strlcat(char*, const char*, size_t);"

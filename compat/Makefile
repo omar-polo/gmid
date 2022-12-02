@@ -13,6 +13,8 @@ DISTFILES =	Makefile \
 		reallocarray.c \
 		recallocarray.c \
 		setproctitle.c \
+		setresgid.c \
+		setresuid.c \
 		strlcat.c \
 		strlcpy.c \
 		strtonum.c \
