@@ -18,7 +18,7 @@ REPOLOGY_BANNER =	https://repology.org/badge/vertical-allrepos/gmid.svg
 REPOLOGY_URL =		https://repology.org/project/gmid/versions
 
 SUBST =		./subst GITHUB=https://github.com/omar-polo/gmid \
-			VERS=1.8.5 \
+			VERS=1.8.6 \
 			CURV=1.8 \
 			NEXTV=1.9 \
 			TREE=https://github.com/omar-polo/gmid/blob/master
@@ -29,7 +29,7 @@ SUBST_WWW =	${SUBST} MANEXT=html EXT=html REPOLOGY=${REPOLOGY_BANNER}
 .PHONY: all dirs manpages serve-www serve-gemini upload clean titles
 
 all: dirs manpages pages
-	cp style.css www/
+	cp style.css mandoc.css www/
 	cp vim-screenshot.png www/
 	cp vim-screenshot.png gemini/
 
@@ -38,7 +38,7 @@ dirs:
 
 manpages:
 .for m in ${MANPAGES}
-	./mdoc2html.sh $m www/${m:T}.html
+	man -Thtml -Ostyle=mandoc.css $m > www/${m:T}.html
 	man -O width=65 -Tutf8 -l $m | col -b > gemini/${m:T}.txt
 .endfor
 

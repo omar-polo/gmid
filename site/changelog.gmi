@@ -1,8 +1,15 @@
 # change log
 
-## 2022/11/01 - 1.8.5 “Lightbulb Sun” bugfix release
+## 2022/12/02 - 1.8.6 “Lightbulb Sun” bugfix release
 
-### Bug fixes
+* add tests and compat for setresuid setresgid
+* add GEMINI_SEARCH_STRING fastcgi parameter / cgi env variable
+* manpage fix: QUERY_STRING is *not* urldecoded
+* fixed use-after-free in the fastcgi code
+* when switching user also set the groups
+* always cast is*() arguments to unsigned char
+
+## 2022/11/01 - 1.8.5 “Lightbulb Sun” bugfix release
 
 * removed OpenBSD' rc file because now is maintained in the ports tree
 * (hopefully) fix build on DragonflyBSD
