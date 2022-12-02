@@ -1,5 +1,9 @@
 # gmid
 
+**the `master` branch is WIP: it's what gmid 2.0 will be, with breaking
+changes et al.  Please use the latest release from the 1.8 branch for a
+stable and documented experience, thank you.**
+
 gmid is a fast Gemini server written with security in mind.  I
 initially wrote it to serve static files, but it has grown into a
 featureful server.
