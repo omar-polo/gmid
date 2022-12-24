@@ -23,6 +23,7 @@
 #include <getopt.h>
 #include <libgen.h>
 #include <limits.h>
+#include <grp.h>
 #include <pwd.h>
 #include <signal.h>
 #include <string.h>
