@@ -6,7 +6,6 @@ DISTFILES =	Makefile \
 		getdtablesize.c \
 		getprogname.c \
 		imsg.c \
-		landlock.c \
 		libevent.c \
 		libevent2.c \
 		libtls.c \

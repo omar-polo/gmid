@@ -246,7 +246,6 @@ runtest getdtablecount	GETDTABLECOUNT	|| true
 runtest getdtablesize	GETDTABLESIZE	|| true
 runtest getprogname	GETPROGNAME	|| true
 runtest imsg		IMSG		-lutil || true
-runtest landlock	LANDLOCK	|| true
 runtest libevent	LIBEVENT	|| true
 runtest libevent2	LIBEVENT2	|| true
 runtest libtls		LIBTLS		|| true
@@ -336,7 +335,6 @@ cat <<__HEREDOC__
 #define HAVE_GETDTABLESIZE	${HAVE_GETDTABLESIZE}
 #define HAVE_GETPROGNAME	${HAVE_GETPROGNAME}
 #define HAVE_IMSG		${HAVE_IMSG}
-#define HAVE_LANDLOCK		${HAVE_LANDLOCK}
 #define HAVE_LIBEVENT		${HAVE_LIBEVENT}
 #define HAVE_LIBEVENT2		${HAVE_LIBEVENT2}
 #define HAVE_PROGRAM_INVOCATION_SHORT_NAME ${HAVE_PROGRAM_INVOCATION_SHORT_NAME}

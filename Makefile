@@ -56,7 +56,6 @@ GG_SRCS =	gg.c \
 GG_OBJS =	${GG_SRCS:.c=.o} ${COBJS}
 
 SRCS =		gmid.h \
-		landlock_shim.h \
 		parse.y \
 		${GMID_SRCS} \
 		${GE_SRCS} \
@@ -153,7 +152,6 @@ DISTFILES =	.cirrus.yml \
 		gmid.conf.5 \
 		gmid.h \
 		iri.c \
-		landlock_shim.h \
 		log.c \
 		mime.c \
 		parse.y \
