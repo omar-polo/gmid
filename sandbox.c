@@ -21,7 +21,7 @@
 #include <unistd.h>
 
 void
-sandbox_server_process(int can_open_sockets)
+sandbox_server_process(void)
 {
 	struct vhost	*h;
 	struct location	*l;
@@ -54,7 +54,7 @@ sandbox_logger_process(void)
 #warning "No sandbox method known for this OS"
 
 void
-sandbox_server_process(int can_open_sockets)
+sandbox_server_process(void)
 {
 	return;
 }
