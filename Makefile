@@ -64,7 +64,7 @@ SRCS =		gmid.h \
 DISTNAME =	gmid-${VERSION}
 
 all: Makefile.local gmid ge gg
-.PHONY: all static clean cleanall test regress install
+.PHONY: all tags static clean cleanall test regress install
 
 Makefile.local config.h: configure
 	@echo "$@ is out of date; please run ./configure"
@@ -72,6 +72,9 @@ Makefile.local config.h: configure
 
 include Makefile.local
 include Makefile.depend
+
+tags:
+	ctags ${SRCS}
 
 y.tab.c: parse.y
 	${YACC} -b y parse.y
