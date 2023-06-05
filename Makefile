@@ -56,6 +56,7 @@ GG_SRCS =	gg.c \
 GG_OBJS =	${GG_SRCS:.c=.o} ${COBJS}
 
 SRCS =		gmid.h \
+		log.h \
 		parse.y \
 		${GMID_SRCS} \
 		${GE_SRCS} \
