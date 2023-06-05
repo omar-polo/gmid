@@ -68,9 +68,10 @@ load_vhosts(void)
 		TAILQ_FOREACH(l, &h->locations, locations) {
 			if (*l->dir == '\0')
 				continue;
-			if ((l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY)) == -1)
-				fatal("open %s for domain %s: %s", l->dir, h->domain,
-				    strerror(errno));
+			l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY);
+			if (l->dirfd == -1)
+				fatal("open %s for domain %s: %s", l->dir,
+				    h->domain, strerror(errno));
 		}
 	}
 }
@@ -304,7 +305,8 @@ drop_priv(void)
 	}
 
 	if (getuid() == 0)
-		log_warn(NULL, "not a good idea to run a network daemon as root");
+		log_warn(NULL,
+		    "not a good idea to run a network daemon as root");
 }
 
 static void
@@ -493,7 +495,8 @@ main(int argc, char **argv)
 
 		/* close the servers */
 		for (i = 0; i < conf.prefork; ++i) {
-			imsg_compose(&servibuf[i], IMSG_QUIT, 0, 0, -1, NULL, 0);
+			imsg_compose(&servibuf[i], IMSG_QUIT, 0, 0, -1,
+			    NULL, 0);
 			imsg_flush(&servibuf[i]);
 			close(servibuf[i].fd);
 		}
