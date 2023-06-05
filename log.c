@@ -107,7 +107,7 @@ fatal_impl(int use_err, const char *fmt, va_list ap)
 	} else
 		str = NULL, r = 0;
 
-	send_log(IMSG_LOG, LOG_CRIT, str, r);
+	send_log(IMSG_LOG, LOG_CRIT, str, r + 1);
 	free(str);
 
 	/* wait for the logger process to shut down */
