@@ -4,7 +4,7 @@
 #	gencert - generate certificates
 #
 # SYNOPSIS
-#	./gencert [-fh] [-D days] [-d destdir] hostname
+#	./gencert [-efh] [-D days] [-d destdir] hostname
 #
 # DESCRIPTION
 #	A simple script to generate self-signed X.509 certificates for
@@ -15,6 +15,7 @@
 #			will be valid for.  Use 365 (a year) by default.
 #		-d	Save the certificates to the given directory.
 #			By default the current directory is used.
+#		-e	Use an EC key instead of RSA.
 #		-f	Forcefully overwrite existing certificates
 #			without prompting.
 #		-h	Display usage and exit.
@@ -31,14 +32,16 @@ usage() {
 	exit $1
 }
 
+ec=no
 force=no
 destdir=.
 days=365
 
-while getopts "D:d:fh" flag; do
+while getopts "D:d:efh" flag; do
 	case $flag in
 		D) days="$OPTARG" ;;
 		d) destdir="${OPTARG%/}" ;;
+		e) ec=yes ;;
 		f) force=yes ;;
 		h) usage 0 ;;
 		?) usage 1 ;;
@@ -76,13 +79,19 @@ if [ -f "$pem" -o -f "$key" ]; then
 	fi
 fi
 
-openssl req -x509		\
-	-newkey rsa:4096	\
-	-out "${pem}"		\
-	-keyout "${key}"	\
-	-days "${days}"		\
-	-nodes			\
-	-subj "/CN=$hostname"
+if [ $ec = yes ]; then
+	openssl ecparam -name prime256v1 -genkey -noout -out "${key}" && \
+	openssl req -new -x509 -key "${key}" -out "${pem}" -days "${days}" \
+		-nodes -subj "/CN=$hostname"
+else
+	openssl req -x509		\
+		-newkey rsa:4096	\
+		-out "${pem}"		\
+		-keyout "${key}"	\
+		-days "${days}"		\
+		-nodes			\
+		-subj "/CN=$hostname"
+fi
 
 e=$?
 if [ $e -ne 0 ]; then
