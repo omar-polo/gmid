@@ -28,6 +28,8 @@
 #include <limits.h>
 #include <string.h>
 
+#include "log.h"
+
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
 int shutting_down;
@@ -367,9 +369,9 @@ mark_nonblock(int fd)
 	int flags;
 
 	if ((flags = fcntl(fd, F_GETFL)) == -1)
-		fatal("fcntl(F_GETFL): %s", strerror(errno));
+		fatal("fcntl(F_GETFL)");
 	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
-		fatal("fcntl(F_SETFL): %s", strerror(errno));
+		fatal("fcntl(F_SETFL)");
 }
 
 static void
@@ -399,8 +401,7 @@ handle_handshake(int fd, short ev, void *d)
 	c->bev = bufferevent_new(fd, client_read, client_write,
 	    client_error, c);
 	if (c->bev == NULL)
-		fatal("%s: failed to allocate client buffer: %s",
-		    __func__, strerror(errno));
+		fatal("%s: failed to allocate client buffer", __func__);
 
 	event_set(&c->bev->ev_read, c->fd, EV_READ,
 	    client_tls_readcb, c->bev);
@@ -504,7 +505,7 @@ fmt_sbuf(const char *fmt, struct client *c, const char *path)
 			strlcat(c->sbuf, c->domain, sizeof(c->sbuf));
 			break;
 		default:
-			fatal("%s: unknown fmt specifier %c",
+			fatalx("%s: unknown fmt specifier %c",
 			    __func__, *fmt);
 		}
 	}
@@ -1283,7 +1284,7 @@ do_accept(int sock, short et, void *d)
 		if (errno == EWOULDBLOCK || errno == EAGAIN ||
 		    errno == ECONNABORTED)
 			return;
-		fatal("accept: %s", strerror(errno));
+		fatal("accept");
 	}
 
 	mark_nonblock(fd);
@@ -1329,7 +1330,7 @@ handle_dispatch_imsg(int fd, short ev, void *d)
 	}
 
 	if (n == 0)
-		fatal("connection closed.");	/* XXX: fatalx */
+		fatalx("connection closed.");
 
 	for (;;) {
 		if ((n = imsg_get(ibuf, &imsg)) == -1)
@@ -1354,8 +1355,7 @@ handle_dispatch_imsg(int fd, short ev, void *d)
 			signal_del(&sigusr2);
 			break;
 		default:
-			/* XXX: fatalx */
-			fatal("Unknown message %d", imsg.hdr.type);
+			fatalx("Unknown message %d", imsg.hdr.type);
 		}
 		imsg_free(&imsg);
 	}
@@ -1416,8 +1416,8 @@ load_vhosts(void)
 				continue;
 			l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY);
 			if (l->dirfd == -1)
-				fatal("open %s for domain %s: %s", l->dir,
-				    h->domain, strerror(errno));
+				fatal("open %s for domain %s", l->dir,
+				    h->domain);
 		}
 	}
 }
@@ -1427,7 +1427,7 @@ server_main(struct tls *ctx_, struct imsgbuf *ibuf, int sock4, int sock6)
 {
 	drop_priv();
 	if (load_default_mime(&conf.mime) == -1)
-		fatal("can't load default mime: %s", strerror(errno));
+		fatal("can't load default mime");
 	sort_mime(&conf.mime);
 	load_vhosts();
 	loop(ctx_, sock4, sock6, ibuf);

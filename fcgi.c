@@ -20,6 +20,8 @@
 #include <errno.h>
 #include <string.h>
 
+#include "log.h"
+
 /*
  * Sometimes it can be useful to inspect the fastcgi traffic as
  * received by gmid.
@@ -355,8 +357,7 @@ fcgi_req(struct client *c)
 	    NULL, 0,
 	    NI_NUMERICHOST);
 	if (e != 0)
-		fatal("getnameinfo failed: %s (%s)",
-		    gai_strerror(e), strerror(errno));
+		fatalx("getnameinfo failed: %s", gai_strerror(e));
 
 	fcgi_begin_request(c->cgibev);
 	fcgi_send_param(c->cgibev, "GATEWAY_INTERFACE", "CGI/1.1");

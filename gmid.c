@@ -28,6 +28,8 @@
 #include <signal.h>
 #include <string.h>
 
+#include "log.h"
+
 static const char	*opts = "D:df:hnP:Vv";
 
 static const struct option longopts[] = {
@@ -92,23 +94,23 @@ make_socket(int port, int family)
 	}
 
 	if ((sock = socket(family, SOCK_STREAM, 0)) == -1)
-		fatal("socket: %s", strerror(errno));
+		fatal("socket");
 
 	v = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v)) == -1)
-		fatal("setsockopt(SO_REUSEADDR): %s", strerror(errno));
+		fatal("setsockopt(SO_REUSEADDR)");
 
 	v = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &v, sizeof(v)) == -1)
-		fatal("setsockopt(SO_REUSEPORT): %s", strerror(errno));
+		fatal("setsockopt(SO_REUSEPORT)");
 
 	mark_nonblock(sock);
 
 	if (bind(sock, addr, len) == -1)
-		fatal("bind: %s", strerror(errno));
+		fatal("bind");
 
 	if (listen(sock, 16) == -1)
-		fatal("listen: %s", strerror(errno));
+		fatal("listen");
 
 	return sock;
 }
@@ -118,13 +120,14 @@ add_keypair(struct vhost *h)
 {
 	if (*h->ocsp == '\0') {
 		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
-			fatal("failed to load the keypair (%s, %s)",
-			    h->cert, h->key);
+			fatalx("failed to load the keypair (%s, %s): %s",
+			    h->cert, h->key, tls_config_error(tlsconf));
 	} else {
 		if (tls_config_add_keypair_ocsp_file(tlsconf, h->cert, h->key,
 		    h->ocsp) == -1)
-			fatal("failed to load the keypair (%s, %s, %s)",
-			    h->cert, h->key, h->ocsp);
+			fatalx("failed to load the keypair (%s, %s, %s): %s",
+			    h->cert, h->key, h->ocsp,
+			    tls_config_error(tlsconf));
 	}
 }
 
@@ -141,7 +144,8 @@ setup_tls(void)
 	tls_config_insecure_noverifycert(tlsconf);
 
 	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
-		fatal("tls_config_set_protocols");
+		fatalx("tls_config_set_protocols: %s",
+		    tls_config_error(tlsconf));
 
 	if ((ctx = tls_server()) == NULL)
 		fatal("tls_server failure");
@@ -150,20 +154,20 @@ setup_tls(void)
 
 	/* we need to set something, then we can add how many key we want */
 	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))
-		fatal("tls_config_set_keypair_file failed for (%s, %s)",
-		    h->cert, h->key);
+		fatalx("tls_config_set_keypair_file failed for (%s, %s): %s",
+		    h->cert, h->key, tls_config_error(tlsconf));
 
 	/* same for OCSP */
 	if (*h->ocsp != '\0' &&
 	    tls_config_set_ocsp_staple_file(tlsconf, h->ocsp) == -1)
-		fatal("tls_config_set_ocsp_staple_file failed for (%s)",
-		    h->ocsp);
+		fatalx("tls_config_set_ocsp_staple_file failed for (%s): %s",
+		    h->ocsp, tls_config_error(tlsconf));
 
 	while ((h = TAILQ_NEXT(h, vhosts)) != NULL)
 		add_keypair(h);
 
 	if (tls_configure(ctx, tlsconf) == -1)
-		fatal("tls_configure: %s", tls_error(ctx));
+		fatalx("tls_configure: %s", tls_error(ctx));
 }
 
 void
@@ -255,16 +259,16 @@ drop_priv(void)
 	struct passwd *pw = NULL;
 
 	if (*conf.chroot != '\0' && *conf.user == '\0')
-		fatal("can't chroot without an user to switch to after.");
+		fatalx("can't chroot without an user to switch to after.");
 
 	if (*conf.user != '\0') {
 		if ((pw = getpwnam(conf.user)) == NULL)
-			fatal("can't find user %s", conf.user);
+			fatalx("can't find user %s", conf.user);
 	}
 
 	if (*conf.chroot != '\0') {
 		if (chroot(conf.chroot) != 0 || chdir("/") != 0)
-			fatal("%s: %s", conf.chroot, strerror(errno));
+			fatal("%s", conf.chroot);
 	}
 
 	if (pw != NULL) {
@@ -325,11 +329,11 @@ serve(void)
 	for (i = 0; i < conf.prefork; ++i) {
 		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
 		    PF_UNSPEC, p) == -1)
-			fatal("socketpair: %s", strerror(errno));
+			fatal("socketpair");
 
 		switch (fork()) {
 		case -1:
-			fatal("fork: %s", strerror(errno));
+			fatal("fork");
 		case 0:		/* child */
 			close(p[0]);
 			imsg_init(&servibuf[i], p[1]);
@@ -352,7 +356,7 @@ write_pidfile(const char *pidfile)
 		return -1;
 
 	if ((fd = open(pidfile, O_WRONLY|O_CREAT|O_CLOEXEC, 0600)) == -1)
-		fatal("can't open pidfile %s: %s", pidfile, strerror(errno));
+		fatal("can't open pidfile %s", pidfile);
 
 	lock.l_start = 0;
 	lock.l_len = 0;
@@ -360,10 +364,10 @@ write_pidfile(const char *pidfile)
 	lock.l_whence = SEEK_SET;
 
 	if (fcntl(fd, F_SETLK, &lock) == -1)
-		fatal("can't lock %s, gmid is already running?", pidfile);
+		fatalx("can't lock %s, gmid is already running?", pidfile);
 
 	if (ftruncate(fd, 0) == -1)
-		fatal("ftruncate: %s: %s", pidfile, strerror(errno));
+		fatal("ftruncate %s", pidfile);
 
 	dprintf(fd, "%d\n", getpid());
 
@@ -383,7 +387,7 @@ main(int argc, char **argv)
 		switch (ch) {
 		case 'D':
 			if (cmdline_symset(optarg) == -1)
-				fatal("could not parse macro definition: %s",
+				fatalx("could not parse macro definition: %s",
 				    optarg);
 			break;
 		case 'd':
@@ -433,7 +437,7 @@ main(int argc, char **argv)
 		imsg_flush(&logibuf);
 
 		if (daemon(1, 1) == -1)
-			fatal("daemon: %s", strerror(errno));
+			fatal("daemon");
 	}
 
 	sock4 = make_socket(conf.port, AF_INET);

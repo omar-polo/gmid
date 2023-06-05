@@ -27,6 +27,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "log.h"
+
 struct imsgbuf ibuf, logibuf;
 struct conf conf;
 
@@ -86,7 +88,7 @@ mkdirs(const char *path, mode_t mode)
 		return;
 	mkdirs(dname, mode);
 	if (mkdir(path, mode) != 0 && errno != EEXIST)
-		fatal("can't mkdir %s: %s", path, strerror(errno));
+		fatal("can't mkdir %s", path);
 }
 
 /* $XDG_DATA_HOME/gmid */
@@ -150,7 +152,7 @@ serve(const char *host, int port, const char *dir, struct tls *ctx)
 	hints.ai_flags = AI_PASSIVE;
 	error = getaddrinfo(host, service, &hints, &res0);
 	if (error)
-		fatal("%s", gai_strerror(error));
+		fatalx("%s", gai_strerror(error));
 	for (res = res0; res; res = res->ai_next) {
 		sock = socket(res->ai_family, res->ai_socktype,
 		    res->ai_protocol);
@@ -223,7 +225,8 @@ main(int argc, char **argv)
 		case 'p':
 			conf.port = strtonum(optarg, 0, UINT16_MAX, &errstr);
 			if (errstr)
-				fatal("port number is %s: %s", errstr, optarg);
+				fatalx("port number is %s: %s", errstr,
+				    optarg);
 			break;
 		case 'V':
 			puts("Version: " GE_STRING);
@@ -276,21 +279,21 @@ main(int argc, char **argv)
 	/* setup tls */
 
 	if ((tlsconf = tls_config_new()) == NULL)
-		fatal("tls_config_new"); /* XXX: fatalx */
+		fatal("tls_config_new");
 
 	/* optionally accept client certs but don't try to verify them */
 	tls_config_verify_client_optional(tlsconf);
 	tls_config_insecure_noverifycert(tlsconf);
 
 	if ((ctx = tls_server()) == NULL)
-		fatal("tls_server failure"); /* XXX: fatalx */
+		fatal("tls_server failure");
 
 	if (tls_config_set_keypair_file(tlsconf, host->cert, host->key))
-		fatal("can't load the keypair (%s, %s)",
-		    host->cert, host->key);
+		fatalx("can't load the keypair (%s, %s): %s",
+		    host->cert, host->key, tls_config_error(tlsconf));
 
 	if (tls_configure(ctx, tlsconf) == -1)
-		fatal("tls_configure: %s", tls_error(ctx));
+		fatalx("tls_configure: %s", tls_error(ctx));
 
 	/* start the server */
 	signal(SIGPIPE, SIG_IGN);

@@ -24,6 +24,8 @@
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
+#include "log.h"
+
 int
 starts_with(const char *str, const char *prefix)
 {
@@ -122,23 +124,23 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	    host);
 
 	if ((pkey = EVP_PKEY_new()) == NULL)
-		fatal("couldn't create a new private key");
+		fatalx("couldn't create a new private key");
 
 	if ((rsa = RSA_new()) == NULL)
-		fatal("couldn't generate rsa");
+		fatalx("couldn't generate rsa");
 
 	if ((e = BN_new()) == NULL)
-		fatal("couldn't allocate a bignum");
+		fatalx("couldn't allocate a bignum");
 
 	BN_set_word(e, RSA_F4);
 	if (!RSA_generate_key_ex(rsa, 4096, e, NULL))
-		fatal("couldn't generate a rsa key");
+		fatalx("couldn't generate a rsa key");
 
 	if (!EVP_PKEY_assign_RSA(pkey, rsa))
-		fatal("couldn't assign the key");
+		fatalx("couldn't assign the key");
 
 	if ((x509 = X509_new()) == NULL)
-		fatal("couldn't generate the X509 certificate");
+		fatalx("couldn't generate the X509 certificate");
 
 	ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
 	X509_gmtime_adj(X509_get_notBefore(x509), 0);
@@ -146,26 +148,26 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	X509_set_version(x509, 3);
 
 	if (!X509_set_pubkey(x509, pkey))
-		fatal("couldn't set the public key");
+		fatalx("couldn't set the public key");
 
 	name = X509_get_subject_name(x509);
 	if (!X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, host, -1, -1, 0))
-		fatal("couldn't add CN to cert");
+		fatalx("couldn't add CN to cert");
 	X509_set_issuer_name(x509, name);
 
 	if (!X509_sign(x509, pkey, EVP_sha256()))
-		fatal("couldn't sign the certificate");
+		fatalx("couldn't sign the certificate");
 
 	if ((f = fopen(keypath, "w")) == NULL)
-		fatal("fopen(%s): %s", keypath, strerror(errno));
+		fatal("can't open %s", keypath);
 	if (!PEM_write_PrivateKey(f, pkey, NULL, NULL, 0, NULL, NULL))
-		fatal("couldn't write private key");
+		fatalx("couldn't write private key");
 	fclose(f);
 
 	if ((f = fopen(certpath, "w")) == NULL)
-		fatal("fopen(%s): %s", certpath, strerror(errno));
+		fatal("can't open %s", certpath);
 	if (!PEM_write_X509(f, x509))
-		fatal("couldn't write cert");
+		fatalx("couldn't write cert");
 	fclose(f);
 
 	BN_free(e);

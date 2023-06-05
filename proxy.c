@@ -20,6 +20,8 @@
 #include <errno.h>
 #include <string.h>
 
+#include "log.h"
+
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
 static const struct timeval handshake_timeout = { 5, 0 };
@@ -240,7 +242,7 @@ proxy_enqueue_req(struct client *c)
 	c->proxybev = bufferevent_new(c->pfd, proxy_read, proxy_write,
 	    proxy_error, c);
 	if (c->proxybev == NULL)
-		fatal("can't allocate bufferevent: %s", strerror(errno));
+		fatal("can't allocate bufferevent");
 
 	if (!p->notls) {
 		event_set(&c->proxybev->ev_read, c->pfd, EV_READ,

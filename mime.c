@@ -20,6 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "log.h"
+
 void
 init_mime(struct mime *mime)
 {
@@ -28,7 +30,7 @@ init_mime(struct mime *mime)
 
 	mime->t = calloc(mime->cap, sizeof(struct etm));
 	if (mime->t == NULL)
-		fatal("calloc: %s", strerror(errno));
+		fatal("calloc");
 }
 
 /* register mime for the given extension */

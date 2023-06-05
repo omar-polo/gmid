@@ -308,18 +308,6 @@ void		 print_conf(void);
 int		 cmdline_symset(char *);
 
 /* log.c */
-void		 fatal(const char*, ...)
-	__attribute__((format (printf, 1, 2)))
-	__attribute__((__noreturn__));
-
-#define LOG_ATTR_FMT __attribute__((format (printf, 2, 3)))
-void		 log_err(struct client*, const char*, ...)	LOG_ATTR_FMT;
-void		 log_warn(struct client*, const char*, ...)	LOG_ATTR_FMT;
-void		 log_notice(struct client*, const char*, ...)	LOG_ATTR_FMT;
-void		 log_info(struct client*, const char*, ...)	LOG_ATTR_FMT;
-void		 log_debug(struct client*, const char*, ...)	LOG_ATTR_FMT;
-void		 log_request(struct client*, char*, size_t);
-int		 logger_main(int, struct imsgbuf*);
 
 /* mime.c */
 void		 init_mime(struct mime*);

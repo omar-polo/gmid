@@ -30,6 +30,8 @@
 #include <syslog.h>
 #include <time.h>
 
+#include "log.h"
+
 static struct event imsgev;
 
 static FILE *log;
@@ -85,26 +87,56 @@ send_log(int type, int priority, const char *msg, size_t len)
 	imsg_flush(&logibuf);
 }
 
-void
-fatal(const char *fmt, ...)
+static __dead void
+fatal_impl(int use_err, const char *fmt, va_list ap)
 {
 	struct pollfd pfd;
-	va_list	 ap;
-	int	 r;
-	char	*fmted;
+	char *str, *tmp;
+	int r, t, err;
+
+	err = errno;
+
+	if ((r = vasprintf(&str, fmt, ap)) != -1) {
+		if (use_err &&
+		    (t = asprintf(&tmp, "%s: %s", str, strerror(err))) !=
+		    -1) {
+			free(str);
+			str = tmp;
+			r = t;
+		}
+	} else
+		str = NULL, r = 0;
+
+	send_log(IMSG_LOG, LOG_CRIT, str, r);
+	free(str);
+
+	/* wait for the logger process to shut down */
+	memset(&pfd, 0, sizeof(pfd));
+	pfd.fd = logibuf.fd;
+	pfd.events = POLLIN;
+	poll(&pfd, 1, 1000);
+
+	exit(1);
+}
+
+void __dead
+fatal(const char *fmt, ...)
+{
+	va_list ap;
 
 	va_start(ap, fmt);
-	if ((r = vasprintf(&fmted, fmt, ap)) != -1) {
-		send_log(IMSG_LOG, LOG_CRIT, fmted, r+1);
-		free(fmted);
-
-		/* wait for the logger process to shut down */
-		pfd.fd = logibuf.fd;
-		pfd.events = POLLIN;
-		poll(&pfd, 1, 1000);
-	}
+	fatal_impl(1, fmt, ap);
 	va_end(ap);
-	exit(1);
+}
+
+void __dead
+fatalx(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	fatal_impl(0, fmt, ap);
+	va_end(ap);
 }
 
 static inline void
@@ -126,8 +158,7 @@ vlog(int priority, struct client *c,
 		    sbuf, sizeof(sbuf),
 		    NI_NUMERICHOST | NI_NUMERICSERV);
 		if (ec != 0)
-			fatal("getnameinfo: %s: %s",
-			    gai_strerror(ec), strerror(errno));
+			fatal("getnameinfo: %s", gai_strerror(ec));
 	}
 
 	if (vasprintf(&fmted, fmt, ap) == -1)
@@ -224,7 +255,7 @@ log_request(struct client *c, char *meta, size_t l)
 	    sbuf, sizeof(sbuf),
 	    NI_NUMERICHOST | NI_NUMERICSERV);
 	if (ec != 0)
-		fatal("getnameinfo: %s", gai_strerror(ec));
+		fatalx("getnameinfo: %s", gai_strerror(ec));
 
 	if (c->iri.schema != NULL) {
 		/* serialize the IRI */
