@@ -41,6 +41,12 @@ static const struct option opts[] = {
 };
 
 void
+drop_priv(void)
+{
+	return;
+}
+
+void
 load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 {
 	char *cert, *key;
@@ -176,8 +182,7 @@ serve(const char *host, int port, const char *dir, struct tls *ctx)
 	freeaddrinfo(res0);
 
 	log_notice(NULL, "serving %s on port %d", dir, port);
-	loop(ctx, sock, -1, NULL);
-	return 0;
+	return server_main(ctx, NULL, sock, -1);
 }
 
 static __dead void
@@ -241,10 +246,6 @@ main(int argc, char **argv)
 	if (certs_dir == NULL)
 		certs_dir = data_dir();
 
-	if (load_default_mime(&conf.mime) == -1)
-		fatal("can't load default mime types");
-	sort_mime(&conf.mime);
-
 	/* set up the implicit vhost and location */
 
 	host = xcalloc(1, sizeof(*host));
@@ -271,9 +272,6 @@ main(int argc, char **argv)
 		strlcpy(loc->dir, tmp, sizeof(loc->dir));
 		free(tmp);
 	}
-
-	if ((loc->dirfd = open(loc->dir, O_RDONLY|O_DIRECTORY)) == -1)
-		fatal("can't open %s", loc->dir);
 
 	/* setup tls */
 

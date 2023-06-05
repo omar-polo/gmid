@@ -1367,7 +1367,7 @@ handle_siginfo(int fd, short ev, void *d)
 	log_info(NULL, "%d connected clients", connected_clients);
 }
 
-void
+static void
 loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 {
 	ctx = ctx_;
@@ -1402,6 +1402,36 @@ loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 	sandbox_server_process();
 	event_dispatch();
 	_exit(0);
+}
+
+static void
+load_vhosts(void)
+{
+	struct vhost	*h;
+	struct location	*l;
+
+	TAILQ_FOREACH(h, &hosts, vhosts) {
+		TAILQ_FOREACH(l, &h->locations, locations) {
+			if (*l->dir == '\0')
+				continue;
+			l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY);
+			if (l->dirfd == -1)
+				fatal("open %s for domain %s: %s", l->dir,
+				    h->domain, strerror(errno));
+		}
+	}
+}
+
+int
+server_main(struct tls *ctx_, struct imsgbuf *ibuf, int sock4, int sock6)
+{
+	drop_priv();
+	if (load_default_mime(&conf.mime) == -1)
+		fatal("can't load default mime: %s", strerror(errno));
+	sort_mime(&conf.mime);
+	load_vhosts();
+	loop(ctx_, sock4, sock6, ibuf);
+	return 0;
 }
 
 int

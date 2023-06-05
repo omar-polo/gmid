@@ -58,24 +58,6 @@ dummy_handler(int signo)
 	return;
 }
 
-void
-load_vhosts(void)
-{
-	struct vhost	*h;
-	struct location	*l;
-
-	TAILQ_FOREACH(h, &hosts, vhosts) {
-		TAILQ_FOREACH(l, &h->locations, locations) {
-			if (*l->dir == '\0')
-				continue;
-			l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY);
-			if (l->dirfd == -1)
-				fatal("open %s for domain %s: %s", l->dir,
-				    h->domain, strerror(errno));
-		}
-	}
-}
-
 int
 make_socket(int port, int family)
 {
@@ -182,18 +164,6 @@ setup_tls(void)
 
 	if (tls_configure(ctx, tlsconf) == -1)
 		fatal("tls_configure: %s", tls_error(ctx));
-}
-
-static int
-listener_main(struct imsgbuf *ibuf)
-{
-	drop_priv();
-	if (load_default_mime(&conf.mime) == -1)
-		fatal("load_default_mime: %s", strerror(errno));
-	sort_mime(&conf.mime);
-	load_vhosts();
-	loop(ctx, sock4, sock6, ibuf);
-	return 0;
 }
 
 void
@@ -364,7 +334,7 @@ serve(void)
 			close(p[0]);
 			imsg_init(&servibuf[i], p[1]);
 			setproctitle("server");
-			_exit(listener_main(&servibuf[i]));
+			_exit(server_main(ctx, &servibuf[i], sock4, sock6));
 		default:
 			close(p[1]);
 			imsg_init(&servibuf[i], p[0]);

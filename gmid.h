@@ -296,7 +296,6 @@ enum imsg_type {
 /* gmid.c */
 char		*data_dir(void);
 void		 load_local_cert(struct vhost*, const char*, const char*);
-void		 load_vhosts(void);
 int		 make_socket(int, int);
 void		 setup_tls(void);
 void		 init_config(void);
@@ -348,7 +347,7 @@ void		 client_write(struct bufferevent *, void *);
 void		 start_reply(struct client*, int, const char*);
 void		 client_close(struct client *);
 struct client	*client_by_id(int);
-void		 loop(struct tls*, int, int, struct imsgbuf*);
+int		 server_main(struct tls *, struct imsgbuf *, int, int);
 
 int		 client_tree_cmp(struct client *, struct client *);
 SPLAY_PROTOTYPE(client_tree_id, client, entry, client_tree_cmp);
