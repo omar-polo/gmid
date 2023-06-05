@@ -20,9 +20,9 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl dhnVv
+.Op Fl fhnVv
+.Op Fl c Ar config
 .Op Fl D Ar macro Ns = Ns Ar value
-.Op Fl f Ar config
 .Op Fl P Ar pidfile
 .Ek
 .Sh DESCRIPTION
@@ -38,6 +38,10 @@ rereads the configuration file when it receives
 .Pp
 The options are as follows:
 .Bl -tag -width 14m
+.It Fl c Ar config
+Specifies the configuration file.
+The default is
+.Pa /etc/gmid.conf .
 .It Fl D Ar macro Ns = Ns Ar value
 Define
 .Ar macro
@@ -47,13 +51,8 @@ on the command line.
 Overrides the definition of
 .Ar macro
 in the config file if present.
-.It Fl d
-Debug mode.
-Do not daemonize and log to stderr.
-.It Fl f Ar config
-Specifies the configuration file.
-The default is
-.Pa /etc/gmid.conf .
+.It Fl f
+Stays and logs on the foreground.
 .It Fl h , Fl -help
 Print the usage and exit.
 .It Fl n

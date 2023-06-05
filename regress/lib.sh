@@ -93,8 +93,8 @@ EOF
 }
 
 checkconf() {
-	if ! $gmid -n -f reg.conf >/dev/null 2>&1; then
-		$gmid -n -f reg.conf
+	if ! $gmid -n -c reg.conf >/dev/null 2>&1; then
+		$gmid -n -c reg.conf
 	fi
 }
 
@@ -159,7 +159,7 @@ run() {
 		return
 	fi
 
-	$gmid -P gmid.pid -f reg.conf
+	$gmid -P gmid.pid -c reg.conf
 
 	# give gmid time to bind the port, otherwise we end up
 	# executing gg when gmid isn't ready yet.
