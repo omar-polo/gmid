@@ -225,10 +225,6 @@ enum {
 	REQUEST_DONE,
 };
 
-#define IS_INTERNAL_REQUEST(x) \
-	 (x) != REQUEST_FCGI && \
-	 (x) != REQUEST_PROXY)
-
 struct client {
 	uint32_t	 id;
 	struct tls	*ctx;
