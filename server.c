@@ -1368,10 +1368,8 @@ handle_siginfo(int fd, short ev, void *d)
 }
 
 static void
-loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
+loop(int sock4, int sock6, struct imsgbuf *ibuf)
 {
-	ctx = ctx_;
-
 	SPLAY_INIT(&clients);
 
 	event_init();
@@ -1405,6 +1403,70 @@ loop(struct tls *ctx_, int sock4, int sock6, struct imsgbuf *ibuf)
 }
 
 static void
+add_keypair(struct vhost *h, struct tls_config *conf)
+{
+	if (*h->ocsp == '\0') {
+		if (tls_config_add_keypair_file(conf, h->cert, h->key) == -1)
+			fatalx("failed to load the keypair (%s, %s): %s",
+			    h->cert, h->key, tls_config_error(conf));
+	} else {
+		if (tls_config_add_keypair_ocsp_file(conf, h->cert, h->key,
+		    h->ocsp) == -1)
+			fatalx("failed to load the keypair (%s, %s, %s): %s",
+			    h->cert, h->key, h->ocsp,
+			    tls_config_error(conf));
+	}
+}
+
+/*
+ * XXX: in a ideal privsep world, this is done by the parent process
+ * and its content sent to us.
+ */
+static void
+setup_tls(void)
+{
+	struct tls_config	*tlsconf;
+	struct vhost		*h;
+
+	if ((tlsconf = tls_config_new()) == NULL)
+		fatal("tls_config_new");
+
+	/* optionally accept client certs, but don't try to verify them */
+	tls_config_verify_client_optional(tlsconf);
+	tls_config_insecure_noverifycert(tlsconf);
+
+	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
+		fatalx("tls_config_set_protocols: %s",
+		    tls_config_error(tlsconf));
+
+	h = TAILQ_FIRST(&hosts);
+
+	log_warn(NULL, "loading %s, %s, %s", h->cert, h->key, h->ocsp);
+
+	/* we need to set something, then we can add how many key we want */
+	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))
+		fatalx("tls_config_set_keypair_file failed for (%s, %s): %s",
+		    h->cert, h->key, tls_config_error(tlsconf));
+
+	/* same for OCSP */
+	if (*h->ocsp != '\0' &&
+	    tls_config_set_ocsp_staple_file(tlsconf, h->ocsp) == -1)
+		fatalx("tls_config_set_ocsp_staple_file failed for (%s): %s",
+		    h->ocsp, tls_config_error(tlsconf));
+
+	while ((h = TAILQ_NEXT(h, vhosts)) != NULL)
+		add_keypair(h, tlsconf);
+
+	if ((ctx = tls_server()) == NULL)
+		fatal("tls_server failure");
+
+	if (tls_configure(ctx, tlsconf) == -1)
+		fatalx("tls_configure: %s", tls_error(ctx));
+
+	tls_config_free(tlsconf);
+}
+
+static void
 load_vhosts(void)
 {
 	struct vhost	*h;
@@ -1423,14 +1485,19 @@ load_vhosts(void)
 }
 
 int
-server_main(struct tls *ctx_, struct imsgbuf *ibuf, int sock4, int sock6)
+server_main(struct imsgbuf *ibuf, int sock4, int sock6)
 {
+	/*
+	 * setup tls before dropping privileges: we don't want user
+	 * to put private certs inside the chroot.
+	 */
+	setup_tls();
 	drop_priv();
 	if (load_default_mime(&conf.mime) == -1)
 		fatal("can't load default mime");
 	sort_mime(&conf.mime);
 	load_vhosts();
-	loop(ctx_, sock4, sock6, ibuf);
+	loop(sock4, sock6, ibuf);
 	return 0;
 }
 

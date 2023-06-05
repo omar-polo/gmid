@@ -33,8 +33,7 @@ struct imsgbuf ibuf, logibuf;
 struct conf conf;
 
 struct fcgi fcgi[FCGI_MAX];	/* just because it's referenced */
-struct vhosthead hosts;
-
+struct vhosthead hosts = TAILQ_HEAD_INITIALIZER(hosts);
 
 static const struct option opts[] = {
 	{"help",	no_argument,	NULL,	'h'},
@@ -136,7 +135,7 @@ logger_init(void)
 }
 
 static int
-serve(const char *host, int port, const char *dir, struct tls *ctx)
+serve(const char *host, int port, const char *dir)
 {
 	struct addrinfo hints, *res, *res0;
 	int error, saved_errno, sock = -1;
@@ -184,7 +183,7 @@ serve(const char *host, int port, const char *dir, struct tls *ctx)
 	freeaddrinfo(res0);
 
 	log_notice(NULL, "serving %s on port %d", dir, port);
-	return server_main(ctx, NULL, sock, -1);
+	return server_main(NULL, sock, -1);
 }
 
 static __dead void
@@ -200,8 +199,6 @@ usage(void)
 int
 main(int argc, char **argv)
 {
-	struct tls_config *tlsconf;
-	struct tls *ctx;
 	struct vhost *host;
 	struct location *loc;
 	const char *errstr, *certs_dir = NULL, *hostname = "localhost";
@@ -210,6 +207,7 @@ main(int argc, char **argv)
 
 	logger_init();
 	conf.port = 1965;
+	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
 	while ((ch = getopt_long(argc, argv, "d:H:hp:Vv", opts, NULL)) != -1) {
 		switch (ch) {
@@ -276,27 +274,8 @@ main(int argc, char **argv)
 		free(tmp);
 	}
 
-	/* setup tls */
-
-	if ((tlsconf = tls_config_new()) == NULL)
-		fatal("tls_config_new");
-
-	/* optionally accept client certs but don't try to verify them */
-	tls_config_verify_client_optional(tlsconf);
-	tls_config_insecure_noverifycert(tlsconf);
-
-	if ((ctx = tls_server()) == NULL)
-		fatal("tls_server failure");
-
-	if (tls_config_set_keypair_file(tlsconf, host->cert, host->key))
-		fatalx("can't load the keypair (%s, %s): %s",
-		    host->cert, host->key, tls_config_error(tlsconf));
-
-	if (tls_configure(ctx, tlsconf) == -1)
-		fatalx("tls_configure: %s", tls_error(ctx));
-
 	/* start the server */
 	signal(SIGPIPE, SIG_IGN);
 	setproctitle("%s", loc->dir);
-	return serve(hostname, conf.port, loc->dir, ctx);
+	return serve(hostname, conf.port, loc->dir);
 }

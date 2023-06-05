@@ -51,9 +51,6 @@ const char *pidfile;
 
 struct conf conf;
 
-struct tls_config *tlsconf;
-struct tls *ctx;
-
 static void
 dummy_handler(int signo)
 {
@@ -113,61 +110,6 @@ make_socket(int port, int family)
 		fatal("listen");
 
 	return sock;
-}
-
-static void
-add_keypair(struct vhost *h)
-{
-	if (*h->ocsp == '\0') {
-		if (tls_config_add_keypair_file(tlsconf, h->cert, h->key) == -1)
-			fatalx("failed to load the keypair (%s, %s): %s",
-			    h->cert, h->key, tls_config_error(tlsconf));
-	} else {
-		if (tls_config_add_keypair_ocsp_file(tlsconf, h->cert, h->key,
-		    h->ocsp) == -1)
-			fatalx("failed to load the keypair (%s, %s, %s): %s",
-			    h->cert, h->key, h->ocsp,
-			    tls_config_error(tlsconf));
-	}
-}
-
-void
-setup_tls(void)
-{
-	struct vhost *h;
-
-	if ((tlsconf = tls_config_new()) == NULL)
-		fatal("tls_config_new");
-
-	/* optionally accept client certs, but don't try to verify them */
-	tls_config_verify_client_optional(tlsconf);
-	tls_config_insecure_noverifycert(tlsconf);
-
-	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
-		fatalx("tls_config_set_protocols: %s",
-		    tls_config_error(tlsconf));
-
-	if ((ctx = tls_server()) == NULL)
-		fatal("tls_server failure");
-
-	h = TAILQ_FIRST(&hosts);
-
-	/* we need to set something, then we can add how many key we want */
-	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))
-		fatalx("tls_config_set_keypair_file failed for (%s, %s): %s",
-		    h->cert, h->key, tls_config_error(tlsconf));
-
-	/* same for OCSP */
-	if (*h->ocsp != '\0' &&
-	    tls_config_set_ocsp_staple_file(tlsconf, h->ocsp) == -1)
-		fatalx("tls_config_set_ocsp_staple_file failed for (%s): %s",
-		    h->ocsp, tls_config_error(tlsconf));
-
-	while ((h = TAILQ_NEXT(h, vhosts)) != NULL)
-		add_keypair(h);
-
-	if (tls_configure(ctx, tlsconf) == -1)
-		fatalx("tls_configure: %s", tls_error(ctx));
 }
 
 void
@@ -233,9 +175,6 @@ free_config(void)
 	}
 
 	memset(fcgi, 0, sizeof(fcgi));
-
-	tls_free(ctx);
-	tls_config_free(tlsconf);
 }
 
 static int
@@ -322,10 +261,6 @@ serve(void)
 {
 	int i, p[2];
 
-	/* setup tls before dropping privileges: we don't want user
-	 * to put private certs inside the chroot. */
-	setup_tls();
-
 	for (i = 0; i < conf.prefork; ++i) {
 		if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC,
 		    PF_UNSPEC, p) == -1)
@@ -338,7 +273,7 @@ serve(void)
 			close(p[0]);
 			imsg_init(&servibuf[i], p[1]);
 			setproctitle("server");
-			_exit(server_main(ctx, &servibuf[i], sock4, sock6));
+			_exit(server_main(&servibuf[i], sock4, sock6));
 		default:
 			close(p[1]);
 			imsg_init(&servibuf[i], p[0]);
