@@ -28,8 +28,10 @@
 #include <pwd.h>
 #include <signal.h>
 #include <string.h>
+#include <syslog.h>
 
 #include "logger.h"
+#include "log.h"
 
 static const char	*opts = "c:D:fhnP:Vv";
 
@@ -154,8 +156,7 @@ drop_priv(void)
 	}
 
 	if (getuid() == 0)
-		log_warn(NULL,
-		    "not a good idea to run a network daemon as root");
+		log_warnx("not a good idea to run a network daemon as root");
 }
 
 static void
@@ -253,6 +254,8 @@ main(int argc, char **argv)
 
 	setlocale(LC_CTYPE, "");
 
+	/* log to stderr until daemonized */
+	log_init(1, LOG_DAEMON);
 	logger_init();
 	config_init();
 
@@ -308,10 +311,12 @@ main(int argc, char **argv)
 		/* log to syslog */
 		imsg_compose(&logibuf, IMSG_LOG_TYPE, 0, 0, -1, NULL, 0);
 		imsg_flush(&logibuf);
+		log_init(0, LOG_DAEMON);
 
 		if (daemon(1, 1) == -1)
 			fatal("daemon");
 	}
+	log_setverbose(conf.verbose);
 
 	sock4 = make_socket(conf.port, AF_INET);
 	sock6 = -1;
@@ -338,7 +343,7 @@ main(int argc, char **argv)
 		if (!wait_signal())
 			break;
 
-		log_info(NULL, "reloading configuration %s", config_path);
+		log_info("reloading configuration %s", config_path);
 
 		/* close the servers */
 		for (i = 0; i < conf.prefork; ++i) {

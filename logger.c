@@ -31,6 +31,7 @@
 #include <time.h>
 
 #include "logger.h"
+#include "log.h"
 
 static struct event imsgev;
 
@@ -47,186 +48,6 @@ static imsg_handlerfn *handlers[] = {
 	[IMSG_LOG_REQUEST] = handle_imsg_log,
 	[IMSG_LOG_TYPE] = handle_imsg_log_type,
 };
-
-static inline void
-print_date(FILE *f)
-{
-	struct tm	tminfo;
-	time_t		t;
-	char		buf[20];
-
-	time(&t);
-	strftime(buf, sizeof(buf), "%F %T",
-	    localtime_r(&t, &tminfo));
-	fprintf(f, "[%s] ", buf);
-}
-
-static inline int
-should_log(int priority)
-{
-	switch (priority) {
-	case LOG_ERR:
-		return 1;
-	case LOG_WARNING:
-		return 1;
-	case LOG_NOTICE:
-		return conf.verbose >= 1;
-	case LOG_INFO:
-		return conf.verbose >= 2;
-	case LOG_DEBUG:
-		return conf.verbose >= 3;
-	default:
-		return 0;
-	}
-}
-
-static inline void
-send_log(int type, int priority, const char *msg, size_t len)
-{
-	imsg_compose(&logibuf, type, priority, 0, -1, msg, len);
-	imsg_flush(&logibuf);
-}
-
-static __dead void
-fatal_impl(int use_err, const char *fmt, va_list ap)
-{
-	struct pollfd pfd;
-	char *str, *tmp;
-	int r, t, err;
-
-	err = errno;
-
-	if ((r = vasprintf(&str, fmt, ap)) != -1) {
-		if (use_err &&
-		    (t = asprintf(&tmp, "%s: %s", str, strerror(err))) !=
-		    -1) {
-			free(str);
-			str = tmp;
-			r = t;
-		}
-	} else
-		str = NULL, r = 0;
-
-	send_log(IMSG_LOG, LOG_CRIT, str, r + 1);
-	free(str);
-
-	/* wait for the logger process to shut down */
-	memset(&pfd, 0, sizeof(pfd));
-	pfd.fd = logibuf.fd;
-	pfd.events = POLLIN;
-	poll(&pfd, 1, 1000);
-
-	exit(1);
-}
-
-void __dead
-fatal(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	fatal_impl(1, fmt, ap);
-	va_end(ap);
-}
-
-void __dead
-fatalx(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	fatal_impl(0, fmt, ap);
-	va_end(ap);
-}
-
-static inline void
-vlog(int priority, struct client *c,
-    const char *fmt, va_list ap)
-{
-	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
-	char *fmted, *s;
-	size_t len;
-	int ec;
-
-	if (!should_log(priority))
-		return;
-
-	if (c != NULL) {
-		len = sizeof(c->addr);
-		ec = getnameinfo((struct sockaddr*)&c->addr, len,
-		    hbuf, sizeof(hbuf),
-		    sbuf, sizeof(sbuf),
-		    NI_NUMERICHOST | NI_NUMERICSERV);
-		if (ec != 0)
-			fatal("getnameinfo: %s", gai_strerror(ec));
-	}
-
-	if (vasprintf(&fmted, fmt, ap) == -1)
-		fatal("vasprintf: %s", strerror(errno));
-
-	if (c == NULL)
-		ec = asprintf(&s, "internal: %s", fmted);
-	else
-		ec = asprintf(&s, "%s:%s %s", hbuf, sbuf, fmted);
-
-	if (ec < 0)
-		fatal("asprintf: %s", strerror(errno));
-
-	send_log(IMSG_LOG, priority, s, ec+1);
-
-	free(fmted);
-	free(s);
-}
-
-void
-log_err(struct client *c, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vlog(LOG_ERR, c, fmt, ap);
-	va_end(ap);
-}
-
-void
-log_warn(struct client *c, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vlog(LOG_WARNING, c, fmt, ap);
-	va_end(ap);
-}
-
-void
-log_notice(struct client *c, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vlog(LOG_NOTICE, c, fmt, ap);
-	va_end(ap);
-}
-
-void
-log_info(struct client *c, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vlog(LOG_INFO, c, fmt, ap);
-	va_end(ap);
-}
-
-void
-log_debug(struct client *c, const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	vlog(LOG_DEBUG, c, fmt, ap);
-	va_end(ap);
-}
 
 void
 log_request(struct client *c, char *meta, size_t l)
@@ -277,32 +98,14 @@ log_request(struct client *c, char *meta, size_t l)
 	    (int)(t-meta), meta);
 	if (ec < 0)
 		err(1, "asprintf");
-	send_log(IMSG_LOG_REQUEST, LOG_NOTICE, fmted, ec+1);
+
+	imsg_compose(&logibuf, IMSG_LOG_REQUEST, 0, 0, -1, fmted, ec + 1);
+	imsg_flush(&logibuf);
+
 	free(fmted);
 }
 
 
-
-static void
-do_log(int type, int priority, const char *msg)
-{
-	int quit = 0;
-
-	if (priority == LOG_CRIT) {
-		quit = 1;
-		priority = LOG_ERR;
-	}
-
-	if (log != NULL) {
-		if (type != IMSG_LOG_REQUEST)
-			print_date(log);
-		fprintf(log, "%s\n", msg);
-	} else
-		syslog(LOG_DAEMON | priority, "%s", msg);
-
-	if (quit)
-		exit(1);
-}
 
 static void
 handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
@@ -313,13 +116,15 @@ handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 static void
 handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
 {
-	int	 priority;
 	char	*msg;
 
 	msg = imsg->data;
 	msg[datalen-1] = '\0';
-	priority = imsg->hdr.peerid;
-	do_log(imsg->hdr.type, priority, msg);
+
+	if (log != NULL)
+		fprintf(log, "%s\n", msg);
+	else
+		syslog(LOG_DAEMON | LOG_NOTICE, "%s", msg);
 }
 
 static void
@@ -351,9 +156,6 @@ int
 logger_main(int fd, struct imsgbuf *ibuf)
 {
 	log = stderr;
-
-	openlog(getprogname(), LOG_NDELAY, LOG_DAEMON);
-	tzset();
 
 	event_init();
 

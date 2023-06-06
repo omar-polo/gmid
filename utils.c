@@ -24,7 +24,7 @@
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
-#include "logger.h"
+#include "log.h"
 
 int
 starts_with(const char *str, const char *prefix)
@@ -119,8 +119,7 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	FILE		*f;
 	const unsigned char *host = (const unsigned char*)hostname;
 
-	log_notice(NULL,
-	    "generating new certificate for %s (it could take a while)",
+	log_info("generating new certificate for %s (it could take a while)",
 	    host);
 
 	if ((pkey = EVP_PKEY_new()) == NULL)
@@ -174,7 +173,7 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	X509_free(x509);
 	RSA_free(rsa);
 
-	log_notice(NULL, "certificate successfully generated");
+	log_info("certificate successfully generated");
 }
 
 X509_STORE *

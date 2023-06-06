@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "logger.h"
+#include "log.h"
 
 void
 init_mime(struct mime *mime)

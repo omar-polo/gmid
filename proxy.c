@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "logger.h"
+#include "log.h"
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
@@ -152,7 +152,7 @@ proxy_read(struct bufferevent *bev, void *d)
 		if (hdr == NULL) {
 			/* max reply + \r\n */
 			if (EVBUFFER_LENGTH(src) > 1029) {
-				log_warn(c, "upstream server is trying to "
+				log_warnx("upstream server is trying to "
 				    "send a header that's too long.");
 				proxy_error(bev, EVBUFFER_READ, c);
 			}
@@ -166,7 +166,7 @@ proxy_read(struct bufferevent *bev, void *d)
 		    !isdigit((unsigned char)hdr[1]) ||
 		    !isspace((unsigned char)hdr[2])) {
 			free(hdr);
-			log_warn(c, "upstream server is trying to send a "
+			log_warnx("upstream server is trying to send a "
 			    "header that's too long.");
 			proxy_error(bev, EVBUFFER_READ, c);
 			return;
@@ -176,7 +176,7 @@ proxy_read(struct bufferevent *bev, void *d)
 		code = (hdr[0] - '0') * 10 + (hdr[1] - '0');
 
 		if (code < 10 || code >= 70) {
-			log_warn(c, "upstream server is trying to send an "
+			log_warnx("upstream server is trying to send an "
 			    "invalid reply code: %d", code);
 			proxy_error(bev, EVBUFFER_READ, c);
 			return;
@@ -284,7 +284,7 @@ proxy_handshake(int fd, short event, void *d)
 		event_add(&c->proxyev, &handshake_timeout);
 		return;
 	case -1:
-		log_warn(c, "handshake with proxy failed: %s",
+		log_warnx("handshake with proxy failed: %s",
 		    tls_error(c->proxyctx));
 		start_reply(c, PROXY_ERROR, "handshake failed");
 		return;

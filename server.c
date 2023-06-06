@@ -29,6 +29,7 @@
 #include <string.h>
 
 #include "logger.h"
+#include "log.h"
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
@@ -321,16 +322,16 @@ check_path(struct client *c, const char *path, int *fd)
 		p = ".";
 
 	dirfd = vhost_dirfd(c->host, path, &c->loc);
-	log_debug(c, "check_path: strip=%d path=%s original=%s",
+	log_debug("check_path: strip=%d path=%s original=%s",
 	    strip, p, path);
 	if (*fd == -1 && (*fd = openat(dirfd, p, O_RDONLY)) == -1) {
 		if (errno == EACCES)
-			log_info(c, "can't open %s: %s", p, strerror(errno));
+			log_info("can't open %s: %s", p, strerror(errno));
 		return FILE_MISSING;
 	}
 
 	if (fstat(*fd, &sb) == -1) {
-		log_notice(c, "failed stat for %s: %s", path, strerror(errno));
+		log_warn("fstat %s", path);
 		return FILE_MISSING;
 	}
 
@@ -414,12 +415,12 @@ handle_handshake(int fd, short ev, void *d)
 #endif
 
 	if ((servname = tls_conn_servername(c->ctx)) == NULL) {
-		log_debug(c, "handshake: missing SNI");
+		log_debug("handshake: missing SNI");
 		goto err;
 	}
 
 	if (!puny_decode(servname, c->domain, sizeof(c->domain), &parse_err)) {
-		log_info(c, "puny_decode: %s", parse_err);
+		log_info("puny_decode: %s", parse_err);
 		goto err;
 	}
 
@@ -433,7 +434,7 @@ handle_handshake(int fd, short ev, void *d)
 	}
 
 found:
-	log_debug(c, "handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
+	log_debug("handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
 	    servname != NULL ? servname : "(null)",
 	    c->domain,
 	    h != NULL ? h->domain : "(null)");
@@ -580,7 +581,8 @@ static int
 proxy_socket(struct client *c, const char *host, const char *port)
 {
 	struct addrinfo hints, *res, *res0;
-	int r, sock;
+	int r, sock, save_errno;
+	const char *cause = NULL;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -589,7 +591,7 @@ proxy_socket(struct client *c, const char *host, const char *port)
 	/* XXX: asr_run? :> */
 	r = getaddrinfo(host, port, &hints, &res0);
 	if (r != 0) {
-		log_warn(c, "getaddrinfo(\"%s\", \"%s\"): %s",
+		log_warnx("getaddrinfo(\"%s\", \"%s\"): %s",
 		    host, port, gai_strerror(r));
 		return -1;
 	}
@@ -597,11 +599,16 @@ proxy_socket(struct client *c, const char *host, const char *port)
 	for (res = res0; res; res = res->ai_next) {
 		sock = socket(res->ai_family, res->ai_socktype,
 		    res->ai_protocol);
-		if (sock == -1)
+		if (sock == -1) {
+			cause = "socket";
 			continue;
+		}
 
 		if (connect(sock, res->ai_addr, res->ai_addrlen) == -1) {
+			cause = "connect";
+			save_errno = errno;
 			close(sock);
+			errno = save_errno;
 			sock = -1;
 			continue;
 		}
@@ -609,10 +616,10 @@ proxy_socket(struct client *c, const char *host, const char *port)
 		break;
 	}
 
-	freeaddrinfo(res0);
-
 	if (sock == -1)
-		log_warn(c, "can't connect to %s:%s", host, port);
+		log_warn("can't connect to %s:%s: %s", host, port, cause);
+
+	freeaddrinfo(res0);
 
 	return sock;
 }
@@ -631,7 +638,7 @@ apply_reverse_proxy(struct client *c)
 	if (p->reqca != NULL && check_matching_certificate(p->reqca, c))
 		return 1;
 
-	log_debug(c, "opening proxy connection for %s:%s",
+	log_debug("opening proxy connection for %s:%s",
 	    p->host, p->port);
 
 	if ((c->pfd = proxy_socket(c, p->host, p->port)) == -1) {
@@ -653,7 +660,7 @@ fcgi_open_sock(struct fcgi *f)
 	int			fd;
 
 	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-		log_err(NULL, "socket: %s", strerror(errno));
+		log_warn("socket");
 		return -1;
 	}
 
@@ -662,8 +669,7 @@ fcgi_open_sock(struct fcgi *f)
 	strlcpy(addr.sun_path, f->path, sizeof(addr.sun_path));
 
 	if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
-		log_warn(NULL, "failed to connect to %s: %s", f->path,
-		    strerror(errno));
+		log_warn("failed to connect to %s", f->path);
 		close(fd);
 		return -1;
 	}
@@ -674,8 +680,9 @@ fcgi_open_sock(struct fcgi *f)
 static int
 fcgi_open_conn(struct fcgi *f)
 {
-	struct addrinfo	hints, *servinfo, *p;
-	int		r, sock;
+	struct addrinfo	 hints, *servinfo, *p;
+	int		 r, sock, save_errno;
+	const char	*cause = NULL;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
@@ -683,24 +690,30 @@ fcgi_open_conn(struct fcgi *f)
 	hints.ai_flags = AI_ADDRCONFIG;
 
 	if ((r = getaddrinfo(f->path, f->port, &hints, &servinfo)) != 0) {
-		log_warn(NULL, "getaddrinfo %s:%s: %s", f->path, f->port,
+		log_warnx("getaddrinfo %s:%s: %s", f->path, f->port,
 		    gai_strerror(r));
 		return -1;
 	}
 
 	for (p = servinfo; p != NULL; p = p->ai_next) {
 		sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-		if (sock == -1)
+		if (sock == -1) {
+			cause = "socket";
 			continue;
+		}
 		if (connect(sock, p->ai_addr, p->ai_addrlen) == -1) {
+			cause = "connect";
+			save_errno = errno;
 			close(sock);
+			errno = save_errno;
 			continue;
 		}
 		break;
 	}
 
 	if (p == NULL) {
-		log_warn(NULL, "couldn't connect to %s:%s", f->path, f->port);
+		log_warn("couldn't connect to %s:%s: %s", f->path, f->port,
+		    cause);
 		sock = -1;
 	}
 
@@ -720,7 +733,7 @@ apply_fastcgi(struct client *c)
 
 	f = &fcgi[id];
 
-	log_debug(c, "opening fastcgi connection for (%s,%s)",
+	log_debug("opening fastcgi connection for (%s,%s)",
 	    f->path, f->port);
 
 	if (*f->port == '\0')
@@ -766,7 +779,7 @@ open_dir(struct client *c)
 	int dirfd, root;
 	char *before_file;
 
-	log_debug(c, "in open_dir");
+	log_debug("in open_dir");
 
 	root = !strcmp(c->iri.path, "/") || *c->iri.path == '\0';
 
@@ -818,8 +831,8 @@ open_dir(struct client *c)
 		    root ? select_non_dotdot : select_non_dot,
 		    alphasort);
 		if (c->dirlen == -1) {
-			log_err(c, "scandir_fd(%d) (vhost:%s) %s: %s",
-			    c->pfd, c->host->domain, c->iri.path, strerror(errno));
+			log_warn("scandir_fd(%d) (vhost:%s) %s",
+			    c->pfd, c->host->domain, c->iri.path);
 			start_reply(c, TEMP_FAILURE, "internal server error");
 			return;
 		}
@@ -959,7 +972,7 @@ retry:
 	event_add(&bufev->ev_write, NULL);
 	return;
 err:
-	log_err(client, "tls error: %s", tls_error(client->ctx));
+	log_warnx("tls error: %s", tls_error(client->ctx));
 	(*bufev->errorcb)(bufev, what, bufev->cbarg);
 }
 
@@ -984,7 +997,7 @@ client_read(struct bufferevent *bev, void *d)
 
 	/* max url len + \r\n */
 	if (EVBUFFER_LENGTH(src) > 1024 + 2) {
-		log_err(c, "too much data received");
+		log_debug("too much data received");
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
@@ -997,14 +1010,14 @@ client_read(struct bufferevent *bev, void *d)
 	}
 	c->reqlen = strlen(c->req);
 	if (c->reqlen > 1024+2) {
-		log_err(c, "URL too long");
+		log_debug("URL too long");
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
 
 	if (!parse_iri(c->req, &c->iri, &parse_err) ||
 	    !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
-		log_err(c, "IRI parse error: %s", parse_err);
+		log_debug("IRI parse error: %s", parse_err);
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
@@ -1046,7 +1059,7 @@ client_write(struct bufferevent *bev, void *d)
 
 	case REQUEST_FILE:
 		if ((r = read(c->pfd, buf, sizeof(buf))) == -1) {
-			log_warn(c, "read: %s", strerror(errno));
+			log_warn("read");
 			client_error(bev, EVBUFFER_ERROR, c);
 			return;
 		} else if (r == 0) {
@@ -1100,8 +1113,7 @@ client_error(struct bufferevent *bev, short error, void *d)
 	c->type = REQUEST_DONE;
 
 	if (error & EVBUFFER_TIMEOUT) {
-		log_warn(c, "timeout reached, "
-		    "forcefully closing the connection");
+		log_debug("timeout; forcefully closing the connection");
 		if (c->code == 0)
 			start_reply(c, BAD_REQUEST, "timeout");
 		else
@@ -1114,7 +1126,7 @@ client_error(struct bufferevent *bev, short error, void *d)
 		return;
 	}
 
-	log_err(c, "unknown bufferevent error %x", error);
+	log_warnx("unknown bufferevent error 0x%x", error);
 	client_close(c);
 }
 
@@ -1160,13 +1172,13 @@ start_reply(struct client *c, int code, const char *meta)
 	return;
 
 err:
-	log_err(c, "evbuffer_add_printf error: no memory");
+	log_warnx("evbuffer_add_printf error: no memory");
 	evbuffer_drain(evb, EVBUFFER_LENGTH(evb));
 	client_close(c);
 	return;
 
 overflow:
-	log_warn(c, "reply header overflow");
+	log_warnx("reply header overflow");
 	evbuffer_drain(evb, EVBUFFER_LENGTH(evb));
 	start_reply(c, TEMP_FAILURE, "internal error");
 }
@@ -1296,7 +1308,7 @@ do_accept(int sock, short et, void *d)
 	c->addr = addr;
 
 	if (tls_accept_socket(ctx, &c->ctx, fd) == -1) {
-		log_warn(c, "failed to accept socket: %s", tls_error(c->ctx));
+		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
 		close(c->fd);
 		free(c);
 		return;
@@ -1364,7 +1376,7 @@ handle_dispatch_imsg(int fd, short ev, void *d)
 static void
 handle_siginfo(int fd, short ev, void *d)
 {
-	log_info(NULL, "%d connected clients", connected_clients);
+	log_info("%d connected clients", connected_clients);
 }
 
 static void
@@ -1441,7 +1453,7 @@ setup_tls(void)
 
 	h = TAILQ_FIRST(&hosts);
 
-	log_warn(NULL, "loading %s, %s, %s", h->cert, h->key, h->ocsp);
+	log_info("loading %s, %s, %s", h->cert, h->key, h->ocsp);
 
 	/* we need to set something, then we can add how many key we want */
 	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))

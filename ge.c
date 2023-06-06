@@ -26,9 +26,11 @@
 #include <libgen.h>
 #include <signal.h>
 #include <string.h>
+#include <syslog.h>
 #include <unistd.h>
 
 #include "logger.h"
+#include "log.h"
 
 struct imsgbuf ibuf, logibuf;
 struct conf conf;
@@ -184,7 +186,7 @@ serve(const char *host, int port, const char *dir)
 		fatal("%s", cause);
 	freeaddrinfo(res0);
 
-	log_notice(NULL, "serving %s on port %d", dir, port);
+	log_info("serving %s on port %d", dir, port);
 	return server_main(NULL, sock, -1);
 }
 
@@ -209,6 +211,8 @@ main(int argc, char **argv)
 
 	setlocale(LC_CTYPE, "");
 
+	log_init(1, LOG_DAEMON);
+	log_setverbose(0);
 	logger_init();
 	config_init();
 
@@ -251,7 +255,6 @@ main(int argc, char **argv)
 		certs_dir = data_dir();
 
 	/* set up the implicit vhost and location */
-
 	host = xcalloc(1, sizeof(*host));
 	TAILQ_INSERT_HEAD(&hosts, host, vhosts);
 

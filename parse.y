@@ -886,8 +886,7 @@ pushfile(const char *name, int secret)
 	nfile = xcalloc(1, sizeof(*nfile));
 	nfile->name = xstrdup(name);
 	if ((nfile->stream = fopen(nfile->name, "r")) == NULL) {
-		log_warn(NULL, "can't open %s: %s", nfile->name,
-		    strerror(errno));
+		log_warn("can't open %s", nfile->name);
 		free(nfile->name);
 		free(nfile);
 		return NULL;

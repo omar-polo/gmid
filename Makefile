@@ -23,6 +23,7 @@ GMID_SRCS =	config.c \
 		fcgi.c \
 		gmid.c \
 		iri.c \
+		log.c \
 		logger.c \
 		mime.c \
 		proxy.c \
@@ -40,6 +41,7 @@ GE_SRCS =	config.c \
 		fcgi.c \
 		ge.c \
 		iri.c \
+		log.c \
 		logger.c \
 		mime.c \
 		proxy.c \
@@ -58,6 +60,7 @@ GG_SRCS =	gg.c \
 GG_OBJS =	${GG_SRCS:.c=.o} ${COBJS}
 
 SRCS =		gmid.h \
+		log.h \
 		logger.h \
 		parse.y \
 		${GMID_SRCS} \
@@ -158,6 +161,8 @@ DISTFILES =	.cirrus.yml \
 		gmid.conf.5 \
 		gmid.h \
 		iri.c \
+		log.c \
+		log.h \
 		logger.c \
 		mime.c \
 		parse.y \

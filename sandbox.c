@@ -15,7 +15,7 @@
  */
 
 #include "gmid.h"
-#include "logger.h"
+#include "log.h"
 
 #if defined(__OpenBSD__)
 

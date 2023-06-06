@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "logger.h"
+#include "log.h"
 
 /*
  * Sometimes it can be useful to inspect the fastcgi traffic as
@@ -262,8 +262,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 		memcpy(&hdr, EVBUFFER_DATA(src), sizeof(hdr));
 
 		if (recid(&hdr) != 1) {
-			log_err(NULL,
-			    "got invalid client id %d from fcgi backend",
+			log_warnx("got invalid client id %d from fcgi backend",
 			    recid(&hdr));
 			goto err;
 		}
@@ -283,8 +282,8 @@ fcgi_read(struct bufferevent *bev, void *d)
 		switch (hdr.type) {
 		case FCGI_END_REQUEST:
 			if (len != sizeof(end)) {
-				log_err(NULL,
-				    "got invalid end request record size");
+				log_warnx("got invalid end request"
+				    " record size");
 				goto err;
 			}
 			bufferevent_read(bev, &end, sizeof(end));
@@ -305,7 +304,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 			break;
 
 		default:
-			log_err(NULL, "got invalid fcgi record (type=%d)",
+			log_warnx("got invalid fcgi record (type=%d)",
 			    hdr.type);
 			goto err;
 		}
@@ -332,8 +331,7 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 	struct client	*c = d;
 
 	if (!(err & (EVBUFFER_ERROR|EVBUFFER_EOF)))
-		log_warn(NULL, "unknown event error (%x): %s",
-		    err, strerror(errno));
+		log_warn("unknown event error (%x)", err);
 
 	c->type = REQUEST_DONE;
 	if (c->code != 0)
