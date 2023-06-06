@@ -299,12 +299,11 @@ void		 drop_priv(void);
 void		 config_init(void);
 void		 config_free(void);
 
+/* parse.y */
 void		 yyerror(const char*, ...);
 void		 parse_conf(const char*);
 void		 print_conf(void);
 int		 cmdline_symset(char *);
-
-/* log.c */
 
 /* mime.c */
 void		 init_mime(struct mime*);
