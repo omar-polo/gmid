@@ -209,8 +209,7 @@ main(int argc, char **argv)
 	setlocale(LC_CTYPE, "");
 
 	logger_init();
-	conf.port = 1965;
-	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
+	config_init();
 
 	while ((ch = getopt_long(argc, argv, "d:H:hp:Vv", opts, NULL)) != -1) {
 		switch (ch) {

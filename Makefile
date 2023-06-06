@@ -18,7 +18,8 @@
 # all.
 TESTS=
 
-GMID_SRCS =	dirs.c \
+GMID_SRCS =	config.c \
+		dirs.c \
 		fcgi.c \
 		gmid.c \
 		iri.c \
@@ -34,7 +35,8 @@ GMID_SRCS =	dirs.c \
 
 GMID_OBJS =	${GMID_SRCS:.c=.o} ${COBJS}
 
-GE_SRCS =	dirs.c \
+GE_SRCS =	config.c \
+		dirs.c \
 		fcgi.c \
 		ge.c \
 		iri.c \

@@ -293,9 +293,11 @@ enum imsg_type {
 char		*data_dir(void);
 void		 load_local_cert(struct vhost*, const char*, const char*);
 int		 make_socket(int, int);
-void		 init_config(void);
-void		 free_config(void);
 void		 drop_priv(void);
+
+/* config.c */
+void		 config_init(void);
+void		 config_free(void);
 
 void		 yyerror(const char*, ...);
 void		 parse_conf(const char*);

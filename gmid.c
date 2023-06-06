@@ -113,71 +113,6 @@ make_socket(int port, int family)
 	return sock;
 }
 
-void
-init_config(void)
-{
-	TAILQ_INIT(&hosts);
-
-	conf.port = 1965;
-	conf.ipv6 = 0;
-	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
-
-	init_mime(&conf.mime);
-
-	conf.prefork = 3;
-}
-
-void
-free_config(void)
-{
-	struct vhost *h, *th;
-	struct location *l, *tl;
-	struct proxy *p, *tp;
-	struct envlist *e, *te;
-	struct alist *a, *ta;
-	int v;
-
-	v = conf.verbose;
-
-	free_mime(&conf.mime);
-	memset(&conf, 0, sizeof(conf));
-
-	conf.verbose = v;
-
-	TAILQ_FOREACH_SAFE(h, &hosts, vhosts, th) {
-		TAILQ_FOREACH_SAFE(l, &h->locations, locations, tl) {
-			TAILQ_REMOVE(&h->locations, l, locations);
-
-			if (l->dirfd != -1)
-				close(l->dirfd);
-
-			free(l);
-		}
-
-		TAILQ_FOREACH_SAFE(e, &h->params, envs, te) {
-			TAILQ_REMOVE(&h->params, e, envs);
-			free(e);
-		}
-
-		TAILQ_FOREACH_SAFE(a, &h->aliases, aliases, ta) {
-			TAILQ_REMOVE(&h->aliases, a, aliases);
-			free(a);
-		}
-
-		TAILQ_FOREACH_SAFE(p, &h->proxies, proxies, tp) {
-			TAILQ_REMOVE(&h->proxies, p, proxies);
-			tls_unload_file(p->cert, p->certlen);
-			tls_unload_file(p->key, p->keylen);
-			free(p);
-		}
-
-		TAILQ_REMOVE(&hosts, h, vhosts);
-		free(h);
-	}
-
-	memset(fcgi, 0, sizeof(fcgi));
-}
-
 static int
 wait_signal(void)
 {
@@ -319,7 +254,7 @@ main(int argc, char **argv)
 	setlocale(LC_CTYPE, "");
 
 	logger_init();
-	init_config();
+	config_init();
 
 	while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 		switch (ch) {
@@ -416,8 +351,8 @@ main(int argc, char **argv)
 		old_ipv6 = conf.ipv6;
 		old_port = conf.port;
 
-		free_config();
-		init_config();
+		config_free();
+		config_init();
 		parse_conf(config_path);
 
 		if (old_port != conf.port) {
