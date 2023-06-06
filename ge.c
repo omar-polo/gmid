@@ -22,6 +22,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <locale.h>
 #include <libgen.h>
 #include <signal.h>
 #include <string.h>
@@ -204,6 +205,8 @@ main(int argc, char **argv)
 	const char *errstr, *certs_dir = NULL, *hostname = "localhost";
 	char path[PATH_MAX];
 	int ch;
+
+	setlocale(LC_CTYPE, "");
 
 	logger_init();
 	conf.port = 1965;

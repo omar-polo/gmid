@@ -21,6 +21,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <locale.h>
 #include <string.h>
 
 enum debug {
@@ -350,6 +351,8 @@ main(int argc, char **argv)
 {
 	int		 ch, code;
 	const char	*errstr;
+
+	setlocale(LC_CTYPE, "");
 
 	while ((ch = getopt(argc, argv, "23C:d:H:K:NP:T:")) != -1) {
 		switch (ch) {

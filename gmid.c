@@ -21,6 +21,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <getopt.h>
+#include <locale.h>
 #include <libgen.h>
 #include <limits.h>
 #include <grp.h>
@@ -314,6 +315,8 @@ main(int argc, char **argv)
 {
 	int i, ch, conftest = 0;
 	int pidfd, old_ipv6, old_port;
+
+	setlocale(LC_CTYPE, "");
 
 	logger_init();
 	init_config();
