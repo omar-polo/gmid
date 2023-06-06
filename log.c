@@ -16,6 +16,8 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
