@@ -21,6 +21,8 @@ void		 fatalx(const char *, ...)
 	__attribute__((format (printf, 1, 2)))
 	__attribute__((__noreturn__));
 
+struct client;
+
 #define LOG_ATTR_FMT __attribute__((format (printf, 2, 3)))
 void		 log_err(struct client *, const char *, ...)	LOG_ATTR_FMT;
 void		 log_warn(struct client *, const char *, ...)	LOG_ATTR_FMT;
