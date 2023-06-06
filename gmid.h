@@ -81,7 +81,7 @@
 #define FCGI_VAL_MAX		511
 
 #define FCGI_MAX	32
-#define PROC_MAX	16
+#define PREFORK_MAX	16
 
 struct iri {
 	char		*schema;
@@ -210,9 +210,9 @@ struct conf {
 extern const char *config_path;
 extern struct conf conf;
 
-extern struct imsgbuf logibuf, servibuf[PROC_MAX];
+extern struct imsgbuf logibuf, servibuf[PREFORK_MAX];
 
-extern int servpipes[PROC_MAX];
+extern int servpipes[PREFORK_MAX];
 
 typedef void (imsg_handlerfn)(struct imsgbuf*, struct imsg*, size_t);
 

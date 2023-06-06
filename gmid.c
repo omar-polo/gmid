@@ -45,7 +45,7 @@ struct vhosthead hosts;
 
 int sock4, sock6;
 
-struct imsgbuf logibuf, servibuf[PROC_MAX];
+struct imsgbuf logibuf, servibuf[PREFORK_MAX];
 
 const char *config_path = "/etc/gmid.conf";
 const char *pidfile;

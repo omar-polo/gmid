@@ -1126,7 +1126,7 @@ check_port_num(int n)
 int
 check_prefork_num(int n)
 {
-	if (n <= 0 || n >= PROC_MAX)
+	if (n <= 0 || n >= PREFORK_MAX)
 		yyerror("invalid prefork number %d", n);
 	return n;
 }
