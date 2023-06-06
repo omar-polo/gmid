@@ -675,7 +675,7 @@ lungetc(int c)
 	if (file->ungetpos >= file->ungetsize) {
 		void *p = reallocarray(file->ungetbuf, file->ungetsize, 2);
 		if (p == NULL)
-			err(1, "lungetc");
+			fatal("lungetc");
 		file->ungetbuf = p;
 		file->ungetsize *= 2;
 	}
@@ -809,7 +809,7 @@ top:
 		}
 		yylval.v.string = strdup(buf);
 		if (yylval.v.string == NULL)
-			err(1, "yylex: strdup");
+			fatal("yylex: strdup");
 		return STRING;
 	}
 

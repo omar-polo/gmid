@@ -56,9 +56,9 @@ load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 	char *cert, *key;
 
 	if (asprintf(&cert, "%s/%s.cert.pem", dir, hostname) == -1)
-		errx(1, "asprintf");
+		fatal("asprintf");
 	if (asprintf(&key, "%s/%s.key.pem", dir, hostname) == -1)
-		errx(1, "asprintf");
+		fatal("asprintf");
 
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
 		gen_certificate(hostname, cert, key);
@@ -102,12 +102,12 @@ data_dir(void)
 
 	if ((xdg = getenv("XDG_DATA_HOME")) == NULL) {
 		if ((home = getenv("HOME")) == NULL)
-			errx(1, "XDG_DATA_HOME and HOME both empty");
+			fatalx("XDG_DATA_HOME and HOME both empty");
 		if (asprintf(&t, "%s/.local/share/gmid", home) == -1)
-			err(1, "asprintf");
+			fatalx("asprintf");
 	} else {
 		if (asprintf(&t, "%s/gmid", xdg) == -1)
-			err(1, "asprintf");
+			fatal("asprintf");
 	}
 
 	mkdirs(t, 0755);
@@ -120,11 +120,11 @@ logger_init(void)
 	int p[2];
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
-		err(1, "socketpair");
+		fatal("socketpair");
 
 	switch (fork()) {
 	case -1:
-		err(1, "fork");
+		fatal("fork");
 	case 0:
 		close(p[0]);
 		setproctitle("logger");

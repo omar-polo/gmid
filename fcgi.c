@@ -244,14 +244,14 @@ fcgi_read(struct bufferevent *bev, void *d)
 		struct sockaddr_un addr;
 
 		if ((debug_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
-			err(1, "socket");
+			fatal("socket");
 
 		memset(&addr, 0, sizeof(addr));
 		addr.sun_family = AF_UNIX;
 		strlcpy(addr.sun_path, "./debug.sock", sizeof(addr.sun_path));
 		if (connect(debug_socket, (struct sockaddr*)&addr, sizeof(addr))
 		    == -1)
-			err(1, "connect");
+			fatal("connect");
 	}
 #endif
 

@@ -47,7 +47,7 @@ void
 sandbox_logger_process(void)
 {
 	if (pledge("stdio recvfd", NULL) == -1)
-		err(1, "pledge");
+		fatal("pledge");
 }
 
 #else
