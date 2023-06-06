@@ -139,11 +139,12 @@ static int
 serve(const char *host, int port, const char *dir)
 {
 	struct addrinfo hints, *res, *res0;
-	int error, saved_errno, sock = -1;
+	int r, error, saved_errno, sock = -1;
 	const char *cause = NULL;
 	char service[32];
 
-	if (snprintf(service, sizeof(service), "%d", port) < 0)
+	r = snprintf(service, sizeof(service), "%d", port);
+	if (r < 0 || (size_t)r >= sizeof(service))
 		fatal("snprintf");
 
 	memset(&hints, 0, sizeof(hints));
