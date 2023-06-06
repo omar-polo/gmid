@@ -228,18 +228,6 @@ log_debug(struct client *c, const char *fmt, ...)
 	va_end(ap);
 }
 
-/* strchr, but with a bound */
-static char *
-gmid_strnchr(char *s, int c, size_t len)
-{
-	size_t i;
-
-	for (i = 0; i < len; ++i)
-		if (s[i] == c)
-			return &s[i];
-	return NULL;
-}
-
 void
 log_request(struct client *c, char *meta, size_t l)
 {
@@ -282,7 +270,7 @@ log_request(struct client *c, char *meta, size_t l)
 		strlcpy(b, t, sizeof(b));
 	}
 
-	if ((t = gmid_strnchr(meta, '\r', l)) == NULL)
+	if ((t = memchr(meta, '\r', l)) == NULL)
 		t = meta + len;
 
 	ec = asprintf(&fmted, "%s:%s GET %s %.*s", hbuf, sbuf, b,
