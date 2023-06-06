@@ -28,7 +28,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "log.h"
+#include "logger.h"
 
 struct imsgbuf ibuf, logibuf;
 struct conf conf;

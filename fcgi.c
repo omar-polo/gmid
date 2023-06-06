@@ -20,7 +20,7 @@
 #include <errno.h>
 #include <string.h>
 
-#include "log.h"
+#include "logger.h"
 
 /*
  * Sometimes it can be useful to inspect the fastcgi traffic as

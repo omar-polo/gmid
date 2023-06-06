@@ -30,7 +30,7 @@
 #include <syslog.h>
 #include <time.h>
 
-#include "log.h"
+#include "logger.h"
 
 static struct event imsgev;
 

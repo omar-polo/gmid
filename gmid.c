@@ -29,7 +29,7 @@
 #include <signal.h>
 #include <string.h>
 
-#include "log.h"
+#include "logger.h"
 
 static const char	*opts = "c:D:fhnP:Vv";
 

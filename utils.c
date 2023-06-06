@@ -24,7 +24,7 @@
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
-#include "log.h"
+#include "logger.h"
 
 int
 starts_with(const char *str, const char *prefix)

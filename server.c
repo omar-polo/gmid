@@ -28,7 +28,7 @@
 #include <limits.h>
 #include <string.h>
 
-#include "log.h"
+#include "logger.h"
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
 
