@@ -96,7 +96,7 @@ log_request(struct client *c, char *meta, size_t l)
 
 	ec = asprintf(&fmted, "%s:%s GET %s %.*s", hbuf, sbuf, b,
 	    (int)(t-meta), meta);
-	if (ec < 0)
+	if (ec == -1)
 		err(1, "asprintf");
 
 	imsg_compose(&logibuf, IMSG_LOG_REQUEST, 0, 0, -1, fmted, ec + 1);
