@@ -29,7 +29,6 @@
 #include <syslog.h>
 #include <unistd.h>
 
-#include "logger.h"
 #include "log.h"
 
 struct conf conf;

@@ -28,7 +28,6 @@
 #include <limits.h>
 #include <string.h>
 
-#include "logger.h"
 #include "log.h"
 #include "proc.h"
 

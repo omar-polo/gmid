@@ -30,7 +30,6 @@
 #include <syslog.h>
 #include <time.h>
 
-#include "logger.h"
 #include "log.h"
 #include "proc.h"
 
