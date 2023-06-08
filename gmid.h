@@ -404,6 +404,9 @@ int		 serialize_iri(struct iri*, char*, size_t);
 int		 encode_path(char *, size_t, const char *);
 char		*pct_decode_str(char *);
 
+/* logger.h */
+void		 logger(struct privsep *, struct privsep_proc *);
+
 /* proxy.c */
 int		 proxy_init(struct client *);
 
