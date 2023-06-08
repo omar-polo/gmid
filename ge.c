@@ -32,7 +32,7 @@
 #include "logger.h"
 #include "log.h"
 
-struct imsgbuf ibuf, logibuf;
+struct imsgbuf ibuf;
 struct conf conf;
 
 struct fcgi fcgi[FCGI_MAX];	/* just because it's referenced */
@@ -43,12 +43,6 @@ static const struct option opts[] = {
 	{"version",	no_argument,	NULL,	'V'},
 	{NULL,		0,		NULL,	0},
 };
-
-void
-drop_priv(void)
-{
-	return;
-}
 
 void
 load_local_cert(struct vhost *h, const char *hostname, const char *dir)
@@ -112,29 +106,6 @@ data_dir(void)
 
 	mkdirs(t, 0755);
 	return t;
-}
-
-static void
-logger_init(void)
-{
-	int p[2];
-
-	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
-		fatal("socketpair");
-
-	switch (fork()) {
-	case -1:
-		fatal("fork");
-	case 0:
-		close(p[0]);
-		setproctitle("logger");
-		imsg_init(&logibuf, p[1]);
-		_exit(logger_main(p[1], &logibuf));
-	default:
-		close(p[1]);
-		imsg_init(&logibuf, p[0]);
-		return;
-	}
 }
 
 static int
@@ -213,7 +184,6 @@ main(int argc, char **argv)
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(0);
-	logger_init();
 	config_init();
 
 	while ((ch = getopt_long(argc, argv, "d:H:hp:Vv", opts, NULL)) != -1) {

@@ -254,7 +254,8 @@ vhost		: SERVER string {
 
 			free($2);
 		} '{' optnl servbody '}' {
-			if (*host->cert == '\0' || *host->key == '\0')
+			if (*host->cert_path == '\0' ||
+			    *host->key_path == '\0')
 				yyerror("invalid vhost definition: %s", $2);
 		}
 		| error '}'		{ yyerror("bad server directive"); }
@@ -276,17 +277,20 @@ servopt		: ALIAS string {
 		}
 		| CERT string		{
 			ensure_absolute_path($2);
-			(void) strlcpy(host->cert, $2, sizeof(host->cert));
+			(void) strlcpy(host->cert_path, $2,
+			    sizeof(host->cert_path));
 			free($2);
 		}
 		| KEY string		{
 			ensure_absolute_path($2);
-			(void) strlcpy(host->key, $2, sizeof(host->key));
+			(void) strlcpy(host->key_path, $2,
+			    sizeof(host->key_path));
 			free($2);
 		}
 		| OCSP string		{
 			ensure_absolute_path($2);
-			(void) strlcpy(host->ocsp, $2, sizeof(host->ocsp));
+			(void) strlcpy(host->ocsp_path, $2,
+			    sizeof(host->ocsp_path));
 			free($2);
 		}
 		| PARAM string '=' string {
@@ -1125,7 +1129,7 @@ check_port_num(int n)
 int
 check_prefork_num(int n)
 {
-	if (n <= 0 || n >= PREFORK_MAX)
+	if (n <= 0 || n >= PROC_MAX_INSTANCES)
 		yyerror("invalid prefork number %d", n);
 	return n;
 }

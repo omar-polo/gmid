@@ -32,21 +32,22 @@
 
 #include "logger.h"
 #include "log.h"
+#include "proc.h"
 
-static struct event imsgev;
+#ifndef nitems
+#define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
+#endif
 
 static FILE *log;
 
-static void	handle_imsg_quit(struct imsgbuf*, struct imsg*, size_t);
-static void	handle_imsg_log(struct imsgbuf*, struct imsg*, size_t);
-static void	handle_imsg_log_type(struct imsgbuf*, struct imsg*, size_t);
-static void	handle_dispatch_imsg(int, short, void*);
+static void logger_init(struct privsep *, struct privsep_proc *, void *);
+static void logger_shutdown(void);
+static int logger_dispatch_parent(int, struct privsep_proc *, struct imsg *);
+static int logger_dispatch_server(int, struct privsep_proc *, struct imsg *);
 
-static imsg_handlerfn *handlers[] = {
-	[IMSG_QUIT] = handle_imsg_quit,
-	[IMSG_LOG] = handle_imsg_log,
-	[IMSG_LOG_REQUEST] = handle_imsg_log,
-	[IMSG_LOG_TYPE] = handle_imsg_log_type,
+static struct privsep_proc procs[] = {
+	{ "parent",	PROC_PARENT,	logger_dispatch_parent },
+	{ "server",	PROC_SERVER,	logger_dispatch_server },
 };
 
 void
@@ -99,74 +100,82 @@ log_request(struct client *c, char *meta, size_t l)
 	if (ec == -1)
 		err(1, "asprintf");
 
-	imsg_compose(&logibuf, IMSG_LOG_REQUEST, 0, 0, -1, fmted, ec + 1);
-	imsg_flush(&logibuf);
+	proc_compose(conf.ps, PROC_LOGGER, IMSG_LOG_REQUEST,
+	    fmted, ec + 1);
 
 	free(fmted);
 }
 
 
 
-static void
-handle_imsg_quit(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+void
+logger(struct privsep *ps, struct privsep_proc *p)
 {
-	event_loopbreak();
+	proc_run(ps, p, procs, nitems(procs), logger_init, NULL);
 }
 
 static void
-handle_imsg_log(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+logger_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 {
-	char	*msg;
-
-	msg = imsg->data;
-	msg[datalen-1] = '\0';
-
-	if (log != NULL)
-		fprintf(log, "%s\n", msg);
-	else
-		syslog(LOG_DAEMON | LOG_NOTICE, "%s", msg);
+	p->p_shutdown = logger_shutdown;
+	log = stderr;
+	sandbox_logger_process();
 }
 
 static void
-handle_imsg_log_type(struct imsgbuf *ibuf, struct imsg *imsg, size_t datalen)
+logger_shutdown(void)
 {
-	if (log != NULL && log != stderr) {
+	closelog();
+	if (log && log != stderr) {
 		fflush(log);
 		fclose(log);
 	}
-	log = NULL;
+}
 
-	if (imsg->fd != -1) {
-		if ((log = fdopen(imsg->fd, "a")) == NULL) {
-			syslog(LOG_DAEMON | LOG_ERR, "fdopen: %s",
-			    strerror(errno));
-			exit(1);
+static int
+logger_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
+{
+	switch (imsg->hdr.type) {
+	case IMSG_LOG_TYPE:
+		if (log != NULL && log != stderr) {
+			fflush(log);
+			fclose(log);
 		}
+		log = NULL;
+
+		if (imsg->fd != -1) {
+			if ((log = fdopen(imsg->fd, "a")) == NULL)
+				fatal("fdopen");
+		}
+		break;
+	default:
+		return -1;
 	}
+
+	return 0;
 }
 
-static void
-handle_dispatch_imsg(int fd, short ev, void *d)
+static int
+logger_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
-	struct imsgbuf *ibuf = d;
-	dispatch_imsg(ibuf, handlers, sizeof(handlers));
-}
+	char *msg;
+	size_t datalen;
 
-int
-logger_main(int fd, struct imsgbuf *ibuf)
-{
-	log = stderr;
-
-	event_init();
-
-	event_set(&imsgev, fd, EV_READ | EV_PERSIST, &handle_dispatch_imsg, ibuf);
-	event_add(&imsgev, NULL);
-
-	sandbox_logger_process();
-
-	event_dispatch();
-
-	closelog();
+	switch (imsg->hdr.type) {
+	case IMSG_LOG_REQUEST:
+		msg = imsg->data;
+		datalen = IMSG_DATA_SIZE(imsg);
+		if (datalen == 0)
+			fatal("got invalid IMSG_LOG_REQUEST");
+		msg[datalen - 1] = '\0';
+		if (log != NULL)
+			fprintf(log, "%s\n", msg);
+		else
+			syslog(LOG_DAEMON | LOG_NOTICE, "%s", msg);
+		break;
+	default:
+		return -1;
+	}
 
 	return 0;
 }

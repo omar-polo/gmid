@@ -81,7 +81,11 @@
 #define FCGI_VAL_MAX		511
 
 #define FCGI_MAX	32
-#define PREFORK_MAX	16
+#define PROC_MAX_INSTANCES	16
+
+/* forward declaration */
+struct privsep;
+struct privsep_proc;
 
 struct iri {
 	char		*schema;
@@ -163,9 +167,18 @@ struct alist {
 extern TAILQ_HEAD(vhosthead, vhost) hosts;
 struct vhost {
 	char		 domain[HOST_NAME_MAX + 1];
-	char		 cert[PATH_MAX];
-	char		 key[PATH_MAX];
-	char		 ocsp[PATH_MAX];
+	char		 cert_path[PATH_MAX];
+	char		 key_path[PATH_MAX];
+	char		 ocsp_path[PATH_MAX];
+
+	uint8_t		*cert;
+	size_t		 certlen;
+
+	uint8_t		*key;
+	size_t		 keylen;
+
+	uint8_t		*ocsp;
+	size_t		 ocsplen;
 
 	TAILQ_ENTRY(vhost) vhosts;
 
@@ -193,11 +206,9 @@ struct mime {
 };
 
 struct conf {
-	/* from command line */
+	struct privsep	*ps;
 	int		 foreground;
 	int		 verbose;
-
-	/* in the config */
 	int		 port;
 	int		 ipv6;
 	uint32_t	 protos;
@@ -205,14 +216,19 @@ struct conf {
 	char		 chroot[PATH_MAX];
 	char		 user[LOGIN_NAME_MAX];
 	int		 prefork;
+	int		 reload;
+
+	int		 sock4;
+	struct event	 evsock4;
+	int		 sock6;
+	struct event	 evsock6;
 };
 
 extern const char *config_path;
 extern struct conf conf;
 
-extern struct imsgbuf logibuf, servibuf[PREFORK_MAX];
-
-extern int servpipes[PREFORK_MAX];
+extern int servpipes[PROC_MAX_INSTANCES];
+extern int privsep_process;
 
 typedef void (imsg_handlerfn)(struct imsgbuf*, struct imsg*, size_t);
 
@@ -286,24 +302,47 @@ enum imsg_type {
 	IMSG_LOG,
 	IMSG_LOG_REQUEST,
 	IMSG_LOG_TYPE,
-	IMSG_QUIT,
+
+	IMSG_RECONF_START,	/* 7 */
+	IMSG_RECONF_MIME,
+	IMSG_RECONF_PROTOS,
+	IMSG_RECONF_PORT,
+	IMSG_RECONF_SOCK4,
+	IMSG_RECONF_SOCK6,
+	IMSG_RECONF_FCGI,
+	IMSG_RECONF_HOST,
+	IMSG_RECONF_CERT,
+	IMSG_RECONF_KEY,
+	IMSG_RECONF_OCSP,
+	IMSG_RECONF_LOC,
+	IMSG_RECONF_ENV,
+	IMSG_RECONF_ALIAS,
+	IMSG_RECONF_PROXY,
+	IMSG_RECONF_END,
+	IMSG_RECONF_DONE,
+
+	IMSG_CTL_PROCFD,
 };
 
 /* gmid.c */
 char		*data_dir(void);
 void		 load_local_cert(struct vhost*, const char*, const char*);
 int		 make_socket(int, int);
-void		 drop_priv(void);
 
 /* config.c */
 void		 config_init(void);
 void		 config_free(void);
+int		 config_send(struct conf *, struct fcgi *, struct vhosthead *);
+int		 config_recv(struct conf *, struct imsg *);
 
 /* parse.y */
 void		 yyerror(const char*, ...);
 void		 parse_conf(const char*);
 void		 print_conf(void);
 int		 cmdline_symset(char *);
+struct vhost	*new_vhost(void);
+struct location	*new_location(void);
+struct proxy	*new_proxy(void);
 
 /* mime.c */
 void		 init_mime(struct mime*);
@@ -331,7 +370,8 @@ void		 client_write(struct bufferevent *, void *);
 void		 start_reply(struct client*, int, const char*);
 void		 client_close(struct client *);
 struct client	*client_by_id(int);
-int		 server_main(struct imsgbuf *, int, int);
+void		 do_accept(int, short, void *);
+void		 server(struct privsep *ps, struct privsep_proc *);
 
 int		 client_tree_cmp(struct client *, struct client *);
 SPLAY_PROTOTYPE(client_tree_id, client, entry, client_tree_cmp);
@@ -349,6 +389,7 @@ void		 fcgi_error(struct bufferevent *, short, void *);
 void		 fcgi_req(struct client *);
 
 /* sandbox.c */
+void		 sandbox_main_process(void);
 void		 sandbox_server_process(void);
 void		 sandbox_logger_process(void);
 

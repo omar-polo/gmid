@@ -30,15 +30,20 @@
 
 #include "logger.h"
 #include "log.h"
+#include "proc.h"
 
 #define MIN(a, b)	((a) < (b) ? (a) : (b))
+
+#ifndef nitems
+#define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
+#endif
 
 int shutting_down;
 
 static struct tls	*ctx;
 
-static struct event e4, e6, imsgev, siginfo, sigusr2;
-static int has_ipv6, has_siginfo;
+static struct event siginfo, sigusr2;
+static int has_siginfo;
 
 int connected_clients;
 
@@ -66,10 +71,16 @@ static void	 client_error(struct bufferevent *, short, void *);
 
 static void	 client_close_ev(int, short, void *);
 
-static void	 do_accept(int, short, void*);
-
-static void	 handle_dispatch_imsg(int, short, void *);
 static void	 handle_siginfo(int, short, void*);
+
+static void	 server_init(struct privsep *, struct privsep_proc *, void *);
+static int	 server_dispatch_parent(int, struct privsep_proc *, struct imsg *);
+static int	 server_dispatch_logger(int, struct privsep_proc *, struct imsg *);
+
+static struct privsep_proc procs[] = {
+	{ "parent",	PROC_PARENT,	server_dispatch_parent },
+	{ "logger",	PROC_LOGGER,	server_dispatch_logger },
+};
 
 static uint32_t server_client_id;
 
@@ -1281,7 +1292,7 @@ client_close(struct client *c)
 	client_close_ev(c->fd, 0, c);
 }
 
-static void
+void
 do_accept(int sock, short et, void *d)
 {
 	struct client *c;
@@ -1329,116 +1340,37 @@ client_by_id(int id)
 }
 
 static void
-handle_dispatch_imsg(int fd, short ev, void *d)
-{
-	struct imsgbuf	*ibuf = d;
-	struct imsg	 imsg;
-	ssize_t		 n;
-
-	if ((n = imsg_read(ibuf)) == -1) {
-		if (errno == EAGAIN || errno == EWOULDBLOCK)
-			return;
-		fatal("imsg_read");
-	}
-
-	if (n == 0)
-		fatalx("connection closed.");
-
-	for (;;) {
-		if ((n = imsg_get(ibuf, &imsg)) == -1)
-			fatal("imsg_get");
-		if (n == 0)
-			return;
-
-		switch (imsg.hdr.type) {
-		case IMSG_QUIT:
-			/*
-			 * Don't call event_loopbreak since we want to
-			 * finish handling the ongoing connections.
-			 */
-			shutting_down = 1;
-
-			event_del(&e4);
-			if (has_ipv6)
-				event_del(&e6);
-			if (has_siginfo)
-				signal_del(&siginfo);
-			event_del(&imsgev);
-			signal_del(&sigusr2);
-			break;
-		default:
-			fatalx("Unknown message %d", imsg.hdr.type);
-		}
-		imsg_free(&imsg);
-	}
-}
-
-static void
 handle_siginfo(int fd, short ev, void *d)
 {
 	log_info("%d connected clients", connected_clients);
 }
 
 static void
-loop(int sock4, int sock6, struct imsgbuf *ibuf)
-{
-	SPLAY_INIT(&clients);
-
-	event_init();
-
-	event_set(&e4, sock4, EV_READ | EV_PERSIST, &do_accept, NULL);
-	event_add(&e4, NULL);
-
-	if (sock6 != -1) {
-		has_ipv6 = 1;
-		event_set(&e6, sock6, EV_READ | EV_PERSIST, &do_accept, NULL);
-		event_add(&e6, NULL);
-	}
-
-	if (ibuf) {
-		event_set(&imsgev, ibuf->fd, EV_READ | EV_PERSIST,
-		    handle_dispatch_imsg, ibuf);
-		event_add(&imsgev, NULL);
-	}
-
-#ifdef SIGINFO
-	has_siginfo = 1;
-	signal_set(&siginfo, SIGINFO, &handle_siginfo, NULL);
-	signal_add(&siginfo, NULL);
-#endif
-	signal_set(&sigusr2, SIGUSR2, &handle_siginfo, NULL);
-	signal_add(&sigusr2, NULL);
-
-	sandbox_server_process();
-	event_dispatch();
-	_exit(0);
-}
-
-static void
 add_keypair(struct vhost *h, struct tls_config *conf)
 {
-	if (*h->ocsp == '\0') {
-		if (tls_config_add_keypair_file(conf, h->cert, h->key) == -1)
-			fatalx("failed to load the keypair (%s, %s): %s",
-			    h->cert, h->key, tls_config_error(conf));
+	if (h->ocsp == NULL) {
+		if (tls_config_add_keypair_mem(conf, h->cert, h->certlen,
+		    h->key, h->keylen) == -1)
+			fatalx("failed to load the keypair: %s",
+			    tls_config_error(conf));
 	} else {
-		if (tls_config_add_keypair_ocsp_file(conf, h->cert, h->key,
-		    h->ocsp) == -1)
-			fatalx("failed to load the keypair (%s, %s, %s): %s",
-			    h->cert, h->key, h->ocsp,
+		if (tls_config_add_keypair_ocsp_mem(conf, h->cert, h->certlen,
+		    h->key, h->keylen, h->ocsp, h->ocsplen) == -1)
+			fatalx("failed to load the keypair: %s",
 			    tls_config_error(conf));
 	}
 }
 
-/*
- * XXX: in a ideal privsep world, this is done by the parent process
- * and its content sent to us.
- */
 static void
 setup_tls(void)
 {
 	struct tls_config	*tlsconf;
 	struct vhost		*h;
+
+	if (ctx == NULL) {
+		if ((ctx = tls_server()) == NULL)
+			fatal("tls_server failure");
+	}
 
 	if ((tlsconf = tls_config_new()) == NULL)
 		fatal("tls_config_new");
@@ -1453,25 +1385,23 @@ setup_tls(void)
 
 	h = TAILQ_FIRST(&hosts);
 
-	log_info("loading %s, %s, %s", h->cert, h->key, h->ocsp);
-
 	/* we need to set something, then we can add how many key we want */
-	if (tls_config_set_keypair_file(tlsconf, h->cert, h->key))
-		fatalx("tls_config_set_keypair_file failed for (%s, %s): %s",
-		    h->cert, h->key, tls_config_error(tlsconf));
+	if (tls_config_set_keypair_mem(tlsconf, h->cert, h->certlen,
+	    h->key, h->keylen) == -1)
+		fatalx("tls_config_set_keypair_mem failed: %s",
+		    tls_config_error(tlsconf));
 
 	/* same for OCSP */
-	if (*h->ocsp != '\0' &&
-	    tls_config_set_ocsp_staple_file(tlsconf, h->ocsp) == -1)
-		fatalx("tls_config_set_ocsp_staple_file failed for (%s): %s",
-		    h->ocsp, tls_config_error(tlsconf));
+	if (h->ocsp != NULL &&
+	    tls_config_set_ocsp_staple_mem(tlsconf, h->ocsp, h->ocsplen)
+	    == -1)
+		fatalx("tls_config_set_ocsp_staple_file failed: %s",
+		    tls_config_error(tlsconf));
 
 	while ((h = TAILQ_NEXT(h, vhosts)) != NULL)
 		add_keypair(h, tlsconf);
 
-	if ((ctx = tls_server()) == NULL)
-		fatal("tls_server failure");
-
+	tls_reset(ctx);
 	if (tls_configure(ctx, tlsconf) == -1)
 		fatalx("tls_configure: %s", tls_error(ctx));
 
@@ -1496,21 +1426,80 @@ load_vhosts(void)
 	}
 }
 
-int
-server_main(struct imsgbuf *ibuf, int sock4, int sock6)
+void
+server(struct privsep *ps, struct privsep_proc *p)
 {
-	/*
-	 * setup tls before dropping privileges: we don't want user
-	 * to put private certs inside the chroot.
-	 */
-	setup_tls();
-	drop_priv();
-	if (load_default_mime(&conf.mime) == -1)
-		fatal("can't load default mime");
-	sort_mime(&conf.mime);
-	load_vhosts();
-	loop(sock4, sock6, ibuf);
+	proc_run(ps, p, procs, nitems(procs), server_init, NULL);
+}
+
+static void
+server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
+{
+#if 0
+	static volatile int attached = 0;
+	while (!attached)
+		sleep(1);
+#endif
+
+	SPLAY_INIT(&clients);
+
+#ifdef SIGINFO
+	has_siginfo = 1;
+	signal_set(&siginfo, SIGINFO, &handle_siginfo, NULL);
+	signal_add(&siginfo, NULL);
+#endif
+	signal_set(&sigusr2, SIGUSR2, &handle_siginfo, NULL);
+	signal_add(&sigusr2, NULL);
+
+	sandbox_server_process();
+}
+
+static int
+server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
+{
+	struct privsep	*ps = p->p_ps;
+	struct conf	*conf = ps->ps_env;
+
+	switch (imsg->hdr.type) {
+	case IMSG_RECONF_START:
+	case IMSG_RECONF_MIME:
+	case IMSG_RECONF_PROTOS:
+	case IMSG_RECONF_PORT:
+	case IMSG_RECONF_SOCK4:
+	case IMSG_RECONF_SOCK6:
+	case IMSG_RECONF_FCGI:
+	case IMSG_RECONF_HOST:
+	case IMSG_RECONF_CERT:
+	case IMSG_RECONF_KEY:
+	case IMSG_RECONF_OCSP:
+	case IMSG_RECONF_LOC:
+	case IMSG_RECONF_ENV:
+	case IMSG_RECONF_ALIAS:
+	case IMSG_RECONF_PROXY:
+		return config_recv(conf, imsg);
+	case IMSG_RECONF_END:
+		if (config_recv(conf, imsg) == -1)
+			return -1;
+		if (load_default_mime(&conf->mime) == -1)
+			fatal("can't load default mime");
+		sort_mime(&conf->mime);
+		setup_tls();
+		load_vhosts();
+		if (conf->sock4 != -1)
+			event_add(&conf->evsock4, NULL);
+		if (conf->sock6 != -1)
+			event_add(&conf->evsock6, NULL);
+		break;
+	default:
+		return -1;
+	}
+
 	return 0;
+}
+static int
+server_dispatch_logger(int fd, struct privsep_proc *p, struct imsg *imsg)
+{
+	return -1;
 }
 
 int

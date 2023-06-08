@@ -22,6 +22,13 @@
 #include <unistd.h>
 
 void
+sandbox_main_process(void)
+{
+	if (pledge("stdio rpath inet dns sendfd proc", NULL) == -1)
+		fatal("pledge");
+}
+
+void
 sandbox_server_process(void)
 {
 	struct vhost	*h;

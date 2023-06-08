@@ -43,6 +43,7 @@ fi
 
 CFLAGS="${CFLAGS} -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
 CFLAGS="${CFLAGS} -Wwrite-strings -Wno-unused-parameter"
+CFLAGS="${CFLAGS} -Wno-missing-field-initializers"
 
 if [ -z "${LDFLAGS}" ]; then
 	LDFLAGS=`printf "all:\\n\\t@echo \\\$(LDFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`

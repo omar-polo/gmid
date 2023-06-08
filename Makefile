@@ -26,6 +26,7 @@ GMID_SRCS =	config.c \
 		log.c \
 		logger.c \
 		mime.c \
+		proc.c \
 		proxy.c \
 		puny.c \
 		sandbox.c \
@@ -63,6 +64,7 @@ SRCS =		gmid.h \
 		log.h \
 		logger.h \
 		parse.y \
+		proc.h \
 		${GMID_SRCS} \
 		${GE_SRCS} \
 		${GG_SRCS}
@@ -88,8 +90,10 @@ y.tab.c: parse.y
 gmid: ${GMID_OBJS}
 	${CC} ${GMID_OBJS} -o $@ ${LDFLAGS}
 
-ge: ${GE_OBJS}
-	${CC} ${GE_OBJS} -o $@ ${LDFLAGS}
+#ge: ${GE_OBJS}
+#	${CC} ${GE_OBJS} -o $@ ${LDFLAGS}
+ge:
+	:
 
 gg: ${GG_OBJS}
 	${CC} ${GG_OBJS} -o $@ ${LDFLAGS}

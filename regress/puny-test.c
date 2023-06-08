@@ -21,7 +21,6 @@
 
 /* to make the linker happy */
 struct conf conf;
-struct imsgbuf logibuf, servibuf[PREFORK_MAX];
 
 const struct suite {
 	const char	*src;
