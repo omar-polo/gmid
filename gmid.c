@@ -66,6 +66,8 @@ int sock4, sock6;
 int privsep_process;
 int pidfd = -1;
 
+int debug, verbose;
+
 const char *config_path = "/etc/gmid.conf";
 const char *pidfile;
 
@@ -193,7 +195,7 @@ main(int argc, char **argv)
 				    optarg);
 			break;
 		case 'f':
-			conf.foreground = 1;
+			debug = 1;
 			break;
 		case 'h':
 			usage();
@@ -220,7 +222,7 @@ main(int argc, char **argv)
 			puts("Version: " GMID_STRING);
 			return 0;
 		case 'v':
-			conf.verbose++;
+			verbose = 1;
 			break;
 		default:
 			usage();
@@ -263,17 +265,16 @@ main(int argc, char **argv)
 			procs[i].p_chroot = conf.chroot;
 	}
 
-	log_init(conf.foreground, LOG_DAEMON);
-	log_setverbose(conf.verbose);
+	log_init(debug, LOG_DAEMON);
+	log_setverbose(verbose);
 	if (title != NULL)
 		log_procinit(title);
 
 	/* only the parent returns */
-	proc_init(ps, procs, nitems(procs), conf.foreground,
-	    argc0, argv, proc_id);
+	proc_init(ps, procs, nitems(procs), debug, argc0, argv, proc_id);
 
 	log_procinit("main");
-	if (!conf.foreground && daemon(0, 0) == -1)
+	if (!debug && daemon(0, 0) == -1)
 		fatal("daemon");
 
 	pidfd = write_pidfile(pidfile);

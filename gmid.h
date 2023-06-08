@@ -207,8 +207,6 @@ struct mime {
 
 struct conf {
 	struct privsep	*ps;
-	int		 foreground;
-	int		 verbose;
 	int		 port;
 	int		 ipv6;
 	uint32_t	 protos;
