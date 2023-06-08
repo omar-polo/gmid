@@ -244,6 +244,10 @@ if runtest noop MMD -MMD; then
 	CFLAGS="${CFLAGS} -MMD"
 fi
 
+if ! runtest wait_any WAIT_ANY; then
+	CFLAGS="${CFLAGS} -DWAIT_ANY=-1"
+fi
+
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest freezero	FREEZERO	|| true
