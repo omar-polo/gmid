@@ -62,6 +62,12 @@ sandbox_logger_process(void)
 #warning "No sandbox method known for this OS"
 
 void
+sandbox_main_process(void)
+{
+	return;
+}
+
+void
 sandbox_server_process(void)
 {
 	return;
