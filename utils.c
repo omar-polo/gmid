@@ -241,3 +241,37 @@ end:
 		X509_STORE_CTX_free(ctx);
 	return ret;
 }
+
+struct vhost *
+new_vhost(void)
+{
+	struct vhost *h;
+
+	h = xcalloc(1, sizeof(*h));
+	TAILQ_INIT(&h->locations);
+	TAILQ_INIT(&h->params);
+	TAILQ_INIT(&h->aliases);
+	TAILQ_INIT(&h->proxies);
+	return h;
+}
+
+struct location *
+new_location(void)
+{
+	struct location *l;
+
+	l = xcalloc(1, sizeof(*l));
+	l->dirfd = -1;
+	l->fcgi = -1;
+	return l;
+}
+
+struct proxy *
+new_proxy(void)
+{
+	struct proxy *p;
+
+	p = xcalloc(1, sizeof(*p));
+	p->protocols = TLS_PROTOCOLS_DEFAULT;
+	return p;
+}

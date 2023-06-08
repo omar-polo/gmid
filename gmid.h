@@ -340,9 +340,6 @@ void		 yyerror(const char*, ...);
 void		 parse_conf(const char*);
 void		 print_conf(void);
 int		 cmdline_symset(char *);
-struct vhost	*new_vhost(void);
-struct location	*new_location(void);
-struct proxy	*new_proxy(void);
 
 /* mime.c */
 void		 init_mime(struct mime*);
@@ -421,5 +418,8 @@ void		*xcalloc(size_t, size_t);
 void		 gen_certificate(const char*, const char*, const char*);
 X509_STORE	*load_ca(const char*);
 int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);
+struct vhost	*new_vhost(void);
+struct location	*new_location(void);
+struct proxy	*new_proxy(void);
 
 #endif
