@@ -159,7 +159,7 @@ run() {
 		return
 	fi
 
-	$gmid -P gmid.pid -c reg.conf
+	$gmid -P $PWD/gmid.pid -c reg.conf
 
 	# give gmid time to bind the port, otherwise we end up
 	# executing gg when gmid isn't ready yet.
