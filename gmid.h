@@ -421,6 +421,5 @@ void		*xcalloc(size_t, size_t);
 void		 gen_certificate(const char*, const char*, const char*);
 X509_STORE	*load_ca(const char*);
 int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);
-void		 dispatch_imsg(struct imsgbuf*, imsg_handlerfn**, size_t);
 
 #endif
