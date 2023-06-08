@@ -17,9 +17,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include "gmid.h"
+
 #include <sys/types.h>
-#include <sys/queue.h>
-#include <sys/tree.h>
+/* #include <sys/queue.h>	XXX provided by gmid.h */
+/* #include <sys/tree.h>	XXX provided by gmid.h */
 #include <sys/socket.h>
 #include <sys/wait.h>
 
@@ -34,10 +36,9 @@
 #include <signal.h>
 #include <paths.h>
 #include <pwd.h>
-#include <event.h>
-#include <imsg.h>
+/* #include <event.h>		XXX provided by gmid.h */
+/* #include <imsg.h>		XXX provided by gmid.h */
 
-#include "gmid.h"
 #include "log.h"
 #include "proc.h"
 
