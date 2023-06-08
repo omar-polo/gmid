@@ -32,7 +32,6 @@
 #include "logger.h"
 #include "log.h"
 
-struct imsgbuf ibuf;
 struct conf conf;
 
 struct fcgi fcgi[FCGI_MAX];	/* just because it's referenced */
