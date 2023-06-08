@@ -1435,12 +1435,6 @@ server(struct privsep *ps, struct privsep_proc *p)
 static void
 server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 {
-#if 0
-	static volatile int attached = 0;
-	while (!attached)
-		sleep(1);
-#endif
-
 	SPLAY_INIT(&clients);
 
 #ifdef SIGINFO
