@@ -33,6 +33,7 @@
 #include "log.h"
 
 struct conf conf;
+int privsep_process;
 
 struct fcgi fcgi[FCGI_MAX];	/* just because it's referenced */
 struct vhosthead hosts = TAILQ_HEAD_INITIALIZER(hosts);
@@ -42,6 +43,54 @@ static const struct option opts[] = {
 	{"version",	no_argument,	NULL,	'V'},
 	{NULL,		0,		NULL,	0},
 };
+
+void
+log_request(struct client *c, char *meta, size_t l)
+{
+	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
+	const char *t;
+	size_t len;
+	int ec;
+
+	len = sizeof(c->addr);
+	ec = getnameinfo((struct sockaddr*)&c->addr, len,
+	    hbuf, sizeof(hbuf),
+	    sbuf, sizeof(sbuf),
+	    NI_NUMERICHOST | NI_NUMERICSERV);
+	if (ec != 0)
+		fatalx("getnameinfo: %s", gai_strerror(ec));
+
+	if (c->iri.schema != NULL) {
+		/* serialize the IRI */
+		strlcpy(b, c->iri.schema, sizeof(b));
+		strlcat(b, "://", sizeof(b));
+
+		/* log the decoded host name, but if it was invalid
+		 * use the raw one. */
+		if (*c->domain != '\0')
+			strlcat(b, c->domain, sizeof(b));
+		else
+			strlcat(b, c->iri.host, sizeof(b));
+
+		if (*c->iri.path != '/')
+			strlcat(b, "/", sizeof(b));
+		strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
+		if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */
+			strlcat(b, "?", sizeof(b));
+			strlcat(b, c->iri.query, sizeof(b));
+		}
+	} else {
+		if ((t = c->req) == NULL)
+			t = "";
+		strlcpy(b, t, sizeof(b));
+	}
+
+	if ((t = memchr(meta, '\r', l)) == NULL)
+		t = meta + len;
+
+	fprintf(stderr, "%s:%s GET %s %.*s\n", hbuf, sbuf, b,
+	    (int)(t-meta), meta);
+}
 
 void
 load_local_cert(struct vhost *h, const char *hostname, const char *dir)
@@ -56,8 +105,14 @@ load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
 		gen_certificate(hostname, cert, key);
 
-	strlcpy(h->cert, cert, sizeof(h->cert));
-	strlcpy(h->key, key, sizeof(h->key));
+	h->cert = tls_load_file(cert, &h->certlen, NULL);
+	if (h->cert == NULL)
+		fatal("can't load %s", cert);
+
+	h->key = tls_load_file(key, &h->keylen, NULL);
+	if (h->key == NULL)
+		fatal("can't load %s", key);
+
 	strlcpy(h->domain, hostname, sizeof(h->domain));
 }
 
@@ -156,8 +211,21 @@ serve(const char *host, int port, const char *dir)
 		fatal("%s", cause);
 	freeaddrinfo(res0);
 
+	event_init();
+
+	/* cheating */
+	conf.sock4 = sock;
+	event_set(&conf.evsock4, conf.sock4, EV_READ|EV_PERSIST,
+	    do_accept, NULL);
+
+	server_init(NULL, NULL, NULL);
+	if (server_configure_done(&conf) == -1)
+		fatalx("server configuration failed");
+
 	log_info("serving %s on port %d", dir, port);
-	return server_main(NULL, sock, -1);
+	event_dispatch();
+	log_info("quitting");
+	return 0;
 }
 
 static __dead void

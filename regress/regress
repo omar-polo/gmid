@@ -31,7 +31,7 @@ if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
 fi
 
 # Run regression tests for the ge binary.
-#run_test test_ge		XXX
+run_test test_ge
 
 # Run regression tests for the gmid binary.
 run_test test_static_files

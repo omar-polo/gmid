@@ -24,7 +24,7 @@ GMID_SRCS =	gmid.c config.c dirs.c fcgi.c iri.c log.c logger.c mime.c \
 
 GMID_OBJS =	${GMID_SRCS:.c=.o} ${COBJS}
 
-GE_SRCS =	ge.c config.c dirs.c fcgi.c iri.c log.c logger.c mime.c \
+GE_SRCS =	ge.c config.c dirs.c fcgi.c iri.c log.c mime.c proc.c \
 		proxy.c puny.c sandbox.c server.c utf8.c utils.c
 
 GE_OBJS =	${GE_SRCS:.c=.o} ${COBJS}
@@ -56,10 +56,8 @@ y.tab.c: parse.y
 gmid: ${GMID_OBJS}
 	${CC} ${GMID_OBJS} -o $@ ${LDFLAGS}
 
-#ge: ${GE_OBJS}
-#	${CC} ${GE_OBJS} -o $@ ${LDFLAGS}
-ge:
-	:
+ge: ${GE_OBJS}
+	${CC} ${GE_OBJS} -o $@ ${LDFLAGS}
 
 gg: ${GG_OBJS}
 	${CC} ${GG_OBJS} -o $@ ${LDFLAGS}
