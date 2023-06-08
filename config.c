@@ -28,6 +28,8 @@
 void
 config_init(void)
 {
+	memset(&conf, 0, sizeof(conf));
+
 	TAILQ_INIT(&hosts);
 
 	conf.port = 1965;
