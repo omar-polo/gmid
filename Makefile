@@ -18,56 +18,23 @@
 # all.
 TESTS=
 
-GMID_SRCS =	config.c \
-		dirs.c \
-		fcgi.c \
-		gmid.c \
-		iri.c \
-		log.c \
-		logger.c \
-		mime.c \
-		proc.c \
-		proxy.c \
-		puny.c \
-		sandbox.c \
-		server.c \
-		utf8.c \
-		utils.c \
-		y.tab.c \
+GMID_SRCS =	gmid.c config.c dirs.c fcgi.c iri.c log.c logger.c mime.c \
+		proc.c proxy.c puny.c sandbox.c server.c utf8.c utils.c \
+		y.tab.c
 
 GMID_OBJS =	${GMID_SRCS:.c=.o} ${COBJS}
 
-GE_SRCS =	config.c \
-		dirs.c \
-		fcgi.c \
-		ge.c \
-		iri.c \
-		log.c \
-		logger.c \
-		mime.c \
-		proxy.c \
-		puny.c \
-		sandbox.c \
-		server.c \
-		utf8.c \
-		utils.c
+GE_SRCS =	ge.c config.c dirs.c fcgi.c iri.c log.c logger.c mime.c \
+		proxy.c puny.c sandbox.c server.c utf8.c utils.c
 
 GE_OBJS =	${GE_SRCS:.c=.o} ${COBJS}
 
-GG_SRCS =	gg.c \
-		iri.c \
-		utf8.c
+GG_SRCS =	gg.c iri.c utf8.c
 
 GG_OBJS =	${GG_SRCS:.c=.o} ${COBJS}
 
-SRCS =		gmid.h \
-		log.h \
-		logger.h \
-		parse.y \
-		proc.h \
-		${GMID_SRCS} \
-		${GE_SRCS} \
-		${GG_SRCS}
+SRCS =		gmid.h log.h logger.h parse.y proc.h \
+		${GMID_SRCS} ${GE_SRCS} ${GG_SRCS}
 
 DISTNAME =	gmid-${VERSION}
 
@@ -144,39 +111,12 @@ uninstall:
 
 # -- maintainer targets --
 
-DISTFILES =	.cirrus.yml \
-		.dockerignore \
-		.gitignore \
-		ChangeLog \
-		LICENSE \
-		Makefile \
-		Makefile.depend \
-		README.md \
-		configure \
-		configure.local.example \
-		dirs.c \
-		fcgi.c \
-		ge.1 \
-		ge.c \
-		gg.1 \
-		gg.c \
-		gmid.8 \
-		gmid.c \
-		gmid.conf.5 \
-		gmid.h \
-		iri.c \
-		log.c \
-		log.h \
-		logger.c \
-		mime.c \
-		parse.y \
-		proxy.c \
-		puny.c \
-		sandbox.c \
-		server.c \
-		utf8.c \
-		utils.c \
-		y.tab.c
+DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
+		Makefile Makefile.depend README.md configure \
+		configure.local.example dirs.c fcgi.c ge.1 ge.c gg.1 \
+		gg.c gmid.8 gmid.c gmid.conf.5 gmid.h iri.c log.c log.h \
+		logger.c mime.c parse.y proxy.c puny.c sandbox.c \
+		server.c utf8.c utils.c y.tab.c
 
 depend: config.h y.tab.c
 	mkdep -f Makefile.tmp1 ${CFLAGS} ${GE_SRCS} ${GG_SRCS} ${GMID_SRCS} \
