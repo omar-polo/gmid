@@ -14,5 +14,4 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-void		 log_request(struct client *, char *, size_t);
 void		 logger(struct privsep *, struct privsep_proc *);

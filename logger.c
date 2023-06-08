@@ -51,64 +51,6 @@ static struct privsep_proc procs[] = {
 };
 
 void
-log_request(struct client *c, char *meta, size_t l)
-{
-	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
-	char *fmted;
-	const char *t;
-	size_t len;
-	int ec;
-
-	len = sizeof(c->addr);
-	ec = getnameinfo((struct sockaddr*)&c->addr, len,
-	    hbuf, sizeof(hbuf),
-	    sbuf, sizeof(sbuf),
-	    NI_NUMERICHOST | NI_NUMERICSERV);
-	if (ec != 0)
-		fatalx("getnameinfo: %s", gai_strerror(ec));
-
-	if (c->iri.schema != NULL) {
-		/* serialize the IRI */
-		strlcpy(b, c->iri.schema, sizeof(b));
-		strlcat(b, "://", sizeof(b));
-
-		/* log the decoded host name, but if it was invalid
-		 * use the raw one. */
-		if (*c->domain != '\0')
-			strlcat(b, c->domain, sizeof(b));
-		else
-			strlcat(b, c->iri.host, sizeof(b));
-
-		if (*c->iri.path != '/')
-			strlcat(b, "/", sizeof(b));
-		strlcat(b, c->iri.path, sizeof(b)); /* TODO: sanitize UTF8 */
-		if (*c->iri.query != '\0') {	    /* TODO: sanitize UTF8 */
-			strlcat(b, "?", sizeof(b));
-			strlcat(b, c->iri.query, sizeof(b));
-		}
-	} else {
-		if ((t = c->req) == NULL)
-			t = "";
-		strlcpy(b, t, sizeof(b));
-	}
-
-	if ((t = memchr(meta, '\r', l)) == NULL)
-		t = meta + len;
-
-	ec = asprintf(&fmted, "%s:%s GET %s %.*s", hbuf, sbuf, b,
-	    (int)(t-meta), meta);
-	if (ec == -1)
-		err(1, "asprintf");
-
-	proc_compose(conf.ps, PROC_LOGGER, IMSG_LOG_REQUEST,
-	    fmted, ec + 1);
-
-	free(fmted);
-}
-
-
-
-void
 logger(struct privsep *ps, struct privsep_proc *p)
 {
 	proc_run(ps, p, procs, nitems(procs), logger_init, NULL);

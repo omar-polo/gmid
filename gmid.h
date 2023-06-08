@@ -328,6 +328,9 @@ enum imsg_type {
 char		*data_dir(void);
 void		 load_local_cert(struct vhost*, const char*, const char*);
 
+/* gmid.c / ge.c */
+void		 log_request(struct client *, char *, size_t);
+
 /* config.c */
 void		 config_init(void);
 void		 config_free(void);
