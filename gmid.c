@@ -279,7 +279,7 @@ main(int argc, char **argv)
 			conftest++;
 			break;
 		case 'P':
-			pidfile = optarg;
+			pidfile = absolutify_path(optarg);
 			break;
 		case 'V':
 			puts("Version: " GMID_STRING);
