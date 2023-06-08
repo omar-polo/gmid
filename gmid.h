@@ -167,9 +167,9 @@ struct alist {
 extern TAILQ_HEAD(vhosthead, vhost) hosts;
 struct vhost {
 	char		 domain[HOST_NAME_MAX + 1];
-	char		 cert_path[PATH_MAX];
-	char		 key_path[PATH_MAX];
-	char		 ocsp_path[PATH_MAX];
+	char		*cert_path;
+	char		*key_path;
+	char		*ocsp_path;
 
 	uint8_t		*cert;
 	size_t		 certlen;

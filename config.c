@@ -73,6 +73,9 @@ config_free(void)
 	init_mime(&conf.mime);
 
 	TAILQ_FOREACH_SAFE(h, &hosts, vhosts, th) {
+		free(h->cert_path);
+		free(h->key_path);
+		free(h->ocsp_path);
 		free(h->cert);
 		free(h->key);
 		free(h->ocsp);
@@ -255,10 +258,17 @@ config_send(struct conf *conf, struct fcgi *fcgi, struct vhosthead *hosts)
 	}
 
 	TAILQ_FOREACH(h, hosts, vhosts) {
+		struct vhost vcopy;
+
+		memcpy(&vcopy, h, sizeof(vcopy));
+		vcopy.cert_path = NULL;
+		vcopy.key_path = NULL;
+		vcopy.ocsp_path = NULL;
+
 		log_debug("sending host %s", h->domain);
 
 		if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_HOST,
-		    h, sizeof(*h)) == -1)
+		    &vcopy, sizeof(vcopy)) == -1)
 			return -1;
 
 		log_debug("sending certificate %s", h->cert_path);
@@ -273,7 +283,7 @@ config_send(struct conf *conf, struct fcgi *fcgi, struct vhosthead *hosts)
 		if (config_send_file(ps, fd, IMSG_RECONF_KEY) == -1)
 			return -1;
 
-		if (*h->ocsp_path != '\0') {
+		if (h->ocsp_path != NULL) {
 			log_debug("sending ocsp %s", h->ocsp_path);
 			if ((fd = open(h->ocsp_path, O_RDONLY)) == -1)
 				fatal("can't open %s", h->ocsp_path);

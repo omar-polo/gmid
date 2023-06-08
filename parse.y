@@ -254,8 +254,8 @@ vhost		: SERVER string {
 
 			free($2);
 		} '{' optnl servbody '}' {
-			if (*host->cert_path == '\0' ||
-			    *host->key_path == '\0')
+			if (host->cert_path == NULL ||
+			    host->key_path == NULL)
 				yyerror("invalid vhost definition: %s", $2);
 		}
 		| error '}'		{ yyerror("bad server directive"); }
@@ -277,21 +277,18 @@ servopt		: ALIAS string {
 		}
 		| CERT string		{
 			ensure_absolute_path($2);
-			(void) strlcpy(host->cert_path, $2,
-			    sizeof(host->cert_path));
-			free($2);
+			free(host->cert_path);
+			host->cert_path = $2;
 		}
 		| KEY string		{
 			ensure_absolute_path($2);
-			(void) strlcpy(host->key_path, $2,
-			    sizeof(host->key_path));
-			free($2);
+			free(host->key_path);
+			host->key_path = $2;
 		}
 		| OCSP string		{
 			ensure_absolute_path($2);
-			(void) strlcpy(host->ocsp_path, $2,
-			    sizeof(host->ocsp_path));
-			free($2);
+			free(host->ocsp_path);
+			host->ocsp_path = $2;
 		}
 		| PARAM string '=' string {
 			add_param($2, $4);
