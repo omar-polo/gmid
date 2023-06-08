@@ -51,10 +51,8 @@ config_free(void)
 	struct proxy *p, *tp;
 	struct envlist *e, *te;
 	struct alist *a, *ta;
-	int v;
 
 	ps = conf.ps;
-	v = conf.verbose;
 
 	if (conf.sock4 != -1) {
 		event_del(&conf.evsock4);
@@ -70,7 +68,6 @@ config_free(void)
 	memset(&conf, 0, sizeof(conf));
 
 	conf.ps = ps;
-	conf.verbose = v;
 	conf.sock4 = conf.sock6 = -1;
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 	init_mime(&conf.mime);
