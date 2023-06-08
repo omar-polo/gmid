@@ -70,7 +70,7 @@ static: ${GMID_OBJS} ${GE_OBJS} ${GG_OBJS}
 	${CC} ${GG_OBJS} -o gg ${LDFLAGS} ${STATIC}
 
 clean:
-	rm -f *.o compat/*.o y.tab.c y.tab.h y.output gmid ge gg
+	rm -f *.[do] compat/*.[do] y.tab.c y.tab.h y.output gmid ge gg
 	rm -f compile_flags.txt
 	${MAKE} -C regress clean
 
@@ -130,3 +130,23 @@ ${DISTNAME}.tar.gz: ${DISTFILES}
 	${MAKE} -C regress	DESTDIR=${PWD}/.dist/${DISTNAME}/regress dist
 	cd .dist/ && tar zcf ../$@ ${DISTNAME}
 	rm -rf .dist/
+
+# -- dependencies --
+
+-include config.d
+-include dirs.d
+-include fcgi.d
+-include gg.d
+-include gmid.d
+-include iri.d
+-include log.d
+-include logger.d
+-include mime.d
+-include proc.d
+-include proxy.d
+-include puny.d
+-include sandbox.d
+-include server.d
+-include utf8.d
+-include utils.d
+-include y.tab.d

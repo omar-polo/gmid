@@ -240,6 +240,10 @@ fi
 # --------
 # tests for config.h
 
+if runtest noop MMD -MMD; then
+	CFLAGS="${CFLAGS} -MMD"
+fi
+
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest freezero	FREEZERO	|| true
