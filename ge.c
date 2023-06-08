@@ -284,7 +284,6 @@ main(int argc, char **argv)
 		usage();
 
 	/* prepare the configuration */
-	conf.verbose = 1;
 	init_mime(&conf.mime);
 
 	if (certs_dir == NULL)
