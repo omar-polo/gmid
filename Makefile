@@ -46,7 +46,6 @@ Makefile.local config.h: configure
 	@exit 1
 
 include Makefile.local
-include Makefile.depend
 
 tags:
 	ctags ${SRCS}
@@ -112,20 +111,10 @@ uninstall:
 # -- maintainer targets --
 
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
-		Makefile Makefile.depend README.md configure \
-		configure.local.example dirs.c fcgi.c ge.1 ge.c gg.1 \
-		gg.c gmid.8 gmid.c gmid.conf.5 gmid.h iri.c log.c log.h \
-		logger.c mime.c parse.y proxy.c puny.c sandbox.c \
-		server.c utf8.c utils.c y.tab.c
-
-depend: config.h y.tab.c
-	mkdep -f Makefile.tmp1 ${CFLAGS} ${GE_SRCS} ${GG_SRCS} ${GMID_SRCS} \
-		${COBJSx:.o=.c}
-	perl -e 'undef $$/; $$_ = <>; s|/usr/include/\S+||g; \
-		s|\\\n||g; s|  +| |g; s| $$||mg; print;' \
-		Makefile.tmp1 > Makefile.tmp2
-	rm Makefile.tmp1
-	mv Makefile.tmp2 Makefile.depend
+		Makefile README.md configure configure.local.example dirs.c \
+		fcgi.c ge.1 ge.c gg.1 gg.c gmid.8 gmid.c gmid.conf.5 gmid.h \
+		iri.c log.c log.h logger.c mime.c parse.y proxy.c puny.c \
+		sandbox.c server.c utf8.c utils.c y.tab.c
 
 dist: ${DISTNAME}.sha256
 
