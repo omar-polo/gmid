@@ -327,7 +327,6 @@ enum imsg_type {
 /* gmid.c */
 char		*data_dir(void);
 void		 load_local_cert(struct vhost*, const char*, const char*);
-int		 make_socket(int, int);
 
 /* config.c */
 void		 config_init(void);

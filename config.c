@@ -134,6 +134,61 @@ config_send_file(struct privsep *ps, int fd, int type)
 }
 
 static int
+make_socket(int port, int family)
+{
+	int sock, v;
+	struct sockaddr_in addr4;
+	struct sockaddr_in6 addr6;
+	struct sockaddr *addr;
+	socklen_t len;
+
+	switch (family) {
+	case AF_INET:
+		memset(&addr4, 0, sizeof(addr4));
+		addr4.sin_family = family;
+		addr4.sin_port = htons(port);
+		addr4.sin_addr.s_addr = INADDR_ANY;
+		addr = (struct sockaddr*)&addr4;
+		len = sizeof(addr4);
+		break;
+
+	case AF_INET6:
+		memset(&addr6, 0, sizeof(addr6));
+		addr6.sin6_family = AF_INET6;
+		addr6.sin6_port = htons(port);
+		addr6.sin6_addr = in6addr_any;
+		addr = (struct sockaddr*)&addr6;
+		len = sizeof(addr6);
+		break;
+
+	default:
+		/* unreachable */
+		abort();
+	}
+
+	if ((sock = socket(family, SOCK_STREAM, 0)) == -1)
+		fatal("socket");
+
+	v = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v)) == -1)
+		fatal("setsockopt(SO_REUSEADDR)");
+
+	v = 1;
+	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &v, sizeof(v)) == -1)
+		fatal("setsockopt(SO_REUSEPORT)");
+
+	mark_nonblock(sock);
+
+	if (bind(sock, addr, len) == -1)
+		fatal("bind");
+
+	if (listen(sock, 16) == -1)
+		fatal("listen");
+
+	return sock;
+}
+
+static int
 config_send_socks(struct conf *conf)
 {
 	struct privsep	*ps = conf->ps;
