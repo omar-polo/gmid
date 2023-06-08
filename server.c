@@ -73,7 +73,6 @@ static void	 client_close_ev(int, short, void *);
 
 static void	 handle_siginfo(int, short, void*);
 
-static void	 server_init(struct privsep *, struct privsep_proc *, void *);
 static int	 server_dispatch_parent(int, struct privsep_proc *, struct imsg *);
 static int	 server_dispatch_logger(int, struct privsep_proc *, struct imsg *);
 
@@ -1432,7 +1431,7 @@ server(struct privsep *ps, struct privsep_proc *p)
 	proc_run(ps, p, procs, nitems(procs), server_init, NULL);
 }
 
-static void
+void
 server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 {
 	SPLAY_INIT(&clients);
@@ -1446,6 +1445,22 @@ server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 	signal_add(&sigusr2, NULL);
 
 	sandbox_server_process();
+}
+
+int
+server_configure_done(struct conf *conf)
+{
+	if (load_default_mime(&conf->mime) == -1)
+		fatal("can't load default mime");
+	sort_mime(&conf->mime);
+	setup_tls();
+	load_vhosts();
+	if (conf->sock4 != -1)
+		event_add(&conf->evsock4, NULL);
+	if (conf->sock6 != -1)
+		event_add(&conf->evsock6, NULL);
+
+	return 0;
 }
 
 static int
@@ -1474,15 +1489,8 @@ server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_RECONF_END:
 		if (config_recv(conf, imsg) == -1)
 			return -1;
-		if (load_default_mime(&conf->mime) == -1)
-			fatal("can't load default mime");
-		sort_mime(&conf->mime);
-		setup_tls();
-		load_vhosts();
-		if (conf->sock4 != -1)
-			event_add(&conf->evsock4, NULL);
-		if (conf->sock6 != -1)
-			event_add(&conf->evsock6, NULL);
+		if (server_configure_done(conf) == -1)
+			return -1;
 		break;
 	default:
 		return -1;
