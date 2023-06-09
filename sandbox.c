@@ -31,21 +31,6 @@ sandbox_main_process(void)
 void
 sandbox_server_process(void)
 {
-	struct vhost	*h;
-	struct location	*l;
-
-	TAILQ_FOREACH(h, &hosts, vhosts) {
-		TAILQ_FOREACH(l, &h->locations, locations) {
-			if (*l->dir == '\0')
-				continue;
-
-			if (unveil(l->dir, "rw") == -1)
-				fatal("unveil %s for domain %s",
-				    l->dir,
-				    h->domain);
-		}
-	}
-
 	if (pledge("stdio recvfd rpath unix inet dns", NULL) == -1)
 		fatal("pledge");
 }
