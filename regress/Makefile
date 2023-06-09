@@ -91,7 +91,7 @@ clean:
 	rm -f localhost.cert.pem localhost.key.pem
 	rm -f testca.* valid.csr valid.key valid.crt invalid.*pem
 	rm -rf testdata fill-file puny-test fcgi-test
-	rm -f gmid.pid
+	rm -f gmid.pid fcgi.sock
 
 testdata: fill-file
 	mkdir testdata

@@ -30,6 +30,7 @@ regress/*.csr
 regress/*.srl
 regress/reg.conf
 regress/fcgi-test
+regress/fcgi.sock
 regress/fill-file
 regress/iri_test
 regress/puny-test
