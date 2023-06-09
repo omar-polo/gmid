@@ -433,7 +433,7 @@ handle_handshake(int fd, short ev, void *d)
 		goto err;
 	}
 
-	TAILQ_FOREACH(h, &hosts, vhosts) {
+	TAILQ_FOREACH(h, &conf.hosts, vhosts) {
 		if (matches(h->domain, c->domain))
 			goto found;
 		TAILQ_FOREACH(a, &h->aliases, aliases) {
@@ -1390,7 +1390,7 @@ setup_tls(void)
 		fatalx("tls_config_set_protocols: %s",
 		    tls_config_error(tlsconf));
 
-	h = TAILQ_FIRST(&hosts);
+	h = TAILQ_FIRST(&conf.hosts);
 
 	/* we need to set something, then we can add how many key we want */
 	if (tls_config_set_keypair_mem(tlsconf, h->cert, h->certlen,
@@ -1421,7 +1421,7 @@ load_vhosts(void)
 	struct vhost	*h;
 	struct location	*l;
 
-	TAILQ_FOREACH(h, &hosts, vhosts) {
+	TAILQ_FOREACH(h, &conf.hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
 			if (*l->dir == '\0')
 				continue;

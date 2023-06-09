@@ -168,7 +168,7 @@ struct alist {
 	TAILQ_ENTRY(alist) aliases;
 };
 
-extern TAILQ_HEAD(vhosthead, vhost) hosts;
+TAILQ_HEAD(vhosthead, vhost);
 struct vhost {
 	char		 domain[HOST_NAME_MAX + 1];
 	char		*cert_path;
@@ -226,6 +226,7 @@ struct conf {
 	struct event	 evsock6;
 
 	struct fcgihead	 fcgi;
+	struct vhosthead hosts;
 };
 
 extern const char *config_path;
@@ -340,7 +341,7 @@ void		 log_request(struct client *, char *, size_t);
 /* config.c */
 void		 config_init(void);
 void		 config_free(void);
-int		 config_send(struct conf *, struct vhosthead *);
+int		 config_send(struct conf *);
 int		 config_recv(struct conf *, struct imsg *);
 
 /* parse.y */

@@ -30,9 +30,8 @@ config_init(void)
 {
 	memset(&conf, 0, sizeof(conf));
 
-	TAILQ_INIT(&hosts);
-
 	TAILQ_INIT(&conf.fcgi);
+	TAILQ_INIT(&conf.hosts);
 
 	conf.port = 1965;
 	conf.ipv6 = 0;
@@ -74,15 +73,8 @@ config_free(void)
 		TAILQ_REMOVE(&conf.fcgi, f, fcgi);
 		free(f);
 	}
-	memset(&conf, 0, sizeof(conf));
 
-	conf.ps = ps;
-	conf.sock4 = conf.sock6 = -1;
-	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
-	init_mime(&conf.mime);
-	TAILQ_INIT(&conf.fcgi);
-
-	TAILQ_FOREACH_SAFE(h, &hosts, vhosts, th) {
+	TAILQ_FOREACH_SAFE(h, &conf.hosts, vhosts, th) {
 		free(h->cert_path);
 		free(h->key_path);
 		free(h->ocsp_path);
@@ -122,9 +114,18 @@ config_free(void)
 			free(p);
 		}
 
-		TAILQ_REMOVE(&hosts, h, vhosts);
+		TAILQ_REMOVE(&conf.hosts, h, vhosts);
 		free(h);
 	}
+
+	memset(&conf, 0, sizeof(conf));
+
+	conf.ps = ps;
+	conf.sock4 = conf.sock6 = -1;
+	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
+	init_mime(&conf.mime);
+	TAILQ_INIT(&conf.fcgi);
+	TAILQ_INIT(&conf.hosts);
 }
 
 static int
@@ -242,7 +243,7 @@ config_send_socks(struct conf *conf)
 }
 
 int
-config_send(struct conf *conf, struct vhosthead *hosts)
+config_send(struct conf *conf)
 {
 	struct privsep	*ps = conf->ps;
 	struct etm	*m;
@@ -286,7 +287,7 @@ config_send(struct conf *conf, struct vhosthead *hosts)
 			return -1;
 	}
 
-	TAILQ_FOREACH(h, hosts, vhosts) {
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		struct vhost vcopy;
 
 		memcpy(&vcopy, h, sizeof(vcopy));
@@ -520,7 +521,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		vh = new_vhost();
 		strlcpy(vh->domain, vht.domain, sizeof(vh->domain));
 		h = vh;
-		TAILQ_INSERT_TAIL(&hosts, h, vhosts);
+		TAILQ_INSERT_TAIL(&conf->hosts, h, vhosts);
 
 		/* reset proxy */
 		p = NULL;

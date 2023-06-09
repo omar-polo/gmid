@@ -237,7 +237,7 @@ option		: CHROOT string	{
 
 vhost		: SERVER string {
 			host = new_vhost();
-			TAILQ_INSERT_HEAD(&hosts, host, vhosts);
+			TAILQ_INSERT_HEAD(&conf.hosts, host, vhosts);
 
 			loc = new_location();
 			TAILQ_INSERT_HEAD(&host->locations, loc, locations);
@@ -953,7 +953,7 @@ print_conf(void)
 	if (*conf.user != '\0')
 		printf("user \"%s\"\n", conf.user);
 
-	TAILQ_FOREACH(h, &hosts, vhosts) {
+	TAILQ_FOREACH(h, &conf.hosts, vhosts) {
 		printf("\nserver \"%s\" {\n", h->domain);
 		printf("	cert \"%s\"\n", h->cert);
 		printf("	key \"%s\"\n", h->key);

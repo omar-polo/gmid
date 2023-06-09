@@ -58,8 +58,6 @@ static const struct option longopts[] = {
 	{NULL,		0,			NULL,	0},
 };
 
-struct vhosthead hosts;
-
 int sock4, sock6;
 int privsep_process;
 int pidfd = -1;
@@ -314,7 +312,7 @@ main_configure(struct conf *conf)
 	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_START, NULL, 0) == -1)
 		return -1;
 
-	if (config_send(conf, &hosts) == -1)
+	if (config_send(conf) == -1)
 		return -1;
 
 	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_END, NULL, 0) == -1)

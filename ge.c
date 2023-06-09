@@ -34,8 +34,6 @@
 struct conf conf;
 int privsep_process;
 
-struct vhosthead hosts = TAILQ_HEAD_INITIALIZER(hosts);
-
 static const struct option opts[] = {
 	{"help",	no_argument,	NULL,	'h'},
 	{"version",	no_argument,	NULL,	'V'},
@@ -290,7 +288,7 @@ main(int argc, char **argv)
 
 	/* set up the implicit vhost and location */
 	host = xcalloc(1, sizeof(*host));
-	TAILQ_INSERT_HEAD(&hosts, host, vhosts);
+	TAILQ_INSERT_HEAD(&conf.hosts, host, vhosts);
 
 	loc = xcalloc(1, sizeof(*loc));
 	loc->fcgi = -1;
