@@ -21,6 +21,11 @@
 
 #include "../config.h"
 
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/un.h>
+
+#include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,21 +80,38 @@ prepare_header(struct fcgi_header *h, int type, int id, size_t size,
 	return 0;
 }
 
-static int
+static void
 must_read(int sock, void *d, size_t len)
 {
 	ssize_t r;
 
-	for (;;) {
+	while (len > 0) {
 		switch (r = read(sock, d, len)) {
 		case -1:
+			err(1, "read");
 		case 0:
-			return -1;
+			errx(1, "EOF");
 		default:
-			if (r == (ssize_t)len)
-				return 0;
 			len -= r;
 			d += r;
+		}
+	}
+}
+
+static void
+must_write(int sock, const void *d, size_t len)
+{
+	ssize_t w;
+
+	while (len > 0) {
+		switch (w = write(sock, d, len)) {
+		case -1:
+			err(1, "write");
+		case 0:
+			errx(1, "EOF");
+		default:
+			len -= w;
+			d += w;
 		}
 	}
 }
@@ -103,8 +125,7 @@ consume(int fd, size_t len)
 	while (len != 0) {
 		if ((l = len) > sizeof(buf))
 			l =  sizeof(buf);
-		if (must_read(fd, buf, l) == -1)
-                        return 0;
+		must_read(fd, buf, l);
 		len -= l;
 	}
 
@@ -112,49 +133,82 @@ consume(int fd, size_t len)
 }
 
 static void
-read_header(struct fcgi_header *hdr)
+read_header(int fd, struct fcgi_header *hdr)
 {
-	if (must_read(0, hdr, sizeof(*hdr)) == -1)
-		exit(1);
+	must_read(fd, hdr, sizeof(*hdr));
 }
 
 /* read and consume a record of the given type */
 static void
-assert_record(int type)
+assert_record(int fd, int type)
 {
 	struct fcgi_header hdr;
 
-	read_header(&hdr);
+	read_header(fd, &hdr);
 
 	if (hdr.type != type)
 		errx(1, "expected record type %d; got %d",
 		    type, hdr.type);
 
-	consume(0, SUM(hdr.content_len1, hdr.content_len0));
-	consume(0, hdr.padding);
+	consume(fd, SUM(hdr.content_len1, hdr.content_len0));
+	consume(fd, hdr.padding);
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
 	struct fcgi_header	 hdr;
 	struct fcgi_end_req_body end;
+	struct sockaddr_un	 sun;
+	const char		*path;
 	const char		*msg;
 	size_t			 len;
+	int			 ch, sock, s;
 
-	msg = "20 text/gemini\r\n# Hello, world!\n";
+	msg = "20 text/gemini\r\n# hello from fastcgi!\n";
 	len = strlen(msg);
+
+	while ((ch = getopt(argc, argv, "")) != -1)
+		errx(1, "wrong usage");
+	argc -= optind;
+	argv += optind;
+	if (argc != 1)
+		errx(1, "wrong usage");
+
+	path = argv[0];
+
+	if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+		err(1, "socket");
+
+	memset(&sun, 0, sizeof(sun));
+	sun.sun_family = AF_UNIX;
+	(void)strlcpy(sun.sun_path, path, sizeof(sun.sun_path));
+
+	if (unlink(path) == -1 && errno != ENOENT)
+		err(1, "unlink %s", path);
+
+	if (bind(sock, (struct sockaddr *)&sun, sizeof(sun)) == -1)
+		err(1, "bind");
+
+	if (listen(sock, 5) == -1)
+		err(1, "listen");
 
 	for (;;) {
 		warnx("waiting for a request");
-		assert_record(FCGI_BEGIN_REQUEST);
+		if ((s = accept(sock, NULL, NULL)) == -1) {
+			warn("retrying; accept failed");
+			continue;
+		}
+		warnx("got a connection");
+
+		assert_record(s, FCGI_BEGIN_REQUEST);
 
 		/* read params */
 		for (;;) {
-			read_header(&hdr);
+			read_header(s, &hdr);
 
-			consume(0, SUM(hdr.content_len1, hdr.content_len0));
-			consume(0, hdr.padding);
+			consume(s, SUM(hdr.content_len1, hdr.content_len0));
+			consume(s, hdr.padding);
 
 			if (hdr.type != FCGI_PARAMS)
 				errx(1, "got %d; expecting PARAMS", hdr.type);
@@ -165,19 +219,19 @@ main(void)
 				break;
 		}
 
-		assert_record(FCGI_STDIN);
+		assert_record(s, FCGI_STDIN);
 
 		warnx("sending the response");
 
 		prepare_header(&hdr, FCGI_STDOUT, 1, len, 0);
-		write(0, &hdr, sizeof(hdr));
-		write(0, msg, len);
+		must_write(s, &hdr, sizeof(hdr));
+		must_write(s, msg, len);
 
 		warnx("closing the request");
 
 		prepare_header(&hdr, FCGI_END_REQUEST, 1, sizeof(end), 0);
-		write(0, &hdr, sizeof(hdr));
+		write(s, &hdr, sizeof(hdr));
 		memset(&end, 0, sizeof(end));
-		write(0, &end, sizeof(end));
+		write(s, &end, sizeof(end));
 	}
 }
