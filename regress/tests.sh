@@ -205,11 +205,25 @@ location "/foo/*" { root "'$PWD'/testdata" strip 1 }'
 }
 
 test_fastcgi() {
-	# XXX: prefork 1 for testing
-	setup_simple_test 'prefork 1' 'fastcgi spawn "'$PWD'/fcgi-test"'
+	./fcgi-test fcgi.sock &
+	fcgi_pid=$!
 
-	fetch /
-	check_reply "20 text/gemini" "# Hello, world!"
+	setup_simple_test 'prefork 1' 'fastcgi "'$PWD'/fcgi.sock"'
+
+	i=0
+	while [ $i -lt 10 ]; do
+		fetch /
+		check_reply "20 text/gemini" "# hello from fastcgi!"
+		if [ $? -ne 0 ]; then
+			kill $fcgi_pid
+			return 1
+		fi
+
+		i=$(($i + 1))
+	done
+
+	kill $fcgi_pid
+	return 0
 }
 
 test_macro_expansion() {
