@@ -25,28 +25,32 @@
 #include "log.h"
 #include "proc.h"
 
-void
-config_init(void)
+struct conf *
+config_new(void)
 {
-	memset(&conf, 0, sizeof(conf));
+	struct conf *conf;
 
-	TAILQ_INIT(&conf.fcgi);
-	TAILQ_INIT(&conf.hosts);
+	conf = xcalloc(1, sizeof(*conf));
 
-	conf.port = 1965;
-	conf.ipv6 = 0;
-	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
+	TAILQ_INIT(&conf->fcgi);
+	TAILQ_INIT(&conf->hosts);
 
-	init_mime(&conf.mime);
+	conf->port = 1965;
+	conf->ipv6 = 0;
+	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
-	conf.prefork = 3;
+	init_mime(&conf->mime);
 
-	conf.sock4 = -1;
-	conf.sock6 = -1;
+	conf->prefork = 3;
+
+	conf->sock4 = -1;
+	conf->sock6 = -1;
+
+	return conf;
 }
 
 void
-config_free(void)
+config_purge(struct conf *conf)
 {
 	struct privsep *ps;
 	struct fcgi *f, *tf;
@@ -56,25 +60,25 @@ config_free(void)
 	struct envlist *e, *te;
 	struct alist *a, *ta;
 
-	ps = conf.ps;
+	ps = conf->ps;
 
-	if (conf.sock4 != -1) {
-		event_del(&conf.evsock4);
-		close(conf.sock4);
+	if (conf->sock4 != -1) {
+		event_del(&conf->evsock4);
+		close(conf->sock4);
 	}
 
-	if (conf.sock6 != -1) {
-		event_del(&conf.evsock6);
-		close(conf.sock6);
+	if (conf->sock6 != -1) {
+		event_del(&conf->evsock6);
+		close(conf->sock6);
 	}
 
-	free_mime(&conf.mime);
-	TAILQ_FOREACH_SAFE(f, &conf.fcgi, fcgi, tf) {
-		TAILQ_REMOVE(&conf.fcgi, f, fcgi);
+	free_mime(&conf->mime);
+	TAILQ_FOREACH_SAFE(f, &conf->fcgi, fcgi, tf) {
+		TAILQ_REMOVE(&conf->fcgi, f, fcgi);
 		free(f);
 	}
 
-	TAILQ_FOREACH_SAFE(h, &conf.hosts, vhosts, th) {
+	TAILQ_FOREACH_SAFE(h, &conf->hosts, vhosts, th) {
 		free(h->cert_path);
 		free(h->key_path);
 		free(h->ocsp_path);
@@ -114,18 +118,18 @@ config_free(void)
 			free(p);
 		}
 
-		TAILQ_REMOVE(&conf.hosts, h, vhosts);
+		TAILQ_REMOVE(&conf->hosts, h, vhosts);
 		free(h);
 	}
 
-	memset(&conf, 0, sizeof(conf));
+	memset(conf, 0, sizeof(*conf));
 
-	conf.ps = ps;
-	conf.sock4 = conf.sock6 = -1;
-	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
-	init_mime(&conf.mime);
-	TAILQ_INIT(&conf.fcgi);
-	TAILQ_INIT(&conf.hosts);
+	conf->ps = ps;
+	conf->sock4 = conf->sock6 = -1;
+	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
+	init_mime(&conf->mime);
+	TAILQ_INIT(&conf->fcgi);
+	TAILQ_INIT(&conf->hosts);
 }
 
 static int
@@ -461,7 +465,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 
 	switch (imsg->hdr.type) {
 	case IMSG_RECONF_START:
-		config_free();
+		config_purge(conf);
 		h = NULL;
 		p = NULL;
 		break;
@@ -494,7 +498,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			fatalx("missing socket for IMSG_RECONF_SOCK4");
 		conf->sock4 = imsg->fd;
 		event_set(&conf->evsock4, conf->sock4, EV_READ|EV_PERSIST,
-		    do_accept, NULL);
+		    do_accept, conf);
 		break;
 
 	case IMSG_RECONF_SOCK6:
@@ -504,7 +508,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			fatalx("missing socket for IMSG_RECONF_SOCK6");
 		conf->sock6 = imsg->fd;
 		event_set(&conf->evsock6, conf->sock6, EV_READ|EV_PERSIST,
-		    do_accept, NULL);
+		    do_accept, conf);
 		break;
 
 	case IMSG_RECONF_FCGI:

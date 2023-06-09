@@ -356,7 +356,7 @@ open_file(struct client *c)
 	switch (check_path(c, c->iri.path, &c->pfd)) {
 	case FILE_EXISTS:
 		c->type = REQUEST_FILE;
-		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
+		start_reply(c, SUCCESS, mime(c->conf, c->host, c->iri.path));
 		return;
 
 	case FILE_DIRECTORY:
@@ -388,6 +388,7 @@ static void
 handle_handshake(int fd, short ev, void *d)
 {
 	struct client *c = d;
+	struct conf *conf = c->conf;
 	struct vhost *h;
 	struct alist *a;
 	const char *servname;
@@ -433,7 +434,7 @@ handle_handshake(int fd, short ev, void *d)
 		goto err;
 	}
 
-	TAILQ_FOREACH(h, &conf.hosts, vhosts) {
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		if (matches(h->domain, c->domain))
 			goto found;
 		TAILQ_FOREACH(a, &h->aliases, aliases) {
@@ -478,6 +479,7 @@ strip_path(const char *path, int strip)
 static void
 fmt_sbuf(const char *fmt, struct client *c, const char *path)
 {
+	struct conf *conf = c->conf;
 	size_t i;
 	char buf[32];
 
@@ -507,7 +509,7 @@ fmt_sbuf(const char *fmt, struct client *c, const char *path)
 			strlcat(c->sbuf, c->iri.query, sizeof(c->sbuf));
 			break;
 		case 'P':
-			snprintf(buf, sizeof(buf), "%d", conf.port);
+			snprintf(buf, sizeof(buf), "%d", conf->port);
 			strlcat(c->sbuf, buf, sizeof(c->sbuf));
 			memset(buf, 0, sizeof(buf));
 			break;
@@ -740,7 +742,7 @@ apply_fastcgi(struct client *c)
 	if ((id = vhost_fastcgi(c->host, c->iri.path)) == -1)
 		return 0;
 
-	TAILQ_FOREACH(f, &conf.fcgi, fcgi) {
+	TAILQ_FOREACH(f, &c->conf->fcgi, fcgi) {
 		if (i == id)
 			break;
 		++i;
@@ -828,7 +830,7 @@ open_dir(struct client *c)
 	switch (check_path(c, c->iri.path, &c->pfd)) {
 	case FILE_EXISTS:
 		c->type = REQUEST_FILE;
-		start_reply(c, SUCCESS, mime(c->host, c->iri.path));
+		start_reply(c, SUCCESS, mime(c->conf, c->host, c->iri.path));
 		break;
 
 	case FILE_DIRECTORY:
@@ -1302,6 +1304,7 @@ client_close(struct client *c)
 void
 do_accept(int sock, short et, void *d)
 {
+	struct conf *conf = d;
 	struct client *c;
 	struct sockaddr_storage addr;
 	struct sockaddr *saddr;
@@ -1320,6 +1323,7 @@ do_accept(int sock, short et, void *d)
 	mark_nonblock(fd);
 
 	c = xcalloc(1, sizeof(*c));
+	c->conf = conf;
 	c->id = ++server_client_id;
 	c->fd = fd;
 	c->pfd = -1;
@@ -1369,7 +1373,7 @@ add_keypair(struct vhost *h, struct tls_config *conf)
 }
 
 static void
-setup_tls(void)
+setup_tls(struct conf *conf)
 {
 	struct tls_config	*tlsconf;
 	struct vhost		*h;
@@ -1386,11 +1390,11 @@ setup_tls(void)
 	tls_config_verify_client_optional(tlsconf);
 	tls_config_insecure_noverifycert(tlsconf);
 
-	if (tls_config_set_protocols(tlsconf, conf.protos) == -1)
+	if (tls_config_set_protocols(tlsconf, conf->protos) == -1)
 		fatalx("tls_config_set_protocols: %s",
 		    tls_config_error(tlsconf));
 
-	h = TAILQ_FIRST(&conf.hosts);
+	h = TAILQ_FIRST(&conf->hosts);
 
 	/* we need to set something, then we can add how many key we want */
 	if (tls_config_set_keypair_mem(tlsconf, h->cert, h->certlen,
@@ -1416,12 +1420,12 @@ setup_tls(void)
 }
 
 static void
-load_vhosts(void)
+load_vhosts(struct conf *conf)
 {
 	struct vhost	*h;
 	struct location	*l;
 
-	TAILQ_FOREACH(h, &conf.hosts, vhosts) {
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
 			if (*l->dir == '\0')
 				continue;
@@ -1461,8 +1465,8 @@ server_configure_done(struct conf *conf)
 	if (load_default_mime(&conf->mime) == -1)
 		fatal("can't load default mime");
 	sort_mime(&conf->mime);
-	setup_tls();
-	load_vhosts();
+	setup_tls(conf);
+	load_vhosts(conf);
 	if (conf->sock4 != -1)
 		event_add(&conf->evsock4, NULL);
 	if (conf->sock6 != -1)

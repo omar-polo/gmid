@@ -67,8 +67,6 @@ int debug, verbose;
 const char *config_path = "/etc/gmid.conf";
 const char *pidfile;
 
-struct conf conf;
-
 static void
 usage(void)
 {
@@ -82,6 +80,7 @@ usage(void)
 void
 log_request(struct client *c, char *meta, size_t l)
 {
+	struct conf *conf = c->conf;
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
 	char *fmted;
 	const char *t;
@@ -129,7 +128,7 @@ log_request(struct client *c, char *meta, size_t l)
 	if (ec == -1)
 		err(1, "asprintf");
 
-	proc_compose(conf.ps, PROC_LOGGER, IMSG_LOG_REQUEST,
+	proc_compose(conf->ps, PROC_LOGGER, IMSG_LOG_REQUEST,
 	    fmted, ec + 1);
 
 	free(fmted);
@@ -166,6 +165,7 @@ write_pidfile(const char *pidfile)
 int
 main(int argc, char **argv)
 {
+	struct conf *conf;
 	struct privsep *ps;
 	const char *errstr, *title = NULL;
 	size_t i;
@@ -178,7 +178,6 @@ main(int argc, char **argv)
 
 	/* log to stderr until daemonized */
 	log_init(1, LOG_DAEMON);
-	config_init();
 
 	while ((ch = getopt_long(argc, argv, opts, longopts, NULL)) != -1) {
 		switch (ch) {
@@ -229,8 +228,10 @@ main(int argc, char **argv)
 	if (argc - optind != 0)
 		usage();
 
-	parse_conf(config_path);
-	if (*conf.chroot != '\0' && *conf.user == '\0')
+	conf = config_new();
+
+	parse_conf(conf, config_path);
+	if (*conf->chroot != '\0' && *conf->user == '\0')
 		fatalx("can't chroot without a user to switch to after.");
 
 	if (conftest) {
@@ -242,23 +243,23 @@ main(int argc, char **argv)
 
 	if ((ps = calloc(1, sizeof(*ps))) == NULL)
 		fatal("calloc");
-	ps->ps_env = &conf;
-	conf.ps = ps;
-	if (*conf.user) {
+	ps->ps_env = conf;
+	conf->ps = ps;
+	if (*conf->user) {
 		if (geteuid())
 			fatalx("need root privileges");
-		if ((ps->ps_pw = getpwnam(conf.user)) == NULL)
-			fatalx("unknown user %s", conf.user);
+		if ((ps->ps_pw = getpwnam(conf->user)) == NULL)
+			fatalx("unknown user %s", conf->user);
 	}
 
-	ps->ps_instances[PROC_SERVER] = conf.prefork;
+	ps->ps_instances[PROC_SERVER] = conf->prefork;
 	ps->ps_instance = proc_instance;
 	if (title != NULL)
 		ps->ps_title[proc_id] = title;
 
-	if (*conf.chroot != '\0') {
+	if (*conf->chroot != '\0') {
 		for (i = 0; i < nitems(procs); ++i)
-			procs[i].p_chroot = conf.chroot;
+			procs[i].p_chroot = conf->chroot;
 	}
 
 	log_init(debug, LOG_DAEMON);
@@ -293,11 +294,11 @@ main(int argc, char **argv)
 
 	proc_connect(ps);
 
-	if (main_configure(&conf) == -1)
+	if (main_configure(conf) == -1)
 		fatal("configuration failed");
 
 	event_dispatch();
-	main_shutdown(&conf);
+	main_shutdown(conf);
 	/* NOTREACHED */
 	return 0;
 }
@@ -343,8 +344,8 @@ main_reload(struct conf *conf)
 	}
 
 	log_debug("%s: config file %s", __func__, config_path);
-	config_free();
-	parse_conf(config_path); /* XXX should handle error here */
+	config_purge(conf);
+	parse_conf(conf, config_path); /* XXX should handle error here */
 
 	main_configure(conf);
 }
@@ -416,7 +417,7 @@ static void __dead
 main_shutdown(struct conf *conf)
 {
 	proc_kill(conf->ps);
-	config_free();
+	config_purge(conf);
 	free(conf->ps);
 	/* free(conf); */
 

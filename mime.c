@@ -136,7 +136,7 @@ mime_find(const void *a, const void *b)
 }
 
 const char *
-mime(struct vhost *host, const char *path)
+mime(struct conf *conf, struct vhost *host, const char *path)
 {
 	const char *def, *ext;
 	struct etm *t;
@@ -146,7 +146,7 @@ mime(struct vhost *host, const char *path)
 	if ((ext = path_ext(path)) == NULL)
 		return def;
 
-	t = bsearch(ext, conf.mime.t, conf.mime.len, sizeof(*conf.mime.t),
+	t = bsearch(ext, conf->mime.t, conf->mime.len, sizeof(*conf->mime.t),
 	    mime_find);
 	if (t != NULL)
 		return t->mime;

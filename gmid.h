@@ -230,7 +230,6 @@ struct conf {
 };
 
 extern const char *config_path;
-extern struct conf conf;
 
 extern int servpipes[PROC_MAX_INSTANCES];
 extern int privsep_process;
@@ -247,6 +246,7 @@ enum {
 };
 
 struct client {
+	struct conf	*conf;
 	uint32_t	 id;
 	struct tls	*ctx;
 	char		*req;
@@ -339,14 +339,14 @@ void		 load_local_cert(struct vhost*, const char*, const char*);
 void		 log_request(struct client *, char *, size_t);
 
 /* config.c */
-void		 config_init(void);
-void		 config_free(void);
+struct conf	*config_new(void);
+void		 config_purge(struct conf *);
 int		 config_send(struct conf *);
 int		 config_recv(struct conf *, struct imsg *);
 
 /* parse.y */
 void		 yyerror(const char*, ...);
-void		 parse_conf(const char*);
+void		 parse_conf(struct conf *, const char*);
 void		 print_conf(void);
 int		 cmdline_symset(char *);
 
@@ -355,7 +355,7 @@ void		 init_mime(struct mime*);
 int		 add_mime(struct mime*, const char*, const char*);
 int		 load_default_mime(struct mime*);
 void		 sort_mime(struct mime *);
-const char	*mime(struct vhost*, const char*);
+const char	*mime(struct conf *, struct vhost*, const char*);
 void		 free_mime(struct mime *);
 
 /* server.c */

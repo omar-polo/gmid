@@ -31,7 +31,6 @@
 
 #include "log.h"
 
-struct conf conf;
 int privsep_process;
 
 static const struct option opts[] = {
@@ -159,7 +158,7 @@ data_dir(void)
 }
 
 static int
-serve(const char *host, int port, const char *dir)
+serve(struct conf *conf, const char *host, int port, const char *dir)
 {
 	struct addrinfo hints, *res, *res0;
 	int r, error, saved_errno, sock = -1;
@@ -210,12 +209,12 @@ serve(const char *host, int port, const char *dir)
 	event_init();
 
 	/* cheating */
-	conf.sock4 = sock;
-	event_set(&conf.evsock4, conf.sock4, EV_READ|EV_PERSIST,
-	    do_accept, NULL);
+	conf->sock4 = sock;
+	event_set(&conf->evsock4, conf->sock4, EV_READ|EV_PERSIST,
+	    do_accept, conf);
 
 	server_init(NULL, NULL, NULL);
-	if (server_configure_done(&conf) == -1)
+	if (server_configure_done(conf) == -1)
 		fatalx("server configuration failed");
 
 	log_info("serving %s on port %d", dir, port);
@@ -237,6 +236,7 @@ usage(void)
 int
 main(int argc, char **argv)
 {
+	struct conf *conf;
 	struct vhost *host;
 	struct location *loc;
 	const char *errstr, *certs_dir = NULL, *hostname = "localhost";
@@ -247,7 +247,7 @@ main(int argc, char **argv)
 
 	log_init(1, LOG_DAEMON);
 	log_setverbose(0);
-	config_init();
+	conf = config_new();
 
 	while ((ch = getopt_long(argc, argv, "d:H:hp:Vv", opts, NULL)) != -1) {
 		switch (ch) {
@@ -261,7 +261,7 @@ main(int argc, char **argv)
 			usage();
 			break;
 		case 'p':
-			conf.port = strtonum(optarg, 0, UINT16_MAX, &errstr);
+			conf->port = strtonum(optarg, 0, UINT16_MAX, &errstr);
 			if (errstr)
 				fatalx("port number is %s: %s", errstr,
 				    optarg);
@@ -281,14 +281,14 @@ main(int argc, char **argv)
 		usage();
 
 	/* prepare the configuration */
-	init_mime(&conf.mime);
+	init_mime(&conf->mime);
 
 	if (certs_dir == NULL)
 		certs_dir = data_dir();
 
 	/* set up the implicit vhost and location */
 	host = xcalloc(1, sizeof(*host));
-	TAILQ_INSERT_HEAD(&conf.hosts, host, vhosts);
+	TAILQ_INSERT_HEAD(&conf->hosts, host, vhosts);
 
 	loc = xcalloc(1, sizeof(*loc));
 	loc->fcgi = -1;
@@ -315,5 +315,5 @@ main(int argc, char **argv)
 	/* start the server */
 	signal(SIGPIPE, SIG_IGN);
 	setproctitle("%s", loc->dir);
-	return serve(hostname, conf.port, loc->dir);
+	return serve(conf, hostname, conf->port, loc->dir);
 }

@@ -35,6 +35,8 @@
 
 #include "log.h"
 
+struct conf *conf;
+
 TAILQ_HEAD(files, file)		 files = TAILQ_HEAD_INITIALIZER(files);
 static struct file {
 	TAILQ_ENTRY(file)	 entry;
@@ -214,22 +216,22 @@ varset		: STRING '=' string		{
 		;
 
 option		: CHROOT string	{
-			if (strlcpy(conf.chroot, $2, sizeof(conf.chroot)) >=
-			    sizeof(conf.chroot))
+			if (strlcpy(conf->chroot, $2, sizeof(conf->chroot)) >=
+			    sizeof(conf->chroot))
 				yyerror("chroot path too long");
 			free($2);
 		}
-		| IPV6 bool		{ conf.ipv6 = $2; }
-		| PORT NUM		{ conf.port = check_port_num($2); }
-		| PREFORK NUM		{ conf.prefork = check_prefork_num($2); }
+		| IPV6 bool		{ conf->ipv6 = $2; }
+		| PORT NUM		{ conf->port = check_port_num($2); }
+		| PREFORK NUM		{ conf->prefork = check_prefork_num($2); }
 		| PROTOCOLS string {
-			if (tls_config_parse_protocols(&conf.protos, $2) == -1)
+			if (tls_config_parse_protocols(&conf->protos, $2) == -1)
 				yyerror("invalid protocols string \"%s\"", $2);
 			free($2);
 		}
 		| USER string {
-			if (strlcpy(conf.user, $2, sizeof(conf.user)) >=
-			    sizeof(conf.user))
+			if (strlcpy(conf->user, $2, sizeof(conf->user)) >=
+			    sizeof(conf->user))
 				yyerror("user name too long");
 			free($2);
 		}
@@ -237,7 +239,7 @@ option		: CHROOT string	{
 
 vhost		: SERVER string {
 			host = new_vhost();
-			TAILQ_INSERT_HEAD(&conf.hosts, host, vhosts);
+			TAILQ_INSERT_HEAD(&conf->hosts, host, vhosts);
 
 			loc = new_location();
 			TAILQ_INSERT_HEAD(&host->locations, loc, locations);
@@ -473,7 +475,7 @@ medianames_l	: medianames_l medianamesl
 		;
 
 medianamesl	: numberstring {
-			if (add_mime(&conf.mime, current_media, $1) == -1)
+			if (add_mime(&conf->mime, current_media, $1) == -1)
 				err(1, "add_mime");
 			free($1);
 		}
@@ -907,9 +909,11 @@ popfile(void)
 }
 
 void
-parse_conf(const char *filename)
+parse_conf(struct conf *c, const char *filename)
 {
 	struct sym		*sym, *next;
+
+	conf = c;
 
 	file = pushfile(filename, 0);
 	if (file == NULL)
@@ -943,17 +947,17 @@ print_conf(void)
 	/* struct envlist	*e; */
 	/* struct alist	*a; */
 
-	if (*conf.chroot != '\0')
-		printf("chroot \"%s\"\n", conf.chroot);
-	printf("ipv6 %s\n", conf.ipv6 ? "on" : "off");
+	if (*conf->chroot != '\0')
+		printf("chroot \"%s\"\n", conf->chroot);
+	printf("ipv6 %s\n", conf->ipv6 ? "on" : "off");
 	/* XXX: defined mimes? */
-	printf("port %d\n", conf.port);
-	printf("prefork %d\n", conf.prefork);
+	printf("port %d\n", conf->port);
+	printf("prefork %d\n", conf->prefork);
 	/* XXX: protocols? */
-	if (*conf.user != '\0')
-		printf("user \"%s\"\n", conf.user);
+	if (*conf->user != '\0')
+		printf("user \"%s\"\n", conf->user);
 
-	TAILQ_FOREACH(h, &conf.hosts, vhosts) {
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		printf("\nserver \"%s\" {\n", h->domain);
 		printf("	cert \"%s\"\n", h->cert);
 		printf("	key \"%s\"\n", h->key);
@@ -1126,7 +1130,7 @@ fastcgi_conf(const char *path, const char *port)
 	struct fcgi	*f;
 	int		i = 0;
 
-	TAILQ_FOREACH(f, &conf.fcgi, fcgi) {
+	TAILQ_FOREACH(f, &conf->fcgi, fcgi) {
 		if (!strcmp(f->path, path) &&
 		    ((port == NULL && *f->port == '\0') ||
 		     !strcmp(f->port, port)))
@@ -1139,7 +1143,7 @@ fastcgi_conf(const char *path, const char *port)
 	(void)strlcpy(f->path, path, sizeof(f->path));
 	if (port != NULL)
 		(void)strlcpy(f->port, port, sizeof(f->port));
-	TAILQ_INSERT_TAIL(&conf.fcgi, f, fcgi);
+	TAILQ_INSERT_TAIL(&conf->fcgi, f, fcgi);
 
 	return f->id;
 }

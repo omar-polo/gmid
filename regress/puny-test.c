@@ -19,9 +19,6 @@
 
 #include "../gmid.h"
 
-/* to make the linker happy */
-struct conf conf;
-
 const struct suite {
 	const char	*src;
 	const char	*res;
