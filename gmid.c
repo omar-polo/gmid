@@ -58,8 +58,6 @@ static const struct option longopts[] = {
 	{NULL,		0,			NULL,	0},
 };
 
-struct fcgi fcgi[FCGI_MAX];
-
 struct vhosthead hosts;
 
 int sock4, sock6;
@@ -316,7 +314,7 @@ main_configure(struct conf *conf)
 	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_START, NULL, 0) == -1)
 		return -1;
 
-	if (config_send(conf, fcgi, &hosts) == -1)
+	if (config_send(conf, &hosts) == -1)
 		return -1;
 
 	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_END, NULL, 0) == -1)

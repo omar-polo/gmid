@@ -32,6 +32,8 @@ config_init(void)
 
 	TAILQ_INIT(&hosts);
 
+	TAILQ_INIT(&conf.fcgi);
+
 	conf.port = 1965;
 	conf.ipv6 = 0;
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
@@ -48,6 +50,7 @@ void
 config_free(void)
 {
 	struct privsep *ps;
+	struct fcgi *f, *tf;
 	struct vhost *h, *th;
 	struct location *l, *tl;
 	struct proxy *p, *tp;
@@ -67,12 +70,17 @@ config_free(void)
 	}
 
 	free_mime(&conf.mime);
+	TAILQ_FOREACH_SAFE(f, &conf.fcgi, fcgi, tf) {
+		TAILQ_REMOVE(&conf.fcgi, f, fcgi);
+		free(f);
+	}
 	memset(&conf, 0, sizeof(conf));
 
 	conf.ps = ps;
 	conf.sock4 = conf.sock6 = -1;
 	conf.protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 	init_mime(&conf.mime);
+	TAILQ_INIT(&conf.fcgi);
 
 	TAILQ_FOREACH_SAFE(h, &hosts, vhosts, th) {
 		free(h->cert_path);
@@ -117,8 +125,6 @@ config_free(void)
 		TAILQ_REMOVE(&hosts, h, vhosts);
 		free(h);
 	}
-
-	memset(fcgi, 0, sizeof(fcgi));
 }
 
 static int
@@ -236,10 +242,11 @@ config_send_socks(struct conf *conf)
 }
 
 int
-config_send(struct conf *conf, struct fcgi *fcgi, struct vhosthead *hosts)
+config_send(struct conf *conf, struct vhosthead *hosts)
 {
 	struct privsep	*ps = conf->ps;
 	struct etm	*m;
+	struct fcgi	*fcgi;
 	struct vhost	*h;
 	struct location	*l;
 	struct proxy	*p;
@@ -272,11 +279,10 @@ config_send(struct conf *conf, struct fcgi *fcgi, struct vhosthead *hosts)
 	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
 		return -1;
 
-	for (i = 0; i < FCGI_MAX; ++i) {
-		if (*fcgi[i].path == '\0')
-			break;
+	TAILQ_FOREACH(fcgi, &conf->fcgi, fcgi) {
+		log_debug("sending fastcgi %s", fcgi->path);
 		if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_FCGI,
-		    &fcgi[i], sizeof(fcgi[i])) == -1)
+		    fcgi, sizeof(*fcgi)) == -1)
 			return -1;
 	}
 
@@ -442,13 +448,13 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	static struct proxy *p;
 	struct privsep	*ps = conf->ps;
 	struct etm	 m;
-	struct fcgi	*f;
+	struct fcgi	*fcgi;
 	struct vhost	*vh, vht;
 	struct location	*loc;
 	struct envlist	*env;
 	struct alist	*alias;
 	struct proxy	*proxy;
-	size_t		 i, datalen;
+	size_t		 datalen;
 
 	datalen = IMSG_DATA_SIZE(imsg);
 
@@ -501,16 +507,11 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		break;
 
 	case IMSG_RECONF_FCGI:
-		for (i = 0; i < FCGI_MAX; ++i) {
-			f = &fcgi[i];
-			if (*f->path != '\0')
-				continue;
-			IMSG_SIZE_CHECK(imsg, f);
-			memcpy(f, imsg->data, datalen);
-			break;
-		}
-		if (i == FCGI_MAX)
-			fatalx("recv too many fcgi");
+		IMSG_SIZE_CHECK(imsg, fcgi);
+		fcgi = xcalloc(1, sizeof(*fcgi));
+		memcpy(fcgi, imsg->data, datalen);
+		log_debug("received fcgi %s", fcgi->path);
+		TAILQ_INSERT_TAIL(&conf->fcgi, fcgi, fcgi);
 		break;
 
 	case IMSG_RECONF_HOST:

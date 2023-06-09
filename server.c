@@ -734,13 +734,22 @@ fcgi_open_conn(struct fcgi *f)
 static int
 apply_fastcgi(struct client *c)
 {
-	int		 id;
+	int		 id, i = 0;
 	struct fcgi	*f;
 
 	if ((id = vhost_fastcgi(c->host, c->iri.path)) == -1)
 		return 0;
 
-	f = &fcgi[id];
+	TAILQ_FOREACH(f, &conf.fcgi, fcgi) {
+		if (i == id)
+			break;
+		++i;
+	}
+
+	if (f == NULL) {
+		log_warnx("can't find fcgi #%d", id);
+		return 0;
+	}
 
 	log_debug("opening fastcgi connection for (%s,%s)",
 	    f->path, f->port);

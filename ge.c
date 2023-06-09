@@ -34,7 +34,6 @@
 struct conf conf;
 int privsep_process;
 
-struct fcgi fcgi[FCGI_MAX];	/* just because it's referenced */
 struct vhosthead hosts = TAILQ_HEAD_INITIALIZER(hosts);
 
 static const struct option opts[] = {

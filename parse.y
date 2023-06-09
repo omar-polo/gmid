@@ -1124,27 +1124,24 @@ int
 fastcgi_conf(const char *path, const char *port)
 {
 	struct fcgi	*f;
-	int		i;
+	int		i = 0;
 
-	for (i = 0; i < FCGI_MAX; ++i) {
-		f = &fcgi[i];
-
-		if (*f->path == '\0') {
-			f->id = i;
-			(void) strlcpy(f->path, path, sizeof(f->path));
-			if (port != NULL)
-				(void) strlcpy(f->port, port, sizeof(f->port));
-			return i;
-		}
-
+	TAILQ_FOREACH(f, &conf.fcgi, fcgi) {
 		if (!strcmp(f->path, path) &&
 		    ((port == NULL && *f->port == '\0') ||
 		     !strcmp(f->port, port)))
 			return i;
+		++i;
 	}
 
-	yyerror("too much `fastcgi' rules defined.");
-	return -1;
+	f = xcalloc(1, sizeof(*f));
+	f->id = i;
+	(void)strlcpy(f->path, path, sizeof(f->path));
+	if (port != NULL)
+		(void)strlcpy(f->port, port, sizeof(f->port));
+	TAILQ_INSERT_TAIL(&conf.fcgi, f, fcgi);
+
+	return f->id;
 }
 
 void

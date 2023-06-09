@@ -80,7 +80,6 @@
 #define FCGI_NAME_MAX		511
 #define FCGI_VAL_MAX		511
 
-#define FCGI_MAX	32
 #define PROC_MAX_INSTANCES	16
 
 /* forward declaration */
@@ -103,12 +102,13 @@ struct parser {
 	const char	*err;
 };
 
+TAILQ_HEAD(fcgihead, fcgi);
 struct fcgi {
 	int		 id;
 	char		 path[PATH_MAX];
 	char		 port[32];
+	TAILQ_ENTRY(fcgi) fcgi;
 };
-extern struct fcgi fcgi[FCGI_MAX];
 
 TAILQ_HEAD(proxyhead, proxy);
 struct proxy {
@@ -224,6 +224,8 @@ struct conf {
 	struct event	 evsock4;
 	int		 sock6;
 	struct event	 evsock6;
+
+	struct fcgihead	 fcgi;
 };
 
 extern const char *config_path;
@@ -338,7 +340,7 @@ void		 log_request(struct client *, char *, size_t);
 /* config.c */
 void		 config_init(void);
 void		 config_free(void);
-int		 config_send(struct conf *, struct fcgi *, struct vhosthead *);
+int		 config_send(struct conf *, struct vhosthead *);
 int		 config_recv(struct conf *, struct imsg *);
 
 /* parse.y */
