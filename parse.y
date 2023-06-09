@@ -442,7 +442,7 @@ fastcgi		: string {
 		| TCP string PORT NUM {
 			char *c;
 			if (asprintf(&c, "%d", $4) == -1)
-				err(1, "asprintf");
+				fatal("asprintf");
 			loc->fcgi = fastcgi_conf($2, c);
 			free($2);
 		}
@@ -476,7 +476,7 @@ medianames_l	: medianames_l medianamesl
 
 medianamesl	: numberstring {
 			if (add_mime(&conf->mime, current_media, $1) == -1)
-				err(1, "add_mime");
+				fatal("add_mime");
 			free($1);
 		}
 		;

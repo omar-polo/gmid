@@ -77,13 +77,13 @@ absolutify_path(const char *path)
 
 	if (*path == '/') {
 		if ((r = strdup(path)) == NULL)
-			err(1, "strdup");
+			fatal("strdup");
 		return r;
 	}
 
 	wd = getcwd(NULL, 0);
 	if (asprintf(&r, "%s/%s", wd, path) == -1)
-		err(1, "asprintf");
+		fatal("asprintf");
 	free(wd);
 	return r;
 }
@@ -94,7 +94,7 @@ xstrdup(const char *s)
 	char *d;
 
 	if ((d = strdup(s)) == NULL)
-		err(1, "strdup");
+		fatal("strdup");
 	return d;
 }
 
@@ -104,7 +104,7 @@ xcalloc(size_t nmemb, size_t size)
 	void *d;
 
 	if ((d = calloc(nmemb, size)) == NULL)
-		err(1, "calloc");
+		fatal("calloc");
 	return d;
 }
 

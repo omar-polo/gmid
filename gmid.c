@@ -126,7 +126,7 @@ log_request(struct client *c, char *meta, size_t l)
 	ec = asprintf(&fmted, "%s:%s GET %s %.*s", hbuf, sbuf, b,
 	    (int)(t-meta), meta);
 	if (ec == -1)
-		err(1, "asprintf");
+		fatal("asprintf");
 
 	proc_compose(conf->ps, PROC_LOGGER, IMSG_LOG_REQUEST,
 	    fmted, ec + 1);
@@ -231,7 +231,7 @@ main(int argc, char **argv)
 	conf = config_new();
 
 	if (parse_conf(conf, config_path) == -1)
-		errx(1, "failed to load configuration file");
+		fatalx("failed to load configuration file");
 	if (*conf->chroot != '\0' && *conf->user == '\0')
 		fatalx("can't chroot without a user to switch to after.");
 
