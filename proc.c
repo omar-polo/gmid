@@ -89,14 +89,14 @@ void
 proc_exec(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
     int debug, int argc, char **argv)
 {
-	unsigned int		 proc, nargc, i, proc_i;
+	unsigned int		 proc, nargc, i, proc_i, proc_X = 0;
 	const char		**nargv;
 	struct privsep_proc	*p;
 	char			 num[32];
 	int			 fd;
 
 	/* Prepare the new process argv. */
-	nargv = calloc(argc + 5, sizeof(char *));
+	nargv = calloc(argc + 9, sizeof(char *));
 	if (nargv == NULL)
 		fatal("%s: calloc", __func__);
 
@@ -109,6 +109,16 @@ proc_exec(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
 	proc_i = nargc;
 	nargc++;
 
+	/* Set user and chroot */
+	if (ps->ps_pw != NULL) {
+		nargv[nargc++] = "-U";
+		nargv[nargc++] = ps->ps_pw->pw_name;
+
+		nargv[nargc++] = "-X";
+		proc_X = nargc;
+		nargc++;
+	}
+
 	/* Point process instance arg to stack and copy the original args. */
 	nargv[nargc++] = "-I";
 	nargv[nargc++] = num;
@@ -120,8 +130,10 @@ proc_exec(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
 	for (proc = 0; proc < nproc; proc++) {
 		p = &procs[proc];
 
-		/* Update args with process title. */
+		/* Update args with process title and chroot. */
 		nargv[proc_i] = (char *)(uintptr_t)p->p_title;
+		if (proc_X && p->p_chroot != NULL)
+			nargv[proc_X] = p->p_chroot;
 
 		/* Fire children processes. */
 		for (i = 0; i < ps->ps_instances[p->p_id]; i++) {

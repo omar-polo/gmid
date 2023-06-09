@@ -51,7 +51,7 @@ static struct privsep_proc procs[] = {
 	{ "logger",	PROC_LOGGER,	main_dispatch_logger, logger },
 };
 
-static const char	*opts = "c:D:fI:hnP:T:Vv";
+static const char	*opts = "c:D:fI:hnP:T:U:VvX:";
 
 static const struct option longopts[] = {
 	{"help",	no_argument,		NULL,	'h'},
@@ -169,6 +169,7 @@ main(int argc, char **argv)
 	struct conf *conf;
 	struct privsep *ps;
 	const char *errstr, *title = NULL;
+	const char *user = NULL, *chroot = NULL;
 	size_t i;
 	int ch, conftest = 0;
 	int proc_instance = 0;
@@ -214,11 +215,17 @@ main(int argc, char **argv)
 			if (proc_id == PROC_MAX)
 				fatalx("invalid process name");
 			break;
+		case 'U':
+			user = optarg;
+			break;
 		case 'V':
 			puts("Version: " GMID_STRING);
 			return 0;
 		case 'v':
 			verbose = 1;
+			break;
+		case 'X':
+			chroot = optarg;
 			break;
 		default:
 			usage();
@@ -231,10 +238,21 @@ main(int argc, char **argv)
 
 	conf = config_new();
 
-	if (parse_conf(conf, config_path) == -1)
-		fatalx("failed to load configuration file");
-	if (*conf->chroot != '\0' && *conf->user == '\0')
-		fatalx("can't chroot without a user to switch to after.");
+	/*
+	 * Only the parent loads the config, the others get user and
+	 * chroot via flags and the rest via imsg.
+	 */
+	if (proc_id == PROC_PARENT) {
+		if (parse_conf(conf, config_path) == -1)
+			fatalx("failed to load configuration file");
+		if (*conf->chroot != '\0' && *conf->user == '\0')
+			fatalx("can't chroot without a user to switch to.");
+	} else {
+		if (user)
+			strlcpy(conf->user, user, sizeof(conf->user));
+		if (chroot)
+			strlcpy(conf->chroot, chroot, sizeof(conf->chroot));
+	}
 
 	if (conftest) {
 		fprintf(stderr, "config OK\n");
