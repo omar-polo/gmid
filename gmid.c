@@ -44,6 +44,7 @@ static void main_sig_handler(int, short, void *);
 static int main_dispatch_server(int, struct privsep_proc *, struct imsg *);
 static int main_dispatch_logger(int, struct privsep_proc *, struct imsg *);
 static void __dead main_shutdown(struct conf *);
+static void main_print_conf(struct conf *);
 
 static struct privsep_proc procs[] = {
 	{ "server",	PROC_SERVER,	main_dispatch_server, server },
@@ -238,7 +239,7 @@ main(int argc, char **argv)
 	if (conftest) {
 		fprintf(stderr, "config OK\n");
 		if (conftest > 1)
-			print_conf();
+			main_print_conf(conf);
 		return 0;
 	}
 
@@ -432,4 +433,31 @@ main_shutdown(struct conf *conf)
 		close(pidfd);
 
 	exit(0);
+}
+
+static void
+main_print_conf(struct conf *conf)
+{
+	struct vhost	*h;
+	/* struct location	*l; */
+	/* struct envlist	*e; */
+	/* struct alist	*a; */
+
+	if (*conf->chroot != '\0')
+		printf("chroot \"%s\"\n", conf->chroot);
+	printf("ipv6 %s\n", conf->ipv6 ? "on" : "off");
+	/* XXX: defined mimes? */
+	printf("port %d\n", conf->port);
+	printf("prefork %d\n", conf->prefork);
+	/* XXX: protocols? */
+	if (*conf->user != '\0')
+		printf("user \"%s\"\n", conf->user);
+
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
+		printf("\nserver \"%s\" {\n", h->domain);
+		printf("	cert \"%s\"\n", h->cert);
+		printf("	key \"%s\"\n", h->key);
+		/* TODO: print locations... */
+		printf("}\n");
+	}
 }

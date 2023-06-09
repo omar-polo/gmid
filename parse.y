@@ -940,33 +940,6 @@ parse_conf(struct conf *c, const char *filename)
 	return 0;
 }
 
-void
-print_conf(void)
-{
-	struct vhost	*h;
-	/* struct location	*l; */
-	/* struct envlist	*e; */
-	/* struct alist	*a; */
-
-	if (*conf->chroot != '\0')
-		printf("chroot \"%s\"\n", conf->chroot);
-	printf("ipv6 %s\n", conf->ipv6 ? "on" : "off");
-	/* XXX: defined mimes? */
-	printf("port %d\n", conf->port);
-	printf("prefork %d\n", conf->prefork);
-	/* XXX: protocols? */
-	if (*conf->user != '\0')
-		printf("user \"%s\"\n", conf->user);
-
-	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
-		printf("\nserver \"%s\" {\n", h->domain);
-		printf("	cert \"%s\"\n", h->cert);
-		printf("	key \"%s\"\n", h->key);
-		/* TODO: print locations... */
-		printf("}\n");
-	}
-}
-
 int
 symset(const char *name, const char *val, int persist)
 {
