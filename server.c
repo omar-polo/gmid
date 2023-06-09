@@ -1484,6 +1484,8 @@ server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_RECONF_ENV:
 	case IMSG_RECONF_ALIAS:
 	case IMSG_RECONF_PROXY:
+	case IMSG_RECONF_PROXY_CERT:
+	case IMSG_RECONF_PROXY_KEY:
 		return config_recv(conf, imsg);
 	case IMSG_RECONF_END:
 		if (config_recv(conf, imsg) == -1)

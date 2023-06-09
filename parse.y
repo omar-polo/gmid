@@ -301,8 +301,8 @@ proxy		: PROXY { advance_proxy(); }
 			if (*proxy->host == '\0')
 				yyerror("invalid proxy block: missing `relay-to' option");
 
-			if ((proxy->cert == NULL && proxy->key != NULL) ||
-			    (proxy->cert != NULL && proxy->key == NULL))
+			if ((proxy->cert_path == NULL && proxy->key_path != NULL) ||
+			    (proxy->cert_path != NULL && proxy->key_path == NULL))
 				yyerror("invalid proxy block: missing cert or key");
 		}
 		;
@@ -337,20 +337,14 @@ proxy_opts	: /* empty */
 		;
 
 proxy_opt	: CERT string {
-			tls_unload_file(proxy->cert, proxy->certlen);
+			free(proxy->cert);
 			ensure_absolute_path($2);
-			proxy->cert = tls_load_file($2, &proxy->certlen, NULL);
-			if (proxy->cert == NULL)
-				yyerror("can't load cert %s", $2);
-			free($2);
+			proxy->cert_path = $2;
 		}
 		| KEY string {
-			tls_unload_file(proxy->key, proxy->keylen);
+			free(proxy->key);
 			ensure_absolute_path($2);
-			proxy->key = tls_load_file($2, &proxy->keylen, NULL);
-			if (proxy->key == NULL)
-				yyerror("can't load key %s", $2);
-			free($2);
+			proxy->key_path = $2;
 		}
 		| PROTOCOLS string {
 			if (tls_config_parse_protocols(&proxy->protocols, $2) == -1)
@@ -365,9 +359,7 @@ proxy_opt	: CERT string {
 		}
 		| REQUIRE CLIENT CA string {
 			ensure_absolute_path($4);
-			if ((proxy->reqca = load_ca($4)) == NULL)
-				yyerror("couldn't load ca cert: %s", $4);
-			free($4);
+			proxy->reqca_path = $4;
 		}
 		| SNI string {
 			(void) strlcpy(proxy->sni, $2, sizeof(proxy->sni));
@@ -432,9 +424,7 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 		| LOG bool	{ loc->disable_log = !$2; }
 		| REQUIRE CLIENT CA string {
 			ensure_absolute_path($4);
-			if ((loc->reqca = load_ca($4)) == NULL)
-				yyerror("couldn't load ca cert: %s", $4);
-			free($4);
+			loc->reqca_path = $4;
 		}
 		| ROOT string		{
 			(void) strlcpy(loc->dir, $2, sizeof(loc->dir));

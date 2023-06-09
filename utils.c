@@ -177,17 +177,21 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 }
 
 X509_STORE *
-load_ca(const char *path)
+load_ca(int fd)
 {
 	FILE		*f = NULL;
 	X509		*x = NULL;
 	X509_STORE	*store;
 
-	if ((store = X509_STORE_new()) == NULL)
+	if ((store = X509_STORE_new()) == NULL) {
+		close(fd);
 		return NULL;
+	}
 
-	if ((f = fopen(path, "r")) == NULL)
+	if ((f = fdopen(fd, "r")) == NULL) {
+		close(fd);
 		goto err;
+	}
 
 	if ((x = PEM_read_X509(f, NULL, NULL, NULL)) == NULL)
 		goto err;

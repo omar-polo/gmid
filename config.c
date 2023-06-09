@@ -88,6 +88,8 @@ config_free(void)
 			if (l->dirfd != -1)
 				close(l->dirfd);
 
+			free(l->reqca_path);
+			X509_STORE_free(l->reqca);
 			free(l);
 		}
 
@@ -103,8 +105,12 @@ config_free(void)
 
 		TAILQ_FOREACH_SAFE(p, &h->proxies, proxies, tp) {
 			TAILQ_REMOVE(&h->proxies, p, proxies);
-			tls_unload_file(p->cert, p->certlen);
-			tls_unload_file(p->key, p->keylen);
+			free(p->cert_path);
+			free(p->cert);
+			free(p->key_path);
+			free(p->key);
+			free(p->reqca_path);
+			X509_STORE_free(p->reqca);
 			free(p);
 		}
 
@@ -116,7 +122,7 @@ config_free(void)
 }
 
 static int
-config_send_file(struct privsep *ps, int fd, int type)
+config_send_file(struct privsep *ps, int type, int fd, void *data, size_t l)
 {
 	int	 n, m, id, d;
 
@@ -124,15 +130,30 @@ config_send_file(struct privsep *ps, int fd, int type)
 	n = -1;
 	proc_range(ps, id, &n, &m);
 	for (n = 0; n < m; ++n) {
-		if ((d = dup(fd)) == -1)
-			fatal("dup");
-		if (proc_compose_imsg(ps, id, n, type, -1, d, NULL, 0)
+		d = -1;
+		if (fd != -1 && (d = dup(fd)) == -1)
+			fatal("dup %d", fd);
+		if (proc_compose_imsg(ps, id, n, type, -1, d, data, l)
 		    == -1)
 			return -1;
 	}
 
-	close(fd);
+	if (fd != -1)
+		close(fd);
 	return 0;
+}
+
+static int
+config_open_send(struct privsep *ps, int type, const char *path)
+{
+	int fd;
+
+	log_debug("sending %s", path);
+
+	if ((fd = open(path, O_RDONLY)) == -1)
+		fatal("can't open %s", path);
+
+	return config_send_file(ps, type, fd, NULL, 0);
 }
 
 static int
@@ -199,7 +220,7 @@ config_send_socks(struct conf *conf)
 	if ((sock = make_socket(conf->port, AF_INET)) == -1)
 		return -1;
 
-	if (config_send_file(ps, sock, IMSG_RECONF_SOCK4) == -1)
+	if (config_send_file(ps, IMSG_RECONF_SOCK4, sock, NULL, 0) == -1)
 		return -1;
 
 	if (!conf->ipv6)
@@ -208,7 +229,7 @@ config_send_socks(struct conf *conf)
 	if ((sock = make_socket(conf->port, AF_INET6)) == -1)
 		return -1;
 
-	if (config_send_file(ps, sock, IMSG_RECONF_SOCK6) == -1)
+	if (config_send_file(ps, IMSG_RECONF_SOCK6, sock, NULL, 0) == -1)
 		return -1;
 
 	return 0;
@@ -276,26 +297,40 @@ config_send(struct conf *conf, struct fcgi *fcgi, struct vhosthead *hosts)
 		log_debug("sending certificate %s", h->cert_path);
 		if ((fd = open(h->cert_path, O_RDONLY)) == -1)
 			fatal("can't open %s", h->cert_path);
-		if (config_send_file(ps, fd, IMSG_RECONF_CERT) == -1)
+		if (config_send_file(ps, IMSG_RECONF_CERT, fd, NULL, 0) == -1)
 			return -1;
 
 		log_debug("sending key %s", h->key_path);
 		if ((fd = open(h->key_path, O_RDONLY)) == -1)
 			fatal("can't open %s", h->key_path);
-		if (config_send_file(ps, fd, IMSG_RECONF_KEY) == -1)
+		if (config_send_file(ps, IMSG_RECONF_KEY, fd, NULL, 0) == -1)
 			return -1;
 
 		if (h->ocsp_path != NULL) {
 			log_debug("sending ocsp %s", h->ocsp_path);
 			if ((fd = open(h->ocsp_path, O_RDONLY)) == -1)
 				fatal("can't open %s", h->ocsp_path);
-			if (config_send_file(ps, fd, IMSG_RECONF_OCSP) == -1)
+			if (config_send_file(ps, IMSG_RECONF_OCSP, fd,
+			    NULL, 0) == -1)
 				return -1;
 		}
 
 		TAILQ_FOREACH(l, &h->locations, locations) {
-			if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_LOC,
-			    l, sizeof(*l)) == -1)
+			struct location lcopy;
+			int fd = -1;
+
+			memcpy(&lcopy, l, sizeof(lcopy));
+			lcopy.reqca_path = NULL;
+			lcopy.reqca = NULL;
+			lcopy.dirfd = -1;
+			memset(&lcopy.locations, 0, sizeof(lcopy.locations));
+
+			if (l->reqca_path != NULL &&
+			    (fd = open(l->reqca_path, O_RDONLY)) == -1)
+				fatal("can't open %s", l->reqca_path);
+
+			if (config_send_file(ps, IMSG_RECONF_LOC, fd,
+			    &lcopy, sizeof(lcopy)) == -1)
 				return -1;
 		}
 
@@ -321,8 +356,40 @@ config_send(struct conf *conf, struct fcgi *fcgi, struct vhosthead *hosts)
 			return -1;
 
 		TAILQ_FOREACH(p, &h->proxies, proxies) {
-			if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_PROXY,
-			    p, sizeof(*p)) == -1)
+			struct proxy pcopy;
+			int fd = -1;
+
+			memcpy(&pcopy, p, sizeof(pcopy));
+			pcopy.cert_path = NULL;
+			pcopy.cert = NULL;
+			pcopy.certlen = 0;
+			pcopy.key_path = NULL;
+			pcopy.key = NULL;
+			pcopy.keylen = 0;
+			pcopy.reqca_path = NULL;
+			pcopy.reqca = NULL;
+
+			if (p->reqca_path != NULL) {
+				fd = open(p->reqca_path, O_RDONLY);
+				if (fd == -1)
+					fatal("can't open %s", p->reqca_path);
+			}
+
+			if (config_send_file(ps, IMSG_RECONF_PROXY, fd,
+			    &pcopy, sizeof(pcopy)) == -1)
+				return -1;
+
+			if (p->cert_path != NULL &&
+			    config_open_send(ps, IMSG_RECONF_PROXY_CERT,
+			    p->cert_path) == -1)
+				return -1;
+
+			if (p->key_path != NULL &&
+			    config_open_send(ps, IMSG_RECONF_PROXY_KEY,
+			    p->key_path) == -1)
+				return -1;
+
+			if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
 				return -1;
 		}
 
@@ -372,6 +439,7 @@ int
 config_recv(struct conf *conf, struct imsg *imsg)
 {
 	static struct vhost *h;
+	static struct proxy *p;
 	struct privsep	*ps = conf->ps;
 	struct etm	 m;
 	struct fcgi	*f;
@@ -388,6 +456,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	case IMSG_RECONF_START:
 		config_free();
 		h = NULL;
+		p = NULL;
 		break;
 
 	case IMSG_RECONF_MIME:
@@ -451,6 +520,9 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		strlcpy(vh->domain, vht.domain, sizeof(vh->domain));
 		h = vh;
 		TAILQ_INSERT_TAIL(&hosts, h, vhosts);
+
+		/* reset proxy */
+		p = NULL;
 		break;
 
 	case IMSG_RECONF_CERT:
@@ -503,8 +575,13 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		loc->fcgi = -1;
 
 		memcpy(loc, imsg->data, datalen);
-		loc->dirfd = -1; /* XXX */
-		loc->reqca = NULL; /* XXX */
+
+		if (imsg->fd != -1) {
+			loc->reqca = load_ca(imsg->fd);
+			if (loc->reqca == NULL)
+				fatalx("failed to load CA");
+		}
+
 		TAILQ_INSERT_TAIL(&h->locations, loc, locations);
 		break;
 
@@ -533,10 +610,41 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		IMSG_SIZE_CHECK(imsg, proxy);
 		proxy = xcalloc(1, sizeof(*proxy));
 		memcpy(proxy, imsg->data, datalen);
-		proxy->reqca = NULL; /* XXX */
-		proxy->cert = proxy->key = NULL; /* XXX */
-		proxy->certlen = proxy->keylen = 0; /* XXX */
+
+		if (imsg->fd != -1) {
+			proxy->reqca = load_ca(imsg->fd);
+			if (proxy->reqca == NULL)
+				fatal("failed to load CA");
+		}
+
 		TAILQ_INSERT_TAIL(&h->proxies, proxy, proxies);
+		p = proxy;
+		break;
+
+	case IMSG_RECONF_PROXY_CERT:
+		log_debug("receiving proxy cert");
+		if (p == NULL)
+			fatalx("recv'd proxy cert without proxy");
+		if (p->cert != NULL)
+			fatalx("proxy cert already received");
+		if (imsg->fd == -1)
+			fatalx("no fd for IMSG_RECONF_PROXY_CERT");
+		if (load_file(imsg->fd, &p->cert, &p->certlen) == -1)
+			fatalx("failed to load cert for proxy %s of %s",
+			    p->host, h->domain);
+		break;
+
+	case IMSG_RECONF_PROXY_KEY:
+		log_debug("receiving proxy key");
+		if (p == NULL)
+			fatalx("recv'd proxy key without proxy");
+		if (p->key != NULL)
+			fatalx("proxy key already received");
+		if (imsg->fd == -1)
+			fatalx("no fd for IMSG_RECONF_PROXY_KEY");
+		if (load_file(imsg->fd, &p->key, &p->keylen) == -1)
+			fatalx("failed to load key for proxy %s of %s",
+			    p->host, h->domain);
 		break;
 
 	case IMSG_RECONF_END:

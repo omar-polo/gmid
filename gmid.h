@@ -122,10 +122,13 @@ struct proxy {
 	int		 notls;
 	uint32_t	 protocols;
 	int		 noverifyname;
+	char		*cert_path;
 	uint8_t		*cert;
 	size_t		 certlen;
+	char		*key_path;
 	uint8_t		*key;
 	size_t		 keylen;
+	char		*reqca_path;
 	X509_STORE	*reqca;
 
 	TAILQ_ENTRY(proxy) proxies;
@@ -141,6 +144,7 @@ struct location {
 	int		 block_code;
 	char		 block_fmt[GEMINI_URL_LEN];
 	int		 strip;
+	char		*reqca_path;
 	X509_STORE	*reqca;
 	int		 disable_log;
 	int		 fcgi;
@@ -316,6 +320,8 @@ enum imsg_type {
 	IMSG_RECONF_ENV,
 	IMSG_RECONF_ALIAS,
 	IMSG_RECONF_PROXY,
+	IMSG_RECONF_PROXY_CERT,
+	IMSG_RECONF_PROXY_KEY,
 	IMSG_RECONF_END,
 	IMSG_RECONF_DONE,
 
@@ -421,7 +427,7 @@ char		*absolutify_path(const char*);
 char		*xstrdup(const char*);
 void		*xcalloc(size_t, size_t);
 void		 gen_certificate(const char*, const char*, const char*);
-X509_STORE	*load_ca(const char*);
+X509_STORE	*load_ca(int);
 int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);
 struct vhost	*new_vhost(void);
 struct location	*new_location(void);
