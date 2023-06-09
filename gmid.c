@@ -230,7 +230,8 @@ main(int argc, char **argv)
 
 	conf = config_new();
 
-	parse_conf(conf, config_path);
+	if (parse_conf(conf, config_path) == -1)
+		errx(1, "failed to load configuration file");
 	if (*conf->chroot != '\0' && *conf->user == '\0')
 		fatalx("can't chroot without a user to switch to after.");
 
@@ -345,7 +346,11 @@ main_reload(struct conf *conf)
 
 	log_debug("%s: config file %s", __func__, config_path);
 	config_purge(conf);
-	parse_conf(conf, config_path); /* XXX should handle error here */
+
+	if (parse_conf(conf, config_path) == -1) {
+		log_warnx("failed to parse the config");
+		return;
+	}
 
 	main_configure(conf);
 }

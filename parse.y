@@ -908,7 +908,7 @@ popfile(void)
 	return file ? 0 : EOF;
 }
 
-void
+int
 parse_conf(struct conf *c, const char *filename)
 {
 	struct sym		*sym, *next;
@@ -917,7 +917,7 @@ parse_conf(struct conf *c, const char *filename)
 
 	file = pushfile(filename, 0);
 	if (file == NULL)
-		exit(1);
+		return -1;
 	topfile = file;
 
 	yyparse();
@@ -936,7 +936,8 @@ parse_conf(struct conf *c, const char *filename)
 	}
 
 	if (errors)
-		exit(1);
+		return -1;
+	return 0;
 }
 
 void

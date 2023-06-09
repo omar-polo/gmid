@@ -346,7 +346,7 @@ int		 config_recv(struct conf *, struct imsg *);
 
 /* parse.y */
 void		 yyerror(const char*, ...);
-void		 parse_conf(struct conf *, const char*);
+int		 parse_conf(struct conf *, const char*);
 void		 print_conf(void);
 int		 cmdline_symset(char *);
 
