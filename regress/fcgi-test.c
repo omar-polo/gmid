@@ -194,12 +194,10 @@ main(int argc, char **argv)
 		err(1, "listen");
 
 	for (;;) {
-		warnx("waiting for a request");
 		if ((s = accept(sock, NULL, NULL)) == -1) {
 			warn("retrying; accept failed");
 			continue;
 		}
-		warnx("got a connection");
 
 		assert_record(s, FCGI_BEGIN_REQUEST);
 
@@ -221,13 +219,9 @@ main(int argc, char **argv)
 
 		assert_record(s, FCGI_STDIN);
 
-		warnx("sending the response");
-
 		prepare_header(&hdr, FCGI_STDOUT, 1, len, 0);
 		must_write(s, &hdr, sizeof(hdr));
 		must_write(s, msg, len);
-
-		warnx("closing the request");
 
 		prepare_header(&hdr, FCGI_END_REQUEST, 1, sizeof(end), 0);
 		write(s, &hdr, sizeof(hdr));
