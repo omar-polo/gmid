@@ -80,7 +80,7 @@ if [ -f "$pem" -o -f "$key" ]; then
 fi
 
 if [ $ec = yes ]; then
-	openssl ecparam -name prime256v1 -genkey -noout -out "${key}" && \
+	openssl ecparam -name secp384r1 -genkey -noout -out "${key}" && \
 	openssl req -new -x509 -key "${key}" -out "${pem}" -days "${days}" \
 		-nodes -subj "/CN=$hostname"
 else
