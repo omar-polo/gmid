@@ -133,11 +133,11 @@ config_purge(struct conf *conf)
 }
 
 static int
-config_send_file(struct privsep *ps, int type, int fd, void *data, size_t l)
+config_send_file(struct privsep *ps, enum privsep_procid id, int type,
+    int fd, void *data, size_t l)
 {
-	int	 n, m, id, d;
+	int	 n, m, d;
 
-	id = PROC_SERVER;
 	n = -1;
 	proc_range(ps, id, &n, &m);
 	for (n = 0; n < m; ++n) {
@@ -155,7 +155,8 @@ config_send_file(struct privsep *ps, int type, int fd, void *data, size_t l)
 }
 
 static int
-config_open_send(struct privsep *ps, int type, const char *path)
+config_open_send(struct privsep *ps, enum privsep_procid id, int type,
+    const char *path)
 {
 	int fd;
 
@@ -164,7 +165,7 @@ config_open_send(struct privsep *ps, int type, const char *path)
 	if ((fd = open(path, O_RDONLY)) == -1)
 		fatal("can't open %s", path);
 
-	return config_send_file(ps, type, fd, NULL, 0);
+	return config_send_file(ps, id, type, fd, NULL, 0);
 }
 
 static int
@@ -231,7 +232,8 @@ config_send_socks(struct conf *conf)
 	if ((sock = make_socket(conf->port, AF_INET)) == -1)
 		return -1;
 
-	if (config_send_file(ps, IMSG_RECONF_SOCK4, sock, NULL, 0) == -1)
+	if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_SOCK4, sock,
+	    NULL, 0) == -1)
 		return -1;
 
 	if (!conf->ipv6)
@@ -240,7 +242,8 @@ config_send_socks(struct conf *conf)
 	if ((sock = make_socket(conf->port, AF_INET6)) == -1)
 		return -1;
 
-	if (config_send_file(ps, IMSG_RECONF_SOCK6, sock, NULL, 0) == -1)
+	if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_SOCK6, sock,
+	    NULL, 0) == -1)
 		return -1;
 
 	return 0;
@@ -308,21 +311,23 @@ config_send(struct conf *conf)
 		log_debug("sending certificate %s", h->cert_path);
 		if ((fd = open(h->cert_path, O_RDONLY)) == -1)
 			fatal("can't open %s", h->cert_path);
-		if (config_send_file(ps, IMSG_RECONF_CERT, fd, NULL, 0) == -1)
+		if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_CERT, fd,
+		    NULL, 0) == -1)
 			return -1;
 
 		log_debug("sending key %s", h->key_path);
 		if ((fd = open(h->key_path, O_RDONLY)) == -1)
 			fatal("can't open %s", h->key_path);
-		if (config_send_file(ps, IMSG_RECONF_KEY, fd, NULL, 0) == -1)
+		if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_KEY, fd,
+		    NULL, 0) == -1)
 			return -1;
 
 		if (h->ocsp_path != NULL) {
 			log_debug("sending ocsp %s", h->ocsp_path);
 			if ((fd = open(h->ocsp_path, O_RDONLY)) == -1)
 				fatal("can't open %s", h->ocsp_path);
-			if (config_send_file(ps, IMSG_RECONF_OCSP, fd,
-			    NULL, 0) == -1)
+			if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_OCSP,
+			    fd, NULL, 0) == -1)
 				return -1;
 		}
 
@@ -340,8 +345,8 @@ config_send(struct conf *conf)
 			    (fd = open(l->reqca_path, O_RDONLY)) == -1)
 				fatal("can't open %s", l->reqca_path);
 
-			if (config_send_file(ps, IMSG_RECONF_LOC, fd,
-			    &lcopy, sizeof(lcopy)) == -1)
+			if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_LOC,
+			    fd, &lcopy, sizeof(lcopy)) == -1)
 				return -1;
 		}
 
@@ -386,18 +391,18 @@ config_send(struct conf *conf)
 					fatal("can't open %s", p->reqca_path);
 			}
 
-			if (config_send_file(ps, IMSG_RECONF_PROXY, fd,
-			    &pcopy, sizeof(pcopy)) == -1)
+			if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_PROXY,
+			    fd, &pcopy, sizeof(pcopy)) == -1)
 				return -1;
 
 			if (p->cert_path != NULL &&
-			    config_open_send(ps, IMSG_RECONF_PROXY_CERT,
-			    p->cert_path) == -1)
+			    config_open_send(ps, PROC_SERVER,
+			    IMSG_RECONF_PROXY_CERT, p->cert_path) == -1)
 				return -1;
 
 			if (p->key_path != NULL &&
-			    config_open_send(ps, IMSG_RECONF_PROXY_KEY,
-			    p->key_path) == -1)
+			    config_open_send(ps, PROC_SERVER,
+			    IMSG_RECONF_PROXY_KEY, p->key_path) == -1)
 				return -1;
 
 			if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
