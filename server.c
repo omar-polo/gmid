@@ -41,8 +41,10 @@ int shutting_down;
 
 static struct tls	*ctx;
 
-static struct event siginfo, sigusr2;
-static int has_siginfo;
+#ifdef SIGINFO
+static struct event siginfo;
+#endif
+static struct event sigusr2;
 
 int connected_clients;
 
@@ -1463,7 +1465,6 @@ server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 	SPLAY_INIT(&clients);
 
 #ifdef SIGINFO
-	has_siginfo = 1;
 	signal_set(&siginfo, SIGINFO, &handle_siginfo, NULL);
 	signal_add(&siginfo, NULL);
 #endif
