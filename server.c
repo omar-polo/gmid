@@ -1190,7 +1190,8 @@ start_reply(struct client *c, int code, const char *meta)
 	bufferevent_write(c->bev, "\r\n", 2);
 
 	if (!vhost_disable_log(c->host, c->iri.path))
-		log_request(c, EVBUFFER_DATA(evb), EVBUFFER_LENGTH(evb));
+		log_request(c, (char *)EVBUFFER_DATA(evb),
+		    EVBUFFER_LENGTH(evb));
 
 	if (code != 20)
 		c->type = REQUEST_DONE;

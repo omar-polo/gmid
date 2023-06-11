@@ -262,15 +262,15 @@ ssl_error(const char *where)
 }
 
 char *
-ssl_pubkey_hash(const char *buf, size_t len)
+ssl_pubkey_hash(const uint8_t *buf, size_t len)
 {
 	static const char hex[] = "0123456789abcdef";
 	BIO		*in;
 	X509		*x509 = NULL;
 	char		*hash = NULL;
 	size_t		 off;
-	char		 digest[EVP_MAX_MD_SIZE];
-	int		 dlen, i;
+	unsigned char	 digest[EVP_MAX_MD_SIZE];
+	unsigned int	 dlen, i;
 
 	if ((in = BIO_new_mem_buf(buf, len)) == NULL) {
 		log_warnx("%s: BIO_new_mem_buf failed", __func__);
@@ -314,7 +314,7 @@ ssl_pubkey_hash(const char *buf, size_t len)
 }
 
 EVP_PKEY *
-ssl_load_pkey(const char *buf, size_t len)
+ssl_load_pkey(const uint8_t *buf, size_t len)
 {
 	BIO		*in;
 	EVP_PKEY	*pkey;

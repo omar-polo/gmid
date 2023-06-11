@@ -122,7 +122,8 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	const void		*from;
 	unsigned char		*to;
 	size_t			 datalen;
-	int			 n, len, ret;
+	int			 n, ret;
+	unsigned int		 len;
 
 	datalen = IMSG_DATA_SIZE(imsg);
 
