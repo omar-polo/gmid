@@ -548,6 +548,9 @@ proc_run(struct privsep *ps, struct privsep_proc *p,
 	const char		*root;
 
 	log_procinit(p->p_title);
+	setproctitle("%s", p->p_title);
+
+	privsep_process = p->p_id;
 
 	if (ps->ps_pw == NULL)
 		goto init;
@@ -571,10 +574,6 @@ proc_run(struct privsep *ps, struct privsep_proc *p,
 		fatal("%s: chroot", __func__);
 	if (chdir("/") == -1)
 		fatal("%s: chdir(\"/\")", __func__);
-
-	privsep_process = p->p_id;
-
-	setproctitle("%s", p->p_title);
 
 	if (setgroups(1, &pw->pw_gid) ||
 	    setresgid(pw->pw_gid, pw->pw_gid, pw->pw_gid) ||
