@@ -36,6 +36,13 @@ sandbox_server_process(void)
 }
 
 void
+sandbox_crypto_process(void)
+{
+	if (pledge("stdio recvfd", NULL) == -1)
+		fatal("pledge");
+}
+
+void
 sandbox_logger_process(void)
 {
 	if (pledge("stdio recvfd", NULL) == -1)
@@ -54,6 +61,12 @@ sandbox_main_process(void)
 
 void
 sandbox_server_process(void)
+{
+	return;
+}
+
+void
+sandbox_crypto_process(void)
 {
 	return;
 }

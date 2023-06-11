@@ -42,12 +42,14 @@ static void main_configure_done(struct conf *);
 static void main_reload(struct conf *);
 static void main_sig_handler(int, short, void *);
 static int main_dispatch_server(int, struct privsep_proc *, struct imsg *);
+static int main_dispatch_crypto(int, struct privsep_proc *, struct imsg *);
 static int main_dispatch_logger(int, struct privsep_proc *, struct imsg *);
 static void __dead main_shutdown(struct conf *);
 static void main_print_conf(struct conf *);
 
 static struct privsep_proc procs[] = {
 	{ "server",	PROC_SERVER,	main_dispatch_server, server },
+	{ "crypto",	PROC_CRYPTO,	main_dispatch_crypto, crypto },
 	{ "logger",	PROC_LOGGER,	main_dispatch_logger, logger },
 };
 
@@ -328,15 +330,19 @@ main_configure(struct conf *conf)
 {
 	struct privsep	*ps = conf->ps;
 
-	conf->reload = conf->prefork;
+	conf->reload = conf->prefork + 1; /* servers, crypto */
 
 	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_START, NULL, 0) == -1)
+		return -1;
+	if (proc_compose(ps, PROC_CRYPTO, IMSG_RECONF_START, NULL, 0) == -1)
 		return -1;
 
 	if (config_send(conf) == -1)
 		return -1;
 
 	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_END, NULL, 0) == -1)
+		return -1;
+	if (proc_compose(ps, PROC_CRYPTO, IMSG_RECONF_END, NULL, 0) == -1)
 		return -1;
 
 	return 0;
@@ -405,6 +411,23 @@ main_sig_handler(int sig, short ev, void *arg)
 
 static int
 main_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
+{
+	struct privsep	*ps = p->p_ps;
+	struct conf	*conf = ps->ps_env;
+
+	switch (imsg->hdr.type) {
+	case IMSG_RECONF_DONE:
+		main_configure_done(conf);
+		break;
+	default:
+		return -1;
+	}
+
+	return 0;
+}
+
+static int
+main_dispatch_crypto(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	struct privsep	*ps = p->p_ps;
 	struct conf	*conf = ps->ps_env;

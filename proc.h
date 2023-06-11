@@ -36,6 +36,7 @@ struct imsgev {
 enum privsep_procid {
 	PROC_PARENT,
 	PROC_SERVER,
+	PROC_CRYPTO,
 	PROC_LOGGER,
 	PROC_MAX,
 };

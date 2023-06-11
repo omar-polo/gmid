@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2021 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2008 Pierre-Yves Ritschard <pyr@openbsd.org>
+ * Copyright (c) 2008 Reyk Floeter <reyk@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -20,6 +22,7 @@
 #include <string.h>
 
 #include <openssl/bn.h>
+#include <openssl/err.h>
 #include <openssl/pem.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
@@ -244,6 +247,90 @@ end:
 	if (ctx != NULL)
 		X509_STORE_CTX_free(ctx);
 	return ret;
+}
+
+void
+ssl_error(const char *where)
+{
+	unsigned long	 code;
+	char		 errbuf[128];
+
+	while ((code = ERR_get_error()) != 0) {
+		ERR_error_string_n(code, errbuf, sizeof(errbuf));
+		log_debug("debug: SSL library error: %s: %s", where, errbuf);
+	}
+}
+
+char *
+ssl_pubkey_hash(const char *buf, size_t len)
+{
+	static const char hex[] = "0123456789abcdef";
+	BIO		*in;
+	X509		*x509 = NULL;
+	char		*hash = NULL;
+	size_t		 off;
+	char		 digest[EVP_MAX_MD_SIZE];
+	int		 dlen, i;
+
+	if ((in = BIO_new_mem_buf(buf, len)) == NULL) {
+		log_warnx("%s: BIO_new_mem_buf failed", __func__);
+		return NULL;
+	}
+
+	if ((x509 = PEM_read_bio_X509(in, NULL, NULL, NULL)) == NULL) {
+		log_warnx("%s: PEM_read_bio_X509 failed", __func__);
+		ssl_error("PEM_read_bio_X509");
+		goto fail;
+	}
+
+	if ((hash = malloc(TLS_CERT_HASH_SIZE)) == NULL) {
+		log_warn("%s: malloc", __func__);
+		goto fail;
+	}
+
+	if (X509_pubkey_digest(x509, EVP_sha256(), digest, &dlen) != 1) {
+		log_warnx("%s: X509_pubkey_digest failed", __func__);
+		ssl_error("X509_pubkey_digest");
+		free(hash);
+		hash = NULL;
+		goto fail;
+	}
+
+	if (TLS_CERT_HASH_SIZE < 2 * dlen + sizeof("SHA256:"))
+		fatalx("%s: hash buffer too small", __func__);
+
+	off = strlcpy(hash, "SHA256:", TLS_CERT_HASH_SIZE);
+	for (i = 0; i < dlen; ++i) {
+		hash[off++] = hex[(digest[i] >> 4) & 0xf];
+		hash[off++] = hex[digest[i] & 0xf];
+	}
+	hash[off] = '\0';
+
+ fail:
+	BIO_free(in);
+	if (x509)
+		X509_free(x509);
+	return hash;
+}
+
+EVP_PKEY *
+ssl_load_pkey(const char *buf, size_t len)
+{
+	BIO		*in;
+	EVP_PKEY	*pkey;
+
+	if ((in = BIO_new_mem_buf(buf, len)) == NULL) {
+		log_warnx("%s: BIO_new_mem_buf failed", __func__);
+		return NULL;
+	}
+
+	if ((pkey = PEM_read_bio_PrivateKey(in, NULL, NULL, NULL)) == NULL) {
+		log_warnx("%s: PEM_read_bio_PrivateKey failed", __func__);
+		ssl_error("PEM_read_bio_PrivateKey");
+	}
+
+	BIO_free(in);
+	return pkey;
 }
 
 struct vhost *

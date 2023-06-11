@@ -46,6 +46,12 @@ static int has_siginfo;
 
 int connected_clients;
 
+/*
+ * This function is not publicy exported because it is a hack until libtls
+ * has a proper privsep setup.
+ */
+void tls_config_use_fake_private_key(struct tls_config *);
+
 static inline int matches(const char*, const char*);
 
 static int	 check_path(struct client*, const char*, int*);
@@ -73,10 +79,12 @@ static void	 client_close_ev(int, short, void *);
 static void	 handle_siginfo(int, short, void*);
 
 static int	 server_dispatch_parent(int, struct privsep_proc *, struct imsg *);
+static int	 server_dispatch_crypto(int, struct privsep_proc *, struct imsg *);
 static int	 server_dispatch_logger(int, struct privsep_proc *, struct imsg *);
 
 static struct privsep_proc procs[] = {
 	{ "parent",	PROC_PARENT,	server_dispatch_parent },
+	{ "crypto",	PROC_CRYPTO,	server_dispatch_crypto },
 	{ "logger",	PROC_LOGGER,	server_dispatch_logger },
 };
 
@@ -1384,6 +1392,13 @@ setup_tls(struct conf *conf)
 	if ((tlsconf = tls_config_new()) == NULL)
 		fatal("tls_config_new");
 
+	/*
+	 * ge doesn't use the privsep crypto engine; it doesn't use
+	 * privsep at all so `ps' is NULL.
+	 */
+	if (conf->ps != NULL)
+		tls_config_use_fake_private_key(tlsconf);
+
 	/* optionally accept client certs, but don't try to verify them */
 	tls_config_verify_client_optional(tlsconf);
 	tls_config_insecure_noverifycert(tlsconf);
@@ -1455,6 +1470,13 @@ server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 	signal_add(&sigusr2, NULL);
 
 	sandbox_server_process();
+
+	/*
+	 * ge doesn't use the privsep crypto engine; it doesn't use
+	 * privsep at all so `ps' is NULL.
+	 */
+	if (ps != NULL)
+		crypto_engine_init(ps->ps_env);
 }
 
 int
@@ -1510,6 +1532,13 @@ server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 
 	return 0;
 }
+
+static int
+server_dispatch_crypto(int fd, struct privsep_proc *p, struct imsg *imsg)
+{
+	return -1;
+}
+
 static int
 server_dispatch_logger(int fd, struct privsep_proc *p, struct imsg *imsg)
 {

@@ -22,6 +22,8 @@
 #include <limits.h>
 #include <string.h>
 
+#include <openssl/pem.h>
+
 #include "log.h"
 #include "proc.h"
 
@@ -34,6 +36,7 @@ config_new(void)
 
 	TAILQ_INIT(&conf->fcgi);
 	TAILQ_INIT(&conf->hosts);
+	TAILQ_INIT(&conf->pkis);
 
 	conf->port = 1965;
 	conf->ipv6 = 0;
@@ -59,6 +62,7 @@ config_purge(struct conf *conf)
 	struct proxy *p, *tp;
 	struct envlist *e, *te;
 	struct alist *a, *ta;
+	struct pki *pki, *tpki;
 
 	ps = conf->ps;
 
@@ -122,6 +126,13 @@ config_purge(struct conf *conf)
 		free(h);
 	}
 
+	TAILQ_FOREACH_SAFE(pki, &conf->pkis, pkis, tpki) {
+		TAILQ_REMOVE(&conf->pkis, pki, pkis);
+		free(pki->hash);
+		EVP_PKEY_free(pki->pkey);
+		free(pki);
+	}
+
 	memset(conf, 0, sizeof(*conf));
 
 	conf->ps = ps;
@@ -130,6 +141,7 @@ config_purge(struct conf *conf)
 	init_mime(&conf->mime);
 	TAILQ_INIT(&conf->fcgi);
 	TAILQ_INIT(&conf->hosts);
+	TAILQ_INIT(&conf->pkis);
 }
 
 static int
@@ -166,6 +178,38 @@ config_open_send(struct privsep *ps, enum privsep_procid id, int type,
 		fatal("can't open %s", path);
 
 	return config_send_file(ps, id, type, fd, NULL, 0);
+}
+
+static int
+config_send_kp(struct privsep *ps, int cert_type, int key_type,
+    const char *cert, const char *key)
+{
+	int fd, d;
+
+	log_debug("sending %s", cert);
+	if ((fd = open(cert, O_RDONLY)) == -1)
+		fatal("can't open %s", cert);
+	if ((d = dup(fd)) == -1)
+		fatal("fd");
+
+	if (config_send_file(ps, PROC_SERVER, cert_type, fd, NULL, 0) == -1) {
+		close(d);
+		return -1;
+	}
+	if (config_send_file(ps, PROC_CRYPTO, cert_type, d, NULL, 0) == -1)
+		return -1;
+
+	log_debug("sending %s", key);
+	if ((fd = open(key, O_RDONLY)) == -1)
+		return -1;
+	if (config_send_file(ps, PROC_CRYPTO, key_type, fd, NULL, 0) == -1)
+		return -1;
+
+	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
+		return -1;
+	if (proc_flush_imsg(ps, PROC_CRYPTO, -1) == -1)
+		return -1;
+	return 0;
 }
 
 static int
@@ -261,7 +305,6 @@ config_send(struct conf *conf)
 	struct envlist	*e;
 	struct alist	*a;
 	size_t		 i;
-	int		 fd;
 
 	for (i = 0; i < conf->mime.len; ++i) {
 		m = &conf->mime.t[i];
@@ -308,18 +351,8 @@ config_send(struct conf *conf)
 		    &vcopy, sizeof(vcopy)) == -1)
 			return -1;
 
-		log_debug("sending certificate %s", h->cert_path);
-		if ((fd = open(h->cert_path, O_RDONLY)) == -1)
-			fatal("can't open %s", h->cert_path);
-		if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_CERT, fd,
-		    NULL, 0) == -1)
-			return -1;
-
-		log_debug("sending key %s", h->key_path);
-		if ((fd = open(h->key_path, O_RDONLY)) == -1)
-			fatal("can't open %s", h->key_path);
-		if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_KEY, fd,
-		    NULL, 0) == -1)
+		if (config_send_kp(ps, IMSG_RECONF_CERT, IMSG_RECONF_KEY,
+		    h->cert_path, h->key_path) == -1)
 			return -1;
 
 		if (h->ocsp_path != NULL) {
@@ -394,12 +427,14 @@ config_send(struct conf *conf)
 			    fd, &pcopy, sizeof(pcopy)) == -1)
 				return -1;
 
-			if (p->cert_path != NULL &&
-			    config_open_send(ps, PROC_SERVER,
-			    IMSG_RECONF_PROXY_CERT, p->cert_path) == -1)
+			if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
 				return -1;
 
-			if (p->key_path != NULL &&
+			if (p->cert_path == NULL || p->key_path == NULL)
+				continue;
+
+			if (config_open_send(ps, PROC_SERVER,
+			    IMSG_RECONF_PROXY_CERT, p->cert_path) == -1 ||
 			    config_open_send(ps, PROC_SERVER,
 			    IMSG_RECONF_PROXY_KEY, p->key_path) == -1)
 				return -1;
@@ -443,6 +478,51 @@ load_file(int fd, uint8_t **data, size_t *len)
 	}
 
 	close(fd);
+	return 0;
+}
+
+static int
+config_crypto_recv_kp(struct conf *conf, struct imsg *imsg)
+{
+	static struct pki *pki;
+	uint8_t *d;
+	size_t len;
+
+	/* XXX: check for duplicates */
+
+	if (imsg->fd == -1)
+		fatalx("no fd for imsg %d", imsg->hdr.type);
+
+	switch (imsg->hdr.type) {
+	case IMSG_RECONF_CERT:
+		if (pki != NULL)
+			fatalx("imsg in wrong order; pki is not NULL");
+		if ((pki = calloc(1, sizeof(*pki))) == NULL)
+			fatal("calloc");
+		if (load_file(imsg->fd, &d, &len) == -1)
+			fatalx("can't load file");
+		if ((pki->hash = ssl_pubkey_hash(d, len)) == NULL)
+			fatalx("failed to compute cert hash");
+		free(d);
+		TAILQ_INSERT_TAIL(&conf->pkis, pki, pkis);
+		break;
+
+	case IMSG_RECONF_KEY:
+		if (pki == NULL)
+			fatalx("got key without cert beforehand %d",
+			    imsg->hdr.type);
+		if (load_file(imsg->fd, &d, &len) == -1)
+			fatalx("failed to load private key");
+		if ((pki->pkey = ssl_load_pkey(d, len)) == NULL)
+			fatalx("failed load private key");
+		free(d);
+		pki = NULL;
+		break;
+
+	default:
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -533,6 +613,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 
 	case IMSG_RECONF_CERT:
 		log_debug("receiving cert");
+		if (privsep_process == PROC_CRYPTO)
+			return config_crypto_recv_kp(conf, imsg);
 		if (h == NULL)
 			fatalx("recv'd cert without host");
 		if (h->cert != NULL)
@@ -546,6 +628,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 
 	case IMSG_RECONF_KEY:
 		log_debug("receiving key");
+		if (privsep_process == PROC_CRYPTO)
+			return config_crypto_recv_kp(conf, imsg);
 		if (h == NULL)
 			fatalx("recv'd key without host");
 		if (h->key != NULL)

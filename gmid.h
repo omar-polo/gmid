@@ -82,6 +82,8 @@
 
 #define PROC_MAX_INSTANCES	16
 
+#define TLS_CERT_HASH_SIZE	128
+
 /* forward declaration */
 struct privsep;
 struct privsep_proc;
@@ -209,6 +211,13 @@ struct mime {
 	size_t		 cap;
 };
 
+TAILQ_HEAD(pkihead, pki);
+struct pki {
+	char		*hash;
+	EVP_PKEY	*pkey;
+	TAILQ_ENTRY(pki) pkis;
+};
+
 struct conf {
 	struct privsep	*ps;
 	int		 port;
@@ -227,6 +236,7 @@ struct conf {
 
 	struct fcgihead	 fcgi;
 	struct vhosthead hosts;
+	struct pkihead	 pkis;
 };
 
 extern const char *config_path;
@@ -328,6 +338,10 @@ enum imsg_type {
 	IMSG_RECONF_END,
 	IMSG_RECONF_DONE,
 
+	IMSG_CRYPTO_RSA_PRIVENC,
+	IMSG_CRYPTO_RSA_PRIVDEC,
+	IMSG_CRYPTO_ECDSA_SIGN,
+
 	IMSG_CTL_PROCFD,
 };
 
@@ -343,6 +357,10 @@ struct conf	*config_new(void);
 void		 config_purge(struct conf *);
 int		 config_send(struct conf *);
 int		 config_recv(struct conf *, struct imsg *);
+
+/* crypto.c */
+void		 crypto(struct privsep *, struct privsep_proc *);
+void		 crypto_engine_init(struct conf *);
 
 /* parse.y */
 void		 yyerror(const char*, ...);
@@ -398,6 +416,7 @@ void		 fcgi_req(struct client *);
 /* sandbox.c */
 void		 sandbox_main_process(void);
 void		 sandbox_server_process(void);
+void		 sandbox_crypto_process(void);
 void		 sandbox_logger_process(void);
 
 /* utf8.c */
@@ -431,6 +450,9 @@ void		*xcalloc(size_t, size_t);
 void		 gen_certificate(const char*, const char*, const char*);
 X509_STORE	*load_ca(int);
 int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);
+void		 ssl_error(const char *);
+char		*ssl_pubkey_hash(const char *, size_t);
+EVP_PKEY	*ssl_load_pkey(const char *, size_t);
 struct vhost	*new_vhost(void);
 struct location	*new_location(void);
 struct proxy	*new_proxy(void);
