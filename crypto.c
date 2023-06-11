@@ -342,8 +342,9 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 			toptr = imsg.data + sizeof(res);
 
 			if (res.id != reqid)
-				fatalx("invalid response id"
-				    " got %llu, want %llu", res.id, reqid);
+				fatalx("invalid id; got %llu, want %llu",
+				    (unsigned long long)res.id,
+				    (unsigned long long)reqid);
 			if (res.ret > 0)
 				memcpy(to, toptr, res.len);
 
