@@ -578,12 +578,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		if (h == NULL)
 			fatalx("recv'd location without host");
 		IMSG_SIZE_CHECK(imsg, loc);
-
-		//loc = new_location();
 		loc = xcalloc(1, sizeof(*loc));
-		loc->dirfd = -1;
-		loc->fcgi = -1;
-
 		memcpy(loc, imsg->data, datalen);
 
 		if (imsg->fd != -1) {
