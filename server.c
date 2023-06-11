@@ -799,8 +799,6 @@ open_dir(struct client *c)
 	int dirfd, root;
 	char *before_file;
 
-	log_debug("in open_dir");
-
 	root = !strcmp(c->iri.path, "/") || *c->iri.path == '\0';
 
 	len = strlen(c->iri.path);
