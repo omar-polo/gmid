@@ -323,11 +323,10 @@ config_send(struct conf *conf)
 			return -1;
 
 		if (h->ocsp_path != NULL) {
-			log_debug("sending ocsp %s", h->ocsp_path);
-			if ((fd = open(h->ocsp_path, O_RDONLY)) == -1)
-				fatal("can't open %s", h->ocsp_path);
-			if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_OCSP,
-			    fd, NULL, 0) == -1)
+			if (config_open_send(ps, PROC_SERVER, IMSG_RECONF_OCSP,
+			    h->ocsp_path) == -1)
+				return -1;
+			if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
 				return -1;
 		}
 
