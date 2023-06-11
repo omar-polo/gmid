@@ -419,18 +419,14 @@ static int
 load_file(int fd, uint8_t **data, size_t *len)
 {
 	struct stat	 sb;
-	FILE		*fp;
-	size_t		 r;
+	ssize_t		 r;
 
 	if (fstat(fd, &sb) == -1)
 		fatal("fstat");
 
-	if ((fp = fdopen(fd, "r")) == NULL)
-		fatal("fdopen");
-
 	if (sb.st_size < 0 /* || sb.st_size > SIZE_MAX */) {
 		log_warnx("file too large");
-		fclose(fp);
+		close(fd);
 		return -1;
 	}
 	*len = sb.st_size;
@@ -438,15 +434,15 @@ load_file(int fd, uint8_t **data, size_t *len)
 	if ((*data = malloc(*len)) == NULL)
 		fatal("malloc");
 
-	r = fread(*data, 1, *len, fp);
-	if (r != *len) {
-		log_warn("read");
-		fclose(fp);
+	r = pread(fd, *data, *len, 0);
+	if (r == -1 || (size_t)r != *len) {
+		log_warn("read failed");
+		close(fd);
 		free(*data);
 		return -1;
 	}
 
-	fclose(fp);
+	close(fd);
 	return 0;
 }
 
