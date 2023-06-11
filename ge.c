@@ -249,6 +249,9 @@ main(int argc, char **argv)
 	log_setverbose(0);
 	conf = config_new();
 
+	/* ge doesn't do privsep so no privsep crypto engine. */
+	conf->use_privsep_crypto = 0;
+
 	while ((ch = getopt_long(argc, argv, "d:H:hp:Vv", opts, NULL)) != -1) {
 		switch (ch) {
 		case 'd':

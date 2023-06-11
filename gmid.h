@@ -228,6 +228,7 @@ struct conf {
 	char		 user[LOGIN_NAME_MAX];
 	int		 prefork;
 	int		 reload;
+	int		 use_privsep_crypto;
 
 	int		 sock4;
 	struct event	 evsock4;

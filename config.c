@@ -46,6 +46,10 @@ config_new(void)
 
 	conf->prefork = 3;
 
+#ifdef __OpenBSD__
+	conf->use_privsep_crypto = 1;
+#endif
+
 	conf->sock4 = -1;
 	conf->sock6 = -1;
 
@@ -63,8 +67,10 @@ config_purge(struct conf *conf)
 	struct envlist *e, *te;
 	struct alist *a, *ta;
 	struct pki *pki, *tpki;
+	int use_privsep_crypto;
 
 	ps = conf->ps;
+	use_privsep_crypto = conf->use_privsep_crypto;
 
 	if (conf->sock4 != -1) {
 		event_del(&conf->evsock4);
@@ -136,6 +142,7 @@ config_purge(struct conf *conf)
 	memset(conf, 0, sizeof(*conf));
 
 	conf->ps = ps;
+	conf->use_privsep_crypto = use_privsep_crypto;
 	conf->sock4 = conf->sock6 = -1;
 	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 	init_mime(&conf->mime);
@@ -184,7 +191,8 @@ static int
 config_send_kp(struct privsep *ps, int cert_type, int key_type,
     const char *cert, const char *key)
 {
-	int fd, d;
+	struct conf *conf = ps->ps_env;
+	int fd, d, key_target;
 
 	log_debug("sending %s", cert);
 	if ((fd = open(cert, O_RDONLY)) == -1)
@@ -196,13 +204,19 @@ config_send_kp(struct privsep *ps, int cert_type, int key_type,
 		close(d);
 		return -1;
 	}
-	if (config_send_file(ps, PROC_CRYPTO, cert_type, d, NULL, 0) == -1)
+	if (conf->use_privsep_crypto &&
+	    config_send_file(ps, PROC_CRYPTO, cert_type, d, NULL, 0) == -1)
 		return -1;
 
 	log_debug("sending %s", key);
 	if ((fd = open(key, O_RDONLY)) == -1)
 		return -1;
-	if (config_send_file(ps, PROC_CRYPTO, key_type, fd, NULL, 0) == -1)
+
+	key_target = PROC_CRYPTO;
+	if (!conf->use_privsep_crypto)
+		key_target = PROC_SERVER;
+
+	if (config_send_file(ps, key_target, key_type, fd, NULL, 0) == -1)
 		return -1;
 
 	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)

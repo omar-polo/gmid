@@ -1395,11 +1395,7 @@ setup_tls(struct conf *conf)
 	if ((tlsconf = tls_config_new()) == NULL)
 		fatal("tls_config_new");
 
-	/*
-	 * ge doesn't use the privsep crypto engine; it doesn't use
-	 * privsep at all so `ps' is NULL.
-	 */
-	if (conf->ps != NULL)
+	if (conf->use_privsep_crypto)
 		tls_config_use_fake_private_key(tlsconf);
 
 	/* optionally accept client certs, but don't try to verify them */
@@ -1462,6 +1458,8 @@ server(struct privsep *ps, struct privsep_proc *p)
 void
 server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 {
+	struct conf *c;
+
 	SPLAY_INIT(&clients);
 
 #ifdef SIGINFO
@@ -1477,8 +1475,11 @@ server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 	 * ge doesn't use the privsep crypto engine; it doesn't use
 	 * privsep at all so `ps' is NULL.
 	 */
-	if (ps != NULL)
-		crypto_engine_init(ps->ps_env);
+	if (ps != NULL) {
+		c = ps->ps_env;
+		if (c->use_privsep_crypto)
+			crypto_engine_init(ps->ps_env);
+	}
 }
 
 int
