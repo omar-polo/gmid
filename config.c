@@ -208,15 +208,11 @@ config_send_kp(struct privsep *ps, int cert_type, int key_type,
 	    config_send_file(ps, PROC_CRYPTO, cert_type, d, NULL, 0) == -1)
 		return -1;
 
-	log_debug("sending %s", key);
-	if ((fd = open(key, O_RDONLY)) == -1)
-		return -1;
-
 	key_target = PROC_CRYPTO;
 	if (!conf->use_privsep_crypto)
 		key_target = PROC_SERVER;
 
-	if (config_send_file(ps, key_target, key_type, fd, NULL, 0) == -1)
+	if (config_open_send(ps, key_target, key_type, key) == -1)
 		return -1;
 
 	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
