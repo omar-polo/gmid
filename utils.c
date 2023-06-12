@@ -180,41 +180,48 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 }
 
 X509_STORE *
-load_ca(int fd)
+load_ca(uint8_t *d, size_t len)
 {
-	FILE		*f = NULL;
+	BIO		*in;
 	X509		*x = NULL;
 	X509_STORE	*store;
 
 	if ((store = X509_STORE_new()) == NULL) {
-		close(fd);
+		log_warnx("%s: X509_STORE_new failed", __func__);
 		return NULL;
 	}
 
-	if ((f = fdopen(fd, "r")) == NULL) {
-		close(fd);
+	if ((in = BIO_new_mem_buf(d, len)) == NULL) {
+		log_warnx("%s: BIO_new_mem_buf failed", __func__);
 		goto err;
 	}
 
-	if ((x = PEM_read_X509(f, NULL, NULL, NULL)) == NULL)
+	if ((x = PEM_read_bio_X509(in, NULL, NULL, NULL)) == NULL) {
+		log_warnx("%s: PEM_read_bio_X509 failed", __func__);
+		ssl_error("PEM_read_bio_X509");
 		goto err;
+	}
 
-	if (X509_check_ca(x) == 0)
+	if (X509_check_ca(x) == 0) {
+		ssl_error("X509_check_ca");
 		goto err;
+	}
 
-	if (!X509_STORE_add_cert(store, x))
+	if (!X509_STORE_add_cert(store, x)) {
+		ssl_error("X509_STORE_add_cert");
 		goto err;
+	}
 
 	X509_free(x);
-	fclose(f);
+	BIO_free(in);
 	return store;
 
 err:
 	X509_STORE_free(store);
 	if (x != NULL)
 		X509_free(x);
-	if (f != NULL)
-		fclose(f);
+	if (in != NULL)
+		BIO_free(in);
 	return NULL;
 }
 

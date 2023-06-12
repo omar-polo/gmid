@@ -549,7 +549,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	struct envlist	*env;
 	struct alist	*alias;
 	struct proxy	*proxy;
-	size_t		 datalen;
+	uint8_t		*d;
+	size_t		 len, datalen;
 
 	datalen = IMSG_DATA_SIZE(imsg);
 
@@ -672,9 +673,12 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		memcpy(loc, imsg->data, datalen);
 
 		if (imsg->fd != -1) {
-			loc->reqca = load_ca(imsg->fd);
+			if (load_file(imsg->fd, &d, &len) == -1)
+				fatal("load_file");
+			loc->reqca = load_ca(d, len);
 			if (loc->reqca == NULL)
 				fatalx("failed to load CA");
+			free(d);
 		}
 
 		TAILQ_INSERT_TAIL(&h->locations, loc, locations);
@@ -707,9 +711,12 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		memcpy(proxy, imsg->data, datalen);
 
 		if (imsg->fd != -1) {
-			proxy->reqca = load_ca(imsg->fd);
+			if (load_file(imsg->fd, &d, &len) == -1)
+				fatal("load_file");
+			proxy->reqca = load_ca(d, len);
 			if (proxy->reqca == NULL)
 				fatal("failed to load CA");
+			free(d);
 		}
 
 		TAILQ_INSERT_TAIL(&h->proxies, proxy, proxies);
