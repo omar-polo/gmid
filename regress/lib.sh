@@ -10,8 +10,7 @@ current_test=
 run_test() {
 	ggflags=
 	port=10965
-	config_common="prefork 1
-ipv6 off
+	config_common="ipv6 off
 port $port
 "
 	hdr=
