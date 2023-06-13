@@ -83,17 +83,18 @@ prepare_header(struct fcgi_header *h, int type, int id, size_t size,
 static void
 must_read(int sock, void *d, size_t len)
 {
+	uint8_t *data = d;
 	ssize_t r;
 
 	while (len > 0) {
-		switch (r = read(sock, d, len)) {
+		switch (r = read(sock, data, len)) {
 		case -1:
 			err(1, "read");
 		case 0:
 			errx(1, "EOF");
 		default:
 			len -= r;
-			d += r;
+			data += r;
 		}
 	}
 }
@@ -101,17 +102,18 @@ must_read(int sock, void *d, size_t len)
 static void
 must_write(int sock, const void *d, size_t len)
 {
+	const uint8_t *data = d;
 	ssize_t w;
 
 	while (len > 0) {
-		switch (w = write(sock, d, len)) {
+		switch (w = write(sock, data, len)) {
 		case -1:
 			err(1, "write");
 		case 0:
 			errx(1, "EOF");
 		default:
 			len -= w;
-			d += w;
+			data += w;
 		}
 	}
 }
