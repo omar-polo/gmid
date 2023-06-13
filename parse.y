@@ -114,6 +114,8 @@ typedef struct {
 	int lineno;
 } YYSTYPE;
 
+#define YYSTYPE YYSTYPE
+
 %}
 
 /* for bison: */
