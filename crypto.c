@@ -120,11 +120,12 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	struct imsg_crypto_res	 res;
 	struct iovec		 iov[2];
 	const void		*from;
-	unsigned char		*to;
+	unsigned char		*data, *to;
 	size_t			 datalen;
 	int			 n, ret;
 	unsigned int		 len;
 
+	data = imsg->data;
 	datalen = IMSG_DATA_SIZE(imsg);
 
 	switch (imsg->hdr.type) {
@@ -132,10 +133,10 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_CRYPTO_RSA_PRIVDEC:
 		if (datalen < sizeof(req))
 			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		memcpy(&req, imsg->data, sizeof(req));
+		memcpy(&req, data, sizeof(req));
 		if (datalen != sizeof(req) + req.flen)
 			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		from = imsg->data + sizeof(req);
+		from = data + sizeof(req);
 
 		if ((pkey = get_pkey(req.hash)) == NULL ||
 		    (rsa = EVP_PKEY_get1_RSA(pkey)) == NULL)
@@ -187,10 +188,10 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_CRYPTO_ECDSA_SIGN:
 		if (datalen < sizeof(req))
 			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		memcpy(&req, imsg->data, sizeof(req));
+		memcpy(&req, data, sizeof(req));
 		if (datalen != sizeof(req) + req.flen)
 			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		from = imsg->data + sizeof(req);
+		from = data + sizeof(req);
 
 		if ((pkey = get_pkey(req.hash)) == NULL ||
 		    (ecdsa = EVP_PKEY_get1_EC_KEY(pkey)) == NULL)
@@ -261,6 +262,7 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 	int			 n, done = 0;
 	const void		*toptr;
 	char			*hash;
+	unsigned char		*data;
 	size_t			 datalen;
 
 	if ((hash = RSA_get_ex_data(rsa, 0)) == NULL)
@@ -331,16 +333,17 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 				    "crypto", imsg.hdr.pid);
 			}
 
+			data = imsg.data;
 			datalen = IMSG_DATA_SIZE(&imsg);
 			if (datalen < sizeof(res))
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
-			memcpy(&res, imsg.data, sizeof(res));
+			memcpy(&res, data, sizeof(res));
 			if (datalen != sizeof(res) + res.ret)
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
 			ret = res.ret;
-			toptr = imsg.data + sizeof(res);
+			toptr = data + sizeof(res);
 
 			if (res.id != reqid)
 				fatalx("invalid id; got %llu, want %llu",
@@ -464,6 +467,7 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 	int			 n, done = 0;
 	const void		*toptr;
 	char			*hash;
+	unsigned char		*data;
 	size_t			 datalen;
 
 	if ((hash = EC_KEY_get_ex_data(eckey, 0)) == NULL)
@@ -527,15 +531,16 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 				    imsg.hdr.type, imsg.hdr.peerid,
 				    "crypto", imsg.hdr.pid);
 
+			data = imsg.data;
 			datalen = IMSG_DATA_SIZE(&imsg);
 			if (datalen < sizeof(res))
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
-			memcpy(&res, imsg.data, sizeof(res));
+			memcpy(&res, data, sizeof(res));
 			if (datalen != sizeof(res) + res.ret)
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
-			toptr = imsg.data + sizeof(res);
+			toptr = data + sizeof(res);
 
 			if (res.id != reqid)
 				fatalx("invalid response id");

@@ -157,7 +157,7 @@ doreq(struct tls *ctx, const char *buf)
 }
 
 static size_t
-dorep(struct tls *ctx, void *buf, size_t len)
+dorep(struct tls *ctx, uint8_t *buf, size_t len)
 {
 	ssize_t	w;
 	size_t	tot = 0;
@@ -189,7 +189,7 @@ get(const char *r)
 	int		 foundhdr = 0, code = -1, od;
 	char		 iribuf[GEMINI_URL_LEN];
 	char		 req[GEMINI_URL_LEN];
-	char		 buf[2048];
+	uint8_t		 buf[2048];
 	const char	*parse_err, *host, *port;
 
 	if (strlcpy(iribuf, r, sizeof(iribuf)) >= sizeof(iribuf))
@@ -234,7 +234,7 @@ get(const char *r)
 	doreq(ctx, req);
 
 	for (;;) {
-		char	*t;
+		uint8_t	*t;
 		size_t	 len;
 
 		len = dorep(ctx, buf, sizeof(buf));
