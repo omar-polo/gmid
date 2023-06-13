@@ -24,3 +24,12 @@ freebsd_13_task:
     - ./configure
     - make
     - make regress
+
+mac_task:
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
+  test_script:
+    - brew install libevent libretls
+    - LDFLAGS="-L/opt/homebrew/opt/openssl@1.1/lib -lcrypto -lssl $(pkg-config --libs libevent libtls)" ./configure CFLAGS="-I/opt/homebrew/opt/openssl@1.1/include $(pkg-config --cflags libevent libtls)" || (echo ; cat config.log ; false)
+    - make
+    - SKIP_RUNTIME_TESTS=1 make regress
