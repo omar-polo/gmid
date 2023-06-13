@@ -51,8 +51,6 @@ sandbox_logger_process(void)
 
 #else
 
-#warning "No sandbox method known for this OS"
-
 void
 sandbox_main_process(void)
 {
