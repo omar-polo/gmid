@@ -16,7 +16,6 @@ DISTFILES =	Makefile \
 		puny-test.c \
 		regress \
 		serve-bigfile \
-		sha \
 		slow \
 		tests.sh \
 		valid.ext
@@ -96,9 +95,7 @@ clean:
 testdata: fill-file
 	mkdir testdata
 	./fill-file testdata/bigfile
-	./sha testdata/bigfile testdata/bigfile.sha
 	printf "# hello world\n" > testdata/index.gmi
-	./sha testdata/index.gmi testdata/index.gmi.sha
 	cp hello slow err invalid serve-bigfile env testdata/
 	cp max-length-reply testdata
 	mkdir testdata/dir
@@ -111,4 +108,4 @@ dist: ${DISTFILES}
 	mkdir -p ${DESTDIR}/
 	${INSTALL} -m 0644 ${DISTFILES} ${DESTDIR}/
 	cd ${DESTDIR}/ && chmod +x env err hello invalid \
-		max-length-reply regress sha slow
+		max-length-reply regress slow

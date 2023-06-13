@@ -48,10 +48,20 @@ test_serve_big_files() {
 
 	hdr="$(head /bigfile)"
 	get /bigfile > bigfile
-	./sha bigfile bigfile.sha
-	body="$(cat bigfile.sha)"
 
-	check_reply "20 application/octet-stream" "$(cat testdata/bigfile.sha)"
+	want="20 application/octet-stream"
+	if [ "$hdr" != "$want" ]; then
+		echo "Header mismatch" >&2
+		echo "wants : $want"   >&2
+		echo "got   : $hdr"    >&2
+		return 1
+	fi
+
+	if ! cmp -s bigfile testdata/bigfile; then
+		echo "received bigfile is not as expected"
+		cmp bigfile testdata/bigfile
+		return 1
+	fi
 }
 
 test_dont_execute_scripts() {
