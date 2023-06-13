@@ -12,12 +12,12 @@ compat/*.d
 compat/*.o
 docs
 y.tab.*
-Makefile.local
 compile_flags.txt
 config.h
 config.h.old
 config.log
 config.log.old
+config.mk
 configure.local
 !contrib/gmid
 !contrib/vim/syntax_checkers/gmid

@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
+# Copyright (c) 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
 # Copyright (c) 2011, 2013-2022 Ingo Schwarze <schwarze@openbsd.org>
 # Copyright (c) 2010, 2011, 2012 Kristaps Dzonsons <kristaps@bsd.lv>
 #
@@ -18,229 +18,225 @@
 
 set -e
 
+RELEASE=no
+VERSION=2.0-unstable
+
+usage()
+{
+	echo "usage: $0 [--help] [--prefix=prefix] [OPTION=VALUE...]" >&2
+	exit 1
+}
+
+if command -v yacc 2>/dev/null >&2; then
+	YACC=yacc
+elif command -v bison 2>/dev/null >&2; then
+	YACC=bison
+else
+	# assume yacc by default.  Make will fail building parse.y if
+	# not from a release tarball, but at least it'll have a decent
+	# error message.
+	YACC=yacc
+fi
+
+pkgconfig=
+
+CC=${CC:-cc}
+
+if [ "$RELEASE" = no ]; then
+	CFLAGS=${CFLAGS:--O0 -g3}
+else
+	CFLAGS=${CFLAGS:--O2 -pipe}
+fi
+
+PREFIX=${PREFIX-/usr/local}
+
+CDIAGFLAGS=
+CDIAGFLAGS="${CDIAGFLAGS} -W -Wall -Wextra -Wpointer-arith -Wuninitialized"
+CDIAGFLAGS="${CDIAGFLAGS} -Wstrict-prototypes -Wmissing-prototypes -Wunused"
+CDIAGFLAGS="${CDIAGFLAGS} -Wsign-compare -Wno-unused-parameter" # -Wshadow
+CDIAGFLAGS="${CDIAGFLAGS} -Wno-missing-field-initializers"
+CDIAGFLAGS="${CDIAGFLAGS} -Wpointer-sign"
+
+while [ $# -gt 0 ]; do
+	key="${1%%=*}"
+	val="${1#*=}"
+
+	if [ "$key" = --help ]; then
+		usage
+	fi
+
+	if [ "$key" = -Werror ]; then
+		CDIAGFLAGS="$CDIAGFLAGS -Werror"
+		shift
+		continue
+	fi
+
+	if [ "$key" = --enable-sandbox ]; then
+		key=DISABLE_SANDBOX
+		val=0
+	fi
+
+	if [ "$key" = --disable-sandbox ]; then
+		key=DISABLE_SANDBOX
+		val=1
+	fi
+
+	if [ "$key" = "$1" ]; then
+		# if no --xy=, look at the next arg
+		if ! shift 2>/dev/null; then
+			echo "$0: missing value for $key" >&2
+			exit 1
+		fi
+		val="$1"
+	fi
+
+	case "$key" in
+	--bindir)	key=BINDIR ;;
+	--mandir)	key=MANDIR ;;
+	--prefix)	key=PREFIX ;;
+	esac
+
+	case "$key" in
+	BINDIR)		BINDIR="$val" ;;
+	CC)		CC="$val" ;;
+	CFLAGS)		CFLAGS="$val" ;;
+	CDIAGFLAGS)	CDIAGFLAGS="$val" ;;
+	DISABLE_SANDBOX) DISABLE_SANDBOX="$val" ;;
+	LDFLAGS)	LDFLAGS="$val" ;;
+	PKG_CONFIG)	PKG_CONFIG="$val" ;;
+	PREFIX)		PREFIX="$val" ;;
+	YACC)		YACC="$val" ;;
+	*)		usage
+	esac
+
+	shift
+done
+
 [ -w config.log ] && mv config.log config.log.old
 [ -w config.h   ] && mv config.h   config.h.old
-
-# Output file descriptor usage:
-# 1 (stdout): config.h, Makefile.local
-# 2 (stderr): original stderr, usually to the console
-# 3: config.log
 
 exec 3> config.log
 echo "file config.log: writing..."
 
-# --------
-# default settings: initialize all vars here such that nothing is
-# leaked from the environment except for CC, CFLAGS and LDFLAGS
-
-VERSION=2.0-unstable
-
-CC=`printf "all:\\n\\t@echo \\\$(CC)\\n" | make ${MAKE_FLAGS} -sf -`
-
-if [ -z "${CFLAGS}" ]; then
-	CFLAGS=`printf "all:\\n\\t@echo \\\$(CFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
-fi
-
-CFLAGS="${CFLAGS} -W -Wall -Wextra -Wmissing-prototypes -Wstrict-prototypes"
-CFLAGS="${CFLAGS} -Wwrite-strings -Wpointer-sign -Wno-unused-parameter"
-CFLAGS="${CFLAGS} -Wno-missing-field-initializers"
-
-if [ -z "${LDFLAGS}" ]; then
-	LDFLAGS=`printf "all:\\n\\t@echo \\\$(LDFLAGS)\\n" | make ${MAKE_FLAGS} -sf -`
-	LDFLAGS="-ltls -levent -lcrypto"
-fi
-
-LD_IMSG=
-STATIC=
-YACC=yacc
-
-COBJS=
-
-DISABLE_SANDBOX=0
-
 NEED_GNU_SOURCE=0
 NEED_OPENBSD_SOURCE=0
 
-PREFIX="/usr/local"
-BINDIR=
+COMPATS=
+COMP="${CC} ${CFLAGS} -Wno-unused -Werror"
 
-INSTALL="install"
-
-add_library() {
-	if pkg-config "$1"; then
-		CFLAGS="${CFLAGS} $(pkg-config --cflags "$1")"
-		LDFLAGS="${LDFLAGS} $(pkg-config --libs "$1")"
-	fi
-}
-
-# try to auto detect CFLAGS and LDFLAGS
-if command -v pkg-config >/dev/null; then
-	add_library "libtls"
-	add_library "openssl"
-
-	case "$(uname)" in
-		OpenBSD)
-			# use libevent and imsg in base
-			;;
-		*)
-			add_library "libevent"
-			add_library "libimsg"
-			;;
-	esac
-
-	case "$(uname)" in
-		*BSD|DragonFly|Darwin)
-			;;
-		*)
-			add_library "libbsd-ctor libbsd-overlay"
-			;;
-	esac
-fi
-
-# auto detect yacc/bison
-command -v ${YACC} >/dev/null || {
-	echo "${YACC} not found: trying bison" 1>&2
-	echo "${YACC} not found: trying bison" 1>&3
-	YACC=bison
-	command -v ${YACC} >/dev/null || {
-		echo "${YACC} not found: giving up" 1>&2
-		echo "${YACC} not found: giving up" 1>&3
-	}
-}
-
-# --------
-# allow certain variables to be overridden on the command line
-
-for keyvals in "$@"; do
-	if [ "$keyvals" = "--disable-sandbox" ]; then
-		DISABLE_SANDBOX=1
-		continue
-	fi
-
-	if [ "$keyvals" = "--enable-sandbox" ]; then
-		DISABLE_SANDBOX=0
-		continue
-	fi
-
-	key=`echo $keyvals | cut -s -d '=' -f1`
-	if [ -z "$key" ]; then
-		echo "$0: invalid key-value: $keyvals" 1>&2
-		exit 1
-	fi
-	val=`echo $keyvals | cut -d '=' -f 2-`
-	case "$key" in
-		BINDIR)   BINDIR="$val" ;;
-		CC)       CC="$val" ;;
-		CFLAGS)   CFLAGS="$val" ;;
-		DESTDIR)  DESTDIR="$val" ;;
-		LDFLAGS)  LDFLAGS="$val" ;;
-		MANDIR)   MANDIR="$val" ;;
-		PREFIX)   PREFIX="$val" ;;
-		YACC)     YACC="$val" ;;
-		--prefix) PREFIX="$val" ;;
-		*)
-			echo "$0: invalid key: $key" 1>&2
-			exit 1
-	esac
-done
-
-# --------
-# Allow configure.local to override all variables, default settings,
-# command-line arguments, and tested features, above.
-
-if [ -r ./configure.local ]; then
-	echo "configure.local: reading..." 1>&2
-	echo "configure.local: reading..." 1>&3
-	cat ./configure.local 1>&3
-	. ./configure.local
-else
-	echo "configure.local: no (fully automatic configuration)" 1>&2
-	echo "configure.local: no (fully automatic configuration)" 1>&3
-fi
-
-# --------
-# tests functions
-
-# Check whether this HAVE_ setting is manually overridden.
-# If yes, use the override, if no, do not decide anything yet.
-# Arguments: test file name, test var name, manual value
-ismanual() {
-	[ -z "${3}" ] && return 1
-	echo "tested ${1}: HAVE_${2}=${3} (manual)" 1>&2
-	echo "tested ${1}: HAVE_${2}=${3} (manual)" 1>&3
-	echo 1>&3
-	return 0
-}
-
-# Run a single autoconfiguration test.
-# In case of success, enable the feature.
-# In case of failure, do not decide anything yet.
-# Arguments: test file name, test var name, additional CFLAGS
+# singletest name var extra-cflags extra-libs msg
 singletest() {
-	n=${1}${3}
-	cat 1>&3 << __HEREDOC__
-testing ${n} ...
-${COMP} -o have/${1} have/${1}.c ${3} ${LDFLAGS}
-__HEREDOC__
-
-	if ${COMP} -o "have/${1}" "have/${1}.c" ${3} ${LDFLAGS} 1>&3 2>&3
-	then
-		echo "tested ${n}: yes" 1>&2
-		echo "tested ${n}: yes" 1>&3
-		echo 1>&3
-		eval HAVE_${2}=1
-		[ "${3}" = "-D_GNU_SOURCE" ] && NEED_GNU_SOURCE=1
-		[ "${3}" = "-D_OPENBSD_SOURCE" ] && NEED_OPENBSD_SOURCE=1
-		[ "${3}" = "-lutil" ] && LD_IMSG="-lutil"
-		rm "have/${1}"
-		return 0
-	else
-		echo "tested ${n}: no (compilation failed)" 1>&2
-		echo "result of ${n}: ${CC} failed with exit status $?" 1>&3
-		echo "result of compiling ${n}: no" 1>&3
-		echo 1>&3
-		return 1
+	msg="$5"
+	if [ -z "$msg" ]; then
+		if [ -n "$3" ]; then
+			msg=" ($3)"
+		elif [ -n "$4" ]; then
+			msg=" ($4)"
+		fi
+	elif [ "$msg" = no ]; then
+		msg=""
 	fi
+
+	cat >&3 <<EOF
+${1}: testing...
+$COMP have/${1}.c $3 -o test-$1 $LDFLAGS $4
+EOF
+	if $COMP have/${1}.c $3 -o test-$1 $LDFLAGS $4 >&3 2>&3; then
+		rm -f test-${1} test-${1}.d
+
+		echo "${1}: $CC$msg succeeded" >&3
+		echo "${1}$msg: yes"
+		echo >&3
+
+		return 0
+	fi
+
+	echo "${1}: $CC$msg failed $?" >&3
+	echo "${1}$msg: no"
+	echo >&3
+
+	return 1
 }
 
-# Run a complete autoconfiguration test, including the check for
-# a manual override and disabling the feature on failure.
-# Arguments: test file name, test var name, additional CFLAGS
-# The final argument can optionally be repeated a second time.
-runtest() {
-	eval _manual=\${HAVE_${2}}
-	ismanual "${1}" "${2}" "${_manual}" && return 0
-	singletest "${1}" "${2}" "${3}" && return 0
-	[ -n "${4}" ] && singletest "${1}" "${2}" "${4}" && return 0
+# deptest name var
+deptest() {
+	if singletest "$1" "$2" "${CFLAGS}" "${LIBS}" no; then
+		eval HAVE_${2}=1
+		return 0
+	fi
+
+	if [ -f compat/${1}.c ]; then
+		COMPATS="compat/$1.c $COMPATS"
+	fi
+
 	eval HAVE_${2}=0
 	return 1
 }
 
-# --------
-# compiler options
+# runtest name var extra-cflags extra-libs pkgconfig-name
+runtest() {
+	if singletest "$1" "$2" "" ""; then
+		eval HAVE_${2}=1
+		return 0
+	fi
 
-COMP="${CC} ${CFLAGS} -Wno-unused -Werror"
+	if [ -n "$3" -o -n "$4" ]; then
+		echo "retrying with ${3+$3 }$4" >&3
+		if singletest "$1" "$2" "$3" "$4"; then
+			eval HAVE_${2}=1
+			if [ "$3" = -D_GNU_SOURCE ]; then
+				NEED_GNU_SOURCE=1
+				return 0
+			fi
+			if [ "$4" = -D_OPENBSD_SOURCE ]; then
+				NEED_OPENBSD_SOURCE=1
+				return 0
+			fi
+			if [ -n "$3" ]; then
+				CFLAGS="$CFLAGS $3"
+			fi
+			if [ -n "$4" ]; then
+				LIBS="$LIBS $4"
+			fi
+			return 0
+		fi
+	fi
 
-echo "selected CFLAGS=\"${CFLAGS}\"" 1>&2
-echo "selected CFLAGS=\"${CFLAGS}\"" 1>&3
-echo 1>&3
+	if [ -n "$5" -a -n "$pkgconfig" ]; then
+		if $pkgconfig $5; then
+			cflags="$($pkgconfig --cflags "$5")"
+			ldflags="$($pkgconfig --libs "$5")"
+			echo "retrying with pkg-config" >&3
+			if singletest "$1" "$2" "$cflags" "$ldflags"; then
+				CFLAGS="$CFLAGS $cflags"
+				LIBS="$LIBS $ldflags"
+				eval HAVE_$2=1
+				return 0
+			fi
+		fi
+	fi
 
-if [ -n "${STATIC}" ]; then
-	echo "selected STATIC=\"${STATIC}\" (manual)" 1>&2
-	echo "selected STATIC=\"${STATIC}\" (manual)" 1>&3
-	echo 1>&3
+	if [ -f compat/$1.c ]; then
+		COMPATS="compat/$1.c $COMPATS"
+	fi
+
+	eval HAVE_$2=0
+	return 1
+}
+
+if [ "$PKG_CONFIG" = no ]; then
+	echo "pkg-config: disabled"
+elif [ -n "$PKG_CONFIG" ]; then
+	pkgconfig="$PKG_CONFIG"
+	echo "pkg-config: (manual) $PKG_CONFIG"
+elif command -v pkg-config 2>/dev/null >&2; then
+	pkgconfig="pkg-config"
+	echo "pkg-config: (auto) pkg-config"
 else
-	runtest noop STATIC -static || true
-	[ ${HAVE_STATIC} -eq 0 ] || STATIC="-static"
-	echo "selected STATIC=\"${STATIC}\"" 1>&2
-	echo "selected STATIC=\"${STATIC}\"" 1>&3
-	echo 1>&3
+	echo "pkg-config: not found"
 fi
 
-# --------
-# tests for config.h
-
-if runtest noop MMD -MMD; then
+if singletest noop MMD -MMD; then
 	CFLAGS="${CFLAGS} -MMD"
 fi
 
@@ -254,25 +250,26 @@ runtest freezero	FREEZERO	|| true
 runtest getdtablecount	GETDTABLECOUNT	|| true
 runtest getdtablesize	GETDTABLESIZE	|| true
 runtest getprogname	GETPROGNAME	|| true
-runtest imsg		IMSG		-lutil || true
-runtest libevent	LIBEVENT	|| true
-runtest libevent2	LIBEVENT2	|| true
-runtest libtls		LIBTLS		|| true
-runtest memmem		MEMMEM		"" -D_GNU_SOURCE || true
-runtest openssl		OPENSSL		|| true
+runtest imsg		IMSG		"" -lutil libimsg || true
+runtest libevent	LIBEVENT	"" -levent libevent_core|| true
+runtest libtls		LIBTLS		"" -ltls libtls || true
+runtest memmem		MEMMEM		-D_GNU_SOURCE || true
+runtest openssl		OPENSSL		"" '-lcrypto -lssl' 'libcrypto libssl' || true
 runtest pr_set_name	PR_SET_NAME	|| true
-runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME "" -D_GNU_SOURCE || true
+runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME -D_GNU_SOURCE || true
 runtest queue_h		QUEUE_H		|| true
-runtest reallocarray	REALLOCARRAY	|| true
+runtest reallocarray	REALLOCARRAY	-D_OPENBSD_SOURCE	|| true
 runtest recallocarray	RECALLOCARRAY	|| true
 runtest setproctitle	SETPROCTITLE	|| true
-runtest setresgid	SETRESGID	"" -D_GNU_SOURCE || true
-runtest setresuid	SETRESUID	"" -D_GNU_SOURCE || true
+runtest setresgid	SETRESGID	-D_GNU_SOURCE || true
+runtest setresuid	SETRESUID	-D_GNU_SOURCE || true
 runtest strlcat		STRLCAT		|| true
 runtest strlcpy		STRLCPY		|| true
-runtest strtonum	STRTONUM	|| true
+runtest strtonum	STRTONUM	-D_OPENBSD_SOURCE	|| true
 runtest tree_h		TREE_H		|| true
-runtest vasprintf	VASPRINTF	"" -D_GNU_SOURCE || true
+runtest vasprintf	VASPRINTF	-D_GNU_SOURCE || true
+
+deptest libevent2	LIBEVENT2	|| true
 
 if [ ${HAVE_LIBTLS} -eq 0 ]; then
 	echo "FATAL: libtls not found" 1>&2
@@ -292,23 +289,36 @@ if [ ${HAVE_LIBEVENT} -eq 0 ]; then
 	exit 1
 fi
 
+if [ ${HAVE_IMSG} -eq 0 ]; then
+	# compat/imsg.c is implicitly added
+	COMPATS="$COMPATS compat/imsg-buffer.c"
+fi
+
 if [ ${HAVE_QUEUE_H} -eq 0 -o ${HAVE_IMSG} -eq 0 -o ${HAVE_TREE_H} -eq 0 ]; then
 	CFLAGS="${CFLAGS} -I ${PWD}/compat"
 fi
 
-# --------
-# write config.h
+if [ $HAVE_LIBEVENT2 -eq 1 ]; then
+	CFLAGS="$CFLAGS -DHAVE_LIBEVENT2=1"
+fi
+
+if [ $NEED_GNU_SOURCE = 1 ]; then
+	CFLAGS="$CFLAGS -D_GNU_SOURCE"
+fi
+if [ $NEED_OPENBSD_SOURCE = 1 ]; then
+	CFLAGS="$CFLAGS -D_OPENBSD_SOURCE"
+fi
+
+CFLAGS="${CFLAGS} ${CDIAGFLAGS}"
 
 exec > config.h
+echo "config.h: writing.." >&2
 
 cat <<__HEREDOC__
 #ifdef __cplusplus
 #error "Do not use C++."
 #endif
 __HEREDOC__
-
-[ ${NEED_GNU_SOURCE} -eq 0 ] || echo "#define _GNU_SOURCE"
-[ ${NEED_OPENBSD_SOURCE} -eq 0 ] || echo "#define _OPENBSD_SOURCE"
 
 [ ${HAVE_STRLCAT} -eq 0 -o ${HAVE_STRLCPY} -eq 0 -o ${HAVE_IMSG} -eq 0 ] \
 	&& echo "#include <sys/types.h>"
@@ -337,29 +347,6 @@ cat <<__HEREDOC__
 #define VERSION			"${VERSION}"
 #define DISABLE_SANDBOX		${DISABLE_SANDBOX}
 
-#define HAVE_ERR		${HAVE_ERR}
-#define HAVE_EXPLICIT_BZERO	${HAVE_EXPLICIT_BZERO}
-#define HAVE_FREEZERO		${HAVE_FREEZERO}
-#define HAVE_GETDTABLECOUNT	${HAVE_GETDTABLECOUNT}
-#define HAVE_GETDTABLESIZE	${HAVE_GETDTABLESIZE}
-#define HAVE_GETPROGNAME	${HAVE_GETPROGNAME}
-#define HAVE_IMSG		${HAVE_IMSG}
-#define HAVE_LIBEVENT		${HAVE_LIBEVENT}
-#define HAVE_LIBEVENT2		${HAVE_LIBEVENT2}
-#define HAVE_PROGRAM_INVOCATION_SHORT_NAME ${HAVE_PROGRAM_INVOCATION_SHORT_NAME}
-#define HAVE_PR_SET_NAME	${HAVE_PR_SET_NAME}
-#define HAVE_QUEUE_H		${HAVE_QUEUE_H}
-#define HAVE_REALLOCARRAY	${HAVE_REALLOCARRAY}
-#define HAVE_RECALLOCARRAY	${HAVE_RECALLOCARRAY}
-#define HAVE_SETPROCTITLE	${HAVE_SETPROCTITLE}
-#define HAVE_SETRESGID		${HAVE_SETRESGID}
-#define HAVE_SETRESUID		${HAVE_SETRESUID}
-#define HAVE_STRLCAT		${HAVE_STRLCAT}
-#define HAVE_STRLCPY		${HAVE_STRLCPY}
-#define HAVE_STRTONUM		${HAVE_STRTONUM}
-#define HAVE_TREE_H		${HAVE_TREE_H}
-#define HAVE_VASPRINTF		${HAVE_VASPRINTF}
-
 __HEREDOC__
 
 [ ${HAVE_EXPLICIT_BZERO} -eq 0 -o \
@@ -378,72 +365,53 @@ if [ ${HAVE_ERR} -eq 0 ]; then
 	echo "extern	void	 errx(int, const char*, ...);"
 	echo "extern	void	 warn(const char*, ...);"
 	echo "extern	void	 warnx(const char*, ...);"
-	COBJS="${COBJS} compat/err.o"
 else
 	echo "#include <err.h>"
 fi
 if [ ${HAVE_EXPLICIT_BZERO} -eq 0 ]; then
 	echo "extern	void	 explicit_bzero(void*, size_t);"
-	COBJS="${COBJS} compat/explicit_bzero.o"
 fi
 if [ ${HAVE_FREEZERO} -eq 0 ]; then
 	echo "extern	void	 freezero(void*, size_t);"
-	COBJS="${COBJS} compat/freezero.o"
 fi
 if [ ${HAVE_GETDTABLECOUNT} -eq 0 ]; then
 	echo "extern	int	 getdtablecount(void);"
-	COBJS="${COBJS} compat/getdtablecount.o"
 fi
 if [ ${HAVE_GETDTABLESIZE} -eq 0 ]; then
 	echo "extern	int	 getdtablesize(void);"
-	COBJS="${COBJS} compat/getdtablesize.o"
 fi
 if [ ${HAVE_GETPROGNAME} -eq 0 ]; then
 	echo "extern	const char *getprogname(void);"
-	COBJS="${COBJS} compat/getprogname.o"
-fi
-if [ ${HAVE_IMSG} -eq 0 ]; then
-	COBJS="${COBJS} compat/imsg.o compat/imsg-buffer.o"
 fi
 if [ ${HAVE_MEMMEM} -eq 0 ]; then
 	echo "extern void *memmem(const void *, size_t, const void *, size_t);"
-	COBJS="${COBJS} compat/memmem.o"
 fi
 if [ ${HAVE_REALLOCARRAY} -eq 0 ]; then
 	echo "extern	void	*reallocarray(void*, size_t, size_t);"
-	COBJS="${COBJS} compat/reallocarray.o"
 fi
 if [ ${HAVE_RECALLOCARRAY} -eq 0 ]; then
 	echo "extern	void	*recallocarray(void*, size_t, size_t, size_t);"
-	COBJS="${COBJS} compat/recallocarray.o"
 fi
 if [ ${HAVE_SETPROCTITLE} -eq 0 ]; then
 	echo "extern	void	 setproctitle(const char *fmt, ...);"
-	COBJS="${COBJS} compat/setproctitle.o"
 fi
 if [ ${HAVE_SETRESGID} -eq 0 ]; then
 	echo "extern	int	 setresgid(gid_t, gid_t, gid_t);"
-	COBJS="${COBJS} compat/setresgid.o"
 fi
 if [ ${HAVE_SETRESUID} -eq 0 ]; then
 	echo "extern	int	 setresuid(uid_t, uid_t, uid_t);"
-	COBJS="${COBJS} compat/setresuid.o"
 fi
 if [ ${HAVE_STRLCAT} -eq 0 ]; then
 	echo "extern	size_t	 strlcat(char*, const char*, size_t);"
-	COBJS="${COBJS} compat/strlcat.o"
 fi
 if [ ${HAVE_STRLCPY} -eq 0 ]; then
 	echo "extern	size_t	 strlcpy(char*, const char*, size_t);"
-	COBJS="${COBJS} compat/strlcpy.o"
 fi
 if [ ${HAVE_STRTONUM} -eq 0 ]; then
 	echo "extern	long long strtonum(const char*, long long, long long, const char**);"
-	COBJS="${COBJS} compat/strtonum.o"
 fi
 if [ ${HAVE_VASPRINTF} -eq 0 ]; then
 	echo "extern	int	 vasprintf(char**, const char*, va_list);"
-	COBJS="${COBJS} compat/vasprintf.o"
 fi
 
 cat <<__HEREDOC__
@@ -475,13 +443,10 @@ __HEREDOC__
 echo "file config.h: written" 1>&2
 echo "file config.h: written" 1>&3
 
-# --------
-# tests for Makefile.local
+exec > config.mk
 
-exec > Makefile.local
-
-[ -z "${BINDIR}"          ] && BINDIR="${PREFIX}/bin"
-[ -z "${MANDIR}"          ] && MANDIR="${PREFIX}/man"
+[ -z "${BINDIR}"          ] && BINDIR="\${PREFIX}/bin"
+[ -z "${MANDIR}"          ] && MANDIR="\${PREFIX}/man"
 
 [ -z "${INSTALL_PROGRAM}" ] && INSTALL_PROGRAM="${INSTALL} -m 0555"
 [ -z "${INSTALL_LIB}"     ] && INSTALL_LIB="${INSTALL} -m 0444"
@@ -491,26 +456,31 @@ exec > Makefile.local
 cat << __HEREDOC__
 CC		= ${CC}
 CFLAGS		= ${CFLAGS}
-LDFLAGS		= ${LDFLAGS} ${LD_IMSG}
+LDFLAGS		= ${LDFLAGS}
+LIBS		= ${LIBS}
 YACC		= ${YACC}
 STATIC		= ${STATIC}
 PREFIX		= ${PREFIX}
 BINDIR		= ${BINDIR}
 MANDIR		= ${MANDIR}
-INCLUDEDIR	= ${INCLUDEDIR}
-INSTALL		= ${INSTALL}
-INSTALL_PROGRAM	= ${INSTALL_PROGRAM}
-INSTALL_LIB	= ${INSTALL_LIB}
-INSTALL_MAN	= ${INSTALL_MAN}
-INSTALL_DATA	= ${INSTALL_DATA}
 
-COBJS		= ${COBJS}
+INSTALL		= install
+INSTALL_PROGRAM	= ${INSTALL} -m 0555
+INSTALL_LIB	= ${INSTALL} -m 0444
+INSTALL_MAN	= ${INSTALL} -m 0444
+INSTALL_DATA	= ${INSTALL} -m 0444
+
+COMPATS=	${COMPATS}
 
 VERSION		= ${VERSION}
 
 __HEREDOC__
 
-echo "file Makefile.local: written" 1>&2
-echo "file Makefile.local: written" 1>&3
+echo "file config.mk: written" 1>&2
+echo "file config.mk: written" 1>&3
+
+echo >&2
+echo "Now run \`make' to compile." >&2
+echo >&2
 
 exit 0

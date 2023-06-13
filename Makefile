@@ -18,6 +18,10 @@
 # all.
 TESTS=
 
+# -- build-related variables --
+
+COBJS =		${COMPATS:.c=.o}
+
 GMID_SRCS =	gmid.c config.c crypto.c dirs.c fcgi.c iri.c log.c \
 		logger.c mime.c proc.c proxy.c puny.c sandbox.c \
 		server.c utf8.c utils.c y.tab.c
@@ -38,34 +42,16 @@ SRCS =		gmid.h log.h parse.y proc.h \
 
 DISTNAME =	gmid-${VERSION}
 
-all: Makefile.local gmid ge gg
+# -- public targets --
+
+all: config.mk gmid ge gg
 .PHONY: all tags static clean cleanall test regress install
 
-Makefile.local config.h: configure
+config.mk config.h: configure
 	@echo "$@ is out of date; please run ./configure"
 	@exit 1
 
-include Makefile.local
-
-tags:
-	ctags ${SRCS}
-
-y.tab.c: parse.y
-	${YACC} -b y parse.y
-
-gmid: ${GMID_OBJS}
-	${CC} ${GMID_OBJS} -o $@ ${LDFLAGS}
-
-ge: ${GE_OBJS}
-	${CC} ${GE_OBJS} -o $@ ${LDFLAGS}
-
-gg: ${GG_OBJS}
-	${CC} ${GG_OBJS} -o $@ ${LDFLAGS}
-
-static: ${GMID_OBJS} ${GE_OBJS} ${GG_OBJS}
-	${CC} ${GMID_OBJS} -o gmid ${LDFLAGS} ${STATIC}
-	${CC} ${GG_OBJS} -o ge ${LDFLAGS} ${STATIC}
-	${CC} ${GG_OBJS} -o gg ${LDFLAGS} ${STATIC}
+include config.mk
 
 clean:
 	rm -f *.[do] compat/*.[do] y.tab.c y.tab.h y.output gmid ge gg
@@ -73,7 +59,7 @@ clean:
 	${MAKE} -C regress clean
 
 distclean: clean
-	rm -f Makefile.local config.h config.h.old config.log config.log.old
+	rm -f config.h config.h.old config.log config.log.old config.mk
 
 test: regress
 regress: all
@@ -100,6 +86,23 @@ uninstall:
 	rm ${DESTDIR}${MANDIR}/man1/gg.1
 	rm ${DESTDIR}${MANDIR}/man5/gmid.conf.5
 	rm ${DESTDIR}${MANDIR}/man8/gmid.8
+
+tags:
+	ctags ${SRCS}
+
+# --internal build targets --
+
+gmid: ${GMID_OBJS}
+	${CC} ${GMID_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+
+ge: ${GE_OBJS}
+	${CC} ${GE_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+
+gg: ${GG_OBJS}
+	${CC} ${GG_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+
+y.tab.c: parse.y
+	${YACC} -b y parse.y
 
 # make sure we pass -o to ${CC}.  OpenBSD default suffix rule doesn't
 .SUFFIXES: .c .o

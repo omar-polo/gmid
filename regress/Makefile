@@ -20,9 +20,16 @@ DISTFILES =	Makefile \
 		tests.sh \
 		valid.ext
 
-include ../Makefile.local
+include ../config.mk
 
-COMPAT= ${COBJS:%=../%}
+COBJS =		${COMPATS:.c=.o}
+REG_COMPATS =	${COBJS:%=../%}
+
+PUNY_SRCS =	puny-test.c ../puny.c ../utf8.c ../utils.c ../log.c
+PUNY_OBJS =	${PUNY_SRCS:.c=.o} ${REG_COMPATS}
+
+IRI_SRCS =	iri_test.c ../iri.c ../utf8.c
+IRI_OBJS =	${IRI_SRCS:.c=.o} ${REG_COMPATS}
 
 .PHONY: all data clean dist
 
@@ -31,18 +38,17 @@ all: data puny-test iri_test fcgi-test
 
 data: testdata cert.pem testca.pem valid.crt invalid.cert.pem
 
-puny-test: puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT}
-	${CC} puny-test.o ../puny.o ../utf8.o ../utils.o ../log.o ${COMPAT} \
-		-o puny-test ${LDFLAGS}
+puny-test: ${PUNY_OBJS}
+	${CC} ${PUNY_OBJS} -o puny-test ${LIBS} ${LDFLAGS}
 
-iri_test: iri_test.o ../iri.o ../utf8.o ${COMPAT}
-	${CC} iri_test.o ../iri.o ../utf8.o ${COMPAT} -o $@ ${LDFLAGS}
+iri_test: ${IRI_OBJS}
+	${CC} ${IRI_OBJS} -o $@ ${LIBS} ${LDFLAGS}
 
 fill-file: fill-file.o
-	${CC} fill-file.o -o $@ ${LDFLAGS}
+	${CC} fill-file.o -o $@ ${LIBS} ${LDFLAGS}
 
 fcgi-test: fcgi-test.o
-	${CC} fcgi-test.o ${COMPAT} -o fcgi-test ${LDFLAGS}
+	${CC} fcgi-test.o ${REG_COMPATS} -o fcgi-test ${LIBS} ${LDFLAGS}
 
 key.pem: cert.pem
 

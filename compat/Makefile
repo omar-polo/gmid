@@ -29,4 +29,4 @@ dist: ${DISTFILES}
 	${INSTALL} -m 0644 ${DISTFILES} ${DESTDIR}/
 
 .PHONY: all dist
-include ../Makefile.local
+include ../config.mk

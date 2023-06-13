@@ -17,4 +17,4 @@ dist: ${DISTFILES}
 	cp -R vim ${DESTDIR}/vim
 
 .PHONY: all dist
-include ../Makefile.local
+include ../config.mk
