@@ -145,16 +145,12 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 		if ((to = calloc(1, req.tlen)) == NULL)
 			fatal("calloc");
 
-		switch (imsg->hdr.type) {
-		case IMSG_CRYPTO_RSA_PRIVENC:
+		if (imsg->hdr.type == IMSG_CRYPTO_RSA_PRIVENC)
 			ret = RSA_private_encrypt(req.flen, from,
 			    to, rsa, req.padding);
-			break;
-		case IMSG_CRYPTO_RSA_PRIVDEC:
+		else
 			ret = RSA_private_decrypt(req.flen, from,
 			    to, rsa, req.padding);
-			break;
-		}
 
 		memset(&res, 0, sizeof(res));
 		res.id = req.id;
