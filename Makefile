@@ -111,12 +111,19 @@ y.tab.c: parse.y
 
 # -- maintainer targets --
 
+.PHONY: release dist
+
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
 		Makefile README.md config.c configure configure.local.example \
 		crypto.c dirs.c fcgi.c ge.1 ge.c gg.1 gg.c gmid.8 gmid.c \
 		gmid.conf.5 gmid.h iri.c log.c log.h logger.c mime.c \
 		parse.y proxy.c puny.c sandbox.c server.c utf8.c utils.c \
 		y.tab.c
+
+release:
+	sed -i -e '/^RELEASE=/s/no/yes' configure
+	${MAKE} dist
+	sed -i -e '/^RELEASE=/s/yes/no' configure
 
 dist: ${DISTNAME}.sha256
 
