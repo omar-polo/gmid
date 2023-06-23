@@ -124,7 +124,7 @@ log_request(struct client *c, char *meta, size_t l)
 	}
 
 	if ((t = memchr(meta, '\r', l)) == NULL)
-		t = meta + len;
+		t = meta + l;
 
 	ec = asprintf(&fmted, "%s:%s GET %s %.*s", hbuf, sbuf, b,
 	    (int)(t-meta), meta);
