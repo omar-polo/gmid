@@ -113,8 +113,8 @@ static int
 crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	struct privsep		*ps = p->p_ps;
-	RSA			*rsa;
-	EC_KEY			*ecdsa;
+	RSA			*rsa = NULL;
+	EC_KEY			*ecdsa = NULL;
 	EVP_PKEY		*pkey;
 	struct imsg_crypto_req	 req;
 	struct imsg_crypto_res	 res;
