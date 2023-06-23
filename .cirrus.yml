@@ -29,7 +29,7 @@ mac_task:
   macos_instance:
     image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
   test_script:
-    - brew install libevent libretls
-    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
+    - brew install libevent openssl libretls
+    - PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig" ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
     - make
     - SKIP_RUNTIME_TESTS=1 make regress
