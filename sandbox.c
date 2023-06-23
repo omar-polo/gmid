@@ -24,7 +24,7 @@
 void
 sandbox_main_process(void)
 {
-	if (pledge("stdio rpath inet dns sendfd proc", NULL) == -1)
+	if (pledge("stdio rpath inet dns sendfd", NULL) == -1)
 		fatal("pledge");
 }
 
