@@ -31,7 +31,7 @@ sandbox_main_process(void)
 void
 sandbox_server_process(void)
 {
-	if (pledge("stdio recvfd rpath unix inet dns", NULL) == -1)
+	if (pledge("stdio rpath inet unix dns recvfd", NULL) == -1)
 		fatal("pledge");
 }
 
