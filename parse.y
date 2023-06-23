@@ -84,9 +84,6 @@ struct sym {
 int	 symset(const char *, const char *, int);
 char	*symget(const char *);
 
-struct vhost	*new_vhost(void);
-struct location	*new_location(void);
-struct proxy	*new_proxy(void);
 char		*ensure_absolute_path(char*);
 int		 check_block_code(int);
 char		*check_block_fmt(char*);
