@@ -104,6 +104,25 @@ struct parser {
 	const char	*err;
 };
 
+struct conf;
+TAILQ_HEAD(addrhead, address);
+struct address {
+	int			 ai_flags;
+	int			 ai_family;
+	int			 ai_socktype;
+	int			 ai_protocol;
+	struct sockaddr_storage	 ss;
+	socklen_t		 slen;
+	int16_t			 port;
+
+	/* used in the server */
+	struct conf		*conf;
+	int			 sock;
+	struct event		 evsock; /* set if sock != -1 */
+
+	TAILQ_ENTRY(address)	 addrs;
+};
+
 TAILQ_HEAD(fcgihead, fcgi);
 struct fcgi {
 	int		 id;
@@ -188,6 +207,8 @@ struct vhost {
 
 	TAILQ_ENTRY(vhost) vhosts;
 
+	struct addrhead	 addrs;
+
 	/*
 	 * the first location rule is always '*' and holds the default
 	 * settings for the vhost, then follows the "real" location
@@ -220,8 +241,6 @@ struct pki {
 
 struct conf {
 	struct privsep	*ps;
-	int		 port;
-	int		 ipv6;
 	uint32_t	 protos;
 	struct mime	 mime;
 	char		 chroot[PATH_MAX];
@@ -230,14 +249,10 @@ struct conf {
 	int		 reload;
 	int		 use_privsep_crypto;
 
-	int		 sock4;
-	struct event	 evsock4;
-	int		 sock6;
-	struct event	 evsock6;
-
 	struct fcgihead	 fcgi;
 	struct vhosthead hosts;
 	struct pkihead	 pkis;
+	struct addrhead	 addrs;
 };
 
 extern const char *config_path;
@@ -258,6 +273,7 @@ enum {
 
 struct client {
 	struct conf	*conf;
+	struct address	*addr;
 	uint32_t	 id;
 	struct tls	*ctx;
 	char		*req;
@@ -324,9 +340,7 @@ enum imsg_type {
 	IMSG_RECONF_START,	/* 7 */
 	IMSG_RECONF_MIME,
 	IMSG_RECONF_PROTOS,
-	IMSG_RECONF_PORT,
-	IMSG_RECONF_SOCK4,
-	IMSG_RECONF_SOCK6,
+	IMSG_RECONF_SOCK,
 	IMSG_RECONF_FCGI,
 	IMSG_RECONF_HOST,
 	IMSG_RECONF_CERT,

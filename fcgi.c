@@ -350,7 +350,7 @@ fcgi_req(struct client *c)
 	struct tm	 tminfo;
 	struct envlist	*p;
 
-	e = getnameinfo((struct sockaddr*)&c->addr, sizeof(c->addr),
+	e = getnameinfo((struct sockaddr*)&c->raddr, c->raddrlen,
 	    addr, sizeof(addr),
 	    NULL, 0,
 	    NI_NUMERICHOST);

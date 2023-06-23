@@ -239,13 +239,13 @@ test_fastcgi() {
 test_macro_expansion() {
 	cat <<EOF > reg.conf
 pwd = "$PWD"
-$config_common
 
 server "localhost" {
 	# the quoting of \$ is for sh
 	cert \$pwd "/cert.pem"
 	key  \$pwd "/key.pem"
 	root \$pwd "/testdata"
+	listen on localhost port $port
 }
 EOF
 

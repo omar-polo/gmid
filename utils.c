@@ -346,6 +346,7 @@ new_vhost(void)
 	struct vhost *h;
 
 	h = xcalloc(1, sizeof(*h));
+	TAILQ_INIT(&h->addrs);
 	TAILQ_INIT(&h->locations);
 	TAILQ_INIT(&h->params);
 	TAILQ_INIT(&h->aliases);

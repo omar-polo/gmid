@@ -10,9 +10,7 @@ current_test=
 run_test() {
 	ggflags=
 	port=10965
-	config_common="ipv6 off
-port $port
-"
+	config_common=""
 	hdr=
 	body=
 	dont_check_server_alive=no
@@ -64,6 +62,7 @@ server "localhost" {
 	cert "$PWD/cert.pem"
 	key  "$PWD/key.pem"
 	root "$PWD/testdata"
+	listen on localhost port $port
 	$2
 }
 EOF
@@ -78,6 +77,7 @@ set_proxy() {
 server "localhost.local" {
 	cert "$PWD/cert.pem"
 	key "$PWD/key.pem"
+	listen on localhost port $port
 	proxy {
 		relay-to localhost port $port
 		$1

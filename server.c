@@ -489,7 +489,6 @@ strip_path(const char *path, int strip)
 static void
 fmt_sbuf(const char *fmt, struct client *c, const char *path)
 {
-	struct conf *conf = c->conf;
 	size_t i;
 	char buf[32];
 
@@ -519,7 +518,7 @@ fmt_sbuf(const char *fmt, struct client *c, const char *path)
 			strlcat(c->sbuf, c->iri.query, sizeof(c->sbuf));
 			break;
 		case 'P':
-			snprintf(buf, sizeof(buf), "%d", conf->port);
+			snprintf(buf, sizeof(buf), "%d", c->addr->port);
 			strlcat(c->sbuf, buf, sizeof(c->sbuf));
 			memset(buf, 0, sizeof(buf));
 			break;
@@ -1313,7 +1312,7 @@ client_close(struct client *c)
 void
 do_accept(int sock, short et, void *d)
 {
-	struct conf *conf = d;
+	struct address *addr = d;
 	struct client *c;
 	struct sockaddr_storage raddr;
 	struct sockaddr *sraddr;
@@ -1332,7 +1331,8 @@ do_accept(int sock, short et, void *d)
 	mark_nonblock(fd);
 
 	c = xcalloc(1, sizeof(*c));
-	c->conf = conf;
+	c->conf = addr->conf;
+	c->addr = addr;
 	c->id = ++server_client_id;
 	c->fd = fd;
 	c->pfd = -1;
@@ -1486,15 +1486,18 @@ server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 int
 server_configure_done(struct conf *conf)
 {
+	struct address *addr;
+
 	if (load_default_mime(&conf->mime) == -1)
 		fatal("can't load default mime");
 	sort_mime(&conf->mime);
 	setup_tls(conf);
 	load_vhosts(conf);
-	if (conf->sock4 != -1)
-		event_add(&conf->evsock4, NULL);
-	if (conf->sock6 != -1)
-		event_add(&conf->evsock6, NULL);
+
+	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
+		if (addr->sock != -1)
+			event_add(&addr->evsock, NULL);
+	}
 
 	return 0;
 }
@@ -1509,9 +1512,7 @@ server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_RECONF_START:
 	case IMSG_RECONF_MIME:
 	case IMSG_RECONF_PROTOS:
-	case IMSG_RECONF_PORT:
-	case IMSG_RECONF_SOCK4:
-	case IMSG_RECONF_SOCK6:
+	case IMSG_RECONF_SOCK:
 	case IMSG_RECONF_FCGI:
 	case IMSG_RECONF_HOST:
 	case IMSG_RECONF_CERT:

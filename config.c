@@ -37,9 +37,8 @@ config_new(void)
 	TAILQ_INIT(&conf->fcgi);
 	TAILQ_INIT(&conf->hosts);
 	TAILQ_INIT(&conf->pkis);
+	TAILQ_INIT(&conf->addrs);
 
-	conf->port = 1965;
-	conf->ipv6 = 0;
 	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 
 	init_mime(&conf->mime);
@@ -49,9 +48,6 @@ config_new(void)
 #ifdef __OpenBSD__
 	conf->use_privsep_crypto = 1;
 #endif
-
-	conf->sock4 = -1;
-	conf->sock6 = -1;
 
 	return conf;
 }
@@ -67,20 +63,11 @@ config_purge(struct conf *conf)
 	struct envlist *e, *te;
 	struct alist *a, *ta;
 	struct pki *pki, *tpki;
+	struct address *addr, *taddr;
 	int use_privsep_crypto;
 
 	ps = conf->ps;
 	use_privsep_crypto = conf->use_privsep_crypto;
-
-	if (conf->sock4 != -1) {
-		event_del(&conf->evsock4);
-		close(conf->sock4);
-	}
-
-	if (conf->sock6 != -1) {
-		event_del(&conf->evsock6);
-		close(conf->sock6);
-	}
 
 	free_mime(&conf->mime);
 	TAILQ_FOREACH_SAFE(f, &conf->fcgi, fcgi, tf) {
@@ -95,6 +82,11 @@ config_purge(struct conf *conf)
 		free(h->cert);
 		free(h->key);
 		free(h->ocsp);
+
+		TAILQ_FOREACH_SAFE(addr, &h->addrs, addrs, taddr) {
+			TAILQ_REMOVE(&h->addrs, addr, addrs);
+			free(addr);
+		}
 
 		TAILQ_FOREACH_SAFE(l, &h->locations, locations, tl) {
 			TAILQ_REMOVE(&h->locations, l, locations);
@@ -139,11 +131,19 @@ config_purge(struct conf *conf)
 		free(pki);
 	}
 
+	TAILQ_FOREACH_SAFE(addr, &conf->addrs, addrs, taddr) {
+		TAILQ_REMOVE(&conf->addrs, addr, addrs);
+		if (addr->sock != -1) {
+			close(addr->sock);
+			event_del(&addr->evsock);
+		}
+		free(addr);
+	}
+
 	memset(conf, 0, sizeof(*conf));
 
 	conf->ps = ps;
 	conf->use_privsep_crypto = use_privsep_crypto;
-	conf->sock4 = conf->sock6 = -1;
 	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 	init_mime(&conf->mime);
 	TAILQ_INIT(&conf->fcgi);
@@ -223,82 +223,47 @@ config_send_kp(struct privsep *ps, int cert_type, int key_type,
 }
 
 static int
-make_socket(int port, int family)
-{
-	int sock, v;
-	struct sockaddr_in addr4;
-	struct sockaddr_in6 addr6;
-	struct sockaddr *addr;
-	socklen_t len;
-
-	switch (family) {
-	case AF_INET:
-		memset(&addr4, 0, sizeof(addr4));
-		addr4.sin_family = family;
-		addr4.sin_port = htons(port);
-		addr4.sin_addr.s_addr = INADDR_ANY;
-		addr = (struct sockaddr*)&addr4;
-		len = sizeof(addr4);
-		break;
-
-	case AF_INET6:
-		memset(&addr6, 0, sizeof(addr6));
-		addr6.sin6_family = AF_INET6;
-		addr6.sin6_port = htons(port);
-		addr6.sin6_addr = in6addr_any;
-		addr = (struct sockaddr*)&addr6;
-		len = sizeof(addr6);
-		break;
-
-	default:
-		/* unreachable */
-		abort();
-	}
-
-	if ((sock = socket(family, SOCK_STREAM, 0)) == -1)
-		fatal("socket");
-
-	v = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v)) == -1)
-		fatal("setsockopt(SO_REUSEADDR)");
-
-	v = 1;
-	if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &v, sizeof(v)) == -1)
-		fatal("setsockopt(SO_REUSEPORT)");
-
-	mark_nonblock(sock);
-
-	if (bind(sock, addr, len) == -1)
-		fatal("bind");
-
-	if (listen(sock, 16) == -1)
-		fatal("listen");
-
-	return sock;
-}
-
-static int
 config_send_socks(struct conf *conf)
 {
 	struct privsep	*ps = conf->ps;
-	int		 sock;
+	struct address	*addr, a;
+	int		 sock, v;
 
-	if ((sock = make_socket(conf->port, AF_INET)) == -1)
-		return -1;
+	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
+		sock = socket(addr->ai_family, addr->ai_socktype,
+		    addr->ai_protocol);
+		if (sock == -1)
+			fatal("socket");
 
-	if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_SOCK4, sock,
-	    NULL, 0) == -1)
-		return -1;
+		v = 1;
+		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v))
+		    == -1)
+			fatal("setsockopt(SO_REUSEADDR)");
 
-	if (!conf->ipv6)
-		return 0;
+		v = 1;
+		if (setsockopt(sock, SOL_SOCKET, SO_REUSEPORT, &v, sizeof(v))
+		    == -1)
+			fatal("setsockopt(SO_REUSEPORT)");
 
-	if ((sock = make_socket(conf->port, AF_INET6)) == -1)
-		return -1;
+		mark_nonblock(sock);
 
-	if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_SOCK6, sock,
-	    NULL, 0) == -1)
-		return -1;
+		if (bind(sock, (struct sockaddr *)&addr->ss, addr->slen)
+		    == -1)
+			fatal("bind");
+
+		if (listen(sock, 16) == -1)
+			fatal("listen");
+
+		memcpy(&a, addr, sizeof(a));
+		a.conf = NULL;
+		a.sock = -1;
+		memset(&a.evsock, 0, sizeof(a.evsock));
+		memset(&a.addrs, 0, sizeof(a.addrs));
+
+		if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_SOCK, sock,
+		    &a, sizeof(a)) == -1)
+			return -1;
+	}
 
 	return 0;
 }
@@ -325,10 +290,6 @@ config_send(struct conf *conf)
 
 	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_PROTOS,
 	    &conf->protos, sizeof(conf->protos)) == -1)
-		return -1;
-
-	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_PORT,
-	    &conf->port, sizeof(conf->port)) == -1)
 		return -1;
 
 	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
@@ -549,6 +510,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	struct envlist	*env;
 	struct alist	*alias;
 	struct proxy	*proxy;
+	struct address	*addr;
 	uint8_t		*d;
 	size_t		 len, datalen;
 
@@ -577,29 +539,17 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		memcpy(&conf->protos, imsg->data, datalen);
 		break;
 
-	case IMSG_RECONF_PORT:
-		IMSG_SIZE_CHECK(imsg, &conf->port);
-		memcpy(&conf->port, imsg->data, datalen);
-		break;
-
-	case IMSG_RECONF_SOCK4:
-		if (conf->sock4 != -1)
-			fatalx("socket ipv4 already recv'd");
+	case IMSG_RECONF_SOCK:
+		addr = xcalloc(1, sizeof(*addr));
+		IMSG_SIZE_CHECK(imsg, addr);
+		memcpy(addr, imsg->data, sizeof(*addr));
 		if (imsg->fd == -1)
 			fatalx("missing socket for IMSG_RECONF_SOCK4");
-		conf->sock4 = imsg->fd;
-		event_set(&conf->evsock4, conf->sock4, EV_READ|EV_PERSIST,
-		    do_accept, conf);
-		break;
-
-	case IMSG_RECONF_SOCK6:
-		if (conf->sock6 != -1)
-			fatalx("socket ipv6 already recv'd");
-		if (imsg->fd == -1)
-			fatalx("missing socket for IMSG_RECONF_SOCK6");
-		conf->sock6 = imsg->fd;
-		event_set(&conf->evsock6, conf->sock6, EV_READ|EV_PERSIST,
-		    do_accept, conf);
+		addr->conf = conf;
+		addr->sock = imsg->fd;
+		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
+		    do_accept, addr);
+		TAILQ_INSERT_HEAD(&conf->addrs, addr, addrs);
 		break;
 
 	case IMSG_RECONF_FCGI:

@@ -484,9 +484,7 @@ main_print_conf(struct conf *conf)
 
 	if (*conf->chroot != '\0')
 		printf("chroot \"%s\"\n", conf->chroot);
-	printf("ipv6 %s\n", conf->ipv6 ? "on" : "off");
 	/* XXX: defined mimes? */
-	printf("port %d\n", conf->port);
 	printf("prefork %d\n", conf->prefork);
 	/* XXX: protocols? */
 	if (*conf->user != '\0')

@@ -37,6 +37,9 @@
 
 struct conf *conf;
 
+static const char	*default_host = "*";
+static uint16_t		 default_port = 1965;
+
 TAILQ_HEAD(files, file)		 files = TAILQ_HEAD_INITIALIZER(files);
 static struct file {
 	TAILQ_ENTRY(file)	 entry;
@@ -96,6 +99,7 @@ void		 parsehp(char *, char **, const char **, const char *);
 int		 fastcgi_conf(const char *, const char *);
 void		 add_param(char *, char *);
 int		 getservice(const char *);
+void		 listen_on(const char *, const char *);
 
 static struct vhost		*host;
 static struct location		*loc;
@@ -125,7 +129,7 @@ typedef struct {
 %token	FASTCGI FOR_HOST
 %token	INCLUDE INDEX IPV6
 %token	KEY
-%token	LANG LOCATION LOG
+%token	LANG LISTEN LOCATION LOG
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
@@ -220,8 +224,19 @@ option		: CHROOT string	{
 				yyerror("chroot path too long");
 			free($2);
 		}
-		| IPV6 bool		{ conf->ipv6 = $2; }
-		| PORT NUM		{ conf->port = check_port_num($2); }
+		| IPV6 bool {
+			yywarn("option `ipv6' is deprecated,"
+			    " please use `listen on'");
+			if ($2)
+				default_host = "*";
+			else
+				default_host = "0.0.0.0";
+		}
+		| PORT NUM {
+			yywarn("option `port' is deprecated,"
+			    " please use `listen on'");
+			default_port = $2;
+		}
 		| PREFORK NUM		{ conf->prefork = check_prefork_num($2); }
 		| PROTOCOLS string {
 			if (tls_config_parse_protocols(&conf->protos, $2) == -1)
@@ -259,6 +274,20 @@ vhost		: SERVER string {
 			    host->key_path == NULL)
 				yyerror("invalid vhost definition: %s",
 				    host->domain);
+			if (TAILQ_EMPTY(&host->addrs)) {
+				char portno[32];
+				int r;
+
+				r = snprintf(portno, sizeof(portno), "%d",
+				    default_port);
+				if (r < 0 || (size_t)r >= sizeof(portno))
+					fatal("snprintf");
+
+				yywarn("missing `listen on' in server %s,"
+				    " assuming %s port %d", $2, default_host,
+				    default_port);
+				listen_on(default_host, portno);
+			}
 		}
 		| error '}'		{ yyerror("bad server directive"); }
 		;
@@ -294,6 +323,22 @@ servopt		: ALIAS string {
 		}
 		| PARAM string '=' string {
 			add_param($2, $4);
+		}
+		| LISTEN ON STRING PORT STRING {
+			listen_on($3, $5);
+			free($3);
+			free($5);
+		}
+		| LISTEN ON STRING PORT NUM {
+			char portno[32];
+			int r;
+
+			r = snprintf(portno, sizeof(portno), "%d", $5);
+			if (r < 0 || (size_t)r >= sizeof(portno))
+				fatal("snprintf");
+
+			listen_on($3, portno);
+			free($3);
 		}
 		| locopt
 		;
@@ -515,6 +560,7 @@ static const struct keyword {
 	{"ipv6", IPV6},
 	{"key", KEY},
 	{"lang", LANG},
+	{"listen", LISTEN},
 	{"location", LOCATION},
 	{"log", LOG},
 	{"ocsp", OCSP},
@@ -913,6 +959,9 @@ parse_conf(struct conf *c, const char *filename)
 {
 	struct sym		*sym, *next;
 
+	default_host = "*";
+	default_port = 1965;
+
 	conf = c;
 
 	file = pushfile(filename, 0);
@@ -1152,4 +1201,79 @@ getservice(const char *n)
 	}
 
 	return ((unsigned short)llval);
+}
+
+static void
+add_to_addr_queue(struct addrhead *a, struct addrinfo *ai)
+{
+	struct address		*addr;
+	struct sockaddr_in	*sin;
+	struct sockaddr_in6	*sin6;
+
+	if (ai->ai_addrlen > sizeof(addr->ss))
+		fatalx("ai_addrlen larger than a sockaddr_storage");
+
+	TAILQ_FOREACH(addr, a, addrs) {
+		if (addr->ai_flags == ai->ai_flags &&
+		    addr->ai_family == ai->ai_family &&
+		    addr->ai_socktype == ai->ai_socktype &&
+		    addr->ai_protocol == ai->ai_protocol &&
+		    addr->slen == ai->ai_addrlen &&
+		    !memcmp(&addr->ss, ai->ai_addr, addr->slen))
+			return;
+	}
+
+	addr = xcalloc(1, sizeof(*addr));
+	addr->ai_flags = ai->ai_flags;
+	addr->ai_family = ai->ai_family;
+	addr->ai_socktype = ai->ai_socktype;
+	addr->ai_protocol = ai->ai_protocol;
+	addr->slen = ai->ai_addrlen;
+	memcpy(&addr->ss, ai->ai_addr, ai->ai_addrlen);
+
+	/* for commodity */
+	switch (addr->ai_family) {
+	case AF_INET:
+		sin = (struct sockaddr_in *)&addr->ss;
+		addr->port = ntohs(sin->sin_port);
+		break;
+	case AF_INET6:
+		sin6 = (struct sockaddr_in6 *)&addr->ss;
+		addr->port = ntohs(sin6->sin6_port);
+		break;
+	default:
+		fatalx("unknown socket family %d", addr->ai_family);
+	}
+
+	addr->sock = -1;
+
+	TAILQ_INSERT_HEAD(a, addr, addrs);
+}
+
+void
+listen_on(const char *hostname, const char *servname)
+{
+	struct addrinfo hints, *res, *res0;
+	int error;
+
+	if (!strcmp(hostname, "*"))
+		hostname = NULL;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_UNSPEC;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_flags = AI_PASSIVE;
+	error = getaddrinfo(hostname, servname, &hints, &res0);
+	if (error) {
+		yyerror("listen on \"%s\" port %s: %s", hostname, servname,
+		    gai_strerror(errno));
+		return;
+	}
+
+	for (res = res0; res; res = res->ai_next) {
+		add_to_addr_queue(&host->addrs, res);
+		add_to_addr_queue(&conf->addrs, res);
+	}
+
+	freeaddrinfo(res0);
 }

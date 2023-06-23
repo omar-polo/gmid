@@ -159,9 +159,14 @@ static int
 serve(struct conf *conf, const char *host, int port, const char *dir)
 {
 	struct addrinfo hints, *res, *res0;
+	struct vhost *vh = TAILQ_FIRST(&conf->hosts);
+	struct address *addr, *acp;
 	int r, error, saved_errno, sock = -1;
 	const char *cause = NULL;
 	char service[32];
+	int any = 0;
+
+	event_init();
 
 	r = snprintf(service, sizeof(service), "%d", port);
 	if (r < 0 || (size_t)r >= sizeof(service))
@@ -193,23 +198,33 @@ serve(struct conf *conf, const char *host, int port, const char *dir)
 		if (listen(sock, 5) == -1)
 			fatal("listen");
 
-		/*
-		 * for the time being, we're happy as soon as
-		 * something binds.
-		 */
-		break;
+		any = 1;
+
+		addr = xcalloc(1, sizeof(*addr));
+		addr->ai_flags = res->ai_flags;
+		addr->ai_family = res->ai_family;
+		addr->ai_socktype = res->ai_socktype;
+		addr->ai_protocol = res->ai_protocol;
+		addr->slen = res->ai_addrlen;
+		memcpy(&addr->ss, res->ai_addr, res->ai_addrlen);
+
+		addr->conf = conf;
+		addr->sock = sock;
+		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
+		    do_accept, addr);
+
+		TAILQ_INSERT_HEAD(&conf->addrs, addr, addrs);
+
+		acp = xcalloc(1, sizeof(*acp));
+		memcpy(acp, addr, sizeof(*acp));
+		acp->sock = -1;
+		memset(&acp->evsock, 0, sizeof(acp->evsock));
+		TAILQ_INSERT_HEAD(&vh->addrs, addr, addrs);
 	}
 
-	if (sock == -1)
+	if (!any)
 		fatal("%s", cause);
 	freeaddrinfo(res0);
-
-	event_init();
-
-	/* cheating */
-	conf->sock4 = sock;
-	event_set(&conf->evsock4, conf->sock4, EV_READ|EV_PERSIST,
-	    do_accept, conf);
 
 	server_init(NULL, NULL, NULL);
 	if (server_configure_done(conf) == -1)
@@ -239,7 +254,7 @@ main(int argc, char **argv)
 	struct location *loc;
 	const char *errstr, *certs_dir = NULL, *hostname = "localhost";
 	char path[PATH_MAX];
-	int ch;
+	int ch, port = 1965;
 
 	setlocale(LC_CTYPE, "");
 
@@ -262,7 +277,7 @@ main(int argc, char **argv)
 			usage();
 			break;
 		case 'p':
-			conf->port = strtonum(optarg, 0, UINT16_MAX, &errstr);
+			port = strtonum(optarg, 0, UINT16_MAX, &errstr);
 			if (errstr)
 				fatalx("port number is %s: %s", errstr,
 				    optarg);
@@ -316,5 +331,5 @@ main(int argc, char **argv)
 	/* start the server */
 	signal(SIGPIPE, SIG_IGN);
 	setproctitle("%s", loc->dir);
-	return serve(conf, hostname, conf->port, loc->dir);
+	return serve(conf, hostname, port, loc->dir);
 }
