@@ -144,7 +144,7 @@ typedef struct {
 %token	<v.number>	NUM
 
 %type	<v.number>	bool proxy_port
-%type	<v.string>	string numberstring
+%type	<v.string>	string numberstring listen_addr
 
 %%
 
@@ -298,6 +298,10 @@ servbody	: /* empty */
 		| servbody proxy optnl
 		;
 
+listen_addr	: '*' { $$ = NULL; }
+		| STRING
+		;
+
 servopt		: ALIAS string {
 			struct alist *a;
 
@@ -324,12 +328,12 @@ servopt		: ALIAS string {
 		| PARAM string '=' string {
 			add_param($2, $4);
 		}
-		| LISTEN ON STRING PORT STRING {
+		| LISTEN ON listen_addr PORT STRING {
 			listen_on($3, $5);
 			free($3);
 			free($5);
 		}
-		| LISTEN ON STRING PORT NUM {
+		| LISTEN ON listen_addr PORT NUM {
 			char portno[32];
 			int r;
 
@@ -1255,9 +1259,6 @@ listen_on(const char *hostname, const char *servname)
 {
 	struct addrinfo hints, *res, *res0;
 	int error;
-
-	if (!strcmp(hostname, "*"))
-		hostname = NULL;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
