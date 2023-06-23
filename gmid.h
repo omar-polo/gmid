@@ -289,7 +289,9 @@ struct client {
 	char		 sbuf[1029];
 	ssize_t		 len, off;
 
-	struct sockaddr_storage	 addr;
+	struct sockaddr_storage	 raddr;
+	socklen_t		 raddrlen;
+
 	struct vhost	*host;	/* host they're talking to */
 	size_t		 loc;	/* location matched */
 

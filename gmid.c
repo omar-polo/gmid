@@ -87,11 +87,9 @@ log_request(struct client *c, char *meta, size_t l)
 	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
 	char *fmted;
 	const char *t;
-	size_t len;
 	int ec;
 
-	len = sizeof(c->addr);
-	ec = getnameinfo((struct sockaddr*)&c->addr, len,
+	ec = getnameinfo((struct sockaddr*)&c->raddr, c->raddrlen,
 	    hbuf, sizeof(hbuf),
 	    sbuf, sizeof(sbuf),
 	    NI_NUMERICHOST | NI_NUMERICSERV);

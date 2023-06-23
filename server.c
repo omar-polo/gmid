@@ -1315,14 +1315,14 @@ do_accept(int sock, short et, void *d)
 {
 	struct conf *conf = d;
 	struct client *c;
-	struct sockaddr_storage addr;
-	struct sockaddr *saddr;
+	struct sockaddr_storage raddr;
+	struct sockaddr *sraddr;
 	socklen_t len;
 	int fd;
 
-	saddr = (struct sockaddr*)&addr;
-	len = sizeof(addr);
-	if ((fd = accept(sock, saddr, &len)) == -1) {
+	sraddr = (struct sockaddr *)&raddr;
+	len = sizeof(raddr);
+	if ((fd = accept(sock, sraddr, &len)) == -1) {
 		if (errno == EWOULDBLOCK || errno == EAGAIN ||
 		    errno == ECONNABORTED)
 			return;
@@ -1336,7 +1336,8 @@ do_accept(int sock, short et, void *d)
 	c->id = ++server_client_id;
 	c->fd = fd;
 	c->pfd = -1;
-	c->addr = addr;
+	memcpy(&c->raddr, &raddr, sizeof(raddr));
+	c->raddrlen = len;
 
 	if (tls_accept_socket(ctx, &c->ctx, fd) == -1) {
 		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
