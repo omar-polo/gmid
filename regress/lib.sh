@@ -62,7 +62,7 @@ server "localhost" {
 	cert "$PWD/cert.pem"
 	key  "$PWD/key.pem"
 	root "$PWD/testdata"
-	listen on localhost port $port
+	listen on $REGRESS_HOST port $port
 	$2
 }
 EOF
@@ -77,7 +77,7 @@ set_proxy() {
 server "localhost.local" {
 	cert "$PWD/cert.pem"
 	key "$PWD/key.pem"
-	listen on localhost port $port
+	listen on $REGRESS_HOST port $port
 	proxy {
 		relay-to localhost port $port
 		$1

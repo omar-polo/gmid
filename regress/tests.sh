@@ -245,7 +245,7 @@ server "localhost" {
 	cert \$pwd "/cert.pem"
 	key  \$pwd "/key.pem"
 	root \$pwd "/testdata"
-	listen on localhost port $port
+	listen on $REGRESS_HOST port $port
 }
 EOF
 

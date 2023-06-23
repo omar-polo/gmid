@@ -18,6 +18,9 @@
 # all.
 TESTS=
 
+# host to bind to during regress
+REGRESS_HOST =	localhost
+
 # -- build-related variables --
 
 COBJS =		${COMPATS:.c=.o}

@@ -2,6 +2,9 @@
 # all.
 TESTS=
 
+# host to bind to during regress
+REGRESS_HOST =	localhost
+
 DISTFILES =	Makefile \
 		env \
 		err \
@@ -34,7 +37,7 @@ IRI_OBJS =	${IRI_SRCS:.c=.o} ${REG_COMPATS}
 .PHONY: all data clean dist
 
 all: data puny-test iri_test fcgi-test
-	./regress ${TESTS}
+	env REGRESS_HOST="${REGRESS_HOST}" ./regress ${TESTS}
 
 data: testdata cert.pem testca.pem valid.crt invalid.cert.pem
 
