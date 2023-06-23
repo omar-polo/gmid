@@ -260,7 +260,8 @@ vhost		: SERVER string {
 		} '{' optnl servbody '}' {
 			if (host->cert_path == NULL ||
 			    host->key_path == NULL)
-				yyerror("invalid vhost definition: %s", $2);
+				yyerror("invalid vhost definition: %s",
+				    host->domain);
 		}
 		| error '}'		{ yyerror("bad server directive"); }
 		;
