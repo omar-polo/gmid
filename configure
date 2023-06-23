@@ -204,8 +204,8 @@ runtest() {
 
 	if [ -n "$5" -a -n "$pkgconfig" ]; then
 		if $pkgconfig $5; then
-			cflags="$($pkgconfig --cflags "$5")"
-			ldflags="$($pkgconfig --libs "$5")"
+			cflags="$($pkgconfig --cflags $5)"
+			ldflags="$($pkgconfig --libs $5)"
 			echo "retrying with pkg-config" >&3
 			if singletest "$1" "$2" "$cflags" "$ldflags"; then
 				CFLAGS="$CFLAGS $cflags"
