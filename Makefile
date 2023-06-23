@@ -143,8 +143,10 @@ ${DISTNAME}.tar.gz: ${DISTFILES}
 # -- dependencies --
 
 -include config.d
+-include crypto.d
 -include dirs.d
 -include fcgi.d
+-include ge.d
 -include gg.d
 -include gmid.d
 -include iri.d
