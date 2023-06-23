@@ -348,8 +348,6 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 			if (res.ret > 0)
 				memcpy(to, toptr, res.len);
 
-			log_warnx("the return is %d", ret);
-
 			done = 1;
 
 			imsg_free(&imsg);
