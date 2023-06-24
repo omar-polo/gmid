@@ -3,7 +3,7 @@
 > **Warning**
 > The `master` branch is WIP: it's what gmid 2.0 will be, with
 > breaking changes et al.  Please use the latest release from the 1.8
-> branch for a stable and documented experience, thank you.**
+> branch for a stable and documented experience, thank you.
 
 gmid is a full-featured Gemini server written with security in mind.
 It can serve static files, has optional FastCGI and proxying support,
