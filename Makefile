@@ -48,7 +48,7 @@ DISTNAME =	gmid-${VERSION}
 # -- public targets --
 
 all: config.mk gmid ge gg
-.PHONY: all tags static clean cleanall test regress install
+.PHONY: all tags clean cleanall test regress install
 
 config.mk config.h: configure
 	@echo "$@ is out of date; please run ./configure"
