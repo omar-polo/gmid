@@ -1,4 +1,4 @@
-.\" Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
+.\" Copyright (c) 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd September 8, 2022
+.Dd June 24, 2023
 .Dt GMID 8
 .Os
 .Sh NAME
@@ -29,8 +29,6 @@
 .Nm
 is a simple and minimal gemini server that can serve static files,
 talk to FastCGI applications and act as a gemini reverse proxy.
-It can run without a configuration file with a limited set of features
-available.
 .Pp
 .Nm
 rereads the configuration file when it receives
@@ -140,10 +138,10 @@ program was written by
 .Sh CAVEATS
 .Bl -bullet
 .It
-All the root directories are opened during the daemon startup; if a
-root directory is deleted and then re-created,
+All the root directories are opened during the daemon configuration;
+if a root directory is deleted and then re-created,
 .Nm
-won't be able to serve files inside that directory until a restart.
+won't be able to serve files inside that directory until a reload.
 This restriction only applies to the root directories and not their
 content.
 .It
