@@ -170,6 +170,13 @@ config_send_file(struct privsep *ps, enum privsep_procid id, int type,
 
 	if (fd != -1)
 		close(fd);
+
+	/* avoid fd rampage */
+	if (proc_flush_imsg(ps, id, -1) == -1) {
+		log_warn("%s: proc_fush_imsg", __func__);
+		return -1;
+	}
+
 	return 0;
 }
 
@@ -215,10 +222,6 @@ config_send_kp(struct privsep *ps, int cert_type, int key_type,
 	if (config_open_send(ps, key_target, key_type, key) == -1)
 		return -1;
 
-	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
-		return -1;
-	if (proc_flush_imsg(ps, PROC_CRYPTO, -1) == -1)
-		return -1;
 	return 0;
 }
 
@@ -292,13 +295,7 @@ config_send(struct conf *conf)
 	    &conf->protos, sizeof(conf->protos)) == -1)
 		return -1;
 
-	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
-		return -1;
-
 	if (config_send_socks(conf) == -1)
-		return -1;
-
-	if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
 		return -1;
 
 	TAILQ_FOREACH(fcgi, &conf->fcgi, fcgi) {
@@ -330,8 +327,6 @@ config_send(struct conf *conf)
 			if (config_open_send(ps, PROC_SERVER, IMSG_RECONF_OCSP,
 			    h->ocsp_path) == -1)
 				return -1;
-			if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
-				return -1;
 		}
 
 		TAILQ_FOREACH(l, &h->locations, locations) {
@@ -352,9 +347,6 @@ config_send(struct conf *conf)
 			    fd, &lcopy, sizeof(lcopy)) == -1)
 				return -1;
 		}
-
-		if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
-			return -1;
 
 		TAILQ_FOREACH(e, &h->params, envs) {
 			if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_ENV,
@@ -398,9 +390,6 @@ config_send(struct conf *conf)
 			    fd, &pcopy, sizeof(pcopy)) == -1)
 				return -1;
 
-			if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
-				return -1;
-
 			if (p->cert_path == NULL || p->key_path == NULL)
 				continue;
 
@@ -409,13 +398,7 @@ config_send(struct conf *conf)
 			    config_open_send(ps, PROC_SERVER,
 			    IMSG_RECONF_PROXY_KEY, p->key_path) == -1)
 				return -1;
-
-			if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
-				return -1;
 		}
-
-		if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
-			return -1;
 	}
 
 	return 0;
