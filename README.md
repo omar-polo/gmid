@@ -1,31 +1,13 @@
 # gmid
 
-**the `master` branch is WIP: it's what gmid 2.0 will be, with breaking
-changes et al.  Please use the latest release from the 1.8 branch for a
-stable and documented experience, thank you.**
+> **Warning**
+> The `master` branch is WIP: it's what gmid 2.0 will be, with
+> breaking changes et al.  Please use the latest release from the 1.8
+> branch for a stable and documented experience, thank you.**
 
-gmid is a fast Gemini server written with security in mind.  I
-initially wrote it to serve static files, but it has grown into a
-featureful server.
-
-
-## Features
-
-(random order)
-
- - sandboxed by default on OpenBSD, Linux and FreeBSD
- - reconfiguration: reload the running configuration without
-   interruption
- - automatic redirect/error pages (see `block return`)
- - IRI support (RFC3987)
- - automatic certificate generation for config-less mode
- - reverse proxying
- - FastCGI support
- - virtual hosts
- - location rules
- - event-based asynchronous I/O model
- - low memory footprint
- - small codebase, easily hackable
+gmid is a full-featured Gemini server written with security in mind.
+It can serve static files, has optional FastCGI and proxying support,
+and a rich configuration syntax.
 
 
 ## Internationalisation (IRIs, UNICODE, punycode, all that stuff)
@@ -49,12 +31,15 @@ doesn't do that (yet).
 
 ## Configuration
 
+[httpd]: https://man.openbsd.org/httpd.8
+
 gmid has a rich configuration file, heavily inspired by OpenBSD'
-httpd, with every detail carefully documented in the manpage.  Here's
-a minimal example of a config file:
+[httpd(8)][httpd], with every detail carefully documented in the
+manpage.  Here's a minimal example of a config file:
 
 ```conf
 server "example.com" {
+	listen on * port 1965
 	cert "/path/to/cert.pem"
 	key  "/path/to/key.pem"
 	root "/var/gemini/example.com"
@@ -64,12 +49,11 @@ server "example.com" {
 and a slightly more complex one
 
 ```conf
-ipv6 on     # enable ipv6
-
-# define a macro
 cert_root = "/path/to/keys"
 
 server "example.com" {
+	listen on * port 1965
+
 	alias "foobar.com"
 
 	cert $cert_root "/example.com.crt"
@@ -102,17 +86,15 @@ is also needed.
 
 The build is as simple as
 
-    ./configure
-    make
-
-or `make static` to build a statically-linked executable.
+	$ ./configure
+	$ make
 
 If the configure scripts fails to pick up something, please open an
 issue or notify me via email.
 
 To install execute:
 
-    make install
+	# make install
 
 Please keep in mind that the master branch, from time to time, may be
 accidentally broken on some platforms.  gmid is developed primarily on
@@ -126,10 +108,11 @@ working as intended.
 
 Execute
 
-    make regress
+	$ make regress
 
 to start the suite.  Keep in mind that the regression tests needs to
-create files inside the `regress` directory and bind the 10965 port.
+create a few file inside the `regress` directory and bind the 10965
+port.
 
 
 ## Contributing
@@ -142,27 +125,21 @@ to the `contrib` directory.
 
 ## Architecture/Security considerations
 
-**outdated: revisit for gmid 2.0**
+The internal architecture was revisited for the 2.0 release.  For
+previous releases, please refer to previous revision of this file.
 
+gmid has a privsep design, where the operations done by the daemon are
+splitted into multiple processes:
 
-gmid is composed by four processes: the parent process, the logger,
-the listener and the executor.  The parent process is the only one
-that doesn't drop privileges, but all it does is to wait for a SIGHUP
-to reload the configuration and spawn a new generation of children
-process.  The logger process gathers the logs and prints 'em to
-stderr or syslog (for the time being.)  The listener process is the
-only one that needs internet access and is sandboxed by default.  The
-executor process exists only to fork and execute CGI scripts, and
-optionally to connect to FastCGI applications.
+ - main: the main process is the only one that keeps the original
+   privileges.  It opens the TLS certificates on the behalf of the
+   `server` and `crypto` processes and reloads the configuration upon
+   `SIGHUP`.
 
-On OpenBSD the processes are all `pledge(2)`d and `unveil(2)`ed.
+ - logger: logs the requests.
 
-On FreeBSD, the listener and logger process are sandboxed with `capsicum(4)`.
+ - server: listen on the binded ports and serves the request.
 
-On Linux, a `seccomp(2)` filter is installed in the listener to allow
-only certain syscalls, see [sandbox.c](sandbox.c) for more information
-about the BPF program.  If available, landlock is used to limit the
-portion of the file system gmid can access (requires linux 5.13+.)
-
-In any case, it's advisable to run gmid inside some sort of
-container/jail/chroot.
+ - crypto: (used only on OpenBSD at the time of writing.)  Holds the
+   TLS private keys to avoid a compromised `server` process to
+   disclose them.
