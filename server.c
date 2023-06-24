@@ -37,8 +37,6 @@
 #define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
 #endif
 
-int shutting_down;
-
 #ifdef SIGINFO
 static struct event siginfo;
 #endif
