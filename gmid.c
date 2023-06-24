@@ -270,6 +270,9 @@ main(int argc, char **argv)
 			fatalx("need root privileges");
 		if ((ps->ps_pw = getpwnam(conf->user)) == NULL)
 			fatalx("unknown user %s", conf->user);
+		if (*conf->chroot == '\0')
+			strlcpy(conf->chroot, ps->ps_pw->pw_dir,
+			    sizeof(conf->chroot));
 	}
 
 	ps->ps_instances[PROC_SERVER] = conf->prefork;
