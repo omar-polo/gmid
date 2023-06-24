@@ -1244,10 +1244,10 @@ client_close_ev(int fd, short event, void *d)
 	switch (tls_close(c->ctx)) {
 	case TLS_WANT_POLLIN:
 		event_once(c->fd, EV_READ, client_close_ev, c, NULL);
-		break;
+		return;
 	case TLS_WANT_POLLOUT:
 		event_once(c->fd, EV_WRITE, client_close_ev, c, NULL);
-		break;
+		return;
 	}
 
 	connected_clients--;
