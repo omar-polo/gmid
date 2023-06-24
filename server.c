@@ -39,8 +39,6 @@
 
 int shutting_down;
 
-static struct tls	*ctx;
-
 #ifdef SIGINFO
 static struct event siginfo;
 #endif
@@ -1339,7 +1337,7 @@ do_accept(int sock, short et, void *d)
 	memcpy(&c->raddr, &raddr, sizeof(raddr));
 	c->raddrlen = len;
 
-	if (tls_accept_socket(ctx, &c->ctx, fd) == -1) {
+	if (tls_accept_socket(addr->ctx, &c->ctx, fd) == -1) {
 		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
 		close(c->fd);
 		free(c);
@@ -1367,18 +1365,39 @@ handle_siginfo(int fd, short ev, void *d)
 }
 
 static void
-add_keypair(struct vhost *h, struct tls_config *conf)
+add_matching_kps(struct tls_config *tlsconf, struct address *addr,
+    struct conf *conf)
 {
-	if (h->ocsp == NULL) {
-		if (tls_config_add_keypair_mem(conf, h->cert, h->certlen,
-		    h->key, h->keylen) == -1)
-			fatalx("failed to load the keypair: %s",
-			    tls_config_error(conf));
-	} else {
-		if (tls_config_add_keypair_ocsp_mem(conf, h->cert, h->certlen,
-		    h->key, h->keylen, h->ocsp, h->ocsplen) == -1)
-			fatalx("failed to load the keypair: %s",
-			    tls_config_error(conf));
+	struct address	*vaddr;
+	struct vhost	*h;
+	int		 r, any = 0;
+
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
+		TAILQ_FOREACH(vaddr, &h->addrs, addrs) {
+			if (addr->ai_flags != vaddr->ai_flags ||
+			    addr->ai_family != vaddr->ai_family ||
+			    addr->ai_socktype != vaddr->ai_socktype ||
+			    addr->ai_protocol != vaddr->ai_protocol ||
+			    addr->slen != vaddr->slen ||
+			    memcmp(&addr->ss, &vaddr->ss, addr->slen) != 0)
+				continue;
+
+			if (!any) {
+				any = 1;
+				r = tls_config_set_keypair_ocsp_mem(tlsconf,
+				    h->cert, h->certlen, h->key, h->keylen,
+				    h->ocsp, h->ocsplen);
+			} else {
+				r = tls_config_add_keypair_ocsp_mem(tlsconf,
+				    h->cert, h->certlen, h->key, h->keylen,
+				    h->ocsp, h->ocsplen);
+			}
+
+			if (r == -1)
+				fatalx("failed to load keypair"
+				    " for host %s: %s", h->domain,
+				    tls_config_error(tlsconf));
+		}
 	}
 }
 
@@ -1386,50 +1405,31 @@ static void
 setup_tls(struct conf *conf)
 {
 	struct tls_config	*tlsconf;
-	struct vhost		*h;
+	struct address		*addr;
 
-	if (ctx == NULL) {
-		if ((ctx = tls_server()) == NULL)
-			fatal("tls_server failure");
+	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
+		if ((tlsconf = tls_config_new()) == NULL)
+			fatal("tls_config_new");
+
+		if (conf->use_privsep_crypto)
+			tls_config_use_fake_private_key(tlsconf);
+
+		/* optionally accept client certs but don't verify */
+		tls_config_verify_client_optional(tlsconf);
+		tls_config_insecure_noverifycert(tlsconf);
+
+		if (tls_config_set_protocols(tlsconf, conf->protos) == -1)
+			fatalx("tls_config_set_protocols: %s",
+			    tls_config_error(tlsconf));
+
+		add_matching_kps(tlsconf, addr, conf);
+
+		tls_reset(addr->ctx);
+		if (tls_configure(addr->ctx, tlsconf) == -1)
+			fatalx("tls_configure: %s", tls_error(addr->ctx));
+
+		tls_config_free(tlsconf);
 	}
-
-	if ((tlsconf = tls_config_new()) == NULL)
-		fatal("tls_config_new");
-
-	if (conf->use_privsep_crypto)
-		tls_config_use_fake_private_key(tlsconf);
-
-	/* optionally accept client certs, but don't try to verify them */
-	tls_config_verify_client_optional(tlsconf);
-	tls_config_insecure_noverifycert(tlsconf);
-
-	if (tls_config_set_protocols(tlsconf, conf->protos) == -1)
-		fatalx("tls_config_set_protocols: %s",
-		    tls_config_error(tlsconf));
-
-	h = TAILQ_FIRST(&conf->hosts);
-
-	/* we need to set something, then we can add how many key we want */
-	if (tls_config_set_keypair_mem(tlsconf, h->cert, h->certlen,
-	    h->key, h->keylen) == -1)
-		fatalx("tls_config_set_keypair_mem failed: %s",
-		    tls_config_error(tlsconf));
-
-	/* same for OCSP */
-	if (h->ocsp != NULL &&
-	    tls_config_set_ocsp_staple_mem(tlsconf, h->ocsp, h->ocsplen)
-	    == -1)
-		fatalx("tls_config_set_ocsp_staple_file failed: %s",
-		    tls_config_error(tlsconf));
-
-	while ((h = TAILQ_NEXT(h, vhosts)) != NULL)
-		add_keypair(h, tlsconf);
-
-	tls_reset(ctx);
-	if (tls_configure(ctx, tlsconf) == -1)
-		fatalx("tls_configure: %s", tls_error(ctx));
-
-	tls_config_free(tlsconf);
 }
 
 static void

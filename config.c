@@ -136,6 +136,7 @@ config_purge(struct conf *conf)
 		if (addr->sock != -1) {
 			close(addr->sock);
 			event_del(&addr->evsock);
+			tls_free(addr->ctx);
 		}
 		free(addr);
 	}
@@ -548,6 +549,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		addr->sock = imsg->fd;
 		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
 		    do_accept, addr);
+		if ((addr->ctx = tls_server()) == NULL)
+			fatal("tls_server failure");
 		TAILQ_INSERT_HEAD(&conf->addrs, addr, addrs);
 		break;
 

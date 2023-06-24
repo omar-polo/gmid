@@ -119,6 +119,7 @@ struct address {
 	struct conf		*conf;
 	int			 sock;
 	struct event		 evsock; /* set if sock != -1 */
+	struct tls		*ctx;
 
 	TAILQ_ENTRY(address)	 addrs;
 };

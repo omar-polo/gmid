@@ -213,6 +213,9 @@ serve(struct conf *conf, const char *host, int port, const char *dir)
 		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
 		    do_accept, addr);
 
+		if ((addr->ctx = tls_server()) == NULL)
+			fatal("tls_server failure");
+
 		TAILQ_INSERT_HEAD(&conf->addrs, addr, addrs);
 
 		acp = xcalloc(1, sizeof(*acp));
