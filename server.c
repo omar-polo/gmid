@@ -434,8 +434,11 @@ handle_handshake(int fd, short ev, void *d)
 
 	switch (tls_handshake(c->ctx)) {
 	case 0:  /* success */
-	case -1: /* already handshaked */
 		break;
+	case -1:
+		log_warnx("tls_handshake failed: %s", tls_error(c->ctx));
+		client_close(c);
+		return;
 	case TLS_WANT_POLLIN:
 		event_once(c->fd, EV_READ, handle_handshake, c, NULL);
 		return;
@@ -1309,9 +1312,10 @@ client_close(struct client *c)
 		c->pfd = -1;
 	}
 
-	bufferevent_disable(c->bev, EVBUFFER_READ|EVBUFFER_WRITE);
-	bufferevent_free(c->bev);
-	c->bev = NULL;
+	if (c->bev != NULL) {
+		bufferevent_disable(c->bev, EVBUFFER_READ|EVBUFFER_WRITE);
+		bufferevent_free(c->bev);
+	}
 
 	if (c->proxyevset &&
 	    event_pending(&c->proxyev, EV_READ|EV_WRITE, NULL)) {
