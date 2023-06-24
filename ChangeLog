@@ -1,5 +1,7 @@
 2023-06-23  Omar Polo  <op@omarpolo.com>
 
+	* server.c (handle_handshake): correctly handle TLS handshake failures.
+
 	* parse.y: implement `listen on'
 
 2023-06-13  Omar Polo  <op@omarpolo.com>
