@@ -93,11 +93,44 @@ static uint32_t server_client_id;
 struct client_tree_id clients;
 
 static inline int
+match_addr(struct address *target, struct address *source)
+{
+	return (target->ai_flags == source->ai_flags &&
+	    target->ai_family == source->ai_family &&
+	    target->ai_socktype == source->ai_socktype &&
+	    target->ai_protocol == source->ai_protocol &&
+	    target->slen == source->slen &&
+	    !memcmp(&target->ss, &source->ss, target->slen));
+}
+
+static inline int
 matches(const char *pattern, const char *path)
 {
 	if (*path == '/')
 		path++;
 	return !fnmatch(pattern, path, 0);
+}
+
+static inline int
+match_host(struct vhost *v, struct client *c)
+{
+	struct alist *a;
+	struct address *addr;
+
+	TAILQ_FOREACH(addr, &v->addrs, addrs)
+		if (match_addr(addr, c->addr))
+			break;
+	if (addr == NULL)
+		return 0;
+
+	if (matches(v->domain, c->domain))
+		return 1;
+
+	TAILQ_FOREACH(a, &v->aliases, aliases)
+		if (matches(a->alias, c->domain))
+			return 1;
+
+	return 0;
 }
 
 const char *
@@ -398,7 +431,6 @@ handle_handshake(int fd, short ev, void *d)
 	struct client *c = d;
 	struct conf *conf = c->conf;
 	struct vhost *h;
-	struct alist *a;
 	const char *servname;
 	const char *parse_err = "unknown error";
 
@@ -442,16 +474,10 @@ handle_handshake(int fd, short ev, void *d)
 		goto err;
 	}
 
-	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
-		if (matches(h->domain, c->domain))
-			goto found;
-		TAILQ_FOREACH(a, &h->aliases, aliases) {
-			if (matches(a->alias, c->domain))
-				goto found;
-		}
-	}
+	TAILQ_FOREACH(h, &conf->hosts, vhosts)
+		if (match_host(h, c))
+			break;
 
-found:
 	log_debug("handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
 	    servname != NULL ? servname : "(null)",
 	    c->domain,
@@ -1374,12 +1400,7 @@ add_matching_kps(struct tls_config *tlsconf, struct address *addr,
 
 	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		TAILQ_FOREACH(vaddr, &h->addrs, addrs) {
-			if (addr->ai_flags != vaddr->ai_flags ||
-			    addr->ai_family != vaddr->ai_family ||
-			    addr->ai_socktype != vaddr->ai_socktype ||
-			    addr->ai_protocol != vaddr->ai_protocol ||
-			    addr->slen != vaddr->slen ||
-			    memcmp(&addr->ss, &vaddr->ss, addr->slen) != 0)
+			if (!match_addr(addr, vaddr))
 				continue;
 
 			if (!any) {
