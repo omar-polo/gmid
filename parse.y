@@ -1,7 +1,7 @@
 %{
 
 /*
- * Copyright (c) 2021, 2022 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
  * Copyright (c) 2018 Florian Obser <florian@openbsd.org>
  * Copyright (c) 2004, 2005 Esben Norby <norby@openbsd.org>
  * Copyright (c) 2004 Ryan McBride <mcbride@openbsd.org>
