@@ -544,7 +544,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		IMSG_SIZE_CHECK(imsg, addr);
 		memcpy(addr, imsg->data, sizeof(*addr));
 		if (imsg->fd == -1)
-			fatalx("missing socket for IMSG_RECONF_SOCK4");
+			fatalx("missing socket for IMSG_RECONF_SOCK");
 		addr->conf = conf;
 		addr->sock = imsg->fd;
 		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
