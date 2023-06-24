@@ -119,7 +119,7 @@ proc_exec(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
 
 		/* Update args with process title and chroot. */
 		nargv[proc_i] = (char *)(uintptr_t)p->p_title;
-		if (proc_X && p->p_chroot != NULL)
+		if (proc_X)
 			nargv[proc_X] = p->p_chroot;
 
 		/* Fire children processes. */
