@@ -114,7 +114,10 @@ y.tab.c: parse.y
 
 # -- maintainer targets --
 
-.PHONY: release dist
+.PHONY: lint release dist
+
+lint:
+	man -Tlint -Wstyle -l gmid.8 gmid.conf.5 ge.1 gg.1
 
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
 		Makefile README.md config.c configure configure.local.example \
