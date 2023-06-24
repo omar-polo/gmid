@@ -1518,6 +1518,7 @@ server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_RECONF_CERT:
 	case IMSG_RECONF_KEY:
 	case IMSG_RECONF_OCSP:
+	case IMSG_RECONF_HOST_ADDR:
 	case IMSG_RECONF_LOC:
 	case IMSG_RECONF_ENV:
 	case IMSG_RECONF_ALIAS:

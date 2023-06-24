@@ -307,6 +307,7 @@ config_send(struct conf *conf)
 
 	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		struct vhost vcopy;
+		struct address *addr, acopy;
 
 		memcpy(&vcopy, h, sizeof(vcopy));
 		vcopy.cert_path = NULL;
@@ -327,6 +328,21 @@ config_send(struct conf *conf)
 			if (config_open_send(ps, PROC_SERVER, IMSG_RECONF_OCSP,
 			    h->ocsp_path) == -1)
 				return -1;
+		}
+
+		TAILQ_FOREACH(addr, &h->addrs, addrs) {
+			memcpy(&acopy, addr, sizeof(acopy));
+			memset(&acopy.addrs, 0, sizeof(acopy.addrs));
+
+			if (proc_compose(ps, PROC_SERVER,
+			    IMSG_RECONF_HOST_ADDR, &acopy, sizeof(acopy))
+			    == -1)
+				return -1;
+		}
+
+		if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1) {
+			log_warn("%s: proc_fush_imsg", __func__);
+			return -1;
 		}
 
 		TAILQ_FOREACH(l, &h->locations, locations) {
@@ -596,6 +612,16 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		if (load_file(imsg->fd, &h->ocsp, &h->ocsplen) == -1)
 			fatalx("failed to load ocsp for %s",
 			    h->domain);
+		break;
+
+	case IMSG_RECONF_HOST_ADDR:
+		log_debug("receiving host addr");
+		if (h == NULL)
+			fatalx("recv'd host address withouth host");
+		IMSG_SIZE_CHECK(imsg, addr);
+		addr = xcalloc(1, sizeof(*addr));
+		memcpy(addr, imsg->data, datalen);
+		TAILQ_INSERT_TAIL(&h->addrs, addr, addrs);
 		break;
 
 	case IMSG_RECONF_LOC:
