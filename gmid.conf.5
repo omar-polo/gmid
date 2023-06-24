@@ -1,4 +1,4 @@
-.\" Copyright (c) 2022 Omar Polo <op@omarpolo.com>
+.\" Copyright (c) 2022, 2023 Omar Polo <op@omarpolo.com>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd September 8, 2022
+.Dd June 24, 2023
 .Dt GMID.CONF 5
 .Os
 .Sh NAME
@@ -23,14 +23,14 @@ is the configuration file format for the
 .Xr gmid 8
 Gemini server.
 .Pp
-The configuration file is divided into three sections:
-.Bl -tag -width xxxx
+The configuration file is divided into the following sections:
+.Bl -tag -width Ds
 .It Sy Macros
 User-defined variables may be defined and used later, simplifying the
 configuration file.
 .It Sy Global Options
 Global settings for
-.Nm .
+.Xr gmid 8 .
 .It Sy Servers
 Virtual hosts definition.
 .It Sy Types
@@ -39,7 +39,7 @@ Media types and extensions.
 .Pp
 Within the sections, empty lines are ignored and comments can be put
 anywhere in the file using a hash mark
-.Pq Sq # ,
+.Pq Sq #
 and extend to the end of the current line.
 A boolean is either the symbol
 .Sq on
@@ -104,9 +104,9 @@ certdir = "/etc/keys"
 common = "lang it; auto index on"
 
 server "foo" {
-	root $dir "/foo"         # -> /var/gemini/foo
-	cert $certdir "/foo.pem" # -> /etc/keys/foo.pem
-	key  $certdir "/foo.key" # -> /etc/keys/foo.key
+	root $dir "/foo"         # "/var/gemini/foo"
+	cert $certdir "/foo.pem" # "/etc/keys/foo.pem"
+	key  $certdir "/foo.key" # "/etc/keys/foo.key"
 	@common
 }
 .Ed
@@ -118,26 +118,19 @@ the process to the given
 .Ar path .
 The daemon has to be run with root privileges and thus the option
 .Ic user
-needs to be provided, so privileges can be dropped.
-Note that
-.Nm
-will enter the chroot after loading the TLS keys, but before opening
-the virtual host root directories.
-It's recommended to keep the TLS keys outside the chroot.
-Future version of
-.Nm
-may enforce this.
-.It Ic ipv6 Ar bool
-Enable or disable IPv6 support, off by default.
-.It Ic port Ar portno
-The port to listen on.
-1965 by default.
+needs to be provided too, so privileges can be dropped afterwards.
+All the paths in the configuration file are relative to the chroot
+directory, except for the
+.Ic cert ,
+.Ic key
+and
+.Ic ocsp
+paths.
 .It Ic prefork Ar number
 Run the specified number of server processes.
 This increases the performance and prevents delays when connecting to
 a server.
-When not in config-less mode,
-.Nm
+.Xr gmid 8
 runs 3 server processes by default.
 The maximum number allowed is 16.
 .It Ic protocols Ar string
@@ -252,6 +245,20 @@ Specify the language tag for the text/gemini content served.
 If not specified, no
 .Dq lang
 parameter will be added in the response.
+.It Ic listen on Ar address Ic port Ar number
+Set the listen address and port.
+This statement can be specified multiple times.
+If
+.Ar address
+is
+.Sq *
+then
+.Xr gmid 8
+will listen on all IPv4 and IPv6 addresses.
+.Ar 0.0.0.0
+means to listen on all IPv4 addresses and
+.Ar ::
+all IPv6 addresses.
 .It Ic location Ar path Brq ...
 Specify server configuration rules for a specific location.
 .Ar path
@@ -265,7 +272,9 @@ A
 .Ic location
 section may include most of the server configuration rules
 except
-.Ic alias , Ic cert , Ic key , Ic location , Ic param No and Ic proxy .
+.Ic alias , Ic cert , Ic key , Ic listen , Ic location , Ic param
+and
+.Ic proxy .
 .It Ic log Ar bool
 Enable or disable the logging for the current server or location block.
 .It Ic param Ar name Cm = Ar value
@@ -450,7 +459,7 @@ The
 section must include one or more lines of the following syntax, enclosed
 in curly brances:
 .Bl -tag -width Ds
-.It Ar type/subtype Ar name Op Ar name ...
+.It Ar type Ns / Ns Ar subtype Ar name Op Ar name ...
 Set the media
 .Ar type
 and
@@ -469,6 +478,7 @@ By default
 uses the following mapping if no
 .Ic types
 block is defined:
+.Pp
 .Bl -tag -offset indent -width 15m -compact
 .It application/pdf
 pdf
@@ -505,8 +515,6 @@ that enables only TLSv1.3, adds the MIME types mapping from
 .Pa /usr/share/misc/mime.types
 and defines two virtual host:
 .Bd -literal -offset indent
-ipv6 on		# enable ipv6
-
 protocols "tlsv1.3"
 
 types {
@@ -514,12 +522,14 @@ types {
 }
 
 server "example.com" {
+	listen on * port 1965
 	cert "/etc/ssl/example.com.pem"
 	key  "/etc/ssl/private/example.com.key"
 	root "/var/gemini/example.com"
 }
 
 server "example.it" {
+	listen on * port 1965
 	cert "/etc/ssl/example.it.pem"
 	key  "/etc/ssl/private/example.it.key"
 	root "/var/gemini/example.it"
@@ -539,6 +549,8 @@ chroot "/var/gemini"
 user "_gmid"
 
 server "example.com" {
+	listen on * port 1965
+
 	# absolute paths:
 	cert "/etc/ssl/example.com.pem"
 	key  "/etc/ssl/private/example.com.key"
