@@ -1267,6 +1267,8 @@ client_close_ev(int fd, short event, void *d)
 
 	close(c->fd);
 	c->fd = -1;
+
+	free(c);
 }
 
 static void
