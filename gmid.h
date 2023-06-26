@@ -281,6 +281,8 @@ struct client {
 	size_t		 reqlen;
 	struct iri	 iri;
 	char		 domain[DOMAIN_NAME_LEN];
+	char		 rhost[NI_MAXHOST];
+	char		 rserv[NI_MAXSERV];
 
 	struct bufferevent *bev;
 

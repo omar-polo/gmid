@@ -343,26 +343,18 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 void
 fcgi_req(struct client *c)
 {
-	char		 addr[NI_MAXHOST], buf[22];
+	char		 buf[22];
 	char		*qs;
-	int		 e;
 	time_t		 tim;
 	struct tm	 tminfo;
 	struct envlist	*p;
-
-	e = getnameinfo((struct sockaddr*)&c->raddr, c->raddrlen,
-	    addr, sizeof(addr),
-	    NULL, 0,
-	    NI_NUMERICHOST);
-	if (e != 0)
-		fatalx("getnameinfo failed: %s", gai_strerror(e));
 
 	fcgi_begin_request(c->cgibev);
 	fcgi_send_param(c->cgibev, "GATEWAY_INTERFACE", "CGI/1.1");
 	fcgi_send_param(c->cgibev, "GEMINI_URL_PATH", c->iri.path);
 	fcgi_send_param(c->cgibev, "QUERY_STRING", c->iri.query);
-	fcgi_send_param(c->cgibev, "REMOTE_ADDR", addr);
-	fcgi_send_param(c->cgibev, "REMOTE_HOST", addr);
+	fcgi_send_param(c->cgibev, "REMOTE_ADDR", c->rhost);
+	fcgi_send_param(c->cgibev, "REMOTE_HOST", c->rhost);
 	fcgi_send_param(c->cgibev, "REQUEST_METHOD", "");
 	fcgi_send_param(c->cgibev, "SERVER_NAME", c->iri.host);
 	fcgi_send_param(c->cgibev, "SERVER_PROTOCOL", "GEMINI");

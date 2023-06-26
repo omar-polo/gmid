@@ -42,16 +42,8 @@ static const struct option opts[] = {
 void
 log_request(struct client *c, char *meta, size_t l)
 {
-	char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV], b[GEMINI_URL_LEN];
+	char b[GEMINI_URL_LEN];
 	const char *t;
-	int ec;
-
-	ec = getnameinfo((struct sockaddr*)&c->raddr, c->raddrlen,
-	    hbuf, sizeof(hbuf),
-	    sbuf, sizeof(sbuf),
-	    NI_NUMERICHOST | NI_NUMERICSERV);
-	if (ec != 0)
-		fatalx("getnameinfo: %s", gai_strerror(ec));
 
 	if (c->iri.schema != NULL) {
 		/* serialize the IRI */
@@ -81,7 +73,7 @@ log_request(struct client *c, char *meta, size_t l)
 	if ((t = memchr(meta, '\r', l)) == NULL)
 		t = meta + l;
 
-	fprintf(stderr, "%s:%s GET %s %.*s\n", hbuf, sbuf, b,
+	fprintf(stderr, "%s:%s GET %s %.*s\n", c->rhost, c->rserv, b,
 	    (int)(t-meta), meta);
 }
 

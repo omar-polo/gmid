@@ -1343,7 +1343,7 @@ do_accept(int sock, short et, void *d)
 	struct sockaddr_storage raddr;
 	struct sockaddr *sraddr;
 	socklen_t len;
-	int fd;
+	int e, fd;
 
 	sraddr = (struct sockaddr *)&raddr;
 	len = sizeof(raddr);
@@ -1364,6 +1364,15 @@ do_accept(int sock, short et, void *d)
 	c->pfd = -1;
 	memcpy(&c->raddr, &raddr, sizeof(raddr));
 	c->raddrlen = len;
+
+	e = getnameinfo(sraddr, len, c->rhost, sizeof(c->rhost),
+	    c->rserv, sizeof(c->rserv), NI_NUMERICHOST | NI_NUMERICSERV);
+	if (e != 0) {
+		log_warnx("getnameinfo failed: %s", gai_strerror(e));
+		close(c->fd);
+		free(c);
+		return;
+	}
 
 	if (tls_accept_socket(addr->ctx, &c->ctx, fd) == -1) {
 		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
