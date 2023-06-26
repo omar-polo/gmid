@@ -907,13 +907,10 @@ open_dir(struct client *c)
 static void
 redirect_canonical_dir(struct client *c)
 {
-	size_t len;
+	int r;
 
-	strlcpy(c->sbuf, "/", sizeof(c->sbuf));
-	strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
-	len = strlcat(c->sbuf, "/", sizeof(c->sbuf));
-
-	if (len >= sizeof(c->sbuf)) {
+	r = snprintf(c->sbuf, sizeof(c->sbuf), "/%s/", c->iri.path);
+	if (r < 0 || (size_t)r >= sizeof(c->sbuf)) {
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
