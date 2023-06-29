@@ -328,6 +328,9 @@ servopt		: ALIAS string {
 		| PARAM string '=' string {
 			add_param($2, $4);
 		}
+		| LISTEN ON listen_addr {
+			listen_on($3, "1965");
+		}
 		| LISTEN ON listen_addr PORT STRING {
 			listen_on($3, $5);
 			free($3);

@@ -248,8 +248,13 @@ Specify the language tag for the text/gemini content served.
 If not specified, no
 .Dq lang
 parameter will be added in the response.
-.It Ic listen on Ar address Ic port Ar number
-Set the listen address and port.
+.It Ic listen on Ar address Op Ic port Ar number
+Set the listen
+.Ar address
+and
+.Ar port
+which defaults to
+.Sq 1965 .
 This statement can be specified multiple times.
 If
 .Ar address
@@ -259,9 +264,9 @@ then
 .Xr gmid 8
 will listen on all IPv4 and IPv6 addresses.
 .Ar 0.0.0.0
-means to listen on all IPv4 addresses and
+can be used to listen on all IPv4 addresses and
 .Ar ::
-all IPv6 addresses.
+on all IPv6 addresses.
 .It Ic location Ar path Brq ...
 Specify server configuration rules for a specific location.
 .Ar path
