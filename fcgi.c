@@ -22,25 +22,6 @@
 
 #include "log.h"
 
-/*
- * Sometimes it can be useful to inspect the fastcgi traffic as
- * received by gmid.
- *
- * This will make gmid connect to a `debug.sock' socket (that must
- * exists) in the current directory and send there a copy of what gets
- * read.  The socket can be created and monitored e.g. with
- *
- *	rm -f debug.sock ; nc -Ulk ./debug.sock | hexdump -C
- *
- * NB: the sandbox must be disabled for this to work.
- */
-#define DEBUG_FCGI 0
-
-#if DEBUG_FCGI
-# include <sys/un.h>
-static int debug_socket = -1;
-#endif
-
 struct fcgi_header {
 	unsigned char version;
 	unsigned char type;
@@ -239,22 +220,6 @@ fcgi_read(struct bufferevent *bev, void *d)
 	struct fcgi_end_req_body end;
 	size_t			 len;
 
-#if DEBUG_FCGI
-	if (debug_socket == -1) {
-		struct sockaddr_un addr;
-
-		if ((debug_socket = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
-			fatal("socket");
-
-		memset(&addr, 0, sizeof(addr));
-		addr.sun_family = AF_UNIX;
-		strlcpy(addr.sun_path, "./debug.sock", sizeof(addr.sun_path));
-		if (connect(debug_socket, (struct sockaddr*)&addr, sizeof(addr))
-		    == -1)
-			fatal("connect");
-	}
-#endif
-
 	for (;;) {
 		if (EVBUFFER_LENGTH(src) < sizeof(hdr))
 			return;
@@ -271,11 +236,6 @@ fcgi_read(struct bufferevent *bev, void *d)
 
 		if (EVBUFFER_LENGTH(src) < sizeof(hdr) + len + hdr.padding)
 			return;
-
-#if DEBUG_FCGI
-		write(debug_socket, EVBUFFER_DATA(src),
-		    sizeof(hdr) + len + hdr.padding);
-#endif
 
 		evbuffer_drain(src, sizeof(hdr));
 
