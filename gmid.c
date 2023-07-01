@@ -81,7 +81,7 @@ usage(void)
 
 /* used by the server process, defined here so gg can provide its own impl. */
 void
-log_request(struct client *c, char *meta, size_t l)
+log_request(struct client *c, int code, const char *meta)
 {
 	struct conf *conf = c->conf;
 	char b[GEMINI_URL_LEN];
@@ -114,11 +114,8 @@ log_request(struct client *c, char *meta, size_t l)
 		strlcpy(b, t, sizeof(b));
 	}
 
-	if ((t = memchr(meta, '\r', l)) == NULL)
-		t = meta + l;
-
-	ec = asprintf(&fmted, "%s:%s GET %s %.*s", c->rhost, c->rserv, b,
-	    (int)(t-meta), meta);
+	ec = asprintf(&fmted, "%s:%s GET %s %d %s", c->rhost, c->rserv, b,
+	    code, meta);
 	if (ec == -1)
 		fatal("asprintf");
 

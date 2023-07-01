@@ -365,7 +365,7 @@ char		*data_dir(void);
 void		 load_local_cert(struct vhost*, const char*, const char*);
 
 /* gmid.c / ge.c */
-void		 log_request(struct client *, char *, size_t);
+void		 log_request(struct client *, int, const char *);
 
 /* config.c */
 struct conf	*config_new(void);

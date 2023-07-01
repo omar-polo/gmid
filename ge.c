@@ -40,7 +40,7 @@ static const struct option opts[] = {
 };
 
 void
-log_request(struct client *c, char *meta, size_t l)
+log_request(struct client *c, int code, const char *meta)
 {
 	char b[GEMINI_URL_LEN];
 	const char *t;
@@ -70,11 +70,8 @@ log_request(struct client *c, char *meta, size_t l)
 		strlcpy(b, t, sizeof(b));
 	}
 
-	if ((t = memchr(meta, '\r', l)) == NULL)
-		t = meta + l;
-
-	fprintf(stderr, "%s:%s GET %s %.*s\n", c->rhost, c->rserv, b,
-	    (int)(t-meta), meta);
+	fprintf(stderr, "%s:%s GET %s %d %s\n", c->rhost, c->rserv, b,
+	    code, meta);
 }
 
 void
