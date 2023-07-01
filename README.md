@@ -142,7 +142,8 @@ splitted into multiple processes:
 
  - logger: logs the requests.
 
- - server: listen on the binded ports and serves the request.
+ - server: listen on the binded ports and serves the request.  This
+   also include speaking FastCGI and proxying requests.
 
  - crypto: (used only on OpenBSD at the time of writing.)  Holds the
    TLS private keys to avoid a compromised `server` process to
