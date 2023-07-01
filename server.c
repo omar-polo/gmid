@@ -907,15 +907,16 @@ open_dir(struct client *c)
 static void
 redirect_canonical_dir(struct client *c)
 {
+	char buf[GEMINI_URL_LEN];
 	int r;
 
-	r = snprintf(c->sbuf, sizeof(c->sbuf), "/%s/", c->iri.path);
-	if (r < 0 || (size_t)r >= sizeof(c->sbuf)) {
+	r = snprintf(buf, sizeof(buf), "/%s/", c->iri.path);
+	if (r < 0 || (size_t)r >= sizeof(buf)) {
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
-	start_reply(c, TEMP_REDIRECT, c->sbuf);
+	start_reply(c, TEMP_REDIRECT, buf);
 }
 
 static void
