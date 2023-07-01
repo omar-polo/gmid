@@ -1288,7 +1288,7 @@ client_close(struct client *c)
 }
 
 void
-do_accept(int sock, short et, void *d)
+server_accept(int sock, short et, void *d)
 {
 	struct address *addr = d;
 	struct client *c;

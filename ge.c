@@ -200,7 +200,7 @@ serve(struct conf *conf, const char *host, int port, const char *dir)
 		addr->conf = conf;
 		addr->sock = sock;
 		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
-		    do_accept, addr);
+		    server_accept, addr);
 
 		if ((addr->ctx = tls_server()) == NULL)
 			fatal("tls_server failure");

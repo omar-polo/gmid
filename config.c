@@ -548,7 +548,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		addr->conf = conf;
 		addr->sock = imsg->fd;
 		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
-		    do_accept, addr);
+		    server_accept, addr);
 		if ((addr->ctx = tls_server()) == NULL)
 			fatal("tls_server failure");
 		TAILQ_INSERT_HEAD(&conf->addrs, addr, addrs);
