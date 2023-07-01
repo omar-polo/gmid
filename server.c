@@ -52,8 +52,6 @@ void tls_config_use_fake_private_key(struct tls_config *);
 
 static inline int matches(const char*, const char*);
 
-static int	 check_path(struct client*, const char*, int*);
-static void	 open_file(struct client*);
 static void	 handle_handshake(int, short, void*);
 static const char *strip_path(const char*, int);
 static void	 fmt_sbuf(const char*, struct client*, const char*);
@@ -343,73 +341,6 @@ vhost_disable_log(struct vhost *v, const char *path)
 
 	loc = TAILQ_FIRST(&v->locations);
 	return loc->disable_log;
-}
-
-static int
-check_path(struct client *c, const char *path, int *fd)
-{
-	struct stat sb;
-	const char *p;
-	int dirfd, strip;
-
-	assert(path != NULL);
-
-	/*
-	 * in send_dir we add an initial / (to be redirect-friendly),
-	 * but here we want to skip it
-	 */
-	if (*path == '/')
-		path++;
-
-	strip = vhost_strip(c->host, path);
-	p = strip_path(path, strip);
-
-	if (*p == '/')
-		p = p+1;
-	if (*p == '\0')
-		p = ".";
-
-	dirfd = vhost_dirfd(c->host, path, &c->loc);
-	log_debug("check_path: strip=%d path=%s original=%s",
-	    strip, p, path);
-	if (*fd == -1 && (*fd = openat(dirfd, p, O_RDONLY)) == -1) {
-		if (errno == EACCES)
-			log_info("can't open %s: %s", p, strerror(errno));
-		return FILE_MISSING;
-	}
-
-	if (fstat(*fd, &sb) == -1) {
-		log_warn("fstat %s", path);
-		return FILE_MISSING;
-	}
-
-	if (S_ISDIR(sb.st_mode))
-		return FILE_DIRECTORY;
-
-	return FILE_EXISTS;
-}
-
-static void
-open_file(struct client *c)
-{
-	switch (check_path(c, c->iri.path, &c->pfd)) {
-	case FILE_EXISTS:
-		c->type = REQUEST_FILE;
-		start_reply(c, SUCCESS, mime(c->conf, c->host, c->iri.path));
-		return;
-
-	case FILE_DIRECTORY:
-		open_dir(c);
-		return;
-
-	case FILE_MISSING:
-		start_reply(c, NOT_FOUND, "not found");
-		return;
-
-	default:
-		/* unreachable */
-		abort();
-	}
 }
 
 void
@@ -827,13 +758,41 @@ apply_require_ca(struct client *c)
 }
 
 static void
-open_dir(struct client *c)
+server_dir_listing(struct client *c)
 {
-	size_t len;
-	int dirfd, root;
-	char *before_file;
+	int root;
 
 	root = !strcmp(c->iri.path, "/") || *c->iri.path == '\0';
+
+	if (!vhost_auto_index(c->host, c->iri.path)) {
+		start_reply(c, NOT_FOUND, "not found");
+		return;
+	}
+
+	c->dirlen = scandir_fd(c->pfd, &c->dir,
+	    root ? select_non_dotdot : select_non_dot,
+	    alphasort);
+	if (c->dirlen == -1) {
+		log_warn("scandir_fd(%d) (vhost:%s) %s",
+		    c->pfd, c->host->domain, c->iri.path);
+		start_reply(c, TEMP_FAILURE, "internal server error");
+		return;
+	}
+
+	c->type = REQUEST_DIR;
+	start_reply(c, SUCCESS, "text/gemini");
+	evbuffer_add_printf(EVBUFFER_OUTPUT(c->bev),
+	    "# Index of /%s\n\n", c->iri.path);
+}
+
+static void
+open_dir(struct client *c)
+{
+	struct stat sb;
+	const char *index;
+	char path[PATH_MAX];
+	size_t len;
+	int fd = -1;
 
 	len = strlen(c->iri.path);
 	if (len > 0 && !ends_with(c->iri.path, "/")) {
@@ -841,67 +800,33 @@ open_dir(struct client *c)
 		return;
 	}
 
-	strlcpy(c->sbuf, "/", sizeof(c->sbuf));
-	strlcat(c->sbuf, c->iri.path, sizeof(c->sbuf));
-	if (!ends_with(c->sbuf, "/"))
-		strlcat(c->sbuf, "/", sizeof(c->sbuf));
-	before_file = strchr(c->sbuf, '\0');
-	len = strlcat(c->sbuf, vhost_index(c->host, c->iri.path),
-	    sizeof(c->sbuf));
-	if (len >= sizeof(c->sbuf)) {
+	index = vhost_index(c->host, c->iri.path);
+	fd = openat(c->pfd, index, O_RDONLY);
+	if (fd == -1) {
+		server_dir_listing(c);
+		return;
+	}
+
+	if (fstat(fd, &sb) == -1) {
+		log_warn("fstat");
+		close(fd);
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
-	c->iri.path = c->sbuf;
-
-	/* close later unless we have to generate the dir listing */
-	dirfd = c->pfd;
-	c->pfd = -1;
-
-	switch (check_path(c, c->iri.path, &c->pfd)) {
-	case FILE_EXISTS:
-		c->type = REQUEST_FILE;
-		start_reply(c, SUCCESS, mime(c->conf, c->host, c->iri.path));
-		break;
-
-	case FILE_DIRECTORY:
-		start_reply(c, TEMP_REDIRECT, c->sbuf);
-		break;
-
-	case FILE_MISSING:
-		*before_file = '\0';
-
-		if (!vhost_auto_index(c->host, c->iri.path)) {
-			start_reply(c, NOT_FOUND, "not found");
-			break;
-		}
-
-		c->type = REQUEST_DIR;
-
-		c->dirlen = scandir_fd(dirfd, &c->dir,
-		    root ? select_non_dotdot : select_non_dot,
-		    alphasort);
-		if (c->dirlen == -1) {
-			log_warn("scandir_fd(%d) (vhost:%s) %s",
-			    c->pfd, c->host->domain, c->iri.path);
-			start_reply(c, TEMP_FAILURE, "internal server error");
-			return;
-		}
-		c->diroff = 0;
-		c->off = 0;
-
-		start_reply(c, SUCCESS, "text/gemini");
-		evbuffer_add_printf(EVBUFFER_OUTPUT(c->bev),
-		    "# Index of %s\n\n", c->iri.path);
+	if (!S_ISREG(sb.st_mode)) {
+		close(fd);
+		server_dir_listing(c);
 		return;
-
-	default:
-		/* unreachable */
-		abort();
 	}
 
-	close(dirfd);
+	strlcpy(path, c->iri.path, sizeof(path));
+	strlcat(path, index, sizeof(path));
+
+	close(c->pfd);
+	c->pfd = fd;
+	c->type = REQUEST_FILE;
+	start_reply(c, SUCCESS, mime(c->conf, c->host, path));
 }
 
 static void
@@ -1029,9 +954,10 @@ err:
 static void
 client_read(struct bufferevent *bev, void *d)
 {
+	struct stat	 sb;
 	struct client	*c = d;
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
-	const char	*parse_err = "invalid request";
+	const char	*path, *p, *parse_err = "invalid request";
 	char		 decoded[DOMAIN_NAME_LEN];
 
 	bufferevent_disable(bev, EVBUFFER_READ);
@@ -1085,7 +1011,34 @@ client_read(struct bufferevent *bev, void *d)
 	    apply_fastcgi(c))
 		return;
 
-	open_file(c);
+	path = c->iri.path;
+	p = strip_path(path, vhost_strip(c->host, path));
+	while (*p == '/')
+		p++;
+	if (*p == '\0')
+		p = ".";
+
+	c->pfd = openat(vhost_dirfd(c->host, path, &c->loc), p, O_RDONLY);
+	if (c->pfd == -1) {
+		if (errno == EACCES)
+			log_info("can't open %s: %s", p, strerror(errno));
+		start_reply(c, NOT_FOUND, "not found");
+		return;
+	}
+
+	if (fstat(c->pfd, &sb) == -1) {
+		log_warnx("fstat %s", path);
+		start_reply(c, TEMP_FAILURE, "internal server error");
+		return;
+	}
+
+	if (S_ISDIR(sb.st_mode)) {
+		open_dir(c);
+		return;
+	}
+
+	c->type = REQUEST_FILE;
+	start_reply(c, SUCCESS, mime(c->conf, c->host, p));
 }
 
 void

@@ -325,12 +325,6 @@ struct connreq {
 	int	flag;
 };
 
-enum {
-	FILE_EXISTS,
-	FILE_DIRECTORY,
-	FILE_MISSING,
-};
-
 enum imsg_type {
 	IMSG_FCGI_REQ,
 	IMSG_FCGI_FD,
