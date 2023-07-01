@@ -210,7 +210,7 @@ proxy_error(struct bufferevent *bev, short error, void *d)
 
 	/*
 	 * If we're here it means that some kind of non-recoverable
-	 * error appened.
+	 * error happened.
 	 */
 
 	bufferevent_free(bev);
