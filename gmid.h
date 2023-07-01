@@ -306,7 +306,7 @@ struct client {
 
 	/* big enough to store STATUS + SPACE + META + CRLF */
 	char		 sbuf[1029];
-	ssize_t		 len, off;
+	size_t		 soff;
 
 	struct sockaddr_storage	 raddr;
 	socklen_t		 raddrlen;

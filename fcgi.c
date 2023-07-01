@@ -17,6 +17,7 @@
 #include "gmid.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <string.h>
 
@@ -211,6 +212,65 @@ reclen(struct fcgi_header *h)
 	return h->content_len0 + (h->content_len1 << 8);
 }
 
+static void
+fcgi_handle_stdout(struct client *c, struct evbuffer *src, size_t len)
+{
+	struct bufferevent	*bev = c->cgibev;
+	char			*t;
+	size_t			 l;
+	int			 code;
+
+	if (c->code == 0) {
+		l = len;
+		if (l > sizeof(c->sbuf) - c->soff)
+			l = sizeof(c->sbuf) - c->soff;
+
+		memcpy(&c->sbuf[c->soff], EVBUFFER_DATA(src), l);
+		c->soff += l;
+		evbuffer_drain(src, l);
+		len -= l;
+
+		if ((t = memmem(c->sbuf, c->soff, "\r\n", 2)) == NULL) {
+			if (c->soff == sizeof(c->sbuf)) {
+				log_warnx("FastCGI application is trying to"
+				    " send a header that's too long.");
+				fcgi_error(bev, EVBUFFER_ERROR, c);
+			}
+
+			/* wait a bit */
+			return;
+		}
+		*t = '\0';
+		t += 2; /* skip CRLF */
+
+		if (!isdigit((unsigned char)c->sbuf[0]) ||
+		    !isdigit((unsigned char)c->sbuf[1]) ||
+		    c->sbuf[2] != ' ') {
+			fcgi_error(bev, EVBUFFER_ERROR, c);
+			return;
+		}
+
+		code = (c->sbuf[0] - '0') * 10 + (c->sbuf[1] - '0');
+		if (code < 10 || code >= 70) {
+			log_warnx("FastCGI application is trying to send an"
+			    " invalid reply code: %d", code);
+			fcgi_error(bev, EVBUFFER_ERROR, c);
+			return;
+		}
+
+		start_reply(c, code, c->sbuf + 3);
+		if (c->code < 20 || c->code > 29) {
+			fcgi_error(bev, EVBUFFER_EOF, c);
+			return;
+		}
+
+		bufferevent_write(c->bev, t, &c->sbuf[c->soff] - t);
+	}
+
+	bufferevent_write(c->bev, EVBUFFER_DATA(src), len);
+	evbuffer_drain(src, len);
+}
+
 void
 fcgi_read(struct bufferevent *bev, void *d)
 {
@@ -259,8 +319,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 			break;
 
 		case FCGI_STDOUT:
-			bufferevent_write(c->bev, EVBUFFER_DATA(src), len);
-			evbuffer_drain(src, len);
+			fcgi_handle_stdout(c, src, len);
 			break;
 
 		default:
@@ -290,14 +349,25 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 {
 	struct client	*c = d;
 
-	if (!(err & (EVBUFFER_ERROR|EVBUFFER_EOF)))
-		log_warn("unknown event error (%x)", err);
+	/*
+	 * If we're here it means that some kind of non-recoverable
+	 * error happened.
+	 */
+
+	bufferevent_free(bev);
+	c->cgibev = NULL;
+
+	close(c->pfd);
+	c->pfd = -1;
+
+	/* EOF and no header */
+	if (c->code == 0) {
+		start_reply(c, CGI_ERROR, "CGI error");
+		return;
+	}
 
 	c->type = REQUEST_DONE;
-	if (c->code != 0)
-		client_close(c);
-	else
-		start_reply(c, CGI_ERROR, "CGI error");
+	client_write(c->bev, c);
 }
 
 void
