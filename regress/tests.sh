@@ -220,10 +220,12 @@ test_fastcgi() {
 
 	setup_simple_test 'prefork 1' 'fastcgi "'$PWD'/fcgi.sock"'
 
+	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
+
 	i=0
 	while [ $i -lt 10 ]; do
 		fetch /
-		check_reply "20 text/gemini" "# hello from fastcgi!"
+		check_reply "20 text/gemini" "$msg"
 		if [ $? -ne 0 ]; then
 			kill $fcgi_pid
 			return 1

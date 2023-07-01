@@ -167,9 +167,6 @@ main(int argc, char **argv)
 	size_t			 len;
 	int			 ch, sock, s;
 
-	msg = "20 text/gemini\r\n# hello from fastcgi!\n";
-	len = strlen(msg);
-
 	while ((ch = getopt(argc, argv, "")) != -1)
 		errx(1, "wrong usage");
 	argc -= optind;
@@ -220,6 +217,16 @@ main(int argc, char **argv)
 		}
 
 		assert_record(s, FCGI_STDIN);
+
+		msg = "20 text/gemini\r\n# hello from fastcgi!\n";
+		len = strlen(msg);
+
+		prepare_header(&hdr, FCGI_STDOUT, 1, len, 0);
+		must_write(s, &hdr, sizeof(hdr));
+		must_write(s, msg, len);
+
+		msg = "some more content in the page...\n";
+		len = strlen(msg);
 
 		prepare_header(&hdr, FCGI_STDOUT, 1, len, 0);
 		must_write(s, &hdr, sizeof(hdr));
