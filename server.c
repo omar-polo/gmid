@@ -485,7 +485,7 @@ fmtbuf(char *buf, size_t buflen, const char *fmt, struct client *c,
 			strlcat(buf, c->domain, buflen);
 			break;
 		default:
-			fatalx("%s: unknown fmt specifier %c",
+			log_warnx("%s: unknown fmt specifier %c",
 			    __func__, *fmt);
 		}
 	}
