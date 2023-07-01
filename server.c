@@ -791,11 +791,9 @@ open_dir(struct client *c)
 	struct stat sb;
 	const char *index;
 	char path[PATH_MAX];
-	size_t len;
 	int fd = -1;
 
-	len = strlen(c->iri.path);
-	if (len > 0 && !ends_with(c->iri.path, "/")) {
+	if (*c->iri.path != '\0' && !ends_with(c->iri.path, "/")) {
 		redirect_canonical_dir(c);
 		return;
 	}
