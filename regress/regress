@@ -58,5 +58,7 @@ run_test test_proxy_with_certs
 run_test test_include_mime
 
 # TODO: add test that uses only a TLSv1.2 or TLSv1.3
+# TODO: add a test that attempt to serve a non-regular file
+# TODO: add a test where the index is not a regular file
 
 tests_done
