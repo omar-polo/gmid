@@ -54,7 +54,8 @@ static inline int matches(const char*, const char*);
 
 static void	 handle_handshake(int, short, void*);
 static const char *strip_path(const char*, int);
-static void	 fmt_sbuf(const char*, struct client*, const char*);
+static void	 fmtbuf(char *, size_t, const char *, struct client *,
+		    const char *);
 static int	 apply_block_return(struct client*);
 static int	 check_matching_certificate(X509_STORE *, struct client *);
 static int	 apply_reverse_proxy(struct client *);
@@ -443,43 +444,45 @@ strip_path(const char *path, int strip)
 }
 
 static void
-fmt_sbuf(const char *fmt, struct client *c, const char *path)
+fmtbuf(char *buf, size_t buflen, const char *fmt, struct client *c,
+    const char *path)
 {
 	size_t i;
-	char buf[32];
+	char tmp[32];
 
-	memset(buf, 0, sizeof(buf));
+	*buf = '\0';
+	memset(tmp, 0, sizeof(tmp));
 	for (i = 0; *fmt; ++fmt) {
-		if (i == sizeof(buf)-1 || *fmt == '%') {
-			strlcat(c->sbuf, buf, sizeof(c->sbuf));
-			memset(buf, 0, sizeof(buf));
+		if (i == sizeof(tmp)-1 || *fmt == '%') {
+			strlcat(buf, tmp, buflen);
+			memset(tmp, 0, sizeof(tmp));
 			i = 0;
 		}
 
 		if (*fmt != '%') {
-			buf[i++] = *fmt;
+			tmp[i++] = *fmt;
 			continue;
 		}
 
 		switch (*++fmt) {
 		case '%':
-			strlcat(c->sbuf, "%", sizeof(c->sbuf));
+			strlcat(buf, "%", buflen);
 			break;
 		case 'p':
 			if (*path != '/')
-				strlcat(c->sbuf, "/", sizeof(c->sbuf));
-			strlcat(c->sbuf, path, sizeof(c->sbuf));
+				strlcat(buf, "/", buflen);
+			strlcat(buf, path, buflen);
 			break;
 		case 'q':
-			strlcat(c->sbuf, c->iri.query, sizeof(c->sbuf));
+			strlcat(buf, c->iri.query, buflen);
 			break;
 		case 'P':
-			snprintf(buf, sizeof(buf), "%d", c->addr->port);
-			strlcat(c->sbuf, buf, sizeof(c->sbuf));
-			memset(buf, 0, sizeof(buf));
+			snprintf(tmp, sizeof(tmp), "%d", c->addr->port);
+			strlcat(buf, tmp, buflen);
+			memset(tmp, 0, sizeof(tmp));
 			break;
 		case 'N':
-			strlcat(c->sbuf, c->domain, sizeof(c->sbuf));
+			strlcat(buf, c->domain, buflen);
 			break;
 		default:
 			fatalx("%s: unknown fmt specifier %c",
@@ -488,13 +491,14 @@ fmt_sbuf(const char *fmt, struct client *c, const char *path)
 	}
 
 	if (i != 0)
-		strlcat(c->sbuf, buf, sizeof(c->sbuf));
+		strlcat(buf, tmp, buflen);
 }
 
 /* 1 if a matching `block return' (and apply it), 0 otherwise */
 static int
 apply_block_return(struct client *c)
 {
+	char buf[GEMINI_URL_LEN];
 	const char *fmt, *path;
 	int code;
 
@@ -502,9 +506,9 @@ apply_block_return(struct client *c)
 		return 0;
 
 	path = strip_path(c->iri.path, vhost_strip(c->host, c->iri.path));
-	fmt_sbuf(fmt, c, path);
+	fmtbuf(buf, sizeof(buf), fmt, c, path);
 
-	start_reply(c, code, c->sbuf);
+	start_reply(c, code, buf);
 	return 1;
 }
 
