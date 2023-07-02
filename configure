@@ -244,6 +244,22 @@ if ! runtest wait_any WAIT_ANY; then
 	CFLAGS="${CFLAGS} -DWAIT_ANY=-1"
 fi
 
+HAVE_ENDIAN_H=0
+HAVE_SYS_ENDIAN_H=0
+HAVE_MACHINE_ENDIAN=0
+
+runtest endian_h	ENDIAN_H	|| \
+runtest sys_endian_h	SYS_ENDIAN_H	|| \
+runtest machine_endian	MACHINE_ENDIAN	|| true
+
+if [ ${HAVE_ENDIAN_H} -eq 0 -a \
+     ${HAVE_SYS_ENDIAN_H} -eq 0 -a \
+     ${HAVE_MACHINE_ENDIAN} -eq 0 ]; then
+	echo "FATAL: no endian header found" 1>&2
+	echo "FATAL: no endian header found" 1>&3
+	exit 1
+fi
+
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest freezero	FREEZERO	|| true
@@ -348,6 +364,20 @@ cat <<__HEREDOC__
 #define DISABLE_SANDBOX		${DISABLE_SANDBOX}
 
 __HEREDOC__
+
+if [ ${HAVE_ENDIAN_H} -eq 1 ]; then
+	echo "#include <endian.h>"
+elif [ ${HAVE_SYS_ENDIAN_H} -eq 1 ]; then
+	echo "#include <sys/endian.h>"
+elif [ ${HAVE_MACHINE_ENDIAN} -eq 1 ]; then
+	cat <<__HEREDOC__
+#include <machine/endian.h>
+#include <libkern/OSByteOrder.h>
+#define htobe16(x) OSSwapHostToBigInt16(x)
+#define htobe32(x) OSSwapHostToBigInt32(x)
+#define htobe64(x) OSSwapHostToBigInt64(x)
+__HEREDOC__
+fi
 
 [ ${HAVE_EXPLICIT_BZERO} -eq 0 -o \
   ${HAVE_FREEZERO} -eq 0 -o \
