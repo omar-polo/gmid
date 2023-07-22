@@ -534,9 +534,9 @@ rsa_engine_init(void)
 	RSA_meth_set_priv_dec(rsae_method, rsae_priv_dec);
 
 	RSA_meth_set_flags(rsae_method,
-		RSA_meth_get_flags(rsa_default) | RSA_METHOD_FLAG_NO_CHECK);
+	    RSA_meth_get_flags(rsa_default) | RSA_METHOD_FLAG_NO_CHECK);
 	RSA_meth_set0_app_data(rsae_method,
-		RSA_meth_get0_app_data(rsa_default));
+	    RSA_meth_get0_app_data(rsa_default));
 
 	RSA_set_default_method(rsae_method);
 
