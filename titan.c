@@ -31,6 +31,14 @@
 
 #include "iri.h"
 
+#ifndef INFTIM
+#define INFTIM -1
+#endif
+
+#ifndef __OpenBSD__
+#define pledge(a, b) (0)
+#endif
+
 static int
 dial(const char *hostname, const char *port)
 {
