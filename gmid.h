@@ -50,6 +50,8 @@
 # include <event.h>
 #endif
 
+#include "iri.h"
+
 #define VERSION_STR(n)	n " " VERSION
 #define GE_STRING	VERSION_STR("ge")
 #define GG_STRING	VERSION_STR("gg")
@@ -87,16 +89,6 @@
 /* forward declaration */
 struct privsep;
 struct privsep_proc;
-
-struct iri {
-	char		*schema;
-	char		*host;
-	char		*port;
-	uint16_t	 port_no;
-	char		*path;
-	char		*query;
-	char		*fragment;
-};
 
 struct parser {
 	char		*iri;
@@ -437,12 +429,6 @@ void		 sandbox_logger_process(void);
 /* utf8.c */
 int		 valid_multibyte_utf8(struct parser*);
 char		*utf8_nth(char*, size_t);
-
-/* iri.c */
-int		 parse_iri(char*, struct iri*, const char**);
-int		 serialize_iri(struct iri*, char*, size_t);
-int		 encode_path(char *, size_t, const char *);
-char		*pct_decode_str(char *);
 
 /* logger.c */
 void		 logger(struct privsep *, struct privsep_proc *);
