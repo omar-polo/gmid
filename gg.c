@@ -239,7 +239,7 @@ get(const char *r)
 
 		len = dorep(ctx, buf, sizeof(buf));
 		if (len == 0)
-			goto close;
+			break;
 
 		if (foundhdr) {
 			write(1, buf, len);
@@ -258,7 +258,7 @@ get(const char *r)
 
 		if (debug == DEBUG_CODE) {
 			printf("%d\n", code);
-			goto close;
+			break;
 		}
 
 		if (debug == DEBUG_HEADER) {
@@ -266,7 +266,7 @@ get(const char *r)
 			assert(t != NULL);
 			*t = '\0';
 			printf("%s\n", buf);
-			goto close;
+			break;
 		}
 
 		if (debug == DEBUG_META) {
@@ -274,7 +274,7 @@ get(const char *r)
 			assert(t != NULL);
 			*t = '\0';
 			printf("%s\n", buf+3);
-			goto close;
+			break;
 		}
 
 		if (debug == DEBUG_ALL) {
@@ -290,14 +290,19 @@ get(const char *r)
 		write(1, t, len);
 	}
 
-close:
-	od = tls_close(ctx);
-	if (od == TLS_WANT_POLLIN || od == TLS_WANT_POLLOUT)
-		goto close;
-
-	tls_close(ctx);
-	tls_free(ctx);
-	return code;
+	for (;;) {
+		switch (tls_close(ctx)) {
+		case TLS_WANT_POLLIN:
+		case TLS_WANT_POLLOUT:
+			continue;
+		case -1:
+			warnx("tls_close: %s", tls_error(ctx));
+			/* fallthrough */
+		default:
+			tls_free(ctx);
+			return code;
+		}
+	}
 }
 
 static void __attribute__((noreturn))
