@@ -305,7 +305,7 @@ get(const char *r)
 	}
 }
 
-static void __attribute__((noreturn))
+static void __dead
 usage(void)
 {
 	fprintf(stderr, "version: " GG_STRING "\n");
