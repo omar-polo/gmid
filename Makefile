@@ -40,14 +40,17 @@ GG_SRCS =	gg.c iri.c utf8.c
 
 GG_OBJS =	${GG_SRCS:.c=.o} ${COBJS}
 
+TITAN_SRCS =	titan.c iri.c utf8.c
+TITAN_OBJS =	${TITAN_SRCS:.c=.o} ${COBJS}
+
 SRCS =		gmid.h log.h parse.y proc.h \
-		${GMID_SRCS} ${GE_SRCS} ${GG_SRCS}
+		${GMID_SRCS} ${GE_SRCS} ${GG_SRCS} ${TITAN_SRCS}
 
 DISTNAME =	gmid-${VERSION}
 
 # -- public targets --
 
-all: config.mk gmid ge gg
+all: config.mk gmid ge gg titan
 .PHONY: all tags clean cleanall test regress install
 
 config.mk config.h: configure
@@ -103,6 +106,9 @@ ge: ${GE_OBJS}
 
 gg: ${GG_OBJS}
 	${CC} ${GG_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+
+titan: ${TITAN_OBJS}
+	${CC} ${TITAN_OBJS} -o $@ ${LIBS} ${LDFLAGS}
 
 y.tab.c: parse.y
 	${YACC} -b y parse.y
