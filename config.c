@@ -96,12 +96,13 @@ config_purge(struct conf *conf)
 
 			free(l->reqca_path);
 			X509_STORE_free(l->reqca);
-			free(l);
 
 			TAILQ_FOREACH_SAFE(e, &l->params, envs, te) {
 				TAILQ_REMOVE(&l->params, e, envs);
 				free(e);
 			}
+
+			free(l);
 		}
 
 		TAILQ_FOREACH_SAFE(a, &h->aliases, aliases, ta) {
