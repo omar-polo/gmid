@@ -133,7 +133,7 @@ typedef struct {
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
-%token	SERVER SNI STRIP
+%token	SERVER SNI SOCKET STRIP
 %token	TCP TOEXT TYPE TYPES
 %token	USE_TLS USER
 %token	VERIFYNAME
@@ -326,6 +326,8 @@ servopt		: ALIAS string {
 			host->ocsp_path = $2;
 		}
 		| PARAM string '=' string {
+			yywarn("the top-level `param' directive is deprecated."
+			    "  Please use `fastcgi { param ... }`");
 			add_param($2, $4);
 		}
 		| LISTEN ON listen_addr {
@@ -465,7 +467,7 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			    sizeof(loc->default_mime));
 			free($3);
 		}
-		| FASTCGI fastcgi
+		| fastcgi
 		| INDEX string {
 			(void) strlcpy(loc->index, $2, sizeof(loc->index));
 			free($2);
@@ -487,26 +489,44 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 		| STRIP NUM		{ loc->strip = check_strip_no($2); }
 		;
 
-fastcgi		: string {
-			loc->fcgi = fastcgi_conf($1, NULL);
-			free($1);
-		}
-		| TCP string PORT NUM {
-			char *c;
-			if (asprintf(&c, "%d", $4) == -1)
-				fatal("asprintf");
-			loc->fcgi = fastcgi_conf($2, c);
+fastcgi		: FASTCGI '{' optnl fastcgiopts '}'
+		| FASTCGI fastcgiopt
+		| FASTCGI string {
+			yywarn("`fastcgi path' is deprecated.  "
+			    "Please use `fastcgi socket path' instead.");
+			loc->fcgi = fastcgi_conf($2, NULL);
 			free($2);
+		}
+		| error '}'
+		;
+
+fastcgiopts	: /* empty */
+		| fastcgiopts fastcgiopt optnl
+		;
+
+fastcgiopt	: PARAM string '=' string {
+			add_param($2, $4);
+		}
+		| SOCKET string {
+			loc->fcgi = fastcgi_conf($2, NULL);
+			free($2);
+		}
+		| SOCKET TCP string PORT NUM {
+			char *c;
+
+			if (asprintf(&c, "%d", $5) == -1)
+				fatal("asprintf");
+			loc->fcgi = fastcgi_conf($3, c);
+			free($3);
 			free(c);
 		}
-		| TCP string {
-			loc->fcgi = fastcgi_conf($2, "9000");
-			free($2);
+		| SOCKET TCP string {
+			loc->fcgi = fastcgi_conf($3, "9000");
 		}
-		| TCP string PORT string {
-			loc->fcgi = fastcgi_conf($2, $4);
-			free($2);
-			free($4);
+		| SOCKET TCP string PORT string {
+			loc->fcgi = fastcgi_conf($3, $5);
+			free($3);
+			free($5);
 		}
 		;
 
@@ -586,6 +606,7 @@ static const struct keyword {
 	{"root", ROOT},
 	{"server", SERVER},
 	{"sni", SNI},
+	{"socket", SOCKET},
 	{"strip", STRIP},
 	{"tcp", TCP},
 	{"to-ext", TOEXT},
@@ -1183,7 +1204,7 @@ void
 add_param(char *name, char *val)
 {
 	struct envlist *e;
-	struct envhead *h = &host->params;
+	struct envhead *h = &loc->params;
 
 	e = xcalloc(1, sizeof(*e));
 	(void) strlcpy(e->name, name, sizeof(e->name));

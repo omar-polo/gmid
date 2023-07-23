@@ -97,11 +97,11 @@ config_purge(struct conf *conf)
 			free(l->reqca_path);
 			X509_STORE_free(l->reqca);
 			free(l);
-		}
 
-		TAILQ_FOREACH_SAFE(e, &h->params, envs, te) {
-			TAILQ_REMOVE(&h->params, e, envs);
-			free(e);
+			TAILQ_FOREACH_SAFE(e, &l->params, envs, te) {
+				TAILQ_REMOVE(&l->params, e, envs);
+				free(e);
+			}
 		}
 
 		TAILQ_FOREACH_SAFE(a, &h->aliases, aliases, ta) {
@@ -363,12 +363,12 @@ config_send(struct conf *conf)
 			if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_LOC,
 			    fd, &lcopy, sizeof(lcopy)) == -1)
 				return -1;
-		}
 
-		TAILQ_FOREACH(e, &h->params, envs) {
-			if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_ENV,
-			    e, sizeof(*e)) == -1)
-				return -1;
+			TAILQ_FOREACH(e, &l->params, envs) {
+				if (proc_compose(ps, PROC_SERVER,
+				    IMSG_RECONF_ENV, e, sizeof(*e)) == -1)
+					return -1;
+			}
 		}
 
 		if (proc_flush_imsg(ps, PROC_SERVER, -1) == -1)
@@ -501,6 +501,7 @@ int
 config_recv(struct conf *conf, struct imsg *imsg)
 {
 	static struct vhost *h;
+	static struct location *l;
 	static struct proxy *p;
 	struct privsep	*ps = conf->ps;
 	struct etm	 m;
@@ -570,7 +571,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		h = vh;
 		TAILQ_INSERT_TAIL(&conf->hosts, h, vhosts);
 
-		/* reset proxy */
+		/* reset location and proxy */
+		l = NULL;
 		p = NULL;
 		break;
 
@@ -633,6 +635,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		IMSG_SIZE_CHECK(imsg, loc);
 		loc = xcalloc(1, sizeof(*loc));
 		memcpy(loc, imsg->data, datalen);
+		TAILQ_INIT(&loc->params);
 
 		if (imsg->fd != -1) {
 			if (load_file(imsg->fd, &d, &len) == -1)
@@ -643,16 +646,17 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			free(d);
 		}
 
+		l = loc;
 		TAILQ_INSERT_TAIL(&h->locations, loc, locations);
 		break;
 
 	case IMSG_RECONF_ENV:
-		if (h == NULL)
-			fatalx("recv'd env without host");
+		if (l == NULL)
+			fatalx("recv'd env without location");
 		IMSG_SIZE_CHECK(imsg, env);
 		env = xcalloc(1, sizeof(*env));
 		memcpy(env, imsg->data, datalen);
-		TAILQ_INSERT_TAIL(&h->params, env, envs);
+		TAILQ_INSERT_TAIL(&l->params, env, envs);
 		break;
 
 	case IMSG_RECONF_ALIAS:

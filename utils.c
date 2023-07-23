@@ -348,7 +348,6 @@ new_vhost(void)
 	h = xcalloc(1, sizeof(*h));
 	TAILQ_INIT(&h->addrs);
 	TAILQ_INIT(&h->locations);
-	TAILQ_INIT(&h->params);
 	TAILQ_INIT(&h->aliases);
 	TAILQ_INIT(&h->proxies);
 	return h;
@@ -362,6 +361,7 @@ new_location(void)
 	l = xcalloc(1, sizeof(*l));
 	l->dirfd = -1;
 	l->fcgi = -1;
+	TAILQ_INIT(&l->params);
 	return l;
 }
 

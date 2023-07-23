@@ -212,10 +212,17 @@ If not specified, the
 .Ic default type
 is set to
 .Dq application/octet-stream .
-.It Ic fastcgi Oo Ic tcp Oc Ar socket Oo Cm port Ar port Oc
-Enable
-.Sx FastCGI
-instead of serving files.
+.It Ic fastcgi Ar option
+Enable FastCGI instead of serving files.
+Multiple options may be specified within curly braces.
+Valid options are:
+.Bl -tag -width Ds
+.It Ic param Ar name Cm = Ar value
+Set the param
+.Ar name
+to
+.Ar value .
+.It Ic socket Oo Ic tcp Oc Ar socket Oo Cm port Ar port Oc
 The
 .Ar socket
 can either be a UNIX-domain socket or a TCP socket.
@@ -234,64 +241,9 @@ is interpreted as a hostname or an IP address.
 can be either a port number or the name of a service enclosed in
 double quotes.
 If not specified defaults to 9000.
-.It Ic index Ar string
-Set the directory index file.
-If not specified, it defaults to
-.Pa index.gmi .
-.It Ic key Ar file
-Specify the private key to use for this server.
-.Ar file
-should contain a PEM encoded private key.
-This option is mandatory.
-.It Ic lang Ar string
-Specify the language tag for the text/gemini content served.
-If not specified, no
-.Dq lang
-parameter will be added in the response.
-.It Ic listen on Ar address Op Ic port Ar number
-Set the listen
-.Ar address
-and
-.Ar port
-which defaults to
-.Sq 1965 .
-This statement can be specified multiple times.
-If
-.Ar address
-is
-.Sq *
-then
-.Xr gmid 8
-will listen on all IPv4 and IPv6 addresses.
-.Ar 0.0.0.0
-can be used to listen on all IPv4 addresses and
-.Ar ::
-on all IPv6 addresses.
-.It Ic location Ar path Brq ...
-Specify server configuration rules for a specific location.
-.Ar path
-argument will be matched against the request path with shell globbing
-rules.
-In case of multiple location statements in the same context, the first
-matching location will be put into effect and the later ones ignored.
-Therefore is advisable to match for more specific paths first and for
-generic ones later on.
-A
-.Ic location
-section may include most of the server configuration rules
-except
-.Ic alias , Ic cert , Ic key , Ic listen , Ic location , Ic param
-and
-.Ic proxy .
-.It Ic log Ar bool
-Enable or disable the logging for the current server or location block.
-.It Ic param Ar name Cm = Ar value
-Set the param
-.Ar name
-to
-.Ar value
-for FastCGI.
-By default the following parameters are defined:
+.El
+.Pp
+The FastCGI handler will be given the following variables by default:
 .Bl -tag -width 24m
 .It Ev GATEWAY_INTERFACE
 .Dq CGI/1.1
@@ -368,6 +320,57 @@ certificate in the ISO 8601 format
 The time corresponding to the start of the validity period of the peer
 certificate in the ISO 8601 format.
 .El
+.It Ic index Ar string
+Set the directory index file.
+If not specified, it defaults to
+.Pa index.gmi .
+.It Ic key Ar file
+Specify the private key to use for this server.
+.Ar file
+should contain a PEM encoded private key.
+This option is mandatory.
+.It Ic lang Ar string
+Specify the language tag for the text/gemini content served.
+If not specified, no
+.Dq lang
+parameter will be added in the response.
+.It Ic listen on Ar address Op Ic port Ar number
+Set the listen
+.Ar address
+and
+.Ar port
+which defaults to
+.Sq 1965 .
+This statement can be specified multiple times.
+If
+.Ar address
+is
+.Sq *
+then
+.Xr gmid 8
+will listen on all IPv4 and IPv6 addresses.
+.Ar 0.0.0.0
+can be used to listen on all IPv4 addresses and
+.Ar ::
+on all IPv6 addresses.
+.It Ic location Ar path Brq ...
+Specify server configuration rules for a specific location.
+.Ar path
+argument will be matched against the request path with shell globbing
+rules.
+In case of multiple location statements in the same context, the first
+matching location will be put into effect and the later ones ignored.
+Therefore is advisable to match for more specific paths first and for
+generic ones later on.
+A
+.Ic location
+section may include most of the server configuration rules
+except
+.Ic alias , Ic cert , Ic key , Ic listen , Ic location
+and
+.Ic proxy .
+.It Ic log Ar bool
+Enable or disable the logging for the current server or location block.
 .It Ic ocsp Ar file
 Specify an OCSP response to be stapled during TLS handshakes
 with this server.

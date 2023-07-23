@@ -243,23 +243,23 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 	return loc->block_code != 0;
 }
 
-int
+struct location *
 vhost_fastcgi(struct vhost *v, const char *path)
 {
 	struct location *loc;
 
 	if (v == NULL || path == NULL)
-		return -1;
+		return NULL;
 
 	loc = TAILQ_FIRST(&v->locations);
 	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
 		if (loc->fcgi != -1)
 			if (matches(loc->match, path))
-				return loc->fcgi;
+				return loc;
 	}
 
 	loc = TAILQ_FIRST(&v->locations);
-	return loc->fcgi;
+	return loc->fcgi == -1 ? NULL : loc;
 }
 
 int
@@ -705,20 +705,21 @@ fcgi_open_conn(struct fcgi *f)
 static int
 apply_fastcgi(struct client *c)
 {
-	int		 id, i = 0;
+	int		 i = 0;
 	struct fcgi	*f;
+	struct location	*loc;
 
-	if ((id = vhost_fastcgi(c->host, c->iri.path)) == -1)
+	if ((loc = vhost_fastcgi(c->host, c->iri.path)) == NULL)
 		return 0;
 
 	TAILQ_FOREACH(f, &c->conf->fcgi, fcgi) {
-		if (i == id)
+		if (i == loc->fcgi)
 			break;
 		++i;
 	}
 
 	if (f == NULL) {
-		log_warnx("can't find fcgi #%d", id);
+		log_warnx("can't find fcgi #%d", loc->fcgi);
 		return 0;
 	}
 
@@ -745,7 +746,7 @@ apply_fastcgi(struct client *c)
 	}
 
 	bufferevent_enable(c->cgibev, EV_READ|EV_WRITE);
-	fcgi_req(c);
+	fcgi_req(c, loc);
 
 	return 1;
 }

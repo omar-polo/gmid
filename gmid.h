@@ -175,6 +175,7 @@ struct location {
 	X509_STORE	*reqca;
 	int		 disable_log;
 	int		 fcgi;
+	struct envhead	 params;
 
 	char		 dir[PATH_MAX];
 	int		 dirfd;
@@ -209,7 +210,6 @@ struct vhost {
 	 */
 	struct lochead	 locations;
 
-	struct envhead	 params;
 	struct aliashead aliases;
 	struct proxyhead proxies;
 };
@@ -389,7 +389,7 @@ const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
 int		 vhost_auto_index(struct vhost*, const char*);
 int		 vhost_block_return(struct vhost*, const char*, int*, const char**);
-int		 vhost_fastcgi(struct vhost*, const char*);
+struct location	*vhost_fastcgi(struct vhost*, const char*);
 int		 vhost_dirfd(struct vhost*, const char*, size_t*);
 int		 vhost_strip(struct vhost*, const char*);
 X509_STORE	*vhost_require_ca(struct vhost*, const char*);
@@ -418,7 +418,7 @@ int		 select_non_dotdot(const struct dirent*);
 void		 fcgi_read(struct bufferevent *, void *);
 void		 fcgi_write(struct bufferevent *, void *);
 void		 fcgi_error(struct bufferevent *, short, void *);
-void		 fcgi_req(struct client *);
+void		 fcgi_req(struct client *, struct location *);
 
 /* sandbox.c */
 void		 sandbox_main_process(void);

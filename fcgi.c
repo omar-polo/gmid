@@ -371,7 +371,7 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 }
 
 void
-fcgi_req(struct client *c)
+fcgi_req(struct client *c, struct location *loc)
 {
 	char		 buf[22];
 	char		*qs;
@@ -398,7 +398,7 @@ fcgi_req(struct client *c)
 		free(qs);
 	}
 
-	TAILQ_FOREACH(p, &c->host->params, envs) {
+	TAILQ_FOREACH(p, &loc->params, envs) {
 		fcgi_send_param(c->cgibev, p->name, p->value);
 	}
 
