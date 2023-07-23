@@ -218,7 +218,7 @@ test_fastcgi() {
 	./fcgi-test fcgi.sock &
 	fcgi_pid=$!
 
-	setup_simple_test 'prefork 1' 'fastcgi "'$PWD'/fcgi.sock"'
+	setup_simple_test 'prefork 1' 'fastcgi socket "'$PWD'/fcgi.sock"'
 
 	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
 
@@ -233,6 +233,26 @@ test_fastcgi() {
 
 		i=$(($i + 1))
 	done
+
+	kill $fcgi_pid
+	return 0
+}
+
+test_fastcgi_deprecated_syntax() {
+	./fcgi-test fcgi.sock &
+	fcgi_pid=$!
+
+	# the old syntax will eventually go away, but check that the
+	# backward compatibility works.
+	setup_simple_test 'prefork 1' 'fastcgi "'$PWD'/fcgi.sock"'
+
+	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
+	fetch /
+	check_reply "20 text/gemini" "$msg"
+	if [ $? -ne 0 ]; then
+		kill $fcgi_pid
+		return 1
+	fi
 
 	kill $fcgi_pid
 	return 0
