@@ -51,6 +51,7 @@ run_test test_require_client_ca
 run_test test_root_inside_location
 run_test test_root_inside_location_with_redirect
 run_test test_fastcgi
+run_test test_fastcgi_inside_location
 run_test test_fastcgi_deprecated_syntax
 run_test test_macro_expansion
 run_test test_proxy_relay_to
