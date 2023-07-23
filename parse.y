@@ -501,7 +501,6 @@ fastcgi		: FASTCGI '{' optnl fastcgiopts '}'
 			loc->fcgi = fastcgi_conf($2, NULL);
 			free($2);
 		}
-		| error '}'
 		;
 
 fastcgiopts	: /* empty */
