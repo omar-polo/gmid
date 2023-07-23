@@ -124,6 +124,19 @@ struct fcgi {
 	TAILQ_ENTRY(fcgi) fcgi;
 };
 
+TAILQ_HEAD(envhead, envlist);
+struct envlist {
+	char		 name[FCGI_NAME_MAX];
+	char		 value[FCGI_VAL_MAX];
+	TAILQ_ENTRY(envlist) envs;
+};
+
+TAILQ_HEAD(aliashead, alist);
+struct alist {
+	char		alias[HOST_NAME_MAX + 1];
+	TAILQ_ENTRY(alist) aliases;
+};
+
 TAILQ_HEAD(proxyhead, proxy);
 struct proxy {
 	char		 match_proto[32];
@@ -167,19 +180,6 @@ struct location {
 	int		 dirfd;
 
 	TAILQ_ENTRY(location) locations;
-};
-
-TAILQ_HEAD(envhead, envlist);
-struct envlist {
-	char		 name[FCGI_NAME_MAX];
-	char		 value[FCGI_VAL_MAX];
-	TAILQ_ENTRY(envlist) envs;
-};
-
-TAILQ_HEAD(aliashead, alist);
-struct alist {
-	char		alias[HOST_NAME_MAX + 1];
-	TAILQ_ENTRY(alist) aliases;
 };
 
 TAILQ_HEAD(vhosthead, vhost);
