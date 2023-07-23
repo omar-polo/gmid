@@ -247,6 +247,7 @@ struct location *
 vhost_fastcgi(struct vhost *v, const char *path)
 {
 	struct location *loc;
+	int force_disable = 0;
 
 	if (v == NULL || path == NULL)
 		return NULL;
@@ -256,7 +257,12 @@ vhost_fastcgi(struct vhost *v, const char *path)
 		if (loc->fcgi != -1)
 			if (matches(loc->match, path))
 				return loc;
+		if (loc->nofcgi && matches(loc->match, path))
+			force_disable = 1;
 	}
+
+	if (force_disable)
+		return NULL;
 
 	loc = TAILQ_FIRST(&v->locations);
 	return loc->fcgi == -1 ? NULL : loc;

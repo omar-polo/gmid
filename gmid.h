@@ -175,6 +175,7 @@ struct location {
 	X509_STORE	*reqca;
 	int		 disable_log;
 	int		 fcgi;
+	int		 nofcgi;
 	struct envhead	 params;
 
 	char		 dir[PATH_MAX];

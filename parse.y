@@ -491,6 +491,10 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 
 fastcgi		: FASTCGI '{' optnl fastcgiopts '}'
 		| FASTCGI fastcgiopt
+		| FASTCGI OFF {
+			loc->fcgi = -1;
+			loc->nofcgi = 1;
+		}
 		| FASTCGI string {
 			yywarn("`fastcgi path' is deprecated.  "
 			    "Please use `fastcgi socket path' instead.");
