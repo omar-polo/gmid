@@ -497,6 +497,7 @@ fastcgi		: string {
 				fatal("asprintf");
 			loc->fcgi = fastcgi_conf($2, c);
 			free($2);
+			free(c);
 		}
 		| TCP string {
 			loc->fcgi = fastcgi_conf($2, "9000");
