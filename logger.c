@@ -37,7 +37,7 @@
 #define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
 #endif
 
-static int logfd = 2; /* stderr */
+static int logfd = -1;
 
 static void logger_init(struct privsep *, struct privsep_proc *, void *);
 static void logger_shutdown(void);

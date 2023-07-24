@@ -119,6 +119,9 @@ log_request(struct client *c, int code, const char *meta)
 	if (ec == -1)
 		fatal("asprintf");
 
+	if (debug)
+		fprintf(stderr, "%s\n", fmted);
+
 	proc_compose(conf->ps, PROC_LOGGER, IMSG_LOG_REQUEST,
 	    fmted, ec + 1);
 
@@ -324,9 +327,6 @@ main_send_logfd(struct conf *conf)
 	struct privsep	*ps = conf->ps;
 	char		 path[PATH_MAX];
 	int		 r, fd = -1;
-
-	if (debug)
-		return 0;
 
 	if (conf->log_access) {
 		r = snprintf(path, sizeof(path), "%s%s%s", conf->chroot,
