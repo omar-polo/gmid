@@ -377,3 +377,23 @@ test_include_mime() {
 	fetch_hdr /foo.1
 	check_reply '20 text/x-mandoc' || return 1
 }
+
+test_log_file() {
+	rm -f log log.edited
+	setup_simple_test 'log access "'$PWD'/log"' ''
+
+	fetch_hdr /
+	check_reply '20 text/gemini'
+
+	# remove the <ip>:<port> leading part
+	awk '{$1 = ""; print substr($0, 2)}' log > log.edited
+
+	echo GET gemini://localhost/ 20 text/gemini | cmp -s - log.edited
+	if [ $? -ne 0 ]; then
+		# keep the log for post-mortem analysis
+		return 1
+	fi
+
+	rm -f log log.edited
+	return 0
+}
