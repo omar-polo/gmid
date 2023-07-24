@@ -299,11 +299,13 @@ main(int argc, char **argv)
 	signal_set(&ps->ps_evsigterm, SIGTERM, main_sig_handler, ps);
 	signal_set(&ps->ps_evsigchld, SIGCHLD, main_sig_handler, ps);
 	signal_set(&ps->ps_evsighup, SIGHUP, main_sig_handler, ps);
+	signal_set(&ps->ps_evsigusr1, SIGUSR1, main_sig_handler, ps);
 
 	signal_add(&ps->ps_evsigint, NULL);
 	signal_add(&ps->ps_evsigterm, NULL);
 	signal_add(&ps->ps_evsigchld, NULL);
 	signal_add(&ps->ps_evsighup, NULL);
+	signal_add(&ps->ps_evsigusr1, NULL);
 
 	proc_connect(ps);
 
@@ -317,19 +319,32 @@ main(int argc, char **argv)
 }
 
 static int
+main_send_logfd(struct conf *conf)
+{
+	struct privsep	*ps = conf->ps;
+	int		 fd = -1;
+
+	if (debug)
+		return 0;
+
+	if (conf->log_access) {
+		fd = open(conf->log_access, O_WRONLY|O_CREAT|O_APPEND, 0600);
+		if (fd == -1)
+			log_warn("can't open %s", conf->log_access);
+	}
+	if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_TYPE, -1, fd,
+	    NULL, 0) == -1)
+		return -1;
+	return 0;
+}
+
+static int
 main_configure(struct conf *conf)
 {
 	struct privsep	*ps = conf->ps;
-	int fd = -1;
 
-	if (!debug) {
-		if (conf->log_access && (fd = open(conf->log_access,
-		    O_WRONLY|O_CREAT|O_APPEND, 0600)) == -1)
-			log_warn("can't open %s", conf->log_access);
-		if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_TYPE,
-		    -1, fd, NULL, 0) == -1)
-			return -1;
-	}
+	if (main_send_logfd(conf) == -1)
+		return -1;
 
 	conf->reload = conf->prefork + 1; /* servers, crypto */
 
@@ -404,6 +419,9 @@ main_sig_handler(int sig, short ev, void *arg)
 	case SIGTERM:
 	case SIGINT:
 		main_shutdown(ps->ps_env);
+		break;
+	case SIGUSR1:
+		main_send_logfd(ps->ps_env);
 		break;
 	default:
 		fatalx("unexpected signal %d", sig);

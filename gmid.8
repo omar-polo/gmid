@@ -32,7 +32,9 @@ talk to FastCGI applications and act as a gemini reverse proxy.
 .Pp
 .Nm
 rereads the configuration file when it receives
-.Dv SIGHUP .
+.Dv SIGHUP
+and reopens log files when it receives
+.Dv SIGUSR1 .
 .Pp
 The options are as follows:
 .Bl -tag -width 14m

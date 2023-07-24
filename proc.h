@@ -68,6 +68,7 @@ struct privsep {
 	struct event			 ps_evsigterm;
 	struct event			 ps_evsigchld;
 	struct event			 ps_evsighup;
+	struct event			 ps_evsigusr1;
 
 	void				*ps_env;
 };
