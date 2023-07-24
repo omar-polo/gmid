@@ -1,0 +1,93 @@
+.\" Copyright (c) 2023 Omar Polo <op@omarpolo.com>
+.\"
+.\" Permission to use, copy, modify, and distribute this software for any
+.\" purpose with or without fee is hereby granted, provided that the above
+.\" copyright notice and this permission notice appear in all copies.
+.\"
+.\" THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+.\" WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+.\" MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+.\" ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+.\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+.\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+.\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+.Dd July 24 2023
+.Dt TITAN 1
+.Os
+.Sh NAME
+.Nm titan
+.Nd titan client
+.Sh SYNOPSIS
+.Nm
+.Bk -words
+.Op Fl C Ar cert
+.Op Fl K Ar key
+.Op Fl m Ar mime
+.Op Fl t Ar token
+.Ar url
+.Op Ar file
+.Ek
+.Sh DESCRIPTION
+.Nm
+allows to send a data to a Titan server.
+If no
+.Ar file
+is given on the command line,
+.Nm
+reads from standard input.
+.Pp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl C Ar cert
+Specify the TLS client certificate to use.
+.It Fl K Ar cert
+Specify the TLS client certificate key to use.
+Defaults to
+.Fl C
+if provided.
+.It Fl m Ar mime
+Specify the mime of the content being sent.
+Unset by default.
+.It Fl t Ar token
+Specify the token for the transaction.
+Unset by default.
+.El
+.Pp
+If
+.Fl m
+or
+.Fl t
+are given,
+.Nm
+alters the URL of the request to include the parameters.
+The size is always added.
+.Sh EXIT STATUS
+The
+.Nm
+utility exits with one of the following values:
+.Pp
+.Bl -tag -width Ds -offset indent -compact
+.It 0
+The trasaction completed successfully and the response code was in the
+2x or 3x range.
+.It 1
+An error occurred.
+.It 2
+The response code was not in the 2x or 3x range.
+.El
+.Sh STANDARDS
+.Nm
+implements the
+.Dq Titan Specification
+.Lk gemini://transjovian.org/titan/page/The%20Titan%20Specification
+.Sh AUTHORS
+.An -nosplit
+The
+.Nm
+utility was written by
+.An Omar Polo Aq Mt op@omarpolo.com .
+.Sh CAVEATS
+.Nm
+doesn't do any TOFU
+.Pq Trust On First Use
+or any X.509 certificate validation beyond the name verification.
