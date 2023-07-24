@@ -148,11 +148,53 @@ iomux(struct tls *ctx, int fd, const char *in, size_t inlen, char *out,
 	return 0;
 }
 
+static FILE *
+open_input_file(int argc, char **argv)
+{
+	FILE	*fp;
+	char	 buf[BUFSIZ];
+	char	 sfn[22];
+	size_t	 r;
+	int	 fd;
+
+	if (argc > 1) {
+		if ((fp = fopen(argv[1], "r")) == NULL)
+			err(1, "can't open %s", argv[1]);
+		return fp;
+	}
+
+	strlcpy(sfn, "/tmp/titan.XXXXXXXXXX", sizeof(sfn));
+	if ((fd = mkstemp(sfn)) == -1 ||
+	    (fp = fdopen(fd, "w+")) == NULL) {
+		warn("%s", sfn);
+		if (fd != -1) {
+			unlink(sfn);
+			close(fd);
+		}
+		errx(1, "can't create temp file");
+	}
+	unlink(sfn);
+
+	for (;;) {
+		r = fread(buf, 1, sizeof(buf), stdin);
+		if (r == 0)
+			break;
+		fwrite(buf, 1, r, fp);
+	}
+	if (ferror(fp))
+		err(1, "I/O error");
+
+	if (fseeko(fp, 0, SEEK_SET) == -1)
+		err(1, "fseeko");
+
+	return fp;
+}
+
 static void __dead
 usage(void)
 {
 	fprintf(stderr,
-	    "usage: %s [-C cert] [-K key] [-m mime] [-t token] url file\n",
+	    "usage: %s [-C cert] [-K key] [-m mime] [-t token] url [file]\n",
 	    getprogname());
 	exit(1);
 }
@@ -172,7 +214,7 @@ main(int argc, char **argv)
 	char		*req;
 	int		 sock, ch;
 
-	if (pledge("stdio rpath inet dns", NULL) == -1)
+	if (pledge("stdio rpath tmppath inet dns", NULL) == -1)
 		err(1, "pledge");
 
 	while ((ch = getopt(argc, argv, "C:K:m:t:")) != -1) {
@@ -199,13 +241,12 @@ main(int argc, char **argv)
 	if (cert != NULL && key == NULL)
 		key = cert;
 
-	if (argc != 2)
+	if (argc > 2)
 		usage();
 
-	if ((in = fopen(argv[1], "r")) == NULL)
-		err(1, "can't open %s", argv[1]);
+	in = open_input_file(argc, argv);
 
-	/* drop rpath */
+	/* drop rpath tmppath */
 	if (pledge("stdio inet dns", NULL) == -1)
 		err(1, "pledge");
 
