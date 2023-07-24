@@ -129,6 +129,18 @@ paths.
 Defaults to the
 .Ic user
 home directory, if provided.
+.It Ic log Ar options
+Specify logging options.
+Multiple options may be provided within curly braces.
+The available options are as follows:
+.Bl -tag -width Ds
+.It Ic syslog
+Log to syslog.
+This is the default behaviour.
+.It Ic access Ar file
+Log the requests to
+.Ar file .
+.El
 .It Ic prefork Ar number
 Run the specified number of server processes.
 This increases the performance and prevents delays when connecting to

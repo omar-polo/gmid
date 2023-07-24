@@ -241,6 +241,7 @@ struct conf {
 	char		 user[LOGIN_NAME_MAX];
 	int		 prefork;
 	int		 reload;
+	char		*log_access;
 	int		 use_privsep_crypto;
 
 	struct fcgihead	 fcgi;

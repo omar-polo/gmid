@@ -320,6 +320,16 @@ static int
 main_configure(struct conf *conf)
 {
 	struct privsep	*ps = conf->ps;
+	int fd = -1;
+
+	if (!debug) {
+		if (conf->log_access && (fd = open(conf->log_access,
+		    O_WRONLY|O_CREAT|O_APPEND, 0600)) == -1)
+			log_warn("can't open %s", conf->log_access);
+		if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_TYPE,
+		    -1, fd, NULL, 0) == -1)
+			return -1;
+	}
 
 	conf->reload = conf->prefork + 1; /* servers, crypto */
 

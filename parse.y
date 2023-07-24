@@ -122,7 +122,7 @@ typedef struct {
 /* for bison: */
 /* %define parse.error verbose */
 
-%token	ALIAS AUTO
+%token	ACCESS ALIAS AUTO
 %token	BLOCK
 %token	CA CERT CHROOT CLIENT
 %token	DEFAULT
@@ -133,7 +133,7 @@ typedef struct {
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
-%token	SERVER SNI SOCKET STRIP
+%token	SERVER SNI SOCKET STRIP SYSLOG
 %token	TCP TOEXT TYPE TYPES
 %token	USE_TLS USER
 %token	VERIFYNAME
@@ -232,6 +232,7 @@ option		: CHROOT string	{
 			else
 				default_host = "0.0.0.0";
 		}
+		| log
 		| PORT NUM {
 			yywarn("option `port' is deprecated,"
 			    " please use `listen on'");
@@ -248,6 +249,24 @@ option		: CHROOT string	{
 			    sizeof(conf->user))
 				yyerror("user name too long");
 			free($2);
+		}
+		;
+
+log		: LOG '{' optnl logopts '}'
+		| LOG logopt
+		;
+
+logopts		: /* empty */
+		| logopts logopt optnl
+		;
+
+logopt		: SYSLOG		{
+			free(conf->log_access);
+			conf->log_access = NULL;
+		}
+		| ACCESS string		{
+			free(conf->log_access);
+			conf->log_access = $2;
 		}
 		;
 
@@ -576,6 +595,7 @@ static const struct keyword {
 	int token;
 } keywords[] = {
 	/* these MUST be sorted */
+	{"access", ACCESS},
 	{"alias", ALIAS},
 	{"auto", AUTO},
 	{"block", BLOCK},
@@ -611,6 +631,7 @@ static const struct keyword {
 	{"sni", SNI},
 	{"socket", SOCKET},
 	{"strip", STRIP},
+	{"syslog", SYSLOG},
 	{"tcp", TCP},
 	{"to-ext", TOEXT},
 	{"type", TYPE},

@@ -69,6 +69,7 @@ config_purge(struct conf *conf)
 	ps = conf->ps;
 	use_privsep_crypto = conf->use_privsep_crypto;
 
+	free(conf->log_access);
 	free_mime(&conf->mime);
 	TAILQ_FOREACH_SAFE(f, &conf->fcgi, fcgi, tf) {
 		TAILQ_REMOVE(&conf->fcgi, f, fcgi);
