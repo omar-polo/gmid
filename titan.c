@@ -190,6 +190,29 @@ open_input_file(int argc, char **argv)
 	return fp;
 }
 
+static int
+parse_response(char *r)
+{
+	int code;
+
+	if (r[0] < '0' || r[0] > '9' ||
+	    r[1] < '0' || r[1] > '9' ||
+	    r[2] != ' ')
+		errx(1, "illegal response");
+
+	code = (r[0] - '0') * 10 + (r[1] - '0');
+	if (code < 10 || code >= 70)
+		errx(1, "invalid response code: %d", code);
+	if (code >= 20 && code < 30)
+		return 0;
+	if (code >= 30 && code < 40) {
+		puts(r + 3);
+		return 0;
+	}
+	warnx("server error: %s", r + 3);
+	return 2;
+}
+
 static void __dead
 usage(void)
 {
@@ -212,7 +235,7 @@ main(int argc, char **argv)
 	char		 iribuf[1025];
 	char		 resbuf[1025];
 	char		*req;
-	int		 sock, ch;
+	int		 sock, ch, ret = 0;
 
 	if (pledge("stdio rpath tmppath inet dns", NULL) == -1)
 		err(1, "pledge");
@@ -322,8 +345,7 @@ main(int argc, char **argv)
 			if ((m = memmem(resbuf, w, "\r\n", 2)) == NULL)
 				errx(1, "invalid reply");
 			*m = '\0';
-			/* XXX parse */
-			puts(resbuf);
+			ret = parse_response(resbuf);
 			break;
 		}
 	}
@@ -347,7 +369,7 @@ main(int argc, char **argv)
 			/* fallthrough */
 		default:
 			tls_free(ctx);
-			return (0);
+			return (ret);
 		}
 	}
 }
