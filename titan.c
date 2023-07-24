@@ -293,13 +293,14 @@ main(int argc, char **argv)
 		errx(1, "tls_configure: %s", tls_error(ctx));
 
 	sock = dial(iri.host, iri.port);
-	if (tls_connect_socket(ctx, sock, iri.host) == -1)
-		errx(1, "failed to connect to %s:%s: %s", iri.host,
-		    *iri.port == '\0' ? "1965" : iri.port, tls_error(ctx));
 
 	/* drop inet tls */
 	if (pledge("stdio", NULL) == -1)
 		err(1, "pledge");
+
+	if (tls_connect_socket(ctx, sock, iri.host) == -1)
+		errx(1, "failed to connect to %s:%s: %s", iri.host,
+		    *iri.port == '\0' ? "1965" : iri.port, tls_error(ctx));
 
 	/* send request */
 	if (iomux(ctx, sock, req, strlen(req), NULL, 0) == -1)
