@@ -322,16 +322,26 @@ static int
 main_send_logfd(struct conf *conf)
 {
 	struct privsep	*ps = conf->ps;
-	int		 fd = -1;
+	char		 path[PATH_MAX];
+	int		 r, fd = -1;
 
 	if (debug)
 		return 0;
 
 	if (conf->log_access) {
+		r = snprintf(path, sizeof(path), "%s%s%s", conf->chroot,
+		    *conf->chroot == '\0' ? "" : "/", conf->log_access);
+		if (r < 0 || (size_t)r >= sizeof(path)) {
+			log_warnx("path too long: %s", conf->log_access);
+			goto done;
+		}
+
 		fd = open(conf->log_access, O_WRONLY|O_CREAT|O_APPEND, 0600);
 		if (fd == -1)
 			log_warn("can't open %s", conf->log_access);
 	}
+
+ done:
 	if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_TYPE, -1, fd,
 	    NULL, 0) == -1)
 		return -1;
