@@ -37,7 +37,7 @@
 #define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
 #endif
 
-static FILE *log;
+static int logfd = 2; /* stderr */
 
 static void logger_init(struct privsep *, struct privsep_proc *, void *);
 static void logger_shutdown(void);
@@ -59,7 +59,6 @@ static void
 logger_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 {
 	p->p_shutdown = logger_shutdown;
-	log = stderr;
 	sandbox_logger_process();
 }
 
@@ -67,10 +66,8 @@ static void
 logger_shutdown(void)
 {
 	closelog();
-	if (log && log != stderr) {
-		fflush(log);
-		fclose(log);
-	}
+	if (logfd != -1)
+		close(logfd);
 }
 
 static int
@@ -78,16 +75,12 @@ logger_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	switch (imsg->hdr.type) {
 	case IMSG_LOG_TYPE:
-		if (log != NULL && log != stderr) {
-			fflush(log);
-			fclose(log);
-		}
-		log = NULL;
+		if (logfd != -1)
+			close(logfd);
+		logfd = -1;
 
-		if (imsg->fd != -1) {
-			if ((log = fdopen(imsg->fd, "a")) == NULL)
-				fatal("fdopen");
-		}
+		if (imsg->fd != -1)
+			logfd = imsg->fd;
 		break;
 	default:
 		return -1;
@@ -109,8 +102,8 @@ logger_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 		if (datalen == 0)
 			fatal("got invalid IMSG_LOG_REQUEST");
 		msg[datalen - 1] = '\0';
-		if (log != NULL)
-			fprintf(log, "%s\n", msg);
+		if (logfd != -1)
+			dprintf(logfd, "%s\n", msg);
 		else
 			syslog(LOG_DAEMON | LOG_NOTICE, "%s", msg);
 		break;
