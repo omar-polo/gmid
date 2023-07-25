@@ -30,7 +30,7 @@ if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
 	tests_done
 fi
 
-# Run regression tests for the ge binary.
+# Run regression tests for the gemexp binary.
 run_test test_gemexp
 
 # Run regression tests for the gmid binary.
