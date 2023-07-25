@@ -9,9 +9,14 @@ gmid is a full-featured Gemini server written with security in mind.
 It can serve static files, has optional FastCGI and proxying support,
 and a rich configuration syntax.
 
-gg is a simple command-line Gemini client, and gemexp a stripped-down
-config-less gmid version used to quickly serve a directory locally
-over Gemini.
+A few helper programs are shipped as part of gmid:
+
+ - `gg` is a simple command-line Gemini client.
+
+ - `gemexp` is a stripped-down config-less version of gmid to quickly
+   serve a directory from the command line.
+
+ - `titan` is a command-line titan client.
 
 
 ## Internationalisation (IRIs, UNICODE, punycode, all that stuff)
