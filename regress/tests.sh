@@ -8,10 +8,10 @@ test_iri() {
 	./iri_test
 }
 
-test_ge() {
+test_gemexp() {
 	dont_check_server_alive=yes
 
-	$ge -p $port -d . testdata &
+	$gemexp -p $port -d . testdata &
 	pid=$!
 	sleep 1
 
