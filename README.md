@@ -9,7 +9,7 @@ gmid is a full-featured Gemini server written with security in mind.
 It can serve static files, has optional FastCGI and proxying support,
 and a rich configuration syntax.
 
-gg is a simple command-line Gemini client, and ge a stripped-down
+gg is a simple command-line Gemini client, and gemexp a stripped-down
 config-less gmid version used to quickly serve a directory locally
 over Gemini.
 
