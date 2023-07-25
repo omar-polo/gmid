@@ -43,7 +43,17 @@ void
 log_request(struct client *c, int code, const char *meta)
 {
 	char b[GEMINI_URL_LEN];
+	char rfc3339[32];
 	const char *t;
+	struct tm *tm;
+	time_t now;
+
+	if ((now = time(NULL)) == -1)
+		fatal("time");
+	if ((tm = localtime(&now)) == NULL)
+		fatal("localtime");
+	if (strftime(rfc3339, sizeof(rfc3339), "%FT%T%z", tm) == 0)
+		fatal("strftime");
 
 	if (c->iri.schema != NULL) {
 		/* serialize the IRI */
@@ -70,8 +80,9 @@ log_request(struct client *c, int code, const char *meta)
 		strlcpy(b, t, sizeof(b));
 	}
 
-	fprintf(stderr, "%s:%s GET %s %d %s\n", c->rhost, c->rserv, b,
-	    code, meta);
+	fprintf(stderr, "%s %s - %s %s 0 %d %s\n", rfc3339,
+	    c->rhost, *c->domain == '\0' ? c->iri.host : c->domain,
+	    b, code, meta);
 }
 
 void
