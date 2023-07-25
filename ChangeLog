@@ -58,7 +58,7 @@
 
 2022-09-07  Omar Polo  <op@omarpolo.com>
 
-	* ge.c (main): add `ge': small program to quickly export a directory over Gemini.
+	* ge.c (main): add `gemexp': small program to quickly export a directory over Gemini.
 
 2022-09-06  Omar Polo  <op@omarpolo.com>
 
