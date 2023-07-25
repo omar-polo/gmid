@@ -170,6 +170,7 @@ ${DISTNAME}.tar.gz: ${DISTFILES}
 -include puny.d
 -include sandbox.d
 -include server.d
+-include titan.d
 -include utf8.d
 -include utils.d
 -include y.tab.d
