@@ -16,15 +16,37 @@
 
 	* fcgi.c (fcgi_handle_stdout): parse and log the fastcgi reply
 
-2023-06-23  Omar Polo  <op@omarpolo.com>
+2023-06-24  Omar Polo  <op@omarpolo.com>
 
 	* server.c (handle_handshake): correctly handle TLS handshake failures.
+
+	* server.c (client_close_ev): plug memory leak
+
+2023-06-23  Omar Polo  <op@omarpolo.com>
 
 	* parse.y: implement `listen on'
 
 2023-06-13  Omar Polo  <op@omarpolo.com>
 
 	* regress/sha: remove regress/sha; sha256/sha256sum is no more required for the regress suite.
+
+2023-06-12  Omar Polo  <op@omarpolo.com>
+
+	* regress/lib.sh (run_test): use the default prefork in tests
+
+2023-06-11  Omar Polo  <op@omarpolo.com>
+
+	* crypto.c: add a privsep crypto engine (enabled only on OpenBSD)
+
+	* configure: add -Wpointer-sign to the mix, adjust the code to cope.
+
+2023-05-05  Omar Polo  <op@omarpolo.com>
+
+	* contrib/gencert: add -e to generate EC keys
+
+2023-05-08  Omar Polo  <op@omarpolo.com>
+
+	* sandbox.c: drop landlock, seccomp and capsicum support
 
 2022-09-10  Omar Polo  <op@omarpolo.com>
 
@@ -37,9 +59,10 @@
 2022-09-06  Omar Polo  <op@omarpolo.com>
 
 	* server.c: drop CGI support.
-	* sandbox.c: optionally disable the sandbox on non-OpenBSD when fastcgi or proxy are used.  New sockets can't be opened under FreeBSD' capsicum(4) and a huge pain in the arse under Linux' seccomp/landlock.  Patches welcome!
 
 2022-07-07  Omar Polo  <op@omarpolo.com>
+
+	Included as part of gmid 1.8.5:
 
 	* log.c (logger_main): fix timestamps in log files.  Reported by Karl Jeacle, thanks!
 
