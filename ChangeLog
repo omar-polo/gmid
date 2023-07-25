@@ -1,3 +1,7 @@
+2023-07-25  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (log_request): allow to change the logging style.
+
 2023-07-24  Omar Polo  <op@omarpolo.com>
 
 	* parse.y: add ability to log to files with `log access <path>'.
