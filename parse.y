@@ -277,7 +277,7 @@ logopt		: SYSLOG		{
 		| STYLE CONDENSED	{
 			conf->log_format = LOG_FORMAT_CONDENSED;
 		}
-		| STILE LEGACY		{
+		| STYLE LEGACY		{
 			conf->log_format = LOG_FORMAT_LEGACY;
 		}
 		;
