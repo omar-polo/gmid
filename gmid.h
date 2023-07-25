@@ -90,6 +90,13 @@
 struct privsep;
 struct privsep_proc;
 
+enum log_format {
+	LOG_FORMAT_CONDENSED,
+	LOG_FORMAT_COMMON,
+	LOG_FORMAT_COMBINED,
+	LOG_FORMAT_LEGACY,
+};
+
 struct parser {
 	char		*iri;
 	struct iri	*parsed;
@@ -242,6 +249,7 @@ struct conf {
 	int		 prefork;
 	int		 reload;
 	char		*log_access;
+	enum log_format	 log_format;
 	int		 use_privsep_crypto;
 
 	struct fcgihead	 fcgi;

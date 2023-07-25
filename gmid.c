@@ -84,10 +84,22 @@ void
 log_request(struct client *c, int code, const char *meta)
 {
 	struct conf *conf = c->conf;
+	char tstamp[64], rfc3339[32];
 	char b[GEMINI_URL_LEN];
 	char *fmted;
 	const char *t;
+	struct tm *tm;
+	time_t now;
 	int ec;
+
+	if ((now = time(NULL)) == -1)
+		fatal("time");
+	if ((tm = localtime(&now)) == NULL)
+		fatal("localtime");
+	if (strftime(tstamp, sizeof(tstamp), "%d/%b%Y:%H:%M:%S %z", tm) == 0)
+		fatal("strftime");
+	if (strftime(rfc3339, sizeof(rfc3339), "%FT%T%z", tm) == 0)
+		fatal("strftime");
 
 	if (c->iri.schema != NULL) {
 		/* serialize the IRI */
@@ -114,8 +126,59 @@ log_request(struct client *c, int code, const char *meta)
 		strlcpy(b, t, sizeof(b));
 	}
 
-	ec = asprintf(&fmted, "%s:%s GET %s %d %s", c->rhost, c->rserv, b,
-	    code, meta);
+	switch (conf->log_format) {
+	case LOG_FORMAT_LEGACY:
+		ec = asprintf(&fmted, "%s:%s GET %s %d %s", c->rhost,
+		    c->rserv, b, code, meta);
+		break;
+
+	case LOG_FORMAT_CONDENSED:
+		/*
+		 * XXX the first '-' is the remote user name, we
+		 * could use the client cert for it.
+		 *
+		 * XXX it should log the size of the response
+		 */
+		ec = asprintf(&fmted, "%s %s - %s %s 0 %d %s", rfc3339,
+		    c->rhost, *c->domain == '\0' ? c->iri.host : c->domain,
+		    b, code, meta);
+		break;
+
+	/*
+	 * Attempt to be compatible with the default Apache httpd'
+	 * LogFormat "%h %l %u %t \"%r\" %>s %b"
+	 * see <https://httpd.apache.org/docs/current/mod/mod_log_config.html>
+	 */
+	case LOG_FORMAT_COMMON:
+		/*
+		 * XXX the second '-' is the remote user name, we
+		 * could use the client cert for it.
+		 *
+		 * XXX it should log the size of the response.
+		 */
+		ec = asprintf(&fmted, "%s %s - - %s \"%s\" %d 0",
+		    *c->domain == '\0' ? c->iri.host : c->domain,
+		    c->rhost, tstamp, b, code);
+		break;
+
+	/*
+	 * Attempt to be compatible with the default nginx' log_format
+	 * combined:
+	 * '$remote_addr - $remote_user [$time_local] "$request" $status $body_bytes_sent "$http_referer" "$http_user_agent"';
+	 */
+	case LOG_FORMAT_COMBINED:
+	default:
+		/*
+		 * XXX the second '-' is the remote user name, we
+		 * could use the client cert for it.
+		 *
+		 * XXX it should log the size of the response.
+		 */
+		ec = asprintf(&fmted, "%s - - [%s] \"%s\" %d 0 \"-\" \"\"",
+		    c->rhost, tstamp, b, code);
+		break;
+	}
+
 	if (ec == -1)
 		fatal("asprintf");
 

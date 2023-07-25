@@ -124,16 +124,16 @@ typedef struct {
 
 %token	ACCESS ALIAS AUTO
 %token	BLOCK
-%token	CA CERT CHROOT CLIENT
+%token	CA CERT CHROOT CLIENT COMBINED COMMON CONDENSED
 %token	DEFAULT
 %token	FASTCGI FOR_HOST
 %token	INCLUDE INDEX IPV6
 %token	KEY
-%token	LANG LISTEN LOCATION LOG
+%token	LANG LEGACY LISTEN LOCATION LOG
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
-%token	SERVER SNI SOCKET STRIP SYSLOG
+%token	SERVER SNI SOCKET STRIP STYLE SYSLOG
 %token	TCP TOEXT TYPE TYPES
 %token	USE_TLS USER
 %token	VERIFYNAME
@@ -267,6 +267,18 @@ logopt		: SYSLOG		{
 		| ACCESS string		{
 			free(conf->log_access);
 			conf->log_access = $2;
+		}
+		| STYLE COMMON		{
+			conf->log_format = LOG_FORMAT_COMMON;
+		}
+		| STYLE COMBINED	{
+			conf->log_format = LOG_FORMAT_COMBINED;
+		}
+		| STYLE CONDENSED	{
+			conf->log_format = LOG_FORMAT_CONDENSED;
+		}
+		| STILE LEGACY		{
+			conf->log_format = LOG_FORMAT_LEGACY;
 		}
 		;
 
@@ -603,6 +615,9 @@ static const struct keyword {
 	{"cert", CERT},
 	{"chroot", CHROOT},
 	{"client", CLIENT},
+	{"combined", COMBINED},
+	{"common", COMMON},
+	{"condensed", CONDENSED},
 	{"default", DEFAULT},
 	{"fastcgi", FASTCGI},
 	{"for-host", FOR_HOST},
@@ -611,6 +626,7 @@ static const struct keyword {
 	{"ipv6", IPV6},
 	{"key", KEY},
 	{"lang", LANG},
+	{"legacy", LEGACY},
 	{"listen", LISTEN},
 	{"location", LOCATION},
 	{"log", LOG},
@@ -631,6 +647,7 @@ static const struct keyword {
 	{"sni", SNI},
 	{"socket", SOCKET},
 	{"strip", STRIP},
+	{"style", STYLE},
 	{"syslog", SYSLOG},
 	{"tcp", TCP},
 	{"to-ext", TOEXT},

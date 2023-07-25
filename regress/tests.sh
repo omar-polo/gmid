@@ -385,10 +385,11 @@ test_log_file() {
 	fetch_hdr /
 	check_reply '20 text/gemini'
 
-	# remove the <ip>:<port> leading part
-	awk '{$1 = ""; print substr($0, 2)}' log > log.edited
+	# remove the date and ip
+	awk '{$1 = ""; $2 = ""; print substr($0, 3)}' log > log.edited
 
-	echo GET gemini://localhost/ 20 text/gemini | cmp -s - log.edited
+	printf '%s\n' '- localhost gemini://localhost/ 0 20 text/gemini' \
+		| cmp -s - log.edited
 	if [ $? -ne 0 ]; then
 		# keep the log for post-mortem analysis
 		return 1

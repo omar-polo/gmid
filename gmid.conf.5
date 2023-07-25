@@ -142,6 +142,51 @@ Log the requests to
 .Ar file .
 The path is relative to the
 .Ic chroot .
+.It Ic style Ar style
+Set the logging style, defaults to
+.Ic condensed .
+The
+.Ar style
+can be one of:
+.Bl -tag -width Ds
+.It Ic common
+Attempt to be compatible with the default Apache httpd log format.
+Each line is formatted as follows: the matching host name,
+the remote IP address, one dash
+.Sq - ,
+Common Name of the client certificate
+.Pq if provided, '-' otherwise ,
+the timestamp of the request, the request URI wrapped in double quotes,
+the response code and the size of the response.
+.It Ic combined
+Attempt to be compatible with the default nginx log format.
+Each line is formatted as follows: the remote IP address, one dash
+.Sq - ,
+Common Name of the client certificate
+.Pq if provided, '-' otherwise ,
+the timestamp wrapped in square brackets, the request URI wrapped in
+double quotes, the response code, the size of the response, a dash
+wrapped in double quotes and "".
+The strangness of these two last fields is because Gemini doesn't have
+the notion of the
+.Dq Referer
+header nor the
+.Dq User-agent .
+.It Ic condensed
+The native
+.Xr gmid 8
+format since 2.0.
+Each line is formatted as follows: RFC 3339 date time,
+remote IP address, Common Name of the client certificate
+.Pq if provided, '-' otherwise ,
+the matching host name, the request URI, the size of the response,
+the response code and meta.
+.It Ic legacy
+The pre-2.0 gmid native format.
+Each line is formatted as follows: the remote IP address and port, the
+.Sq GET
+keyword, the request URI, the response code and meta.
+.El
 .El
 .It Ic prefork Ar number
 Run the specified number of server processes.
