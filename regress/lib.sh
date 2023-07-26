@@ -10,7 +10,7 @@ current_test=
 run_test() {
 	ggflags=
 	port=10965
-	config_common=""
+	config_common="log syslog off"
 	hdr=
 	body=
 	dont_check_server_alive=no
