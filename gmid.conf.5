@@ -134,11 +134,6 @@ Specify logging options.
 Multiple options may be provided within curly braces.
 The available options are as follows:
 .Bl -tag -width Ds
-.It Ic syslog Op Ic off
-Log to syslog.
-It is enabled by default, use the
-.Ic off
-argument to disable.
 .It Ic access Ar file
 Log the requests to
 .Ar file .
@@ -189,6 +184,11 @@ Each line is formatted as follows: the remote IP address and port, the
 .Sq GET
 keyword, the request URI, the response code and meta.
 .El
+.It Ic syslog Op Ic off
+Log to syslog.
+It is enabled by default, use the
+.Ic off
+argument to disable.
 .El
 .It Ic prefork Ar number
 Run the specified number of server processes.
