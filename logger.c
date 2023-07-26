@@ -74,7 +74,7 @@ static int
 logger_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	switch (imsg->hdr.type) {
-	case IMSG_LOG_TYPE:
+	case IMSG_LOG_ACCESS:
 		if (logfd != -1)
 			close(logfd);
 		logfd = -1;

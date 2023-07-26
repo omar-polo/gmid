@@ -405,7 +405,7 @@ main_send_logfd(struct conf *conf)
 	}
 
  done:
-	if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_TYPE, -1, fd,
+	if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_ACCESS, -1, fd,
 	    NULL, 0) == -1)
 		return -1;
 	return 0;

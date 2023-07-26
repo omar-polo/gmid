@@ -329,7 +329,7 @@ struct connreq {
 
 enum imsg_type {
 	IMSG_LOG_REQUEST,
-	IMSG_LOG_TYPE,
+	IMSG_LOG_ACCESS,
 
 	IMSG_RECONF_START,
 	IMSG_RECONF_MIME,
