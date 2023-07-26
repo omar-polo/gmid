@@ -260,9 +260,11 @@ logopts		: /* empty */
 		| logopts logopt optnl
 		;
 
-logopt		: SYSLOG		{
-			free(conf->log_access);
-			conf->log_access = NULL;
+logopt		: SYSLOG OFF		{
+			conf->log_syslog = 0;
+		}
+		| SYSLOG		{
+			conf->log_syslog = 1;
 		}
 		| ACCESS string		{
 			free(conf->log_access);

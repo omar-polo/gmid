@@ -44,6 +44,7 @@ config_new(void)
 	init_mime(&conf->mime);
 
 	conf->prefork = 3;
+	conf->log_syslog = 1;
 
 #ifdef __OpenBSD__
 	conf->use_privsep_crypto = 1;
@@ -148,6 +149,7 @@ config_purge(struct conf *conf)
 	conf->ps = ps;
 	conf->use_privsep_crypto = use_privsep_crypto;
 	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
+	conf->log_syslog = 1;
 	init_mime(&conf->mime);
 	TAILQ_INIT(&conf->fcgi);
 	TAILQ_INIT(&conf->hosts);

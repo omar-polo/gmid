@@ -134,9 +134,11 @@ Specify logging options.
 Multiple options may be provided within curly braces.
 The available options are as follows:
 .Bl -tag -width Ds
-.It Ic syslog
+.It Ic syslog Op Ic off
 Log to syslog.
-This is the default behaviour.
+It is enabled by default, use the
+.Ic off
+argument to disable.
 .It Ic access Ar file
 Log the requests to
 .Ar file .

@@ -408,6 +408,9 @@ main_send_logfd(struct conf *conf)
 	if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_ACCESS, -1, fd,
 	    NULL, 0) == -1)
 		return -1;
+	if (proc_compose_imsg(ps, PROC_LOGGER, -1, IMSG_LOG_SYSLOG, -1, -1,
+	    &conf->log_syslog, sizeof(conf->log_syslog)) == -1)
+		return -1;
 	return 0;
 }
 
