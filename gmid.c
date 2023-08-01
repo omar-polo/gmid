@@ -137,9 +137,10 @@ log_request(struct client *c, int code, const char *meta)
 		 * XXX the first '-' is the remote user name, we
 		 * could use the client cert for it.
 		 *
-		 * XXX it should log the size of the response
+		 * XXX it should log the size of the request and
+		 * response.
 		 */
-		ec = asprintf(&fmted, "%s %s - %s %s 0 %d %s", rfc3339,
+		ec = asprintf(&fmted, "%s %s - %s %s 0 0 %d %s", rfc3339,
 		    c->rhost, *c->domain == '\0' ? c->iri.host : c->domain,
 		    b, code, meta);
 		break;
