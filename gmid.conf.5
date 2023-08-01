@@ -99,11 +99,13 @@ its expanded in-place.
 .Pp
 For example:
 .Bd -literal -offset indent
+ext_ip = "10.0.0.1"
 dir = "/var/gemini"
 certdir = "/etc/keys"
 common = "lang it; auto index on"
 
 server "foo" {
+	listen on $ext_ip
 	root $dir "/foo"         # "/var/gemini/foo"
 	cert $certdir "/foo.pem" # "/etc/keys/foo.pem"
 	key  $certdir "/foo.key" # "/etc/keys/foo.key"
