@@ -388,7 +388,7 @@ test_log_file() {
 	# remove the date and ip
 	awk '{$1 = ""; $2 = ""; print substr($0, 3)}' log > log.edited
 
-	printf '%s\n' '- localhost gemini://localhost/ 0 20 text/gemini' \
+	printf '%s\n' '- localhost gemini://localhost/ 0 0 20 text/gemini' \
 		| cmp -s - log.edited
 	if [ $? -ne 0 ]; then
 		# keep the log for post-mortem analysis
