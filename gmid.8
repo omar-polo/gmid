@@ -71,33 +71,6 @@ Print the version and exit.
 .It Fl v
 Verbose mode.
 .El
-.Sh LOGGING
-Messages and requests are logged by
-.Xr syslog 3
-using the
-.Dv DAEMON
-facility or printed on
-.Em stderr .
-.Pp
-Requests are logged with the
-.Dv NOTICE
-severity.
-Each request log entry has the following fields, separated by
-whitespace:
-.Pp
-.Bl -bullet -compact
-.It
-Client IP address and the source port number, separated by a colon
-.It
-.Sy GET
-keyword
-.It
-Request URL
-.It
-Response status
-.It
-Response meta
-.El
 .Sh EXAMPLES
 To run
 .Nm
