@@ -646,6 +646,24 @@ server "example.com" {
 	}
 }
 .Ed
+.Pp
+This shows how to set up a reverse proxy: all request for
+.Sq example.com
+will be forwarded to 10.0.0.6 transparently.
+Proxying establish a new TLS connection, so any client-certificates used
+to connect to
+.Xr gmid 8
+cannot be provided to the proxied server as well.
+.Bd -literal -offset indent
+server "example.com" {
+	listen on * port 1965
+	cert "/etc/ssl/example.com.pem"
+	key "/etc/ssl/private/example.com.key"
+	proxy {
+		relay-to 10.0.0.6 port 1965
+	}
+}
+.Ed
 .Sh SEE ALSO
 .Xr gmid 8 ,
 .Xr slowcgi 8
