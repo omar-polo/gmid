@@ -37,9 +37,9 @@ fetches the given gemini page and prints it to standard output.
 The options are as follows:
 .Bl -tag -width Ds
 .It Fl 2
-Accept only TLSv1.2.
+Use TLSv1.2.
 .It Fl 3
-Accept only TLSv1.3.
+Use TLSv1.3.
 .It Fl C Ar certificate
 Use the given client
 .Ar certificate .
@@ -50,15 +50,15 @@ should print.
 .Ar mode
 can be one of:
 .Bl -tag -width header -compact
-.It none
+.It Ic none
 print only the body of the reply, the default.
-.It code
+.It Ic code
 print only the response code.
-.It header
+.It Ic header
 print only the response header.
-.It meta
+.It Ic meta
 print only the response meta.
-.It all
+.It Ic all
 print the whole response as-is.
 .El
 .It Fl H Ar sni
