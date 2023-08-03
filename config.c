@@ -65,10 +65,11 @@ config_purge(struct conf *conf)
 	struct alist *a, *ta;
 	struct pki *pki, *tpki;
 	struct address *addr, *taddr;
-	int use_privsep_crypto;
+	int use_privsep_crypto, log_format;
 
 	ps = conf->ps;
 	use_privsep_crypto = conf->use_privsep_crypto;
+	log_format = conf->log_format;
 
 	free(conf->log_access);
 	free_mime(&conf->mime);
@@ -150,6 +151,7 @@ config_purge(struct conf *conf)
 	conf->use_privsep_crypto = use_privsep_crypto;
 	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 	conf->log_syslog = 1;
+	conf->log_format = log_format;
 	init_mime(&conf->mime);
 	TAILQ_INIT(&conf->fcgi);
 	TAILQ_INIT(&conf->hosts);
@@ -288,6 +290,10 @@ config_send(struct conf *conf)
 	struct envlist	*e;
 	struct alist	*a;
 	size_t		 i;
+
+	if (proc_compose(ps, PROC_SERVER, IMSG_RECONF_LOG_FMT,
+	    &conf->log_format, sizeof(conf->log_format)) == -1)
+		return -1;
 
 	for (i = 0; i < conf->mime.len; ++i) {
 		m = &conf->mime.t[i];
@@ -526,6 +532,11 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		config_purge(conf);
 		h = NULL;
 		p = NULL;
+		break;
+
+	case IMSG_RECONF_LOG_FMT:
+		IMSG_SIZE_CHECK(imsg, &conf->log_format);
+		memcpy(&conf->log_format, imsg->data, datalen);
 		break;
 
 	case IMSG_RECONF_MIME:

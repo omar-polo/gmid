@@ -126,6 +126,8 @@ log_request(struct client *c, int code, const char *meta)
 		strlcpy(b, t, sizeof(b));
 	}
 
+	log_warnx("log format is %d", conf->log_format);
+
 	switch (conf->log_format) {
 	case LOG_FORMAT_LEGACY:
 		ec = asprintf(&fmted, "%s:%s GET %s %d %s", c->rhost,
