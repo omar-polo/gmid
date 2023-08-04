@@ -347,8 +347,12 @@ main(int argc, char **argv)
 		buflen = fread(buf, 1, sizeof(buf), in);
 
 		w = iomux(ctx, sock, buf, buflen, resbuf, sizeof(resbuf));
-		if (w == -1)
-			errx(1, "I/O error: %s", tls_error(ctx));
+		if (w == -1) {
+			errstr = tls_error(ctx);
+			if (errstr == NULL)
+				errstr = "unexpected EOF";
+			errx(1, "I/O error: %s", errstr);
+		}
 		if (w != 0) {
 			if ((m = memmem(resbuf, w, "\r\n", 2)) == NULL)
 				errx(1, "invalid reply");
