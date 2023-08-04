@@ -112,6 +112,8 @@ iomux(struct tls *ctx, int fd, const char *in, size_t inlen, char *out,
 			case -1:
 				return -1;
 			case 0:
+				if (outwrote == 0)
+					return -1;
 				return outwrote;
 			default:
 				outwrote += ret;
