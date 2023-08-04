@@ -233,8 +233,9 @@ main(int argc, char **argv)
 	const char	*cert = NULL, *key = NULL, *mime = NULL, *token = NULL;
 	const char	*parse_err;
 	char		 iribuf[1025];
+	char		 reqbuf[1025];
 	char		 resbuf[1025];
-	char		*req;
+	char		*path;
 	int		 sock, ch, ret = 0;
 
 	if (pledge("stdio rpath tmppath inet dns", NULL) == -1)
@@ -277,29 +278,34 @@ main(int argc, char **argv)
 		err(1, "fstat");
 
 	/* prepare the URL */
-	if (token && mime) {
-		if (asprintf(&req, "%s;size=%lld;token=%s;mime=%s\r\n", argv[0],
-		    (long long)sb.st_size, token, mime) == -1)
-			err(1, "asprintf");
-	} else if (token) {
-		if (asprintf(&req, "%s;size=%lld;token=%s\r\n", argv[0],
-		    (long long)sb.st_size, token) == -1)
-			err(1, "asprintf");
-	} else if (mime) {
-		if (asprintf(&req, "%s;size=%lld;mime=%s\r\n", argv[0],
-		    (long long)sb.st_size, mime) == -1)
-			err(1, "asprintf");
-	} else {
-		if (asprintf(&req, "%s;size=%lld\r\n", argv[0],
-		    (long long)sb.st_size) == -1)
-			err(1, "asprintf");
-	}
-
 	if (strlcpy(iribuf, argv[0], sizeof(iribuf)) >= sizeof(iribuf))
 		errx(1, "URL too long");
 
 	if (!parse_iri(iribuf, &iri, &parse_err))
 		errx(1, "invalid IRI: %s", parse_err);
+
+	if (token && mime) {
+		if (asprintf(&path, "%s;size=%lld;token=%s;mime=%s", iri.path,
+		    (long long)sb.st_size, token, mime) == -1)
+			err(1, "asprintf");
+	} else if (token) {
+		if (asprintf(&path, "%s;size=%lld;token=%s", iri.path,
+		    (long long)sb.st_size, token) == -1)
+			err(1, "asprintf");
+	} else if (mime) {
+		if (asprintf(&path, "%s;size=%lld;mime=%s", iri.path,
+		    (long long)sb.st_size, mime) == -1)
+			err(1, "asprintf");
+	} else {
+		if (asprintf(&path, "%s;size=%lld", iri.path,
+		    (long long)sb.st_size) == -1)
+			err(1, "asprintf");
+	}
+
+	iri.path = path;
+	if (!serialize_iri(&iri, reqbuf, sizeof(reqbuf)) ||
+	    strlcat(reqbuf, "\r\n", sizeof(reqbuf)) >= sizeof(reqbuf))
+		errx(1, "URI too long");
 
 	if ((config = tls_config_new()) == NULL)
 		err(1, "tls_config_new");
@@ -326,7 +332,7 @@ main(int argc, char **argv)
 		    *iri.port == '\0' ? "1965" : iri.port, tls_error(ctx));
 
 	/* send request */
-	if (iomux(ctx, sock, req, strlen(req), NULL, 0) == -1)
+	if (iomux(ctx, sock, reqbuf, strlen(reqbuf), NULL, 0) == -1)
 		errx(1, "I/O error: %s", tls_error(ctx));
 
 	for (;;) {
