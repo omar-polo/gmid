@@ -286,6 +286,9 @@ main(int argc, char **argv)
 	if (!parse_iri(iribuf, &iri, &errstr))
 		errx(1, "invalid IRI: %s", errstr);
 
+	if (strcmp(iri.schema, "titan") != 0)
+		errx(1, "not a titan:// URI");
+
 	if (token && mime) {
 		if (asprintf(&path, "%s;size=%lld;token=%s;mime=%s", iri.path,
 		    (long long)sb.st_size, token, mime) == -1)
