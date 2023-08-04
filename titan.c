@@ -279,15 +279,15 @@ main(int argc, char **argv)
 	if (fstat(fileno(in), &sb) == -1)
 		err(1, "fstat");
 
-	/* prepare the URL */
+	/* prepare the IRI */
 	if (strlcpy(iribuf, argv[0], sizeof(iribuf)) >= sizeof(iribuf))
-		errx(1, "URL too long");
+		errx(1, "IRI too long");
 
 	if (!parse_iri(iribuf, &iri, &errstr))
 		errx(1, "invalid IRI: %s", errstr);
 
 	if (strcmp(iri.schema, "titan") != 0)
-		errx(1, "not a titan:// URI");
+		errx(1, "not a titan:// IRI");
 
 	if (token && mime) {
 		if (asprintf(&path, "%s;size=%lld;token=%s;mime=%s", iri.path,
@@ -310,7 +310,7 @@ main(int argc, char **argv)
 	iri.path = path;
 	if (!serialize_iri(&iri, reqbuf, sizeof(reqbuf)) ||
 	    strlcat(reqbuf, "\r\n", sizeof(reqbuf)) >= sizeof(reqbuf))
-		errx(1, "URI too long");
+		errx(1, "IRI too long");
 
 	if ((config = tls_config_new()) == NULL)
 		err(1, "tls_config_new");
