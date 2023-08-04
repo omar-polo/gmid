@@ -45,6 +45,7 @@ config_new(void)
 
 	conf->prefork = 3;
 	conf->log_syslog = 1;
+	conf->log_format = LOG_FORMAT_LEGACY;
 
 #ifdef __OpenBSD__
 	conf->use_privsep_crypto = 1;
