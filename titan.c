@@ -233,7 +233,7 @@ main(int argc, char **argv)
 	struct iri	 iri;
 	FILE		*in;
 	const char	*cert = NULL, *key = NULL, *mime = NULL, *token = NULL;
-	const char	*parse_err;
+	const char	*errstr;
 	char		 iribuf[1025];
 	char		 reqbuf[1025];
 	char		 resbuf[1025];
@@ -283,8 +283,8 @@ main(int argc, char **argv)
 	if (strlcpy(iribuf, argv[0], sizeof(iribuf)) >= sizeof(iribuf))
 		errx(1, "URL too long");
 
-	if (!parse_iri(iribuf, &iri, &parse_err))
-		errx(1, "invalid IRI: %s", parse_err);
+	if (!parse_iri(iribuf, &iri, &errstr))
+		errx(1, "invalid IRI: %s", errstr);
 
 	if (token && mime) {
 		if (asprintf(&path, "%s;size=%lld;token=%s;mime=%s", iri.path,
