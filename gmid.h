@@ -249,6 +249,7 @@ struct conf {
 	int		 prefork;
 	int		 reload;
 	int		 log_syslog;
+	int		 log_facility;
 	char		*log_access;
 	enum log_format	 log_format;
 	int		 use_privsep_crypto;
@@ -332,6 +333,7 @@ enum imsg_type {
 	IMSG_LOG_REQUEST,
 	IMSG_LOG_ACCESS,
 	IMSG_LOG_SYSLOG,
+	IMSG_LOG_FACILITY,
 
 	IMSG_RECONF_START,
 	IMSG_RECONF_LOG_FMT,

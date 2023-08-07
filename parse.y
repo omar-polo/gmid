@@ -32,6 +32,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <syslog.h>
 
 #include "log.h"
 
@@ -126,7 +127,7 @@ typedef struct {
 %token	BLOCK
 %token	CA CERT CHROOT CLIENT COMBINED COMMON CONDENSED
 %token	DEFAULT
-%token	FASTCGI FOR_HOST
+%token	FACILITY FASTCGI FOR_HOST
 %token	INCLUDE INDEX IPV6
 %token	KEY
 %token	LANG LEGACY LISTEN LOCATION LOG
@@ -275,6 +276,42 @@ logopt		: ACCESS string		{
 		}
 		| STYLE LEGACY		{
 			conf->log_format = LOG_FORMAT_LEGACY;
+		}
+		| SYSLOG FACILITY string {
+			const char *str = $3;
+
+			conf->log_syslog = 1;
+
+			if (!strncasecmp(str, "LOG_", 4))
+				str += 4;
+
+			if (!strcasecmp(str, "daemon"))
+				conf->log_facility = LOG_DAEMON;
+#ifdef LOG_FTP
+			else if (!strcasecmp(str, "ftp"))
+				conf->log_facility = LOG_FTP;
+#endif
+			else if (!strcasecmp(str, "local1"))
+				conf->log_facility = LOG_LOCAL1;
+			else if (!strcasecmp(str, "local2"))
+				conf->log_facility = LOG_LOCAL2;
+			else if (!strcasecmp(str, "local3"))
+				conf->log_facility = LOG_LOCAL3;
+			else if (!strcasecmp(str, "local4"))
+				conf->log_facility = LOG_LOCAL4;
+			else if (!strcasecmp(str, "local5"))
+				conf->log_facility = LOG_LOCAL5;
+			else if (!strcasecmp(str, "local6"))
+				conf->log_facility = LOG_LOCAL6;
+			else if (!strcasecmp(str, "local7"))
+				conf->log_facility = LOG_LOCAL7;
+			else if (!strcasecmp(str, "user"))
+				conf->log_facility = LOG_USER;
+			else
+				yywarn("unknown syslog facility `%s'",
+				    $3);
+
+			free($3);
 		}
 		| SYSLOG OFF		{
 			conf->log_syslog = 0;
@@ -621,6 +658,7 @@ static const struct keyword {
 	{"common", COMMON},
 	{"condensed", CONDENSED},
 	{"default", DEFAULT},
+	{"facility", FACILITY},
 	{"fastcgi", FASTCGI},
 	{"for-host", FOR_HOST},
 	{"include", INCLUDE},

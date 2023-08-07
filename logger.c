@@ -39,6 +39,7 @@
 
 static int logfd = -1;
 static int log_to_syslog = 1;
+static int facility = LOG_DAEMON;
 
 static void logger_init(struct privsep *, struct privsep_proc *, void *);
 static void logger_shutdown(void);
@@ -75,6 +76,11 @@ static int
 logger_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	switch (imsg->hdr.type) {
+	case IMSG_LOG_FACILITY:
+		if (IMSG_DATA_SIZE(imsg) != sizeof(facility))
+			fatal("corrupted IMSG_LOG_SYSLOG");
+		memcpy(&facility, imsg->data, sizeof(facility));
+		break;
 	case IMSG_LOG_SYSLOG:
 		if (IMSG_DATA_SIZE(imsg) != sizeof(log_to_syslog))
 			fatal("corrupted IMSG_LOG_SYSLOG");
@@ -111,7 +117,7 @@ logger_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 		if (logfd != -1)
 			dprintf(logfd, "%s\n", msg);
 		if (log_to_syslog)
-			syslog(LOG_DAEMON | LOG_NOTICE, "%s", msg);
+			syslog(facility | LOG_NOTICE, "%s", msg);
 		break;
 	default:
 		return -1;

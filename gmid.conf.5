@@ -190,6 +190,18 @@ Log to syslog.
 It is enabled by default, use the
 .Ic off
 argument to disable.
+.It Ic syslog facility Ar facility
+Log to
+.Xr syslog 3
+using specified
+.Ar facility .
+Available facilities are as follows: daemon, ftp, local0 through local7 and
+user.
+These are case insensitive and can be prefixed with
+.Sq LOG_ .
+Not all level may be available on all operating systems.
+The default facility is
+.Ev LOG_DAEMON .
 .El
 .It Ic prefork Ar number
 Run the specified number of server processes.

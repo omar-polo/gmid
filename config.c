@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
+#include <syslog.h>
 
 #include <openssl/pem.h>
 
@@ -45,6 +46,7 @@ config_new(void)
 
 	conf->prefork = 3;
 	conf->log_syslog = 1;
+	conf->log_facility = LOG_DAEMON;
 	conf->log_format = LOG_FORMAT_LEGACY;
 
 #ifdef __OpenBSD__
@@ -152,6 +154,7 @@ config_purge(struct conf *conf)
 	conf->use_privsep_crypto = use_privsep_crypto;
 	conf->protos = TLS_PROTOCOL_TLSv1_2 | TLS_PROTOCOL_TLSv1_3;
 	conf->log_syslog = 1;
+	conf->log_facility = LOG_DAEMON;
 	conf->log_format = log_format;
 	init_mime(&conf->mime);
 	TAILQ_INIT(&conf->fcgi);
