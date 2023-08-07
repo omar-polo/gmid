@@ -260,13 +260,7 @@ logopts		: /* empty */
 		| logopts logopt optnl
 		;
 
-logopt		: SYSLOG OFF		{
-			conf->log_syslog = 0;
-		}
-		| SYSLOG		{
-			conf->log_syslog = 1;
-		}
-		| ACCESS string		{
+logopt		: ACCESS string		{
 			free(conf->log_access);
 			conf->log_access = $2;
 		}
@@ -281,6 +275,12 @@ logopt		: SYSLOG OFF		{
 		}
 		| STYLE LEGACY		{
 			conf->log_format = LOG_FORMAT_LEGACY;
+		}
+		| SYSLOG OFF		{
+			conf->log_syslog = 0;
+		}
+		| SYSLOG		{
+			conf->log_syslog = 1;
 		}
 		;
 
