@@ -1,3 +1,9 @@
+2023-08-07  Omar Polo  <op@omarpolo.com>
+
+	* logger.c (logger_dispatch_server): allow to change the syslog(3) facility.
+
+	* gmid.c (main): attempt to load TLS certificates and load mimes and virtual hosts root as part of configtest (-n) rather than verifying the syntax of the configuration only.
+
 2023-07-25  Omar Polo  <op@omarpolo.com>
 
 	* gmid.c (log_request): allow to change the logging style.
