@@ -374,6 +374,7 @@ struct conf	*config_new(void);
 void		 config_purge(struct conf *);
 int		 config_send(struct conf *);
 int		 config_recv(struct conf *, struct imsg *);
+int		 config_test(struct conf *);
 
 /* crypto.c */
 void		 crypto(struct privsep *, struct privsep_proc *);

@@ -746,3 +746,49 @@ config_recv(struct conf *conf, struct imsg *imsg)
 
 	return 0;
 }
+
+int
+config_test(struct conf *conf)
+{
+	struct vhost	*h;
+	struct address	*addr;
+	struct imsg	 imsg;
+	int		 fd;
+
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
+		/* faking the imsgs for config_crypto_recv_kp */
+
+		if ((fd = open(h->cert_path, O_RDONLY)) == -1) {
+			log_warn("can't open %s", h->cert_path);
+			return -1;
+		}
+
+		memset(&imsg, 0, sizeof(imsg));
+		imsg.fd = fd;
+		imsg.hdr.type = IMSG_RECONF_CERT;
+		if (config_crypto_recv_kp(conf, &imsg) == -1)
+			return -1;
+
+		if ((fd = open(h->key_path, O_RDONLY)) == -1) {
+			log_warn("can't open %s", h->key_path);
+			return -1;
+		}
+
+		memset(&imsg, 0, sizeof(imsg));
+		imsg.fd = fd;
+		imsg.hdr.type = IMSG_RECONF_KEY;
+		if (config_crypto_recv_kp(conf, &imsg) == -1)
+			return -1;
+	}
+
+	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
+		if ((addr->ctx = tls_server()) == NULL)
+			fatal("tls_server failed");
+		addr->sock = -1;
+	}
+
+	if (server_configure_done(conf))
+		return -1;
+
+	return 0;
+}

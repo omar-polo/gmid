@@ -314,6 +314,8 @@ main(int argc, char **argv)
 	}
 
 	if (conftest) {
+		if (config_test(conf) == -1)
+			fatalx("failed to load the configuration");
 		fprintf(stderr, "config OK\n");
 		if (conftest > 1)
 			main_print_conf(conf);
