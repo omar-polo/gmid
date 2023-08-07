@@ -19,7 +19,8 @@ DISTFILES =	Makefile \
 		strlcpy.c \
 		strtonum.c \
 		tree.h \
-		vasprintf.c
+		vasprintf.c \
+		vis.c
 
 all:
 	false
@@ -27,6 +28,8 @@ all:
 dist: ${DISTFILES}
 	mkdir -p ${DESTDIR}/
 	${INSTALL} -m 0644 ${DISTFILES} ${DESTDIR}/
+	mkdir -p ${DESTDIR}/vis
+	${INSTALL} -m 0644 vis/vis.h ${DESTDIR}/vis
 
 .PHONY: all dist
 include ../config.mk

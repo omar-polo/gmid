@@ -120,6 +120,7 @@ echo "file config.log: writing..."
 
 NEED_GNU_SOURCE=0
 NEED_OPENBSD_SOURCE=0
+NEED_LIBBSD_OPENBSD_VIS=0
 
 COMPATS=
 COMP="${CC} ${CFLAGS} -Wno-unused -Werror"
@@ -190,6 +191,10 @@ runtest() {
 			fi
 			if [ "$4" = -D_OPENBSD_SOURCE ]; then
 				NEED_OPENBSD_SOURCE=1
+				return 0
+			fi
+			if [ "$4" = -DLIBBSD_OPENBSD_VIS ]; then
+				NEED_LIBBSD_OPENBSD_VIS=1
 				return 0
 			fi
 			if [ -n "$3" ]; then
@@ -284,6 +289,7 @@ runtest strlcpy		STRLCPY		|| true
 runtest strtonum	STRTONUM	-D_OPENBSD_SOURCE	|| true
 runtest tree_h		TREE_H		|| true
 runtest vasprintf	VASPRINTF	-D_GNU_SOURCE || true
+runtest vis		VIS		-DLIBBSD_OPENBSD_VIS	|| true
 
 deptest libevent2	LIBEVENT2	|| true
 
@@ -314,6 +320,10 @@ if [ ${HAVE_QUEUE_H} -eq 0 -o ${HAVE_IMSG} -eq 0 -o ${HAVE_TREE_H} -eq 0 ]; then
 	CFLAGS="${CFLAGS} -I ${PWD}/compat"
 fi
 
+if [ ${HAVE_VIS} -eq 0 ]; then
+	CFLAGS="${CFLAGS} -I ${PWD}/compat/vis"
+fi
+
 if [ $HAVE_LIBEVENT2 -eq 1 ]; then
 	CFLAGS="$CFLAGS -DHAVE_LIBEVENT2=1"
 fi
@@ -323,6 +333,9 @@ if [ $NEED_GNU_SOURCE = 1 ]; then
 fi
 if [ $NEED_OPENBSD_SOURCE = 1 ]; then
 	CFLAGS="$CFLAGS -D_OPENBSD_SOURCE"
+fi
+if [ $NEED_LIBBSD_OPENBSD_VIS = 1 ]; then
+	CFLAGS="$CFLAGS -DLIBBSD_OPENBSD_VIS"
 fi
 
 CFLAGS="${CFLAGS} ${CDIAGFLAGS}"

@@ -24,7 +24,8 @@ DISTFILES =	Makefile \
 		strlcpy.c \
 		strtonum.c \
 		tree_h.c \
-		vasprintf.c
+		vasprintf.c \
+		vis.c
 
 all:
 	false
