@@ -28,6 +28,7 @@
 #include <string.h>
 #include <syslog.h>
 #include <unistd.h>
+#include <vis.h>
 
 #include "log.h"
 
@@ -43,6 +44,7 @@ void
 log_request(struct client *c, int code, const char *meta)
 {
 	char b[GEMINI_URL_LEN];
+	char cntmp[64], cn[64] = "-";
 	char rfc3339[32];
 	const char *t;
 	struct tm *tm;
@@ -80,9 +82,21 @@ log_request(struct client *c, int code, const char *meta)
 		strlcpy(b, t, sizeof(b));
 	}
 
-	fprintf(stderr, "%s %s - %s %s 0 %d %s\n", rfc3339,
-	    c->rhost, *c->domain == '\0' ? c->iri.host : c->domain,
-	    b, code, meta);
+	if (tls_peer_cert_provided(c->ctx)) {
+		const char *subj;
+		char *n;
+
+		subj = tls_peer_cert_subject(c->ctx);
+		if ((n = strstr(subj, "/CN=")) != NULL) {
+			strlcpy(cntmp, subj + 4, sizeof(cntmp));
+			if ((n = strchr(cntmp, '/')) != NULL)
+				*n = '\0';
+			strnvis(cn, cntmp, sizeof(cn), VIS_WHITE|VIS_DQ);
+		}
+	}
+
+	fprintf(stderr, "%s %s %s %s %s 0 %d %s\n", rfc3339, c->rhost, cn,
+	    *c->domain == '\0' ? c->iri.host : c->domain, b, code, meta);
 }
 
 void

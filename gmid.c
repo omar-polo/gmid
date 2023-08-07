@@ -29,6 +29,7 @@
 #include <signal.h>
 #include <string.h>
 #include <syslog.h>
+#include <vis.h>
 
 #include "log.h"
 #include "proc.h"
@@ -85,6 +86,7 @@ log_request(struct client *c, int code, const char *meta)
 {
 	struct conf *conf = c->conf;
 	char tstamp[64], rfc3339[32];
+	char cntmp[64], cn[64] = "-";
 	char b[GEMINI_URL_LEN];
 	char *fmted;
 	const char *t;
@@ -126,6 +128,19 @@ log_request(struct client *c, int code, const char *meta)
 		strlcpy(b, t, sizeof(b));
 	}
 
+	if (tls_peer_cert_provided(c->ctx)) {
+		const char *subj;
+		char *n;
+
+		subj = tls_peer_cert_subject(c->ctx);
+		if ((n = strstr(subj, "/CN=")) != NULL) {
+			strlcpy(cntmp, subj + 4, sizeof(cntmp));
+			if ((n = strchr(cntmp, '/')) != NULL)
+				*n = '\0';
+			strnvis(cn, cntmp, sizeof(cn), VIS_WHITE|VIS_DQ);
+		}
+	}
+
 	switch (conf->log_format) {
 	case LOG_FORMAT_LEGACY:
 		ec = asprintf(&fmted, "%s:%s GET %s %d %s", c->rhost,
@@ -134,14 +149,11 @@ log_request(struct client *c, int code, const char *meta)
 
 	case LOG_FORMAT_CONDENSED:
 		/*
-		 * XXX the first '-' is the remote user name, we
-		 * could use the client cert for it.
-		 *
 		 * XXX it should log the size of the request and
 		 * response.
 		 */
-		ec = asprintf(&fmted, "%s %s - %s %s 0 0 %d %s", rfc3339,
-		    c->rhost, *c->domain == '\0' ? c->iri.host : c->domain,
+		ec = asprintf(&fmted, "%s %s %s %s %s 0 0 %d %s", rfc3339,
+		    c->rhost, cn, *c->domain == '\0' ? c->iri.host : c->domain,
 		    b, code, meta);
 		break;
 
@@ -152,14 +164,11 @@ log_request(struct client *c, int code, const char *meta)
 	 */
 	case LOG_FORMAT_COMMON:
 		/*
-		 * XXX the second '-' is the remote user name, we
-		 * could use the client cert for it.
-		 *
 		 * XXX it should log the size of the response.
 		 */
-		ec = asprintf(&fmted, "%s %s - - %s \"%s\" %d 0",
+		ec = asprintf(&fmted, "%s %s - %s %s \"%s\" %d 0",
 		    *c->domain == '\0' ? c->iri.host : c->domain,
-		    c->rhost, tstamp, b, code);
+		    c->rhost, cn, tstamp, b, code);
 		break;
 
 	/*
@@ -170,13 +179,10 @@ log_request(struct client *c, int code, const char *meta)
 	case LOG_FORMAT_COMBINED:
 	default:
 		/*
-		 * XXX the second '-' is the remote user name, we
-		 * could use the client cert for it.
-		 *
 		 * XXX it should log the size of the response.
 		 */
-		ec = asprintf(&fmted, "%s - - [%s] \"%s\" %d 0 \"-\" \"\"",
-		    c->rhost, tstamp, b, code);
+		ec = asprintf(&fmted, "%s - %s [%s] \"%s\" %d 0 \"-\" \"\"",
+		    c->rhost, cn, tstamp, b, code);
 		break;
 	}
 
