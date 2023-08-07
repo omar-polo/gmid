@@ -752,33 +752,34 @@ config_test(struct conf *conf)
 {
 	struct vhost	*h;
 	struct address	*addr;
-	struct imsg	 imsg;
 	int		 fd;
 
-	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
-		/* faking the imsgs for config_crypto_recv_kp */
+	/*
+	 * can't use config_crypto_recv_kp() because not on all platforms
+	 * we're using the privsep crypto engine (yet).
+	 */
+	conf->use_privsep_crypto = 0;
 
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		if ((fd = open(h->cert_path, O_RDONLY)) == -1) {
 			log_warn("can't open %s", h->cert_path);
 			return -1;
 		}
-
-		memset(&imsg, 0, sizeof(imsg));
-		imsg.fd = fd;
-		imsg.hdr.type = IMSG_RECONF_CERT;
-		if (config_crypto_recv_kp(conf, &imsg) == -1)
+		if (load_file(fd, &h->cert, &h->certlen) == -1) {
+			log_warnx("failed to load cert for %s",
+			    h->domain);
 			return -1;
+		}
 
 		if ((fd = open(h->key_path, O_RDONLY)) == -1) {
 			log_warn("can't open %s", h->key_path);
 			return -1;
 		}
-
-		memset(&imsg, 0, sizeof(imsg));
-		imsg.fd = fd;
-		imsg.hdr.type = IMSG_RECONF_KEY;
-		if (config_crypto_recv_kp(conf, &imsg) == -1)
+		if (load_file(fd, &h->key, &h->keylen) == -1) {
+			log_warnx("failed to load key for %s",
+			    h->domain);
 			return -1;
+		}
 	}
 
 	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
