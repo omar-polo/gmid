@@ -29,6 +29,23 @@
 
 #include "log.h"
 
+const char *
+strip_path(const char *path, int strip)
+{
+	char *t;
+
+	while (strip > 0) {
+		if ((t = strchr(path, '/')) == NULL) {
+			path = strchr(path, '\0');
+			break;
+		}
+		path = t;
+		strip--;
+	}
+
+	return path;
+}
+
 int
 starts_with(const char *str, const char *prefix)
 {

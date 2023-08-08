@@ -53,7 +53,6 @@ void tls_config_use_fake_private_key(struct tls_config *);
 static inline int matches(const char*, const char*);
 
 static void	 handle_handshake(int, short, void*);
-static const char *strip_path(const char*, int);
 static void	 fmtbuf(char *, size_t, const char *, struct client *,
 		    const char *);
 static int	 apply_block_return(struct client*);
@@ -430,23 +429,6 @@ handle_handshake(int fd, short ev, void *d)
 
 err:
 	start_reply(c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
-}
-
-static const char *
-strip_path(const char *path, int strip)
-{
-	char *t;
-
-	while (strip > 0) {
-		if ((t = strchr(path, '/')) == NULL) {
-			path = strchr(path, '\0');
-			break;
-		}
-		path = t;
-		strip--;
-	}
-
-	return path;
 }
 
 static void
