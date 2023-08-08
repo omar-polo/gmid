@@ -373,11 +373,37 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 void
 fcgi_req(struct client *c, struct location *loc)
 {
-	char		 buf[22];
-	char		*qs;
+	char		 buf[22], path[GEMINI_URL_LEN];
+	char		*qs, *pathinfo, *scriptname = NULL;
+	size_t		 l;
 	time_t		 tim;
+	int		 r;
 	struct tm	 tminfo;
 	struct envlist	*p;
+
+	TAILQ_FOREACH(p, &loc->params, envs) {
+		if (!strcmp(p->name, "SCRIPT_NAME")) {
+			scriptname = p->value;
+			break;
+		}
+	}
+	if (scriptname == NULL)
+		scriptname = "";
+
+	r = snprintf(path, sizeof(path), "/%s", c->iri.path);
+	if (r < 0 || (size_t)r >= sizeof(c->iri.path)) {
+		log_warn("snprintf failure?");
+		fcgi_error(c->cgibev, EVBUFFER_ERROR, c);
+		return;
+	}
+
+	pathinfo = path;
+	l = strlen(scriptname);
+	while (l > 0 && scriptname[l - 1] == '/')
+		l--;
+	if (!strncmp(scriptname, pathinfo, l))
+		pathinfo += l;
+	log_warnx("scriptname=%s ; pathinfo=%s", scriptname, pathinfo);
 
 	fcgi_begin_request(c->cgibev);
 	fcgi_send_param(c->cgibev, "GATEWAY_INTERFACE", "CGI/1.1");
@@ -390,6 +416,9 @@ fcgi_req(struct client *c, struct location *loc)
 	fcgi_send_param(c->cgibev, "SERVER_PROTOCOL", "GEMINI");
 	fcgi_send_param(c->cgibev, "SERVER_SOFTWARE", GMID_VERSION);
 
+	fcgi_send_param(c->cgibev, "SCRIPT_NAME", scriptname);
+	fcgi_send_param(c->cgibev, "PATH_INFO", pathinfo);
+
 	if (*c->iri.query != '\0' &&
 	    strchr(c->iri.query, '=') == NULL &&
 	    (qs = strdup(c->iri.query)) != NULL) {
@@ -399,6 +428,8 @@ fcgi_req(struct client *c, struct location *loc)
 	}
 
 	TAILQ_FOREACH(p, &loc->params, envs) {
+		if (!strcmp(p->name, "SCRIPT_NAME"))
+			continue;
 		fcgi_send_param(c->cgibev, p->name, p->value);
 	}
 
