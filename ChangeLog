@@ -1,3 +1,8 @@
+2023-08-08  Omar Polo  <op@omarpolo.com>
+
+	* fcgi.c (fcgi_req): implement SCRIPT_NAME / PATH_INFO splitting for fastcgi
+	(fcgi_req): add `fastcgi strip'
+
 2023-08-07  Omar Polo  <op@omarpolo.com>
 
 	* logger.c (logger_dispatch_server): allow to change the syslog(3) facility.
