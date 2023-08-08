@@ -183,6 +183,7 @@ struct location {
 	int		 disable_log;
 	int		 fcgi;
 	int		 nofcgi;
+	int		 fcgi_strip;
 	struct envhead	 params;
 
 	char		 dir[PATH_MAX];

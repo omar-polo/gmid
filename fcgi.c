@@ -374,10 +374,9 @@ void
 fcgi_req(struct client *c, struct location *loc)
 {
 	char		 buf[22], path[GEMINI_URL_LEN];
-	char		*qs, *pathinfo, *scriptname = NULL;
+	char		*qs, *p, *pathinfo, *scriptname = NULL;
 	size_t		 l;
 	time_t		 tim;
-	int		 r;
 	struct tm	 tminfo;
 	struct envlist	*p;
 
@@ -390,12 +389,11 @@ fcgi_req(struct client *c, struct location *loc)
 	if (scriptname == NULL)
 		scriptname = "";
 
-	r = snprintf(path, sizeof(path), "/%s", c->iri.path);
-	if (r < 0 || (size_t)r >= sizeof(c->iri.path)) {
-		log_warn("snprintf failure?");
-		fcgi_error(c->cgibev, EVBUFFER_ERROR, c);
-		return;
-	}
+	p = strip_path(c->iri.path, loc->fcgi_strip);
+	if (*p != '/')
+		snprintf(path, sizeof(path), "/%s", p);
+	else
+		strlcpy(path, p, sizeof(path));
 
 	pathinfo = path;
 	l = strlen(scriptname);

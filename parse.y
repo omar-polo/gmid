@@ -601,6 +601,9 @@ fastcgiopt	: PARAM string '=' string {
 			free($3);
 			free($5);
 		}
+		| STRIP NUM {
+			loc->fcgi_strip = $2;
+		}
 		;
 
 types		: TYPES '{' optnl mediaopts_l '}' ;
