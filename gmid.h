@@ -451,8 +451,6 @@ int		 proxy_init(struct client *);
 int		 puny_decode(const char*, char*, size_t, const char**);
 
 /* utils.c */
-void		 block_signals(void);
-void		 unblock_signals(void);
 const char	*strip_path(const char *, int);
 int		 starts_with(const char*, const char*);
 int		 ends_with(const char*, const char*);
