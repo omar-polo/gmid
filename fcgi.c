@@ -403,7 +403,8 @@ fcgi_req(struct client *c, struct location *loc)
 		l--;
 	if (!strncmp(scriptname, pathinfo, l))
 		pathinfo += l;
-	log_warnx("scriptname=%s ; pathinfo=%s", scriptname, pathinfo);
+
+	log_debug("scriptname=%s ; pathinfo=%s", scriptname, pathinfo);
 
 	fcgi_begin_request(c->cgibev);
 	fcgi_send_param(c->cgibev, "GATEWAY_INTERFACE", "CGI/1.1");
