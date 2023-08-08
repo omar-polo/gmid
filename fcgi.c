@@ -374,37 +374,43 @@ void
 fcgi_req(struct client *c, struct location *loc)
 {
 	char		 buf[22], path[GEMINI_URL_LEN];
-	char		*qs, *p, *pathinfo, *scriptname = NULL;
+	char		*scriptname, *qs;
+	const char	*stripped;
 	size_t		 l;
 	time_t		 tim;
 	struct tm	 tminfo;
 	struct envlist	*p;
 
+	fcgi_begin_request(c->cgibev);
+
+	scriptname = "";
 	TAILQ_FOREACH(p, &loc->params, envs) {
 		if (!strcmp(p->name, "SCRIPT_NAME")) {
 			scriptname = p->value;
 			break;
 		}
 	}
-	if (scriptname == NULL)
-		scriptname = "";
 
-	p = strip_path(c->iri.path, loc->fcgi_strip);
-	if (*p != '/')
-		snprintf(path, sizeof(path), "/%s", p);
+	stripped = strip_path(c->iri.path, loc->fcgi_strip);
+	if (*stripped != '/')
+		snprintf(path, sizeof(path), "/%s", stripped);
 	else
-		strlcpy(path, p, sizeof(path));
+		strlcpy(path, stripped, sizeof(path));
 
-	pathinfo = path;
 	l = strlen(scriptname);
 	while (l > 0 && scriptname[l - 1] == '/')
 		l--;
-	if (!strncmp(scriptname, pathinfo, l))
-		pathinfo += l;
+	if (!strncmp(scriptname, path, l) && (path[l] == '/' ||
+	    path[l] == '\0')) {
+		log_warnx("in here! %zu %s", l, path);
+		fcgi_send_param(c->cgibev, "PATH_INFO", &path[l]);
+		path[l] = '\0';
+		fcgi_send_param(c->cgibev, "SCRIPT_NAME", path);
+	} else {
+		fcgi_send_param(c->cgibev, "PATH_INFO", stripped);
+		fcgi_send_param(c->cgibev, "SCRIPT_NAME", scriptname);
+	}
 
-	log_debug("scriptname=%s ; pathinfo=%s", scriptname, pathinfo);
-
-	fcgi_begin_request(c->cgibev);
 	fcgi_send_param(c->cgibev, "GATEWAY_INTERFACE", "CGI/1.1");
 	fcgi_send_param(c->cgibev, "GEMINI_URL_PATH", c->iri.path);
 	fcgi_send_param(c->cgibev, "QUERY_STRING", c->iri.query);
@@ -414,9 +420,6 @@ fcgi_req(struct client *c, struct location *loc)
 	fcgi_send_param(c->cgibev, "SERVER_NAME", c->iri.host);
 	fcgi_send_param(c->cgibev, "SERVER_PROTOCOL", "GEMINI");
 	fcgi_send_param(c->cgibev, "SERVER_SOFTWARE", GMID_VERSION);
-
-	fcgi_send_param(c->cgibev, "SCRIPT_NAME", scriptname);
-	fcgi_send_param(c->cgibev, "PATH_INFO", pathinfo);
 
 	if (*c->iri.query != '\0' &&
 	    strchr(c->iri.query, '=') == NULL &&
