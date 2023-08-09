@@ -258,8 +258,8 @@ fcgi_handle_stdout(struct client *c, struct evbuffer *src, size_t len)
 			return;
 		}
 
-		start_reply(c, code, c->sbuf + 3);
-		if (c->code < 20 || c->code > 29) {
+		if (start_reply(c, code, c->sbuf + 3) == -1 ||
+		    c->code < 20 || c->code > 29) {
 			fcgi_error(bev, EVBUFFER_EOF, c);
 			return;
 		}
@@ -280,7 +280,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 	struct fcgi_end_req_body end;
 	size_t			 len;
 
-	for (;;) {
+	while (c->type != REQUEST_DONE) {
 		if (EVBUFFER_LENGTH(src) < sizeof(hdr))
 			return;
 
@@ -310,8 +310,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 
 			/* TODO: do something with the status? */
 			c->type = REQUEST_DONE;
-			client_write(c->bev, c);
-			return;
+			break;
 
 		case FCGI_STDERR:
 			/* discard stderr (for now) */
@@ -333,6 +332,7 @@ fcgi_read(struct bufferevent *bev, void *d)
 
 err:
 	fcgi_error(bev, EVBUFFER_ERROR, c);
+	client_write(c->bev, c);
 }
 
 void
@@ -352,10 +352,12 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 	/*
 	 * If we're here it means that some kind of non-recoverable
 	 * error happened.
+	 *
+	 * Don't free bev as we might be called by a function that
+	 * still uses it.
 	 */
 
-	bufferevent_free(bev);
-	c->cgibev = NULL;
+	bufferevent_disable(bev, EVBUFFER_READ);
 
 	close(c->pfd);
 	c->pfd = -1;
@@ -367,7 +369,6 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 	}
 
 	c->type = REQUEST_DONE;
-	client_write(c->bev, c);
 }
 
 void

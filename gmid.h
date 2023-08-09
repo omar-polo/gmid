@@ -409,7 +409,7 @@ int		 vhost_disable_log(struct vhost*, const char*);
 
 void		 mark_nonblock(int);
 void		 client_write(struct bufferevent *, void *);
-void		 start_reply(struct client*, int, const char*);
+int		 start_reply(struct client*, int, const char*);
 void		 client_close(struct client *);
 struct client	*client_by_id(int);
 void		 server_accept(int, short, void *);

@@ -1122,7 +1122,7 @@ client_error(struct bufferevent *bev, short error, void *d)
 	client_close(c);
 }
 
-void
+int
 start_reply(struct client *c, int code, const char *meta)
 {
 	struct evbuffer	*evb = EVBUFFER_OUTPUT(c->bev);
@@ -1161,18 +1161,19 @@ start_reply(struct client *c, int code, const char *meta)
 	if (code != 20)
 		c->type = REQUEST_DONE;
 
-	return;
+	return 0;
 
 err:
 	log_warnx("evbuffer_add_printf error: no memory");
 	evbuffer_drain(evb, EVBUFFER_LENGTH(evb));
-	client_close(c);
-	return;
+	c->type = REQUEST_DONE;
+	return -1;
 
 overflow:
 	log_warnx("reply header overflow");
 	evbuffer_drain(evb, EVBUFFER_LENGTH(evb));
 	start_reply(c, TEMP_FAILURE, "internal error");
+	return -1;
 }
 
 static void

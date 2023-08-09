@@ -182,9 +182,8 @@ proxy_read(struct bufferevent *bev, void *d)
 			return;
 		}
 
-		start_reply(c, code, hdr + 3);
-
-		if (c->code < 20 || c->code > 29) {
+		if (start_reply(c, code, hdr + 3) == -1 ||
+		    c->code < 20 || c->code > 29) {
 			proxy_error(bev, EVBUFFER_EOF, c);
 			return;
 		}
