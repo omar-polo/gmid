@@ -403,7 +403,6 @@ fcgi_req(struct client *c, struct location *loc)
 		l--;
 	if (!strncmp(scriptname, path, l) && (path[l] == '/' ||
 	    path[l] == '\0')) {
-		log_warnx("in here! %zu %s", l, path);
 		fcgi_send_param(c->cgibev, "PATH_INFO", &path[l]);
 		path[l] = '\0';
 		fcgi_send_param(c->cgibev, "SCRIPT_NAME", path);
