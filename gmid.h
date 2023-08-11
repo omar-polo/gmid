@@ -453,7 +453,6 @@ int		 puny_decode(const char*, char*, size_t, const char**);
 
 /* utils.c */
 const char	*strip_path(const char *, int);
-int		 starts_with(const char*, const char*);
 int		 ends_with(const char*, const char*);
 char		*absolutify_path(const char*);
 char		*xstrdup(const char*);

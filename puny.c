@@ -151,7 +151,7 @@ decode(const char *str, char *out, size_t len, const char **err)
 	unsigned int numpoints;
 	const char *s;
 
-	if (!starts_with(str, "xn--")) {
+	if (strncmp(str, "xn--", 4) != 0) {
 		strncpy(out, str, len);
 		return 1;
 	}
