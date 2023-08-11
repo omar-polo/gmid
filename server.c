@@ -1447,8 +1447,8 @@ server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 	sandbox_server_process();
 
 	/*
-	 * ge doesn't use the privsep crypto engine; it doesn't use
-	 * privsep at all so `ps' is NULL.
+	 * gemexp doesn't use the privsep crypto engine; it doesn't
+	 * use privsep at all so `ps' is NULL.
 	 */
 	if (ps != NULL) {
 		c = ps->ps_env;
