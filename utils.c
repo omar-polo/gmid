@@ -78,18 +78,6 @@ ends_with(const char *str, const char *sufx)
 	return 1;
 }
 
-ssize_t
-filesize(int fd)
-{
-	ssize_t len;
-
-	if ((len = lseek(fd, 0, SEEK_END)) == -1)
-		return -1;
-	if (lseek(fd, 0, SEEK_SET) == -1)
-		return -1;
-	return len;
-}
-
 char *
 absolutify_path(const char *path)
 {

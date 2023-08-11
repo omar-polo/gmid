@@ -455,7 +455,6 @@ int		 puny_decode(const char*, char*, size_t, const char**);
 const char	*strip_path(const char *, int);
 int		 starts_with(const char*, const char*);
 int		 ends_with(const char*, const char*);
-ssize_t		 filesize(int);
 char		*absolutify_path(const char*);
 char		*xstrdup(const char*);
 void		*xcalloc(size_t, size_t);
