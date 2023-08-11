@@ -67,7 +67,7 @@ ends_with(const char *str, const char *sufx)
 char *
 absolutify_path(const char *path)
 {
-	char *wd, *r;
+	char wd[PATH_MAX], *r;
 
 	if (*path == '/') {
 		if ((r = strdup(path)) == NULL)
@@ -75,10 +75,10 @@ absolutify_path(const char *path)
 		return r;
 	}
 
-	wd = getcwd(NULL, 0);
+	if (getcwd(wd, sizeof(wd)) == NULL)
+		fatal("getcwd");
 	if (asprintf(&r, "%s/%s", wd, path) == -1)
 		fatal("asprintf");
-	free(wd);
 	return r;
 }
 
