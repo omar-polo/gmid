@@ -48,6 +48,7 @@ else
 	CFLAGS=${CFLAGS:--O2 -pipe}
 fi
 
+INSTALL=${INSTALL-install}
 PREFIX=${PREFIX-/usr/local}
 
 CDIAGFLAGS=
@@ -102,6 +103,7 @@ while [ $# -gt 0 ]; do
 	CFLAGS)		CFLAGS="$val" ;;
 	CDIAGFLAGS)	CDIAGFLAGS="$val" ;;
 	DISABLE_SANDBOX) DISABLE_SANDBOX="$val" ;;
+	INSTALL)	INSTALL="$val" ;;
 	LDFLAGS)	LDFLAGS="$val" ;;
 	PKG_CONFIG)	PKG_CONFIG="$val" ;;
 	PREFIX)		PREFIX="$val" ;;
@@ -488,13 +490,8 @@ echo "file config.h: written" 1>&3
 
 exec > config.mk
 
-[ -z "${BINDIR}"          ] && BINDIR="\${PREFIX}/bin"
-[ -z "${MANDIR}"          ] && MANDIR="\${PREFIX}/man"
-
-[ -z "${INSTALL_PROGRAM}" ] && INSTALL_PROGRAM="${INSTALL} -m 0555"
-[ -z "${INSTALL_LIB}"     ] && INSTALL_LIB="${INSTALL} -m 0444"
-[ -z "${INSTALL_MAN}"     ] && INSTALL_MAN="${INSTALL} -m 0444"
-[ -z "${INSTALL_DATA}"    ] && INSTALL_DATA="${INSTALL} -m 0444"
+[ -z "${BINDIR}" ] && BINDIR="\${PREFIX}/bin"
+[ -z "${MANDIR}" ] && MANDIR="\${PREFIX}/man"
 
 cat << __HEREDOC__
 CC		= ${CC}
@@ -507,11 +504,11 @@ PREFIX		= ${PREFIX}
 BINDIR		= ${BINDIR}
 MANDIR		= ${MANDIR}
 
-INSTALL		= install
-INSTALL_PROGRAM	= ${INSTALL} -m 0555
-INSTALL_LIB	= ${INSTALL} -m 0444
-INSTALL_MAN	= ${INSTALL} -m 0444
-INSTALL_DATA	= ${INSTALL} -m 0444
+INSTALL		= ${INSTALL}
+INSTALL_PROGRAM	= \${INSTALL} -m 0555
+INSTALL_LIB	= \${INSTALL} -m 0444
+INSTALL_MAN	= \${INSTALL} -m 0444
+INSTALL_DATA	= \${INSTALL} -m 0444
 
 COMPATS=	${COMPATS}
 
