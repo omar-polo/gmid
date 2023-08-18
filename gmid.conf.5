@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd July 24, 2023
+.Dd August 18, 2023
 .Dt GMID.CONF 5
 .Os
 .Sh NAME
@@ -326,25 +326,25 @@ leading path components from the
 .Pp
 The FastCGI handler will be given the following variables by default:
 .Bl -tag -width 24m
-.It Ev GATEWAY_INTERFACE
-.Dq CGI/1.1
-.It Ev GEMINI_DOCUMENT_ROOT
-The root directory of the virtual host.
-.It Ev GEMINI_SCRIPT_FILENAME
-Full path to the FastCGI script being executed.
-.It Ev GEMINI_URL
-The full IRI of the request.
+.\" .It Ev GEMINI_DOCUMENT_ROOT
+.\" The root directory of the virtual host.
 .It Ev GEMINI_URL_PATH
-The path of the request.
+Full path of the request.
 .It Ev GEMINI_SEARCH_STRING
 The decoded
 .Ev QUERY_STRING
 if defined in the request and if it doesn't contain any unencoded
 .Sq =
 characters, otherwise unset.
+.It Ev GATEWAY_INTERFACE
+.Dq CGI/1.1
+.It Ev AUTH_TYPE
+The string "Certificate" if the client used a certificate, otherwise
+unset.
 .It Ev PATH_INFO
 The portion of the requested path that is derived from the the IRI
-path hierarchy following the part that identifies the script itself.
+path hierarchy following
+.Ev SCRIPT_NAME .
 Can be unset.
 .It Ev PATH_TRANSLATED
 Present if and only if
@@ -362,9 +362,17 @@ The URL-encoded search or parameter string.
 Textual representation of the client IP.
 .It Ev REQUEST_METHOD
 This is present only for RFC3875 (CGI) compliance.
-It's always set to the empty string.
+It's always set to
+.Dq GET .
 .It Ev SCRIPT_NAME
 The virtual URI path to the script.
+Since it's impossible to determine in all cases the correct
+.Ev SCRIPT_NAME
+programmatically
+.Nm gmid
+assumes it's the empty string.
+It is recommended to manually specify this parameter when serving a
+sub-tree of a virtual host via FastCGI.
 .It Ev SERVER_NAME
 The name of the server
 .It Ev SERVER_PORT
@@ -374,9 +382,6 @@ The port the server is listening on.
 .It Ev SERVER_SOFTWARE
 The name and version of the server, i.e.
 .Dq gmid/1.8.4
-.It Ev AUTH_TYPE
-The string "Certificate" if the client used a certificate, otherwise
-unset.
 .It Ev REMOTE_USER
 The subject of the client certificate if provided, otherwise unset.
 .It Ev TLS_CLIENT_ISSUER

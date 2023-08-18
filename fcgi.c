@@ -371,18 +371,53 @@ fcgi_error(struct bufferevent *bev, short err, void *d)
 	c->type = REQUEST_DONE;
 }
 
+static void
+path_translate(const char *path, struct location *loc, struct location *rloc,
+    char *buf, size_t len)
+{
+	const char *root, *sufx;
+
+	buf[0] = '\0';
+
+	if (*loc->dir != '\0')
+		root = loc->dir;
+	else if (*rloc->dir != '\0')
+		root = rloc->dir;
+	else
+		return;
+
+	sufx = "";
+	if (*root != '\0')
+		sufx = root[strlen(root) - 1] == '/' ? "" : "/";
+
+	while (*path == '/')
+		path++;
+
+	snprintf(buf, len, "%s%s%s", root, sufx, path);
+}
+
 void
 fcgi_req(struct client *c, struct location *loc)
 {
-	char		 buf[22], path[GEMINI_URL_LEN];
+	char		 buf[22], path[GEMINI_URL_LEN], path_tr[PATH_MAX];
 	char		*scriptname, *qs;
-	const char	*stripped;
+	const char	*stripped, *port;
 	size_t		 l;
 	time_t		 tim;
 	struct tm	 tminfo;
 	struct envlist	*p;
 
 	fcgi_begin_request(c->cgibev);
+
+	stripped = strip_path(c->iri.path, loc->fcgi_strip);
+	if (*stripped != '/')
+		snprintf(path, sizeof(path), "/%s", stripped);
+	else
+		strlcpy(path, stripped, sizeof(path));
+
+	port = c->iri.host;
+	if (port == NULL || *port == '\0')
+		port = "1965";
 
 	scriptname = "";
 	TAILQ_FOREACH(p, &loc->params, envs) {
@@ -392,34 +427,35 @@ fcgi_req(struct client *c, struct location *loc)
 		}
 	}
 
-	stripped = strip_path(c->iri.path, loc->fcgi_strip);
-	if (*stripped != '/')
-		snprintf(path, sizeof(path), "/%s", stripped);
-	else
-		strlcpy(path, stripped, sizeof(path));
-
 	l = strlen(scriptname);
 	while (l > 0 && scriptname[l - 1] == '/')
 		l--;
 	if (!strncmp(scriptname, path, l) && (path[l] == '/' ||
 	    path[l] == '\0')) {
 		fcgi_send_param(c->cgibev, "PATH_INFO", &path[l]);
+		path_translate(&path[l], loc, TAILQ_FIRST(&c->host->locations),
+		    path_tr, sizeof(path_tr));
 		path[l] = '\0';
 		fcgi_send_param(c->cgibev, "SCRIPT_NAME", path);
 	} else {
+		path_translate(stripped, loc, TAILQ_FIRST(&c->host->locations),
+		    path_tr, sizeof(path_tr));
 		fcgi_send_param(c->cgibev, "PATH_INFO", stripped);
 		fcgi_send_param(c->cgibev, "SCRIPT_NAME", scriptname);
 	}
 
 	fcgi_send_param(c->cgibev, "GATEWAY_INTERFACE", "CGI/1.1");
-	fcgi_send_param(c->cgibev, "GEMINI_URL_PATH", c->iri.path);
+	fcgi_send_param(c->cgibev, "PATH_TRANSLATED", path_tr);
 	fcgi_send_param(c->cgibev, "QUERY_STRING", c->iri.query);
 	fcgi_send_param(c->cgibev, "REMOTE_ADDR", c->rhost);
 	fcgi_send_param(c->cgibev, "REMOTE_HOST", c->rhost);
-	fcgi_send_param(c->cgibev, "REQUEST_METHOD", "");
+	fcgi_send_param(c->cgibev, "REQUEST_METHOD", "GET");
 	fcgi_send_param(c->cgibev, "SERVER_NAME", c->iri.host);
+	fcgi_send_param(c->cgibev, "SERVER_PORT", port);
 	fcgi_send_param(c->cgibev, "SERVER_PROTOCOL", "GEMINI");
 	fcgi_send_param(c->cgibev, "SERVER_SOFTWARE", GMID_VERSION);
+
+	fcgi_send_param(c->cgibev, "GEMINI_URL_PATH", c->iri.path);
 
 	if (*c->iri.query != '\0' &&
 	    strchr(c->iri.query, '=') == NULL &&
