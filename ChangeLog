@@ -1,3 +1,8 @@
+2023-08-18  Omar Polo  <op@omarpolo.com>
+
+	* fcgi.c (fcgi_req): sync the parameters with RFC3875 (CGI)
+	(fcgi_req): send "GET" as REQUEST_METHOD
+
 2023-08-08  Omar Polo  <op@omarpolo.com>
 
 	* fcgi.c (fcgi_req): implement SCRIPT_NAME / PATH_INFO splitting for fastcgi
