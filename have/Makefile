@@ -1,4 +1,5 @@
 DISTFILES =	Makefile \
+		endian_h.c \
 		err.c \
 		explicit_bzero.c \
 		freezero.c \
@@ -25,7 +26,8 @@ DISTFILES =	Makefile \
 		strtonum.c \
 		tree_h.c \
 		vasprintf.c \
-		vis.c
+		vis.c \
+		wait_any.c
 
 all:
 	false
