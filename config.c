@@ -49,9 +49,7 @@ config_new(void)
 	conf->log_facility = LOG_DAEMON;
 	conf->log_format = LOG_FORMAT_LEGACY;
 
-#ifdef __OpenBSD__
 	conf->use_privsep_crypto = 1;
-#endif
 
 	return conf;
 }
