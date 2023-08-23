@@ -337,7 +337,7 @@ else
 		COMPATS="$f ${COMPATS}"
 	done
 
-	CFLAGS="-Icompat/libtls ${CFLAGS}"
+	CFLAGS="-Icompat/libtls -I../compat/libtls ${CFLAGS}"
 
 	deptest ASN1_time_tm_cmp ASN1_TIME_TM_CMP			|| true
 	deptest ASN1_time_tm_clamp_notafter ASN1_TIME_TM_CLAMP_NOTAFTER	|| true
