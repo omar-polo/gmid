@@ -522,7 +522,7 @@ if [ ${HAVE_GETDTABLESIZE} -eq 0 ]; then
 	echo "extern	int	 getdtablesize(void);"
 fi
 if [ ${HAVE_GETENTROPY} -eq 0 ]; then
-	echo "extern	int	 getentropy(void *, size_t)";
+	echo "extern	int	 getentropy(void *, size_t);"
 fi
 if [ ${HAVE_GETPROGNAME} -eq 0 ]; then
 	echo "extern	const char *getprogname(void);"
