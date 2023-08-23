@@ -287,7 +287,6 @@ runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest freezero	FREEZERO	|| true
 runtest getdtablecount	GETDTABLECOUNT	|| true
 runtest getdtablesize	GETDTABLESIZE	|| true
-runtest getentropy	GETENTROPY	|| true
 runtest getprogname	GETPROGNAME	|| true
 runtest imsg		IMSG		"" -lutil libimsg || true
 runtest libevent	LIBEVENT	"" -levent libevent_core|| true
@@ -311,6 +310,10 @@ runtest vis		VIS		-DLIBBSD_OPENBSD_VIS	|| true
 
 if [ ${HAVE_ARC4RANDOM} -eq 1 -a ${HAVE_ARC4RANDOM_BUF} -eq 0 ]; then
 	COMPATS="compat/arc4random.c ${COMPATS}"
+fi
+
+if [ ${HAVE_ARC4RANDOM} -eq 0 ]; then
+	runtest getentropy GETENTROPY || true
 fi
 
 if [ ${HAVE_ARC4RANDOM} -eq 0 -a ${HAVE_GETENTROPY} -eq 1 ]; then
