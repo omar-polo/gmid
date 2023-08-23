@@ -145,11 +145,10 @@ splitted into multiple processes:
    `server` and `crypto` processes and reloads the configuration upon
    `SIGHUP`.
 
- - logger: logs the requests.
+ - logger: handles the logging with syslog and/or local files.
 
  - server: listen on the binded ports and serves the request.  This
    also include speaking FastCGI and proxying requests.
 
- - crypto: (used only on OpenBSD at the time of writing.)  Holds the
-   TLS private keys to avoid a compromised `server` process to
-   disclose them.
+ - crypto: holds the TLS private keys to avoid a compromised `server`
+   process to disclose them.
