@@ -15,6 +15,7 @@ DISTFILES =	ASN1_time_parse.c \
 		getentropy.c \
 		getprogname.c \
 		imsg.c \
+		landlock.c \
 		libevent.c \
 		libevent2.c \
 		libtls.c \
