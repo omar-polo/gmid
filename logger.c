@@ -61,6 +61,10 @@ static void
 logger_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 {
 	p->p_shutdown = logger_shutdown;
+
+	openlog(getprogname(), LOG_NDELAY, LOG_DAEMON);
+	tzset();
+
 	sandbox_logger_process();
 }
 
