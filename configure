@@ -315,6 +315,9 @@ fi
 
 if [ ${HAVE_ARC4RANDOM} -eq 0 ]; then
 	runtest getentropy GETENTROPY || true
+else
+	# fake it
+	HAVE_GETENTROPY=1
 fi
 
 if [ ${HAVE_ARC4RANDOM} -eq 0 -a ${HAVE_GETENTROPY} -eq 1 ]; then
