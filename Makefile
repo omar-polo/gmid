@@ -128,11 +128,11 @@ lint:
 	man -Tlint -Wstyle -l gmid.8 gmid.conf.5 gemexp.1 gg.1
 
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
-		Makefile README.md config.c configure configure.local.example \
-		crypto.c dirs.c fcgi.c ge.c gemexp.1 gg.1 gg.c gmid.8 gmid.c \
-		gmid.conf.5 gmid.h iri.c iri.h landlock_shim.h log.c log.h \
-		logger.c mime.c parse.y proc.c proc.h proxy.c puny.c \
-		sandbox.c server.c titan.1 titan.c utf8.c utils.c y.tab.c
+		Makefile README.md config.c configure crypto.c dirs.c fcgi.c \
+		ge.c gemexp.1 gg.1 gg.c gmid.8 gmid.c gmid.conf.5 gmid.h \
+		iri.c iri.h landlock_shim.h log.c log.h logger.c mime.c \
+		parse.y proc.c proc.h proxy.c puny.c sandbox.c server.c \
+		titan.1 titan.c utf8.c utils.c y.tab.c
 
 release:
 	sed -i -e '/^RELEASE=/s/no/yes' configure
