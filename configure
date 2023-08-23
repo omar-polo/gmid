@@ -56,7 +56,12 @@ CDIAGFLAGS="${CDIAGFLAGS} -W -Wall -Wextra -Wpointer-arith -Wuninitialized"
 CDIAGFLAGS="${CDIAGFLAGS} -Wstrict-prototypes -Wmissing-prototypes -Wunused"
 CDIAGFLAGS="${CDIAGFLAGS} -Wsign-compare -Wno-unused-parameter" # -Wshadow
 CDIAGFLAGS="${CDIAGFLAGS} -Wno-missing-field-initializers"
-CDIAGFLAGS="${CDIAGFLAGS} -Wpointer-sign"
+CDIAGFLAGS="${CDIAGFLAGS} -Wno-pointer-sign"
+
+LIBTLS=bundled # or system
+if [ "$(uname || true)" = OpenBSD ]; then
+	LIBTLS=system
+fi
 
 while [ $# -gt 0 ]; do
 	key="${1%%=*}"
@@ -95,9 +100,17 @@ while [ $# -gt 0 ]; do
 	--bindir)	key=BINDIR ;;
 	--mandir)	key=MANDIR ;;
 	--prefix)	key=PREFIX ;;
+	--with-libtls)	key=LIBTLS ;;
 	esac
 
 	case "$key" in
+	LIBTLS)
+		case "$val" in
+		bundled)	LIBTLS=bundled ;;
+		system)		LIBTLS=system  ;;
+		*)		usage ;;
+		esac
+		;;
 	BINDIR)		BINDIR="$val" ;;
 	CC)		CC="$val" ;;
 	CFLAGS)		CFLAGS="$val" ;;
@@ -267,15 +280,17 @@ if [ ${HAVE_ENDIAN_H} -eq 0 -a \
 	exit 1
 fi
 
+runtest arc4random	ARC4RANDOM	|| true
+runtest arc4random_buf	ARC4RANDOM_BUF	|| true
 runtest err		ERR		|| true
 runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest freezero	FREEZERO	|| true
 runtest getdtablecount	GETDTABLECOUNT	|| true
 runtest getdtablesize	GETDTABLESIZE	|| true
+runtest getentropy	GETENTROPY	|| true
 runtest getprogname	GETPROGNAME	|| true
 runtest imsg		IMSG		"" -lutil libimsg || true
 runtest libevent	LIBEVENT	"" -levent libevent_core|| true
-runtest libtls		LIBTLS		"" -ltls libtls || true
 runtest memmem		MEMMEM		-D_GNU_SOURCE || true
 runtest openssl		OPENSSL		"" '-lcrypto -lssl' 'libcrypto libssl' || true
 runtest pr_set_name	PR_SET_NAME	|| true
@@ -289,15 +304,51 @@ runtest setresuid	SETRESUID	-D_GNU_SOURCE || true
 runtest strlcat		STRLCAT		|| true
 runtest strlcpy		STRLCPY		|| true
 runtest strtonum	STRTONUM	-D_OPENBSD_SOURCE	|| true
+runtest timingsafe_memcmp TIMINGSAFE_MEMCMP || true
 runtest tree_h		TREE_H		|| true
 runtest vasprintf	VASPRINTF	-D_GNU_SOURCE || true
 runtest vis		VIS		-DLIBBSD_OPENBSD_VIS	|| true
 
+if [ ${HAVE_ARC4RANDOM} -eq 1 -a ${HAVE_ARC4RANDOM_BUF} -eq 0 ]; then
+	COMPATS="compat/arc4random.c ${COMPATS}"
+fi
+
+if [ ${HAVE_ARC4RANDOM} -eq 0 -a ${HAVE_GETENTROPY} -eq 1 ]; then
+	COMPATS="compat/getentropy.c ${COMPATS}"
+fi
+
+if [ "${LIBTLS}" = system ]; then
+	runtest libtls	LIBTLS		"" -ltls libtls || true
+
+	# not actually needed
+	HAVE_ASN1_TIME_TM_CMP=1
+	HAVE_ASN1_TIME_TM_CLAMP_NOTAFTER=1
+	HAVE_ASN1_TIME_PARSE=1
+	HAVE_SSL_CTX_UCCM=1
+	HAVE_SSL_CTX_LVM=1
+	HAVE_X509_LOOKUP_MEM=1
+else
+	# use bundled one
+	HAVE_LIBTLS=1
+	for f in compat/libtls/*.c; do
+		COMPATS="$f ${COMPATS}"
+	done
+
+	CFLAGS="-Icompat/libtls ${CFLAGS}"
+
+	deptest ASN1_time_tm_cmp ASN1_TIME_TM_CMP			|| true
+	deptest ASN1_time_tm_clamp_notafter ASN1_TIME_TM_CLAMP_NOTAFTER	|| true
+	deptest ASN1_time_parse ASN1_TIME_PARSE				|| true
+	deptest SSL_CTX_use_certificate_chain_mem SSL_CTX_UCCM		|| true
+	deptest SSL_CTX_load_verify_mem SSL_CTX_LVM			|| true
+	deptest X509_LOOKUP_mem X509_LOOKUP_MEM				|| true
+fi
+
 deptest libevent2	LIBEVENT2	|| true
 
 if [ ${HAVE_LIBTLS} -eq 0 ]; then
-	echo "FATAL: libtls not found" 1>&2
-	echo "FATAL: libtls not found" 1>&3
+	echo "FATAL: openssl not found" 1>&2
+	echo "FATAL: openssl not found" 1>&3
 	exit 1
 fi
 
@@ -340,7 +391,7 @@ if [ $NEED_LIBBSD_OPENBSD_VIS = 1 ]; then
 	CFLAGS="$CFLAGS -DLIBBSD_OPENBSD_VIS"
 fi
 
-CFLAGS="${CFLAGS} ${CDIAGFLAGS}"
+CFLAGS="-I. ${CFLAGS} ${CDIAGFLAGS}"
 
 exec > config.h
 echo "config.h: writing.." >&2
@@ -394,16 +445,61 @@ elif [ ${HAVE_MACHINE_ENDIAN} -eq 1 ]; then
 __HEREDOC__
 fi
 
-[ ${HAVE_EXPLICIT_BZERO} -eq 0 -o \
+[ ${HAVE_ARC4RANDOM_BUF} -eq 0 -o \
+  ${HAVE_ASN1_TIME_PARSE} -eq 0 -o \
+  ${HAVE_EXPLICIT_BZERO} -eq 0 -o \
   ${HAVE_FREEZERO} -eq 0 -o \
+  ${HAVE_GETENTROPY} -eq 0 -o \
   ${HAVE_REALLOCARRAY} -eq 0 -o \
   ${HAVE_RECALLOCARRAY} -eq 0 -o \
   ${HAVE_STRLCAT} -eq 0 -o \
   ${HAVE_STRLCPY} -eq 0 -o \
-  ${HAVE_STRTONUM} -eq 0 ] && echo "#include <stddef.h>"
+  ${HAVE_STRTONUM} -eq 0 -o \
+  ${HAVE_TIMINGSAFE_MEMCMP} -eq 0 ] && echo "#include <stddef.h>"
+
+[ ${HAVE_ARC4RANDOM} -eq 0 ] && echo "#include <stdint.h>"
 
 [ ${HAVE_SETRESGID} -eq 0 -o \
   ${HAVE_SETRESUID} -eq 0 ] && echo "#include <unistd.h>"
+
+if [ ${HAVE_GETENTROPY} -eq 1 ]; then
+	echo "#define HAVE_GETENTROPY 1"
+else
+	echo "#define WITH_OPENSSL 1"
+	echo "#define OPENSSL_PRNG_ONLY 1"
+fi
+
+if [ ${HAVE_ARC4RANDOM} -eq 0 ]; then
+	echo "extern	uint32_t arc4random(void);"
+else
+	echo "#define HAVE_ARC4RANDOM 1"
+fi
+if [ ${HAVE_ARC4RANDOM_BUF} -eq 0 ]; then
+	echo "extern	void	 arc4random_buf(void *, size_t);"
+else
+	echo "#define HAVE_ARC4RANDOM_BUF 1"
+fi
+
+if [ ${HAVE_ASN1_TIME_TM_CMP} -eq 0 ]; then
+	echo "struct tm;"
+	echo "extern	int	ASN1_time_tm_cmp(struct tm *, struct tm *);"
+else
+	echo "#define HAVE_ASN1_TIME_TM_CMP 1"
+fi
+
+if [ ${HAVE_ASN1_TIME_TM_CLAMP_NOTAFTER} -eq 0 ]; then
+	echo "struct tm;"
+	echo "extern	int	ASN1_time_tm_clamp_notafter(struct tm *);"
+else
+	echo "#define HAVE_ASN1_TIME_TM_CLAMP_NOTAFTER 1"
+fi
+
+if [ ${HAVE_ASN1_TIME_PARSE} -eq 0 ]; then
+	echo "struct tm;"
+	echo "extern	int	ASN1_time_parse(const char *, size_t, struct tm *, int);"
+else
+	echo "#define HAVE_ASN1_TIME_PARSE 1"
+fi
 
 if [ ${HAVE_ERR} -eq 0 ]; then
 	echo "extern	void	 err(int, const char*, ...);"
@@ -424,6 +520,9 @@ if [ ${HAVE_GETDTABLECOUNT} -eq 0 ]; then
 fi
 if [ ${HAVE_GETDTABLESIZE} -eq 0 ]; then
 	echo "extern	int	 getdtablesize(void);"
+fi
+if [ ${HAVE_GETENTROPY} -eq 0 ]; then
+	echo "extern	int	 getentropy(void *, size_t)";
 fi
 if [ ${HAVE_GETPROGNAME} -eq 0 ]; then
 	echo "extern	const char *getprogname(void);"
@@ -455,8 +554,42 @@ fi
 if [ ${HAVE_STRTONUM} -eq 0 ]; then
 	echo "extern	long long strtonum(const char*, long long, long long, const char**);"
 fi
+if [ ${HAVE_TIMINGSAFE_MEMCMP} -eq 0 ]; then
+	echo "extern	int	timingsafe_memcmp(const void *, const void *, size_t);"
+fi
 if [ ${HAVE_VASPRINTF} -eq 0 ]; then
 	echo "extern	int	 vasprintf(char**, const char*, va_list);"
+fi
+
+if [ ${HAVE_ASN1_TIME_TM_CMP} -eq 0 ]; then
+	echo "#include <openssl/asn1.h>"
+	echo "struct tm;"
+	echo "int ASN1_time_tm_cmp(struct tm *, struct tm *);"
+else
+	echo "#define HAVE_ASN1_TIME_TM_CMP 1"
+fi
+
+if [ ${HAVE_SSL_CTX_UCCM} -eq 0 -o ${HAVE_SSL_CTX_LVM} -eq 0 ]; then
+	echo "#include <openssl/ssl.h>"
+fi
+
+if [ ${HAVE_SSL_CTX_UCCM} -eq 0 ]; then
+	echo "int SSL_CTX_use_certificate_chain_mem(SSL_CTX *, void *, int);"
+else
+	echo "#define HAVE_SSL_CTX_USE_CERTIFICATE_CHAIN_MEM 1"
+fi
+
+if [ ${HAVE_SSL_CTX_LVM} -eq 0 ]; then
+	echo "int SSL_CTX_load_verify_mem(SSL_CTX *, void *, int);"
+else
+	echo "#define HAVE_SSL_CTX_LOAD_VERIFY_MEM 1"
+fi
+
+if [ ${HAVE_X509_LOOKUP_MEM} -eq 0 ]; then
+	echo "#include <openssl/x509_vfy.h>"
+	echo "X509_LOOKUP_METHOD *X509_LOOKUP_mem(void);"
+else
+	echo "#define HAVE_X509_LOOKUP_MEM 1"
 fi
 
 cat <<__HEREDOC__

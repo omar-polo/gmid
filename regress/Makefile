@@ -31,7 +31,7 @@ REG_COMPATS =	${COBJS:%=../%}
 PUNY_SRCS =	puny-test.c ../puny.c ../utf8.c ../utils.c ../log.c
 PUNY_OBJS =	${PUNY_SRCS:.c=.o} ${REG_COMPATS}
 
-IRI_SRCS =	iri_test.c ../iri.c ../utf8.c
+IRI_SRCS =	iri_test.c ../iri.c ../utf8.c ../log.c
 IRI_OBJS =	${IRI_SRCS:.c=.o} ${REG_COMPATS}
 
 .PHONY: all data clean dist
@@ -51,7 +51,7 @@ fill-file: fill-file.o
 	${CC} fill-file.o -o $@ ${LIBS} ${LDFLAGS}
 
 fcgi-test: fcgi-test.o
-	${CC} fcgi-test.o ${REG_COMPATS} -o fcgi-test ${LIBS} ${LDFLAGS}
+	${CC} fcgi-test.o ../log.o ${REG_COMPATS} -o fcgi-test ${LIBS} ${LDFLAGS}
 
 key.pem: cert.pem
 

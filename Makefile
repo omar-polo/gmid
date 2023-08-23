@@ -36,11 +36,11 @@ GEMEXP_SRCS =	ge.c config.c crypto.c dirs.c fcgi.c iri.c log.c mime.c \
 
 GEMEXP_OBJS =	${GEMEXP_SRCS:.c=.o} ${COBJS}
 
-GG_SRCS =	gg.c iri.c utf8.c
+GG_SRCS =	gg.c iri.c log.c utf8.c
 
 GG_OBJS =	${GG_SRCS:.c=.o} ${COBJS}
 
-TITAN_SRCS =	titan.c iri.c utf8.c
+TITAN_SRCS =	titan.c iri.c log.c utf8.c
 TITAN_OBJS =	${TITAN_SRCS:.c=.o} ${COBJS}
 
 SRCS =		gmid.h log.h parse.y proc.h \
@@ -60,7 +60,9 @@ config.mk config.h: configure
 include config.mk
 
 clean:
-	rm -f *.[do] compat/*.[do] y.tab.c y.tab.h y.output gmid gemexp gg
+	rm -f gmid gemexp gg
+	rm -f *.[do] compat/*.[do] compat/libtls/*.[do]
+	rm -f y.tab.c y.tab.h y.output
 	rm -f compile_flags.txt
 	${MAKE} -C regress clean
 
