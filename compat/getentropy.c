@@ -41,11 +41,13 @@
 
 int _ssh_compat_getentropy(void *, size_t);
 
+#if 0
 static int
 seed_from_prngd(unsigned char *buf, size_t bytes)
 {
 	return -1;
 }
+#endif
 
 int
 _ssh_compat_getentropy(void *s, size_t len)
