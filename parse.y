@@ -403,6 +403,7 @@ servopt		: ALIAS string {
 		}
 		| LISTEN ON listen_addr {
 			listen_on($3, "1965");
+			free($3);
 		}
 		| LISTEN ON listen_addr PORT STRING {
 			listen_on($3, $5);
