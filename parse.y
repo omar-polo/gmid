@@ -38,7 +38,7 @@
 
 struct conf *conf;
 
-static const char	*default_host = "*";
+static const char	*default_host = NULL;
 static uint16_t		 default_port = 1965;
 
 TAILQ_HEAD(files, file)		 files = TAILQ_HEAD_INITIALIZER(files);
@@ -229,7 +229,7 @@ option		: CHROOT string	{
 			yywarn("option `ipv6' is deprecated,"
 			    " please use `listen on'");
 			if ($2)
-				default_host = "*";
+				default_host = NULL;
 			else
 				default_host = "0.0.0.0";
 		}
@@ -354,7 +354,8 @@ vhost		: SERVER string {
 					fatal("snprintf");
 
 				yywarn("missing `listen on' in server %s,"
-				    " assuming %s port %d", $2, default_host,
+				    " assuming %s port %d", $2,
+				    default_host ? default_host : "*",
 				    default_port);
 				listen_on(default_host, portno);
 			}
@@ -1072,7 +1073,7 @@ parse_conf(struct conf *c, const char *filename)
 {
 	struct sym		*sym, *next;
 
-	default_host = "*";
+	default_host = NULL;
 	default_port = 1965;
 
 	conf = c;
