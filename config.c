@@ -18,6 +18,7 @@
 
 #include <sys/stat.h>
 
+#include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <string.h>
@@ -244,8 +245,11 @@ config_send_socks(struct conf *conf)
 	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
 		sock = socket(addr->ai_family, addr->ai_socktype,
 		    addr->ai_protocol);
-		if (sock == -1)
+		if (sock == -1) {
+			if (errno == EAFNOSUPPORT || errno == EPROTONOSUPPORT)
+				continue;
 			fatal("socket");
+		}
 
 		v = 1;
 		if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &v, sizeof(v))
