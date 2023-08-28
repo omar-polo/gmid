@@ -80,7 +80,10 @@ usage(void)
 	    getprogname());
 }
 
-/* used by the server process, defined here so gg can provide its own impl. */
+/*
+ * Used by the server process, defined here so gemexp can provide
+ * its own implementation.
+ */
 void
 log_request(struct client *c, int code, const char *meta)
 {
