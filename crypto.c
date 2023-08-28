@@ -415,7 +415,7 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 	 * operation in OpenSSL's engine layer.
 	 */
 	memset(&req, 0, sizeof(req));
-	req.id = reqid++;
+	req.id = ++reqid;
 	if (strlcpy(req.hash, hash, sizeof(req.hash)) >= sizeof(req.hash))
 		fatalx("%s: hash too long (%zu)", __func__, strlen(hash));
 	req.flen = dgst_len;
