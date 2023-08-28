@@ -455,7 +455,8 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 			    imsg.hdr.peerid, "crypto", imsg.hdr.pid);
 #endif
 
-			if (crypto_dispatch_server(ibuf->fd, p, &imsg) == 0) {
+			if (imsg.hdr.type != IMSG_CRYPTO_ECDSA_SIGN &&
+			    crypto_dispatch_server(ibuf->fd, p, &imsg) == 0) {
 				/* Message was handled by the callback */
 				imsg_free(&imsg);
 				continue;
