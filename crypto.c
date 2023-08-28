@@ -204,7 +204,7 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 		memset(&iov, 0, sizeof(iov));
 		n = 0;
 		iov[0].iov_base = &res;
-		iov[1].iov_len = sizeof(res);
+		iov[0].iov_len = sizeof(res);
 		n++;
 
 		if (ret > 0) {
