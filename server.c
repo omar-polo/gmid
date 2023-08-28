@@ -373,7 +373,8 @@ handle_handshake(int fd, short ev, void *d)
 	case 0:  /* success */
 		break;
 	case -1:
-		log_warnx("tls_handshake failed: %s", tls_error(c->ctx));
+		log_warnx("(%s:%s) tls_handshake failed: %s",
+		    c->rhost, c->rserv, tls_error(c->ctx));
 		client_close(c);
 		return;
 	case TLS_WANT_POLLIN:
