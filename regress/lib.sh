@@ -59,8 +59,8 @@ gen_config() {
 $config_common
 $1
 server "localhost" {
-	cert "$PWD/cert.pem"
-	key  "$PWD/key.pem"
+	cert "$PWD/localhost.pem"
+	key  "$PWD/localhost.key"
 	root "$PWD/testdata"
 	listen on $REGRESS_HOST port $port
 	$2
@@ -75,8 +75,8 @@ EOF
 set_proxy() {
 	cat <<EOF >>reg.conf
 server "localhost.local" {
-	cert "$PWD/cert.pem"
-	key "$PWD/key.pem"
+	cert "$PWD/localhost.pem"
+	key "$PWD/localhost.key"
 	listen on $REGRESS_HOST port $port
 	proxy {
 		relay-to localhost port $port

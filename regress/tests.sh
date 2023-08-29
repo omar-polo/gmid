@@ -187,7 +187,7 @@ test_require_client_ca() {
 	fetch_hdr /
 	check_reply "20 text/gemini" || return 1
 
-	ggflags="-C invalid.cert.pem -K invalid.key.pem"
+	ggflags="-C invalid.pem -K invalid.key"
 	fetch_hdr /
 	check_reply "61 certificate not authorised" || return 1
 }
@@ -290,8 +290,8 @@ pwd = "$PWD"
 
 server "localhost" {
 	# the quoting of \$ is for sh
-	cert \$pwd "/cert.pem"
-	key  \$pwd "/key.pem"
+	cert \$pwd "/localhost.pem"
+	key  \$pwd "/localhost.key"
 	root \$pwd "/testdata"
 	listen on $REGRESS_HOST port $port
 }
@@ -339,8 +339,8 @@ test_proxy_with_certs() {
 
 	gen_config '' 'require client ca "'$PWD'/testca.pem"'
 	set_proxy "
-		cert \"$PWD/invalid.cert.pem\"
-		key \"$PWD/invalid.key.pem\"
+		cert \"$PWD/invalid.pem\"
+		key \"$PWD/invalid.key\"
 	"
 	run
 

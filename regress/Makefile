@@ -2,6 +2,8 @@
 # all.
 TESTS=
 
+GENCERT_FLAGS=
+
 # host to bind to during regress
 REGRESS_HOST =	localhost
 
@@ -39,7 +41,7 @@ IRI_OBJS =	${IRI_SRCS:.c=.o} ${REG_COMPATS}
 all: data puny-test iri_test fcgi-test
 	env REGRESS_HOST="${REGRESS_HOST}" ./regress ${TESTS}
 
-data: testdata cert.pem testca.pem valid.crt invalid.cert.pem
+data: testdata localhost.pem testca.pem valid.crt invalid.pem
 
 puny-test: ${PUNY_OBJS}
 	${CC} ${PUNY_OBJS} -o puny-test ${LIBS} ${LDFLAGS}
@@ -53,19 +55,10 @@ fill-file: fill-file.o
 fcgi-test: fcgi-test.o
 	${CC} fcgi-test.o ../log.o ${REG_COMPATS} -o fcgi-test ${LIBS} ${LDFLAGS}
 
-key.pem: cert.pem
+localhost.key: localhost.pem
 
-# XXX: key size is NOT GOOD.  This is only for testing.  Smaller keys
-# are quicker to generate.  DON'T DO THIS AT HOME.
-cert.pem:
-	openssl req -x509 -newkey rsa:2048	\
-		-keyout key.pem			\
-		-out cert.pem			\
-		-days 365 -nodes		\
-		-subj "/CN=localhost"
-	ln -s cert.pem localhost.cert.pem
-	ln -s key.pem localhost.key.pem
-	@echo
+localhost.pem:
+	./../contrib/gencert ${GENCERT_FLAGS} localhost >/dev/null
 
 testca.pem:
 	openssl genrsa -out testca.key 2048
@@ -90,14 +83,14 @@ valid.crt: testca.pem
 		-days 365			\
 		-sha256 -extfile valid.ext
 
-invalid.cert.pem: cert.pem
-	cp cert.pem invalid.cert.pem
-	cp key.pem invalid.key.pem
+invalid.pem: localhost.pem
+	cp localhost.pem invalid.pem
+	cp localhost.key invalid.key
 
 clean:
-	rm -f *.o iri_test cert.pem key.pem
-	rm -f localhost.cert.pem localhost.key.pem
-	rm -f testca.* valid.csr valid.key valid.crt invalid.*pem
+	rm -f *.o iri_test localhost.pem localhost.key
+	rm -f localhost.pem localhost.key
+	rm -f testca.* valid.csr valid.key valid.crt invalid.pem invalid.key
 	rm -rf testdata fill-file puny-test fcgi-test
 	rm -f gmid.pid fcgi.sock
 
