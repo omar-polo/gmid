@@ -248,7 +248,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "Version: " GE_STRING "\n"
-	    "Usage: %s [-hVv] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
+	    "Usage: %s [-hV] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
 	    getprogname());
 	exit(1);
 }
@@ -272,7 +272,7 @@ main(int argc, char **argv)
 	/* ge doesn't do privsep so no privsep crypto engine. */
 	conf->use_privsep_crypto = 0;
 
-	while ((ch = getopt_long(argc, argv, "d:H:hp:Vv", opts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "d:H:hp:V", opts, NULL)) != -1) {
 		switch (ch) {
 		case 'd':
 			certs_dir = optarg;
