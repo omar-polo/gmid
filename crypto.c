@@ -475,7 +475,7 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
 			memcpy(&res, data, sizeof(res));
-			if (datalen != sizeof(res) + res.ret)
+			if (datalen != sizeof(res) + res.len)
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
 			toptr = data + sizeof(res);
