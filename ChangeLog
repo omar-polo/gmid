@@ -1,3 +1,7 @@
+2023-08-29  Omar Polo  <op@omarpolo.com>
+
+	* ge.c (data_dir): use $XDG_DATA_HOME/gemexp instead of /gmid for the certificates.
+
 2023-08-18  Omar Polo  <op@omarpolo.com>
 
 	* fcgi.c (fcgi_req): sync the parameters with RFC3875 (CGI)
