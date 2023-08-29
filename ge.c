@@ -148,7 +148,7 @@ mkdirs(const char *path, mode_t mode)
 		fatal("can't mkdir %s", path);
 }
 
-/* $XDG_DATA_HOME/gmid */
+/* $XDG_DATA_HOME/gemexp */
 char *
 data_dir(void)
 {
@@ -158,10 +158,10 @@ data_dir(void)
 	if ((xdg = getenv("XDG_DATA_HOME")) == NULL) {
 		if ((home = getenv("HOME")) == NULL)
 			fatalx("XDG_DATA_HOME and HOME both empty");
-		if (asprintf(&t, "%s/.local/share/gmid", home) == -1)
+		if (asprintf(&t, "%s/.local/share/gemexp", home) == -1)
 			fatalx("asprintf");
 	} else {
-		if (asprintf(&t, "%s/gmid", xdg) == -1)
+		if (asprintf(&t, "%s/gemexp", xdg) == -1)
 			fatal("asprintf");
 	}
 
