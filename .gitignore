@@ -5,12 +5,8 @@ gmid
 gg
 gemexp
 titan
-*.d
-*.o
+**/*.[do]
 *.swp
-have/*.d
-compat/*.d
-compat/*.o
 docs
 y.tab.*
 compile_flags.txt
@@ -23,7 +19,6 @@ configure.local
 !contrib/gmid
 !contrib/vim/syntax_checkers/gmid
 regress/testdata
-regress/*.d
 regress/*.pem
 regress/*.key
 regress/*.crt
@@ -35,8 +30,6 @@ regress/fcgi.sock
 regress/fill-file
 regress/iri_test
 regress/puny-test
-regress/*.o
-regress/gg
 regress/gmid.pid
 
 site/gemini
