@@ -104,9 +104,9 @@ load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 {
 	char *cert, *key;
 
-	if (asprintf(&cert, "%s/%s.cert.pem", dir, hostname) == -1)
+	if (asprintf(&cert, "%s/%s.pem", dir, hostname) == -1)
 		fatal("asprintf");
-	if (asprintf(&key, "%s/%s.key.pem", dir, hostname) == -1)
+	if (asprintf(&key, "%s/%s.key", dir, hostname) == -1)
 		fatal("asprintf");
 
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
