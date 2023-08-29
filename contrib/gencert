@@ -27,7 +27,7 @@
 progname="$(basename -- "$0")"
 
 usage() {
-	echo "usage: $progname [-fh] [-d destdir] [-D days] hostname" >&2
+	echo "usage: $progname [-fhe] [-d destdir] [-D days] hostname" >&2
 	echo "Please read the comment at the top of $0 for the usage." >&2
 	exit $1
 }
