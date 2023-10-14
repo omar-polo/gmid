@@ -101,16 +101,16 @@ tags:
 # --internal build targets --
 
 gmid: ${GMID_OBJS}
-	${CC} ${GMID_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+	${CC} ${GMID_OBJS} -o $@ ${LDFLAGS} ${LIBS}
 
 gemexp: ${GEMEXP_OBJS}
-	${CC} ${GEMEXP_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+	${CC} ${GEMEXP_OBJS} -o $@ ${LDFLAGS} ${LIBS}
 
 gg: ${GG_OBJS}
-	${CC} ${GG_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+	${CC} ${GG_OBJS} -o $@ ${LDFLAGS} ${LIBS}
 
 titan: ${TITAN_OBJS}
-	${CC} ${TITAN_OBJS} -o $@ ${LIBS} ${LDFLAGS}
+	${CC} ${TITAN_OBJS} -o $@ ${LDFLAGS} ${LIBS}
 
 y.tab.c: parse.y
 	${YACC} -b y parse.y
