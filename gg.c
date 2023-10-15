@@ -428,6 +428,7 @@ main(int argc, char **argv)
 #endif
 
 	code = get(*argv);
-
-	return code < 20 || code >= 30;
+	if (code >= 20 && code < 30)
+		return 0;
+	return code;
 }
