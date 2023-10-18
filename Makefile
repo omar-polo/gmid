@@ -125,7 +125,7 @@ y.tab.c: parse.y
 .PHONY: lint release dist
 
 lint:
-	man -Tlint -Wstyle -l gmid.8 gmid.conf.5 gemexp.1 gg.1
+	man -Tlint -Wstyle -l gmid.8 gmid.conf.5 gemexp.1 gg.1 titan.1
 
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
 		Makefile README.md config.c configure crypto.c dirs.c fcgi.c \
