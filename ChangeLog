@@ -1,3 +1,13 @@
+2023-10-18  Omar Polo  <op@omarpolo.com>
+
+	* ge.c (load_local_cert): generate EC certs by default, use -R to keep generating RSA ones.
+	* utils.c (gencert): generate EC too
+	* gg.c (get): print the response header for non-2x replies to standard error
+
+2023-10-15  Omar Polo  <op@omarpolo.com>
+
+	* gg.c (main): exit with the gemini response code (unless it's 2x)
+
 2023-08-29  Omar Polo  <op@omarpolo.com>
 
 	* ge.c (data_dir): use $XDG_DATA_HOME/gemexp instead of /gmid for the certificates.
