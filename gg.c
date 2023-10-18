@@ -23,6 +23,7 @@
 #include <errno.h>
 #include <locale.h>
 #include <string.h>
+#include <wchar.h>
 
 enum debug {
 	DEBUG_NONE,
@@ -181,6 +182,26 @@ dorep(struct tls *ctx, uint8_t *buf, size_t len)
 	return tot;
 }
 
+static void
+safeprint(FILE *fp, const char *str)
+{
+	int		 len;
+	wchar_t		 wc;
+
+	for (; *str != '\0'; str += len) {
+		if ((len = mbtowc(&wc, str, MB_CUR_MAX)) == -1) {
+			mbtowc(NULL, NULL, MB_CUR_MAX);
+			fputc('?', fp);
+			len = 1;
+		} else if (wcwidth(wc) == -1) {
+			fputc('?', fp);
+		} else if (wc != L'\n')
+			putwc(wc, fp);
+	}
+
+	fputc('\n', fp);
+}
+
 static int
 get(const char *r)
 {
@@ -285,6 +306,10 @@ get(const char *r)
 		/* skip the header */
 		t = memmem(buf, len, "\r\n", 2);
 		assert(t != NULL);
+		if (code < 20 || code >= 30) {
+			*t = '\0';
+			safeprint(stderr, buf + 3); /* skip return code */
+		}
 		t += 2; /* skip \r\n */
 		len -= t - buf;
 		write(1, t, len);
