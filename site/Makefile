@@ -1,6 +1,8 @@
-MANPAGES =	../gmid.1 \
-		../gmid.conf.5 \
-		../gg.1
+MANPAGES =	gemexp.1 \
+		gg.1 \
+		gmid.conf.5 \
+		gmid.8 \
+		titan.1
 
 PAGES =		index.gmi \
 		changelog.gmi \
@@ -36,9 +38,12 @@ all: dirs manpages pages
 dirs:
 	mkdir -p gemini www
 
+MANOPTS = -Oman='%N.%S.html;https://man.openbsd.org/%N.%S',style=mandoc.css
+
 manpages:
 .for m in ${MANPAGES}
-	man -Thtml -Ostyle=mandoc.css $m > www/${m:T}.html
+	@echo generating www/${m:T}.html
+	cd .. && man -Thtml ${MANOPTS} -l $m > site/www/${m:T}.html
 	man -O width=65 -Tutf8 -l $m | col -b > gemini/${m:T}.txt
 .endfor
 
