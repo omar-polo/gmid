@@ -218,8 +218,8 @@ gencert(const char *hostname, const char *certpath, const char *keypath,
 	FILE		*f;
 	const unsigned char *host = (const unsigned char*)hostname;
 
-	log_info("generating new certificate for %s (it could take a while)",
-	    host);
+	log_info("Generating new %s key for %s (it could take a while)",
+	    eckey ? "EC" : "RSA", host);
 
 	if ((f = fopen(keypath, "w")) == NULL) {
 		log_warn("can't open %s", keypath);
@@ -292,8 +292,7 @@ gencert(const char *hostname, const char *certpath, const char *keypath,
 
 	X509_free(x509);
 	EVP_PKEY_free(pkey);
-	log_info("%s certificate successfully generated",
-	    eckey ? "EC" : "RSA");
+	log_info("Certificate for %s successfully generated", host);
 	return;
 
  err:
