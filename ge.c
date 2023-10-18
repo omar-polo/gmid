@@ -100,7 +100,7 @@ load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 		fatal("asprintf");
 
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
-		gen_certificate(hostname, cert, key);
+		gencert(hostname, cert, key, 1);
 
 	h->cert = tls_load_file(cert, &h->certlen, NULL);
 	if (h->cert == NULL)

@@ -1,5 +1,7 @@
 /*
  * Copyright (c) 2021, 2023 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2019 Renaud Allard <renaud@allard.it>
+ * Copyright (c) 2016 Kristaps Dzonsons <kristaps@bsd.lv>
  * Copyright (c) 2008 Pierre-Yves Ritschard <pyr@openbsd.org>
  * Copyright (c) 2008 Reyk Floeter <reyk@openbsd.org>
  *
@@ -21,13 +23,21 @@
 #include <errno.h>
 #include <string.h>
 
-#include <openssl/bn.h>
+#include <openssl/ec.h>
 #include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/obj_mac.h>
 #include <openssl/pem.h>
+#include <openssl/rsa.h>
 #include <openssl/x509_vfy.h>
 #include <openssl/x509v3.h>
 
 #include "log.h"
+
+/*
+ * Default number of bits when creating a new RSA key.
+ */
+#define KBITS 4096
 
 const char *
 strip_path(const char *path, int strip)
@@ -102,12 +112,107 @@ xcalloc(size_t nmemb, size_t size)
 	return d;
 }
 
-void
-gen_certificate(const char *hostname, const char *certpath, const char *keypath)
+static EVP_PKEY *
+rsa_key_create(FILE *f, const char *fname)
 {
-	BIGNUM		*e;
+	EVP_PKEY_CTX	*ctx = NULL;
+	EVP_PKEY	*pkey = NULL;
+	int		 ret = -1;
+
+	/* First, create the context and the key. */
+
+	if ((ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, NULL)) == NULL) {
+		log_warnx("EVP_PKEY_CTX_new_id failed");
+		ssl_error("EVP_PKEY_CTX_new_id");
+		goto done;
+	}
+	if (EVP_PKEY_keygen_init(ctx) <= 0) {
+		log_warnx("EVP_PKEY_keygen_init failed");
+		ssl_error("EVP_PKEY_keygen_init");
+		goto done;
+	}
+	if (EVP_PKEY_CTX_set_rsa_keygen_bits(ctx, KBITS) <= 0) {
+		log_warnx("EVP_PKEY_CTX_set_rsa_keygen_bits failed");
+		ssl_error("EVP_PKEY_CTX_set_rsa_keygen_bits");
+		goto done;
+	}
+	if (EVP_PKEY_keygen(ctx, &pkey) <= 0) {
+		log_warnx("EVP_PKEY_keygen failed");
+		ssl_error("EVP_PKEY_keygen");
+		goto done;
+	}
+
+	/* Serialize the key to the disc. */
+	if (!PEM_write_PrivateKey(f, pkey, NULL, NULL, 0, NULL, NULL)) {
+		log_warnx("PEM_write_PrivateKey failed");
+		ssl_error("PEM_write_PrivateKey");
+		goto done;
+	}
+
+	ret = 0;
+ done:
+	if (ret == -1) {
+		EVP_PKEY_free(pkey);
+		pkey = NULL;
+	}
+	EVP_PKEY_CTX_free(ctx);
+	return pkey;
+}
+
+static EVP_PKEY *
+ec_key_create(FILE *f, const char *fname)
+{
+	EC_KEY		*eckey = NULL;
+	EVP_PKEY	*pkey = NULL;
+	int		 ret = -1;
+
+	if ((eckey = EC_KEY_new_by_curve_name(NID_secp384r1)) == NULL) {
+		log_warnx("EC_KEY_new_by_curve_name failed");
+		ssl_error("EC_KEY_new_by_curve_name");
+		goto done;
+	}
+
+	if (!EC_KEY_generate_key(eckey)) {
+		log_warnx("EC_KEY_generate_key failed");
+		ssl_error("EC_KEY_generate_key");
+		goto done;
+	}
+
+	/* Serialise the key to the disc in EC format */
+	if (!PEM_write_ECPrivateKey(f, eckey, NULL, NULL, 0, NULL, NULL)) {
+		log_warnx("PEM_write_ECPrivateKey failed");
+		ssl_error("PEM_write_ECPrivateKey");
+		goto done;
+	}
+
+	/* Convert the EC key into a PKEY structure */
+	if ((pkey = EVP_PKEY_new()) == NULL) {
+		log_warnx("EVP_PKEY_new failed");
+		ssl_error("EVP_PKEY_new");
+		goto done;
+	}
+	if (!EVP_PKEY_set1_EC_KEY(pkey, eckey)) {
+		log_warnx("EVP_PKEY_set1_EC_KEY failed");
+		ssl_error("EVP_PKEY_set1_EC_KEY");
+		goto done;
+	}
+
+	ret = 0;
+ done:
+	if (ret == -1) {
+		EVP_PKEY_free(pkey);
+		pkey = NULL;
+		log_warnx("WOOOPS");
+	}
+	EC_KEY_free(eckey);
+	return pkey;
+}
+
+void
+gencert(const char *hostname, const char *certpath, const char *keypath,
+    int eckey)
+{
 	EVP_PKEY	*pkey;
-	RSA		*rsa;
 	X509		*x509;
 	X509_NAME	*name;
 	FILE		*f;
@@ -116,58 +221,85 @@ gen_certificate(const char *hostname, const char *certpath, const char *keypath)
 	log_info("generating new certificate for %s (it could take a while)",
 	    host);
 
-	if ((pkey = EVP_PKEY_new()) == NULL)
-		fatalx("couldn't create a new private key");
+	if ((f = fopen(keypath, "w")) == NULL) {
+		log_warn("can't open %s", keypath);
+		goto err;
+	}
+	if (eckey)
+		pkey = ec_key_create(f, keypath);
+	else
+		pkey = rsa_key_create(f, keypath);
+	if (pkey == NULL) {
+		log_warnx("failed to generate a private key");
+		goto err;
+	}
+	if (fflush(f) == EOF || fclose(f) == EOF) {
+		log_warn("failed to flush or close the private key");
+		goto err;
+	}
 
-	if ((rsa = RSA_new()) == NULL)
-		fatalx("couldn't generate rsa");
-
-	if ((e = BN_new()) == NULL)
-		fatalx("couldn't allocate a bignum");
-
-	BN_set_word(e, RSA_F4);
-	if (!RSA_generate_key_ex(rsa, 4096, e, NULL))
-		fatalx("couldn't generate a rsa key");
-
-	if (!EVP_PKEY_assign_RSA(pkey, rsa))
-		fatalx("couldn't assign the key");
-
-	if ((x509 = X509_new()) == NULL)
-		fatalx("couldn't generate the X509 certificate");
+	if ((x509 = X509_new()) == NULL) {
+		log_warnx("couldn't generate the X509 certificate");
+		ssl_error("X509_new");
+		goto err;
+	}
 
 	ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
 	X509_gmtime_adj(X509_get_notBefore(x509), 0);
 	X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 years */
-	X509_set_version(x509, 3);
+	X509_set_version(x509, 2); // v3
 
-	if (!X509_set_pubkey(x509, pkey))
-		fatalx("couldn't set the public key");
+	if (!X509_set_pubkey(x509, pkey)) {
+		log_warnx("couldn't set the public key");
+		ssl_error("X509_set_pubkey");
+		goto err;
+	}
 
-	name = X509_get_subject_name(x509);
-	if (!X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, host, -1, -1, 0))
-		fatalx("couldn't add CN to cert");
+	if ((name = X509_NAME_new()) == NULL) {
+		log_warnx("X509_NAME_new failed");
+		ssl_error("X509_NAME_new");
+		goto err;
+	}
+
+	if (!X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, host,
+	    -1, -1, 0)) {
+		log_warnx("couldn't add CN to cert");
+		ssl_error("X509_NAME_add_entry_by_txt");
+		goto err;
+	}
+	X509_set_subject_name(x509, name);
 	X509_set_issuer_name(x509, name);
 
-	if (!X509_sign(x509, pkey, EVP_sha256()))
-		fatalx("couldn't sign the certificate");
+	if (!X509_sign(x509, pkey, EVP_sha256())) {
+		log_warnx("failed to sign the certificate");
+		ssl_error("X509_sign");
+		goto err;
+	}
 
-	if ((f = fopen(keypath, "w")) == NULL)
-		fatal("can't open %s", keypath);
-	if (!PEM_write_PrivateKey(f, pkey, NULL, NULL, 0, NULL, NULL))
-		fatalx("couldn't write private key");
-	fclose(f);
+	if ((f = fopen(certpath, "w")) == NULL) {
+		log_warn("can't open %s", certpath);
+		goto err;
+	}
+	if (!PEM_write_X509(f, x509)) {
+		log_warnx("couldn't write cert");
+		ssl_error("PEM_write_X509");
+		goto err;
+	}
+	if (fflush(f) == EOF || fclose(f) == EOF) {
+		log_warn("failed to flush or close the private key");
+		goto err;
+	}
 
-	if ((f = fopen(certpath, "w")) == NULL)
-		fatal("can't open %s", certpath);
-	if (!PEM_write_X509(f, x509))
-		fatalx("couldn't write cert");
-	fclose(f);
-
-	BN_free(e);
 	X509_free(x509);
-	RSA_free(rsa);
+	EVP_PKEY_free(pkey);
+	log_info("%s certificate successfully generated",
+	    eckey ? "EC" : "RSA");
+	return;
 
-	log_info("certificate successfully generated");
+ err:
+	(void) unlink(certpath);
+	(void) unlink(keypath);
+	exit(1);
 }
 
 X509_STORE *

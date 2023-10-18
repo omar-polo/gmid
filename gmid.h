@@ -457,7 +457,7 @@ int		 ends_with(const char*, const char*);
 char		*absolutify_path(const char*);
 char		*xstrdup(const char*);
 void		*xcalloc(size_t, size_t);
-void		 gen_certificate(const char*, const char*, const char*);
+void		 gencert(const char *, const char *, const char *, int);
 X509_STORE	*load_ca(uint8_t *, size_t);
 int		 validate_against_ca(X509_STORE*, const uint8_t*, size_t);
 void		 ssl_error(const char *);
