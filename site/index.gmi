@@ -14,11 +14,13 @@
 * event-based asynchronous I/O model
 * rich configuration file
 
-gmid also bundles a small gemini client called ‘gg’ (gemini get)
+gmid also bundles a small gemini client called ‘gg’ (gemini get), a stripped-down server for quick testing called ‘gemexp’ and a titan implementation.
 
-=> gmid.1.MANEXT	gmid(1) manpage
+=> gmid.8.MANEXT	gmid(8) manpage
 => gmid.conf.5.MANEXT	gmid.conf(5) manpage
 => gg.1.MANEXT		gg(1) manpage
+=> gemexp.1.MANEXT	gemexp(1) manpage
+=> titan.1.MANEXT	titan(1) manpage
 
 ## Install
 
@@ -38,7 +40,6 @@ The dependencies are:
 
 * libevent
 * OpenSSL/LibreSSL
-* libtls (from either LibreSSL or LibreTLS)
 * yacc or GNU bison
 
 Once all the dependencies are installed, building is as easy as:
