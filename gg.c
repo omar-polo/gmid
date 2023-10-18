@@ -308,6 +308,7 @@ get(const char *r)
 		assert(t != NULL);
 		if (code < 20 || code >= 30) {
 			*t = '\0';
+			fprintf(stderr, "Server says: ");
 			safeprint(stderr, buf + 3); /* skip return code */
 		}
 		t += 2; /* skip \r\n */
