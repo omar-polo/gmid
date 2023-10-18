@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd August 29, 2023
+.Dd October 18, 2023
 .Dt GEMEXP 1
 .Os
 .Sh NAME
@@ -20,7 +20,7 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl hV
+.Op Fl hRV
 .Op Fl d Ar certs-dir
 .Op Fl H Ar hostname
 .Op Fl p Ar port
@@ -65,6 +65,8 @@ and are implicitly generated if not found.
 Print the usage and exit.
 .It Fl p Ar port
 The port to bind to, 1965 by default.
+.It Fl R
+Generate an RSA key instead of an EC one.
 .It Fl V , Fl -version
 Print the version and exit.
 .It Ar directory

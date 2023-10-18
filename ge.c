@@ -32,6 +32,8 @@
 
 #include "log.h"
 
+static int gen_eckey = 1;
+
 int privsep_process;
 
 static const struct option opts[] = {
@@ -100,7 +102,7 @@ load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 		fatal("asprintf");
 
 	if (access(cert, R_OK) == -1 || access(key, R_OK) == -1)
-		gencert(hostname, cert, key, 1);
+		gencert(hostname, cert, key, gen_eckey);
 
 	h->cert = tls_load_file(cert, &h->certlen, NULL);
 	if (h->cert == NULL)
@@ -248,7 +250,7 @@ usage(void)
 {
 	fprintf(stderr,
 	    "Version: " GE_STRING "\n"
-	    "Usage: %s [-hV] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
+	    "Usage: %s [-hRV] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
 	    getprogname());
 	exit(1);
 }
@@ -272,7 +274,7 @@ main(int argc, char **argv)
 	/* ge doesn't do privsep so no privsep crypto engine. */
 	conf->use_privsep_crypto = 0;
 
-	while ((ch = getopt_long(argc, argv, "d:H:hp:V", opts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "d:H:hp:RV", opts, NULL)) != -1) {
 		switch (ch) {
 		case 'd':
 			certs_dir = optarg;
@@ -288,6 +290,9 @@ main(int argc, char **argv)
 			if (errstr)
 				fatalx("port number is %s: %s", errstr,
 				    optarg);
+			break;
+		case 'R':
+			gen_eckey = 0;
 			break;
 		case 'V':
 			puts("Version: " GE_STRING);
