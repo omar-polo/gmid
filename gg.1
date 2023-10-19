@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd $Mdocdate: October 18 2023$
+.Dd $Mdocdate: October 19 2023$
 .Dt GG 1
 .Os
 .Sh NAME
@@ -73,7 +73,7 @@ is used.
 .It Fl N
 Disables the server name verification.
 .It Fl n
-Check that the given IRI is valid, but don't make any requests.
+Check the given IRI for validity, but don't issue any requests.
 .It Fl P Ar host Ns Oo : Ns Ar port Oc
 Connect to the given
 .Ar host
@@ -111,7 +111,7 @@ utility was written by
 .An Omar Polo Aq Mt op@omarpolo.com .
 .Sh CAVEATS
 .Nm
-doesn't do any TOFU
+doesn't perform TOFU
 .Pq Trust On First Use
 or any X.509 certificate validation beyond the name verification.
 .Pp

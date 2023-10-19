@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd October 18, 2023
+.Dd October 19, 2023
 .Dt TITAN 1
 .Os
 .Sh NAME
@@ -29,7 +29,7 @@
 .Ek
 .Sh DESCRIPTION
 .Nm
-allows to send a data to a Titan server.
+allows to upload data to a Titan server.
 If no
 .Ar file
 is given on the command line,
@@ -53,14 +53,15 @@ Specify the token for the transaction.
 Unset by default.
 .El
 .Pp
-If
+.Nm
+alters the passed
+.Ar url
+to include the parameter for the file size as well as the MIME and the
+token if
 .Fl m
 or
 .Fl t
-are given,
-.Nm
-alters the URL of the request to include the parameters.
-The size is always added.
+are given.
 .Sh EXIT STATUS
 The
 .Nm
@@ -91,6 +92,6 @@ utility was written by
 .An Omar Polo Aq Mt op@omarpolo.com .
 .Sh CAVEATS
 .Nm
-doesn't do any TOFU
+doesn't perform TOFU
 .Pq Trust On First Use
 or any X.509 certificate validation beyond the name verification.
