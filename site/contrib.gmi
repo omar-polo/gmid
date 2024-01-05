@@ -60,7 +60,7 @@ Some things to keep in mind:
 
 ## mime.types
 
-=> TREE/contrib/renew-certs contrib/mime.types
+=> TREE/contrib/mime.types contrib/mime.types
 
 A copy of OpenBSD' /usr/share/misc/mime.types to be used as
 
