@@ -2,25 +2,15 @@
 
 > A Gemini server
 
-## Features
+gmid is a full-featured Gemini server written with security in mind.  It can serve static files, has an optional FastCGI and proxying support and a rich configuration syntax.
 
-* sandboxed by default on OpenBSD, FreeBSD and Linux
-* able to reload the configuration on-the-fly without loosing connections
-* punycode and IRI support
-* reverse proxying
-* CGI and FastCGI support
-* virtual hosts and per-location rules
-* low memory footprint
-* event-based asynchronous I/O model
-* rich configuration file
+gmid also bundles a small gemini client called ‘gg’ (gemini get), a small command-line server for quick testing called ‘gemexp’ and a titan implementation.
 
-gmid also bundles a small gemini client called ‘gg’ (gemini get), a stripped-down server for quick testing called ‘gemexp’ and a titan implementation.
-
-=> gmid.8.MANEXT	gmid(8) manpage
-=> gmid.conf.5.MANEXT	gmid.conf(5) manpage
-=> gg.1.MANEXT		gg(1) manpage
-=> gemexp.1.MANEXT	gemexp(1) manpage
-=> titan.1.MANEXT	titan(1) manpage
+=> gmid.8.MANEXT	gmid(8) - Gemini server
+=> gmid.conf.5.MANEXT	gmid.conf(5) - gmid configuration file
+=> gg.1.MANEXT		gg(1) - gemini client
+=> gemexp.1.MANEXT	gemexp(1) - export a directory over Gemini
+=> titan.1.MANEXT	titan(1) - Titan client
 
 ## Install
 
@@ -39,7 +29,7 @@ Otherwise, compile it from source: it’s easy and takes less than a minute on a
 The dependencies are:
 
 * libevent
-* OpenSSL/LibreSSL
+* LibreSSL or OpenSSL
 * yacc or GNU bison
 
 Once all the dependencies are installed, building is as easy as:
@@ -53,7 +43,7 @@ $ make
 $ sudo make install # eventually
 ```
 
-A SHA256 file is available.  However, that only checks for accidental corruption: you can use signify (SHA256.sig and the public key gmid-CURV.pub).  The signify public key for the next release ‘gmid-NEXTV.pub’ is also included.
+A SHA256 file is available.  However, it only checks for accidental corruption.  You can use signify (SHA256.sig and the public key gmid-CURV.pub) to cryptographically verify the downloaded tarball.  The signify public key for the next release ‘gmid-NEXTV.pub’ is also included.
 
 => GITHUB/releases/download/VERS/SHA256		SHA256
 => GITHUB/releases/download/VERS/SHA256.sig	SHA256.sig
