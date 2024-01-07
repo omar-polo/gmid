@@ -1,4 +1,4 @@
-/* $OpenBSD: tls_internal.h,v 1.82 2023/06/18 11:43:03 op Exp $ */
+/* $OpenBSD: tls_internal.h,v 1.83 2023/06/27 18:19:59 tb Exp $ */
 /*
  * Copyright (c) 2014 Jeremie Courreges-Anglas <jca@openbsd.org>
  * Copyright (c) 2014 Joel Sing <jsing@openbsd.org>
@@ -70,6 +70,10 @@ struct tls_ticket_key {
 	time_t		time;
 };
 
+typedef int (*tls_sign_cb)(void *_cb_arg, const char *_pubkey_hash,
+    const uint8_t *_input, size_t _input_len, int _padding_type,
+    uint8_t **_out_signature, size_t *_out_signature_len);
+
 struct tls_config {
 	struct tls_error error;
 
@@ -103,6 +107,8 @@ struct tls_config {
 	int verify_time;
 	int skip_private_key_check;
 	int use_fake_private_key;
+	tls_sign_cb sign_cb;
+	void *sign_cb_arg;
 };
 
 struct tls_conninfo {
@@ -282,12 +288,29 @@ int tls_cert_pubkey_hash(X509 *_cert, char **_hash);
 
 int tls_password_cb(char *_buf, int _size, int _rwflag, void *_u);
 
+RSA_METHOD *tls_signer_rsa_method(void);
+EC_KEY_METHOD *tls_signer_ecdsa_method(void);
+
+#define TLS_PADDING_NONE			0
+#define TLS_PADDING_RSA_PKCS1			1
+
+int tls_config_set_sign_cb(struct tls_config *_config, tls_sign_cb _cb,
+    void *_cb_arg);
+
+struct tls_signer* tls_signer_new(void);
+void tls_signer_free(struct tls_signer * _signer);
+const char *tls_signer_error(struct tls_signer * _signer);
+int tls_signer_add_keypair_file(struct tls_signer *_signer,
+    const char *_cert_file, const char *_key_file);
+int tls_signer_add_keypair_mem(struct tls_signer *_signer, const uint8_t *_cert,
+    size_t _cert_len, const uint8_t *_key, size_t _key_len);
+int tls_signer_sign(struct tls_signer *_signer, const char *_pubkey_hash,
+    const uint8_t *_input, size_t _input_len, int _padding_type,
+    uint8_t **_out_signature, size_t *_out_signature_len);
+
 /* XXX this function is not fully hidden so relayd can use it */
 void tls_config_skip_private_key_check(struct tls_config *config);
 void tls_config_use_fake_private_key(struct tls_config *config);
-
-/* XXX prototypes brought for OpenSMTPD libtls wrapper to OpenSSL */
-int ASN1_time_parse(const char *bytes, size_t len, struct tm *tm, int mode);
 
 #ifndef HAVE_SSL_CTX_USE_CERTIFICATE_CHAIN_MEM
 int SSL_CTX_use_certificate_chain_mem(SSL_CTX *, void *, int);

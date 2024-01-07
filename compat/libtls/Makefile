@@ -13,6 +13,7 @@ DISTFILES =	Makefile \
 		tls_ocsp.c \
 		tls_peer.c \
 		tls_server.c \
+		tls_signer.c \
 		tls_util.c \
 		tls_verify.c
 

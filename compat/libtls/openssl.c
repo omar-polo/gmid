@@ -31,7 +31,7 @@
 X509_LOOKUP_METHOD *
 X509_LOOKUP_mem(void);
 
-static int
+int
 X509_STORE_load_mem(X509_STORE *ctx, void *buf, int len)
 {
         X509_LOOKUP             *lookup;
