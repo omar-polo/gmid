@@ -1,9 +1,12 @@
+# gcc' -Werror=use-after-free gets tripped by vis.c: it sees a use
+# after free where it's not possible and breaks the CI.
+
 linux_amd64_task:
   container:
     image: alpine:latest
   test_script:
     - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
-    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
+    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations -Wno-use-after-free' -Werror
     - make
     - make regress REGRESS_HOST="*"
 
@@ -12,7 +15,7 @@ linux_arm_task:
     image: alpine:latest
   test_script:
     - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
-    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
+    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations -Wno-use-after-free' -Werror
     - make
     - make regress REGRESS_HOST="*"
 
