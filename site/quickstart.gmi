@@ -1,27 +1,14 @@
 # gmid quickstart guide
 
-gmid can be run in two different modes:
+The aim of this “quickstart” guide is to get your capsule up and running.
 
-* configless: a quick way to serve a directory tree from the shell, useful for testing purposes
-* daemon mode: gmid reads the configuration file and runs in the background
-
-To run gmid in the “configless” mode, just type:
-
-```serve a directory tree from the shell
-$ gmid path/to/dir
-```
-
-gmid will then generate a certificate inside ~/.local/share/gmid and serve the given directory locally.
-
-
-## Setting up a capsule with gmid
-
-To host a Gemini capsule you need to run gmid in “daemon” mode, and so a configuration file is needed.  The format of the configuration file is described in the manpage and is quite flexible, but something like the following should be enough to start:
+gmid needs a configuration file to operate.  The format is quite flexible and carefully described in the gmid.conf(5) manpage, but to start this should be enough:
 
 ```sample configuration file
 # /etc/gmid.conf
 
 server "example.com" {
+	listen on * port 1965
 	cert "/etc/ssl/example.com.pem"
 	key  "/etc/ssl/private/example.com.key"
 
@@ -29,6 +16,8 @@ server "example.com" {
 	root "/var/gemini/example.com"
 }
 ```
+
+This will have gmid listening on any address on port 1965 and serving the directory /var/gemini/example.com.
 
 A TLS certificate is also needed.  There are many way to obtain one (acme-client, certbot, ...) but within the Geminispace is common to use self-signed ones.
 
@@ -118,7 +107,7 @@ It’s a common practice for system daemons to chroot themselves into a director
 
 A chroot on UNIX-like OS is an operation that changes the “apparent” root directory (i.e. the “/”) from the current process and its child.  Think of it like imprisoning a process into a directory and never letting it escape until it terminates.
 
-Using a chroot may complicate the use of CGI scripts, because then all the dependencies of the scripts (sh, perl, libraries…) need to be installed inside the chroot too.  For this very reason gmid supports FastCGI.
+Using a chroot may complicate the setup since eventual FastCGI socket or files needed for DNS resolution need to be installed or copied inside the chroot too.
 
 The chroot feature requires a dedicate user, see the previous section.
 
@@ -144,6 +133,7 @@ user "gmid"
 chroot "/var/gemini"
 
 server "example.com" {
+	listen on *
 	cert "/etc/ssl/example.com.pem"
 	key  "/etc/ssl/example.com.key"
 	root "/example.com"
