@@ -97,4 +97,6 @@ To enable Syntastic checker, add to your vimrc:
 let g:syntastic_gmid_checkers = ['gmid']
 ```
 
+Obligatory screenshot:
+
 => vim-screenshot.png Screenshot of vim editing gmid.conf
