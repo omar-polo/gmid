@@ -257,6 +257,8 @@ main(int argc, char **argv)
 		case 't':
 			token = optarg;
 			break;
+		default:
+			usage();
 		}
 	}
 	argc -= optind;
