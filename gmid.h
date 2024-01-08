@@ -53,7 +53,7 @@
 #include "iri.h"
 
 #define VERSION_STR(n)	n " " VERSION
-#define GE_STRING	VERSION_STR("ge")
+#define GEMEXP_STRING	VERSION_STR("gemexp")
 #define GG_STRING	VERSION_STR("gg")
 #define GMID_STRING	VERSION_STR("gmid")
 

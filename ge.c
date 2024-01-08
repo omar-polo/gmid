@@ -249,7 +249,7 @@ static __dead void
 usage(void)
 {
 	fprintf(stderr,
-	    "Version: " GE_STRING "\n"
+	    "Version: " GEMEXP_STRING "\n"
 	    "Usage: %s [-hRV] [-d certs-dir] [-H hostname] [-p port] [dir]\n",
 	    getprogname());
 	exit(1);
@@ -295,7 +295,7 @@ main(int argc, char **argv)
 			gen_eckey = 0;
 			break;
 		case 'V':
-			puts("Version: " GE_STRING);
+			puts("Version: " GEMEXP_STRING);
 			return 0;
 		default:
 			usage();
