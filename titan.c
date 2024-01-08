@@ -269,7 +269,7 @@ main(int argc, char **argv)
 	if (cert != NULL && key == NULL)
 		key = cert;
 
-	if (argc > 2)
+	if (argc != 1 && argc != 2)
 		usage();
 
 	in = open_input_file(argc, argv);
