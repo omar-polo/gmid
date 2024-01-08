@@ -62,7 +62,7 @@ serve-www:
 	python3 -m http.server --directory www 8888
 
 serve-gemini:
-	gmid -p 1966 ./gemini
+	./../gemexp ./gemini
 
 upload:
 	openrsync --rsync-path=openrsync --del -a www/ antartica:/var/www/gmid.omarpolo.com
