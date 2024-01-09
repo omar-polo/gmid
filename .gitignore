@@ -17,6 +17,7 @@ config.log.old
 config.mk
 configure.local
 !contrib/gmid
+!contrib/vim/ale_linters/gmid
 !contrib/vim/syntax_checkers/gmid
 regress/testdata
 regress/*.pem
