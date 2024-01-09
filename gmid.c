@@ -320,15 +320,6 @@ main(int argc, char **argv)
 			strlcpy(conf->chroot, chroot, sizeof(conf->chroot));
 	}
 
-	if (conftest) {
-		if (config_test(conf) == -1)
-			fatalx("failed to load the configuration");
-		fprintf(stderr, "config OK\n");
-		if (conftest > 1)
-			main_print_conf(conf);
-		return 0;
-	}
-
 	if ((ps = calloc(1, sizeof(*ps))) == NULL)
 		fatal("calloc");
 	ps->ps_env = conf;
@@ -341,6 +332,16 @@ main(int argc, char **argv)
 		if (*conf->chroot == '\0')
 			strlcpy(conf->chroot, ps->ps_pw->pw_dir,
 			    sizeof(conf->chroot));
+	}
+
+	if (conftest) {
+		conf->conftest = 1;
+		if (config_test(conf) == -1)
+			fatalx("failed to load the configuration");
+		fprintf(stderr, "config OK\n");
+		if (conftest > 1)
+			main_print_conf(conf);
+		return 0;
 	}
 
 	ps->ps_instances[PROC_SERVER] = conf->prefork;

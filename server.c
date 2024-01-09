@@ -1412,12 +1412,25 @@ load_vhosts(struct conf *conf)
 {
 	struct vhost	*h;
 	struct location	*l;
+	char		 path[PATH_MAX], *p;
+	int		 r;
 
 	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		TAILQ_FOREACH(l, &h->locations, locations) {
 			if (*l->dir == '\0')
 				continue;
-			l->dirfd = open(l->dir, O_RDONLY | O_DIRECTORY);
+
+			p = l->dir;
+
+			if (conf->conftest && *conf->chroot != '\0') {
+				r = snprintf(path, sizeof(path), "%s/%s",
+				    conf->chroot, l->dir);
+				if (r < 0 || (size_t)r >= sizeof(path))
+					fatalx("path too long: %s", l->dir);
+				p = path;
+			}
+
+			l->dirfd = open(p, O_RDONLY | O_DIRECTORY);
 			if (l->dirfd == -1)
 				fatal("open %s for domain %s", l->dir,
 				    h->domain);

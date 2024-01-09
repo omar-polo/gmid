@@ -254,6 +254,7 @@ struct conf {
 	char		*log_access;
 	enum log_format	 log_format;
 	int		 use_privsep_crypto;
+	int		 conftest;
 
 	struct fcgihead	 fcgi;
 	struct vhosthead hosts;
