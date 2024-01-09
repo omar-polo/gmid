@@ -51,7 +51,6 @@ syn cluster gmidValues contains=gmidNumber,
 " TODO: write comprehensive syntax rules so it can be checked with:
 " syn match gmidError '.'
 syn keyword gmidDeprecated ipv6 nextgroup=gmidBoolean skipwhite
-syn match   gmidDeprecated "\<fastcgi\s\+param\>" display
 
 " Comments: {{{2
 " =========
