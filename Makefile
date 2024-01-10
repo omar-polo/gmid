@@ -43,7 +43,7 @@ GG_OBJS =	${GG_SRCS:.c=.o} ${COBJS}
 TITAN_SRCS =	titan.c iri.c log.c utf8.c
 TITAN_OBJS =	${TITAN_SRCS:.c=.o} ${COBJS}
 
-SRCS =		gmid.h landlock_shim.h log.h parse.y proc.h \
+SRCS =		gmid.h iri.h log.h parse.y proc.h \
 		${GMID_SRCS} ${GEMEXP_SRCS} ${GG_SRCS} ${TITAN_SRCS}
 
 DISTNAME =	gmid-${VERSION}
@@ -130,9 +130,9 @@ lint:
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
 		Makefile README.md config.c configure crypto.c dirs.c fcgi.c \
 		ge.c gemexp.1 gg.1 gg.c gmid.8 gmid.c gmid.conf.5 gmid.h \
-		iri.c iri.h landlock_shim.h log.c log.h logger.c mime.c \
-		parse.y proc.c proc.h proxy.c puny.c sandbox.c server.c \
-		titan.1 titan.c utf8.c utils.c y.tab.c
+		iri.c iri.h log.c log.h logger.c mime.c parse.y proc.c \
+		proc.h proxy.c puny.c sandbox.c server.c titan.1 titan.c \
+		utf8.c utils.c y.tab.c
 
 release:
 	sed -i -e '/^RELEASE=/s/no/yes' configure
