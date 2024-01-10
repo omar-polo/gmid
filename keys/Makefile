@@ -1,4 +1,4 @@
-DISTFILES =	Makefile gmid-1.7.pub gmid-1.8.pub gmid-1.9.pub
+DISTFILES =	Makefile gmid-1.7.pub gmid-1.8.pub gmid-2.0.pub
 
 all: false
 
