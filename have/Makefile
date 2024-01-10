@@ -6,6 +6,7 @@ DISTFILES =	ASN1_time_parse.c \
 		SSL_CTX_use_certificate_chain_mem.c \
 		X509_LOOKUP_mem.c \
 		arc4random.c \
+		arc4random_buf.c \
 		endian_h.c \
 		err.c \
 		explicit_bzero.c \
@@ -19,6 +20,7 @@ DISTFILES =	ASN1_time_parse.c \
 		libevent.c \
 		libevent2.c \
 		libtls.c \
+		machine_endian.c \
 		memmem.c \
 		noop.c \
 		openssl.c \
@@ -33,6 +35,7 @@ DISTFILES =	ASN1_time_parse.c \
 		strlcat.c \
 		strlcpy.c \
 		strtonum.c \
+		sys_endian_h.c \
 		timingsafe_memcmp.c \
 		tree_h.c \
 		vasprintf.c \
