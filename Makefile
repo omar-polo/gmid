@@ -127,6 +127,8 @@ y.tab.c: parse.y
 lint:
 	man -Tlint -Wstyle -l gmid.8 gmid.conf.5 gemexp.1 gg.1 titan.1
 
+PUBKEY =	keys/gmid-${VERSION}.pub
+PRIVKEY =	set-PRIVKEY
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
 		Makefile README.md config.c configure crypto.c dirs.c fcgi.c \
 		ge.c gemexp.1 gg.1 gg.c gmid.8 gmid.c gmid.conf.5 gmid.h \
@@ -135,13 +137,18 @@ DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
 		utf8.c utils.c y.tab.c
 
 release:
-	sed -i -e '/^RELEASE=/s/no/yes' configure
+	sed -i -e '/^RELEASE=/s/no/yes/' configure
 	${MAKE} dist
-	sed -i -e '/^RELEASE=/s/yes/no' configure
+	sed -i -e '/^RELEASE=/s/yes/no/' configure
+	signify -S -e -m ${DISTNAME}.sha256 -s ${PRIVKEY}
+
+verify-release:
+	signify -C -p ${PUBKEY} -x ${DISTNAME}.sha256.sig
 
 dist: ${DISTNAME}.sha256
 
 ${DISTNAME}.sha256: ${DISTNAME}.tar.gz
+	sha256 ${DISTNAME}.tar.gz > $@
 
 ${DISTNAME}.tar.gz: ${DISTFILES}
 	mkdir -p .dist/${DISTNAME}/
