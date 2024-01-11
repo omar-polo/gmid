@@ -33,6 +33,7 @@
 
 ### Breaking Changes
 
+* removed CGI support
 * gg now warns when the server doesn't use TLS' close_notify
 * deprecated the global `ipv6' and `port' settings in favour of the per-server `listen on` directive
 * removed the already deprecated config options `mime' and `map'
