@@ -354,7 +354,7 @@ vhost		: SERVER string {
 					fatal("snprintf");
 
 				yywarn("missing `listen on' in server %s,"
-				    " assuming %s port %d", $2,
+				    " assuming %s port %d", host->domain,
 				    default_host ? default_host : "*",
 				    default_port);
 				listen_on(default_host, portno);
