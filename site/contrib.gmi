@@ -6,7 +6,7 @@ This directory is for additional contributed files which may be useful.
 
 => TREE/contrib/Dockerfile contrib/Dockerfile
 
-A sample Dockerfile that builds an alpine linux-based image with a statically linked gmid installed as /bin/gmid.  To build the image:
+A sample Dockerfile that builds an alpine linux-based image.  To build the image:
 
 ```instructions to build the image
 # docker build -f contrib/Dockerfile -t gmid .
@@ -15,12 +15,13 @@ A sample Dockerfile that builds an alpine linux-based image with a statically li
 and then run it with something along the lines of:
 
 ```instruction to run the image
-# docker run --rm -it -p 1965:1965      \
-        -v gmid.conf:/etc/gmid.conf:ro  \
-        -v path/to/keys:/tls:ro         \
-        -v /var/gemini:/var/gemini:ro   \
-        gmid -c /etc/gmid.conf
+# docker run --rm -it -p 1965:1965 \
+        -v /var/gemini:/path/to/gemini/root:ro \
+	gmid
 ```
+
+By default a sample config that serves the content of /var/gemini using a self-signed certificate is included.
+
 
 ## gencert
 
