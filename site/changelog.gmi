@@ -11,6 +11,7 @@
 * added ability to change the syslog(3) facility with `log syslog facility <facility>`
 * added ability to change the logging style with `log style <style>`
 * added `fastcgi strip'
+* reworked the privsep implementation and added a privsep crypto engine
 * implemented `SCRIPT_NAME' and `PATH_INFO' splitting for fastcgi
 
 ### Bug fixes
@@ -19,8 +20,6 @@
 
 ### Improvements
 
-* reworked the privsep implementation
-* added a privsep crypto engine
 * contrib/gencert: added -e to generate EC keys
 * use default prefork (3) in regress
 * removed the sha256 dependency of the regress suite
@@ -28,9 +27,8 @@
 * revamped the fastcgi configuration, now it's per-location
 * attempt to load the TLS certificates, mimes and virtual hosts root as part of the configtest (-n) instead of verifying the syntax only.
 * synced the parameters with RFC3875 (CGI)
-* send "GET" as REQUEST_METHOD for FastCGI
 * gg: exit with the gemini response code unless it's 2X
-* gemexp: generate EC certificates too (it's now the default)
+* gemexp: generate EC certificates too (it's also the new default)
 * (contrib/vim) added an ALE linter and updated the Vim syntax file; thanks Anna “CyberTailor”
 
 ### Breaking Changes
@@ -39,6 +37,7 @@
 * deprecated the global `ipv6' and `port' settings in favour of the per-server `listen on` directive
 * removed the already deprecated config options `mime' and `map'
 * droped seccomp and capsicum support
+* FastCGI: set REQUEST_METHOD to "GET" instead of the empty string
 
 
 ## 2022/12/02 - 1.8.6 “Lightbulb Sun” bugfix release
