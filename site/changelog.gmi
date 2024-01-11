@@ -1,6 +1,6 @@
 # change log
 
-## 2024/01/XX - 2.0 “Lady Stardust”
+## 2024/01/11 - 2.0 “Lady Stardust”
 
 ### New Features
 
