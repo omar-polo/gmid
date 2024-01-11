@@ -1,4 +1,4 @@
-FROM alpine as builder
+FROM alpine
 WORKDIR /build
 RUN apk update &&	\
 	apk upgrade &&	\
@@ -6,14 +6,14 @@ RUN apk update &&	\
 		alpine-sdk	\
 		linux-headers	\
 		bison		\
-		libretls-dev	\
-		libretls-static	\
-		libevent-dev	\
-		libevent-static
+		libevent-dev 	\
+		openssl-dev
 COPY . .
-RUN make static
-
-FROM alpine
-RUN apk update && apk upgrade
-COPY --from=builder /build/gmid /bin/gmid
-ENTRYPOINT ["gmid"]
+RUN ./configure && make && make install
+RUN adduser -H -S -s /sbin/nologin gmid
+RUN mkdir /var/gemini
+RUN ./contrib/gencert -e localhost && \
+	mv localhost.pem /etc/ssl && \
+	mv localhost.key /etc/ssl/private
+RUN mv contrib/Docker.gmid.conf /etc/gmid.conf
+ENTRYPOINT ["gmid", "-f"]

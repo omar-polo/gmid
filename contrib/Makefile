@@ -1,4 +1,5 @@
 DISTFILES =	Makefile \
+		Docker.gmid.conf \
 		Dockerfile \
 		README \
 		gencert \

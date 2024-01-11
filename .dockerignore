@@ -2,8 +2,10 @@
 !*.c
 !*.h
 !*.y
-!compat/*.c
-!compat/*.h
+!*.[1-9]
+!compat
 !have/*.c
 !Makefile
 !configure
+!contrib/Docker.gmid.conf
+!contrib/gencert
