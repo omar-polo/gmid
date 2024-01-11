@@ -135,13 +135,13 @@ splitted into multiple processes:
 
  - main: the main process is the only one that keeps the original
    privileges.  It opens the TLS certificates on the behalf of the
-   `server` and `crypto` processes and reloads the configuration upon
-   `SIGHUP`.
+   `server` and `crypto` processes, reloads the configuration upon
+   `SIGHUP` and re-opens the log files upon `SIGUSR1`.
 
  - logger: handles the logging with syslog and/or local files.
 
- - server: listen on the binded ports and serves the request.  This
-   also include speaking FastCGI and proxying requests.
+ - server: listens for connections and serves the request.  It also
+   speaks FastCGI and do the proxying.
 
  - crypto: holds the TLS private keys to avoid a compromised `server`
    process to disclose them.
