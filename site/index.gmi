@@ -20,7 +20,7 @@ Some distros provide a package — thanks to the maintainers!
 
 Otherwise, compile it from source: it’s easy and takes less than a minute on a raspberry pi 3
 
-=> GITHUB/releases/download/VERS/gmid-VERS.tar.gz	gmid-VERS.tar.gz
+=> SITE/gmid-VERS.tar.gz	gmid-VERS.tar.gz
 
 => https://git.omarpolo.com/?action=summary&path=gmid.git git repository
 => https://codeberg.org/op/gmid/		Codeberg mirror
@@ -35,7 +35,7 @@ The dependencies are:
 Once all the dependencies are installed, building is as easy as:
 
 ```Example of how to compile from source
-$ curl -LO GITHUB/releases/download/VERS/gmid-VERS.tar.gz
+$ curl -LO SITE/gmid-VERS.tar.gz
 $ tar xzvf gmid-VERS.tar.gz
 $ cd gmid-VERS
 $ ./configure
@@ -43,17 +43,21 @@ $ make
 $ sudo make install # eventually
 ```
 
-A SHA256 file is available.  However, it only checks for accidental corruption.  You can use signify (SHA256.sig and the public key gmid-CURV.pub) to cryptographically verify the downloaded tarball.  The signify public key for the next release ‘gmid-NEXTV.pub’ is also included.
+A SHA256 file is available.  However, it only checks for accidental corruption.  You can use signify (gmid-VERS.sha256.sig) and the public key PUBKEY to cryptographically verify the downloaded tarball.  The signify public key for the previous and the next release is included in the tarball.
 
-=> GITHUB/releases/download/VERS/SHA256		SHA256
-=> GITHUB/releases/download/VERS/SHA256.sig	SHA256.sig
+=> SITE/gmid-VERS.sha256	gmid-VERS.sha256
+=> SITE/gmid-VERS.sha25.sig	gmid-VERS.sha256.sig
 
-To verify the signatures with signify(1)
+To verify the signatures with signify(1):
 
 ```Example of how to verify the signature with signify
-% signify -C -p gmid-1.8.pub -x SHA256.sig
+% signify -C -p PUBKEY -x gmid-VERS.sha256.sig
 Signature Verified
 gmid-VERS.tar.gz: OK
-gmid-CURV.pub: OK
-gmid-NEXTV.pub: OK
+```
+
+Git tags are signed with the following ssh key:
+
+```
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJ0nD5I8BNVJknT87gnpLIJWK0fXTayDktQOlS38CGj4 op@omarpolo.com
 ```
