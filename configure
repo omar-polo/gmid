@@ -50,6 +50,7 @@ fi
 
 INSTALL=${INSTALL-install}
 PREFIX=${PREFIX-/usr/local}
+SYSCONFDIR=${SYSCONFDIR-/etc}
 
 CDIAGFLAGS=
 CDIAGFLAGS="${CDIAGFLAGS} -W -Wall -Wextra -Wpointer-arith -Wuninitialized"
@@ -100,6 +101,7 @@ while [ $# -gt 0 ]; do
 	--bindir)	key=BINDIR ;;
 	--mandir)	key=MANDIR ;;
 	--prefix)	key=PREFIX ;;
+	--sysconfdir)	key=SYSCONFDIR ;;
 	--with-libtls)	key=LIBTLS ;;
 	esac
 
@@ -120,6 +122,7 @@ while [ $# -gt 0 ]; do
 	LDFLAGS)	LDFLAGS="$val" ;;
 	PKG_CONFIG)	PKG_CONFIG="$val" ;;
 	PREFIX)		PREFIX="$val" ;;
+	SYSCONFDIR)	SYSCONFDIR="$val" ;;
 	YACC)		YACC="$val" ;;
 	*)		usage
 	esac
@@ -436,6 +439,10 @@ cat <<__HEREDOC__
 #define VERSION			"${VERSION}"
 #define DISABLE_SANDBOX		${DISABLE_SANDBOX}
 #define HAVE_LANDLOCK		${HAVE_LANDLOCK}
+
+#ifndef SYSCONFDIR
+# define SYSCONFDIR		"${SYSCONFDIR}"
+#endif
 
 __HEREDOC__
 

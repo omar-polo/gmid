@@ -68,7 +68,7 @@ int pidfd = -1;
 
 int debug, verbose;
 
-const char *config_path = "/etc/gmid.conf";
+const char *config_path = SYSCONFDIR "/gmid.conf";
 const char *pidfile;
 
 static void
