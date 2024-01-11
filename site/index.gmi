@@ -46,7 +46,7 @@ $ sudo make install # eventually
 A SHA256 file is available.  However, it only checks for accidental corruption.  You can use signify (gmid-VERS.sha256.sig) and the public key PUBKEY to cryptographically verify the downloaded tarball.  The signify public key for the previous and the next release is included in the tarball.
 
 => SITE/gmid-VERS.sha256	gmid-VERS.sha256
-=> SITE/gmid-VERS.sha25.sig	gmid-VERS.sha256.sig
+=> SITE/gmid-VERS.sha256.sig	gmid-VERS.sha256.sig
 
 To verify the signatures with signify(1):
 
