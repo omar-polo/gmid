@@ -128,7 +128,7 @@ to the `contrib` directory.
 ## Architecture/Security considerations
 
 The internal architecture was revisited for the 2.0 release.  For
-previous releases, please refer to previous revision of this file.
+earlier releases, please refer to previous revision of this file.
 
 gmid has a privsep design, where the operations done by the daemon are
 splitted into multiple processes:
