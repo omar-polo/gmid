@@ -78,20 +78,24 @@ install: gmid gg gemexp
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	mkdir -p ${DESTDIR}${MANDIR}/man5
 	mkdir -p ${DESTDIR}${MANDIR}/man8
-	${INSTALL_PROGRAM} gmid ${DESTDIR}${BINDIR}
-	${INSTALL_PROGRAM} gg ${DESTDIR}${BINDIR}
 	${INSTALL_PROGRAM} gemexp ${DESTDIR}${BINDIR}
-	${INSTALL_MAN} gmid.8 ${DESTDIR}${MANDIR}/man8
-	${INSTALL_MAN} gmid.conf.5 ${DESTDIR}${MANDIR}/man5
+	${INSTALL_PROGRAM} gg ${DESTDIR}${BINDIR}
+	${INSTALL_PROGRAM} gmid ${DESTDIR}${BINDIR}
+	${INSTALL_PROGRAM} titan ${DESTDIR}${BINDIR}
 	${INSTALL_MAN} gemexp.1 ${DESTDIR}${MANDIR}/man1
 	${INSTALL_MAN} gg.1 ${DESTDIR}${MANDIR}/man1
+	${INSTALL_MAN} titan.1 ${DESTDIR}${MANDIR}/man1
+	${INSTALL_MAN} gmid.conf.5 ${DESTDIR}${MANDIR}/man5
+	${INSTALL_MAN} gmid.8 ${DESTDIR}${MANDIR}/man8
 
 uninstall:
 	rm ${DESTDIR}${BINDIR}/gemexp
 	rm ${DESTDIR}${BINDIR}/gg
 	rm ${DESTDIR}${BINDIR}/gmid
+	rm ${DESTDIR}${BINDIR}/titan
 	rm ${DESTDIR}${MANDIR}/man1/gemexp.1
 	rm ${DESTDIR}${MANDIR}/man1/gg.1
+	rm ${DESTDIR}${MANDIR}/man1/titan.1
 	rm ${DESTDIR}${MANDIR}/man5/gmid.conf.5
 	rm ${DESTDIR}${MANDIR}/man8/gmid.8
 
