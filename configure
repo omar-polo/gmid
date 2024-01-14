@@ -120,6 +120,7 @@ while [ $# -gt 0 ]; do
 	DISABLE_SANDBOX) DISABLE_SANDBOX="$val" ;;
 	INSTALL)	INSTALL="$val" ;;
 	LDFLAGS)	LDFLAGS="$val" ;;
+	MANDIR)		MANDIR="$val" ;;
 	PKG_CONFIG)	PKG_CONFIG="$val" ;;
 	PREFIX)		PREFIX="$val" ;;
 	SYSCONFDIR)	SYSCONFDIR="$val" ;;
