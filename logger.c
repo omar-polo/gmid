@@ -105,7 +105,7 @@ static int
 logger_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	char *msg;
-	size_t datalen;
+	size_t datalen = 0;
 	struct ibuf ibuf;
 
 	switch (imsg->hdr.type) {
