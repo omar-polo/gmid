@@ -526,7 +526,7 @@ main_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	struct privsep	*ps = p->p_ps;
 	struct conf	*conf = ps->ps_env;
 
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_RECONF_DONE:
 		main_configure_done(conf);
 		break;
@@ -543,7 +543,7 @@ main_dispatch_crypto(int fd, struct privsep_proc *p, struct imsg *imsg)
 	struct privsep	*ps = p->p_ps;
 	struct conf	*conf = ps->ps_env;
 
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_RECONF_DONE:
 		main_configure_done(conf);
 		break;
@@ -560,7 +560,7 @@ main_dispatch_logger(int fd, struct privsep_proc *p, struct imsg *imsg)
 	struct privsep	*ps = p->p_ps;
 	struct conf	*conf = ps->ps_env;
 
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_RECONF_DONE:
 		main_configure_done(conf);
 		break;

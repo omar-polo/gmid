@@ -79,7 +79,7 @@ logger_shutdown(void)
 static int
 logger_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_LOG_FACILITY:
 		if (imsg_get_data(imsg, &facility, sizeof(facility)) == -1)
 			fatal("corrupted IMSG_LOG_SYSLOG");
@@ -108,7 +108,7 @@ logger_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	size_t datalen = 0;
 	struct ibuf ibuf;
 
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_LOG_REQUEST:
 		if (imsg_get_ibuf(imsg, &ibuf) == -1 ||
 		    (datalen = ibuf_size(&ibuf)) == 0)

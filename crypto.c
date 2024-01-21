@@ -80,7 +80,7 @@ crypto_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 static int
 crypto_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_RECONF_START:
 	case IMSG_RECONF_CERT:
 	case IMSG_RECONF_KEY:
@@ -121,18 +121,20 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	struct iovec		 iov[2];
 	const void		*from;
 	unsigned char		*to;
-	int			 n, ret;
+	int			 n, ret, type;
 	unsigned int		 len;
+	pid_t			 pid;
 
 	if (imsg_get_ibuf(imsg, &ibuf) == -1)
 		fatalx("%s: couldn't get an ibuf", __func__);
 
-	switch (imsg->hdr.type) {
+	pid = imsg_get_pid(imsg);
+	switch (type = imsg_get_type(imsg)) {
 	case IMSG_CRYPTO_RSA_PRIVENC:
 	case IMSG_CRYPTO_RSA_PRIVDEC:
 		if (ibuf_get(&ibuf, &req, sizeof(req)) == -1 ||
 		    ibuf_size(&ibuf) != req.flen)
-			fatalx("size mismatch for imsg %d", imsg->hdr.type);
+			fatalx("size mismatch for imsg %d", type);
 		from = ibuf_data(&ibuf);
 
 		if ((pkey = get_pkey(req.hash)) == NULL ||
@@ -142,7 +144,7 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 		if ((to = calloc(1, req.tlen)) == NULL)
 			fatal("calloc");
 
-		if (imsg->hdr.type == IMSG_CRYPTO_RSA_PRIVENC)
+		if (type == IMSG_CRYPTO_RSA_PRIVENC)
 			ret = RSA_private_encrypt(req.flen, from,
 			    to, rsa, req.padding);
 		else
@@ -166,12 +168,12 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 			n++;
 		}
 
-		log_debug("replying to server #%d", imsg->hdr.pid);
-		if (proc_composev_imsg(ps, PROC_SERVER, imsg->hdr.pid - 1,
-		    imsg->hdr.type, 0, -1, iov, n) == -1)
+		log_debug("replying to server #%d", pid);
+		if (proc_composev_imsg(ps, PROC_SERVER, pid - 1,
+		    type, 0, -1, iov, n) == -1)
 			fatal("proc_composev_imsg");
 
-		if (proc_flush_imsg(ps, PROC_SERVER, imsg->hdr.pid - 1) == -1)
+		if (proc_flush_imsg(ps, PROC_SERVER, pid - 1) == -1)
 			fatal("proc_flush_imsg");
 
 		free(to);
@@ -181,7 +183,7 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_CRYPTO_ECDSA_SIGN:
 		if (ibuf_get(&ibuf, &req, sizeof(req)) == -1 ||
 		    ibuf_size(&ibuf) != req.flen)
-			fatalx("size mismatch for imsg %d", imsg->hdr.type);
+			fatalx("size mismatch for imsg %d", type);
 		from = ibuf_data(&ibuf);
 
 		if ((pkey = get_pkey(req.hash)) == NULL ||
@@ -210,12 +212,12 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 			n++;
 		}
 
-		log_debug("replying to server #%d", imsg->hdr.pid);
-		if (proc_composev_imsg(ps, PROC_SERVER, imsg->hdr.pid - 1,
-		    imsg->hdr.type, 0, -1, iov, n) == -1)
+		log_debug("replying to server #%d", pid);
+		if (proc_composev_imsg(ps, PROC_SERVER, pid - 1,
+		    type, 0, -1, iov, n) == -1)
 			fatal("proc_composev_imsg");
 
-		if (proc_flush_imsg(ps, PROC_SERVER, imsg->hdr.pid - 1) == -1)
+		if (proc_flush_imsg(ps, PROC_SERVER, pid - 1) == -1)
 			fatal("proc_flush_imsg");
 
 		free(to);

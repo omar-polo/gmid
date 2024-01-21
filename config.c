@@ -479,9 +479,9 @@ config_crypto_recv_kp(struct conf *conf, struct imsg *imsg)
 	/* XXX: check for duplicates */
 
 	if ((fd = imsg_get_fd(imsg)) == -1)
-		fatalx("no fd for imsg %d", imsg->hdr.type);
+		fatalx("%s: no fd for imsg %d", __func__, imsg_get_type(imsg));
 
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_RECONF_CERT:
 		if (pki != NULL)
 			fatalx("imsg in wrong order; pki is not NULL");
@@ -497,8 +497,8 @@ config_crypto_recv_kp(struct conf *conf, struct imsg *imsg)
 
 	case IMSG_RECONF_KEY:
 		if (pki == NULL)
-			fatalx("got key without cert beforehand %d",
-			    imsg->hdr.type);
+			fatalx("%s: RECONF_KEY: got key without cert",
+			    __func__);
 		if (load_file(fd, &d, &len) == -1)
 			fatalx("failed to load private key");
 		if ((pki->pkey = ssl_load_pkey(d, len)) == NULL)
@@ -533,7 +533,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	size_t		 len;
 	int		 fd;
 
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_RECONF_START:
 		config_purge(conf);
 		h = NULL;

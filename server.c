@@ -1496,7 +1496,7 @@ server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 	struct privsep	*ps = p->p_ps;
 	struct conf	*conf = ps->ps_env;
 
-	switch (imsg->hdr.type) {
+	switch (imsg_get_type(imsg)) {
 	case IMSG_RECONF_START:
 	case IMSG_RECONF_LOG_FMT:
 	case IMSG_RECONF_MIME:
