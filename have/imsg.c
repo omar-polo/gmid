@@ -24,7 +24,8 @@ int
 main(void)
 {
 	struct imsgbuf buf;
+	struct imsg imsg;
 
 	imsg_init(&buf, -1);
-	return 0;
+	return imsg_get_fd(&imsg);
 }
