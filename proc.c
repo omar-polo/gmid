@@ -671,8 +671,8 @@ proc_dispatch(int fd, short event, void *arg)
 		 */
 		switch (imsg.hdr.type) {
 		case IMSG_CTL_PROCFD:
-			IMSG_SIZE_CHECK(&imsg, &pf);
-			memcpy(&pf, imsg.data, sizeof(pf));
+			if (imsg_get_data(&imsg, &pf, sizeof(pf)))
+				fatalx("bad length imsg CTL_PROCFD");
 			proc_accept(ps, imsg_get_fd(&imsg), pf.pf_procid,
 			    pf.pf_instance);
 			break;

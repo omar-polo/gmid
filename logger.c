@@ -81,14 +81,13 @@ logger_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	switch (imsg->hdr.type) {
 	case IMSG_LOG_FACILITY:
-		if (IMSG_DATA_SIZE(imsg) != sizeof(facility))
+		if (imsg_get_data(imsg, &facility, sizeof(facility)) == -1)
 			fatal("corrupted IMSG_LOG_SYSLOG");
-		memcpy(&facility, imsg->data, sizeof(facility));
 		break;
 	case IMSG_LOG_SYSLOG:
-		if (IMSG_DATA_SIZE(imsg) != sizeof(log_to_syslog))
+		if (imsg_get_data(imsg, &log_to_syslog,
+		    sizeof(log_to_syslog)) == -1)
 			fatal("corrupted IMSG_LOG_SYSLOG");
-		memcpy(&log_to_syslog, imsg->data, sizeof(log_to_syslog));
 		break;
 	case IMSG_LOG_ACCESS:
 		if (logfd != -1)
@@ -107,13 +106,14 @@ logger_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
 	char *msg;
 	size_t datalen;
+	struct ibuf ibuf;
 
 	switch (imsg->hdr.type) {
 	case IMSG_LOG_REQUEST:
-		msg = imsg->data;
-		datalen = IMSG_DATA_SIZE(imsg);
-		if (datalen == 0)
+		if (imsg_get_ibuf(imsg, &ibuf) == -1 ||
+		    (datalen = ibuf_size(&ibuf)) == 0)
 			fatal("got invalid IMSG_LOG_REQUEST");
+		msg = ibuf_data(&ibuf);
 		msg[datalen - 1] = '\0';
 		if (logfd != -1)
 			dprintf(logfd, "%s\n", msg);

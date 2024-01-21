@@ -530,10 +530,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	struct proxy	*proxy;
 	struct address	*addr;
 	uint8_t		*d;
-	size_t		 len, datalen;
+	size_t		 len;
 	int		 fd;
-
-	datalen = IMSG_DATA_SIZE(imsg);
 
 	switch (imsg->hdr.type) {
 	case IMSG_RECONF_START:
@@ -543,13 +541,14 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		break;
 
 	case IMSG_RECONF_LOG_FMT:
-		IMSG_SIZE_CHECK(imsg, &conf->log_format);
-		memcpy(&conf->log_format, imsg->data, datalen);
+		if (imsg_get_data(imsg, &conf->log_format,
+		    sizeof(conf->log_format)) == -1)
+			fatalx("bad length imsg LOG_FMT");
 		break;
 
 	case IMSG_RECONF_MIME:
-		IMSG_SIZE_CHECK(imsg, &m);
-		memcpy(&m, imsg->data, datalen);
+		if (imsg_get_data(imsg, &m, sizeof(m)) == -1)
+			fatalx("bad length imsg RECONF_MIME");
 		if (m.mime[sizeof(m.mime) - 1] != '\0' ||
 		    m.ext[sizeof(m.ext) - 1] != '\0')
 			fatal("received corrupted IMSG_RECONF_MIME");
@@ -559,14 +558,15 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		break;
 
 	case IMSG_RECONF_PROTOS:
-		IMSG_SIZE_CHECK(imsg, &conf->protos);
-		memcpy(&conf->protos, imsg->data, datalen);
+		if (imsg_get_data(imsg, &conf->protos, sizeof(conf->protos))
+		    == -1)
+			fatalx("bad length imsg RECONF_PROTOS");
 		break;
 
 	case IMSG_RECONF_SOCK:
 		addr = xcalloc(1, sizeof(*addr));
-		IMSG_SIZE_CHECK(imsg, addr);
-		memcpy(addr, imsg->data, sizeof(*addr));
+		if (imsg_get_data(imsg, addr, sizeof(*addr)) == -1)
+			fatalx("bad length imsg RECONF_SOCK");
 		if ((fd = imsg_get_fd(imsg)) == -1)
 			fatalx("missing socket for IMSG_RECONF_SOCK");
 		addr->conf = conf;
@@ -579,16 +579,16 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		break;
 
 	case IMSG_RECONF_FCGI:
-		IMSG_SIZE_CHECK(imsg, fcgi);
 		fcgi = xcalloc(1, sizeof(*fcgi));
-		memcpy(fcgi, imsg->data, datalen);
+		if (imsg_get_data(imsg, fcgi, sizeof(*fcgi)) == -1)
+			fatalx("bad length imsg RECONF_FCGI");
 		log_debug("received fcgi %s", fcgi->path);
 		TAILQ_INSERT_TAIL(&conf->fcgi, fcgi, fcgi);
 		break;
 
 	case IMSG_RECONF_HOST:
-		IMSG_SIZE_CHECK(imsg, &vht);
-		memcpy(&vht, imsg->data, datalen);
+		if (imsg_get_data(imsg, &vht, sizeof(vht)) == -1)
+			fatalx("bad length imsg RECONF_HOST");
 		vh = new_vhost();
 		strlcpy(vh->domain, vht.domain, sizeof(vh->domain));
 		h = vh;
@@ -646,18 +646,18 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		log_debug("receiving host addr");
 		if (h == NULL)
 			fatalx("recv'd host address withouth host");
-		IMSG_SIZE_CHECK(imsg, addr);
 		addr = xcalloc(1, sizeof(*addr));
-		memcpy(addr, imsg->data, datalen);
+		if (imsg_get_data(imsg, addr, sizeof(*addr)) == -1)
+			fatalx("bad length imsg RECONF_HOST_ADDR");
 		TAILQ_INSERT_TAIL(&h->addrs, addr, addrs);
 		break;
 
 	case IMSG_RECONF_LOC:
 		if (h == NULL)
 			fatalx("recv'd location without host");
-		IMSG_SIZE_CHECK(imsg, loc);
 		loc = xcalloc(1, sizeof(*loc));
-		memcpy(loc, imsg->data, datalen);
+		if (imsg_get_data(imsg, loc, sizeof(*loc)) == -1)
+			fatalx("bad length imsg RECONF_LOC");
 		TAILQ_INIT(&loc->params);
 
 		if ((fd = imsg_get_fd(imsg)) != -1) {
@@ -676,18 +676,18 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	case IMSG_RECONF_ENV:
 		if (l == NULL)
 			fatalx("recv'd env without location");
-		IMSG_SIZE_CHECK(imsg, env);
 		env = xcalloc(1, sizeof(*env));
-		memcpy(env, imsg->data, datalen);
+		if (imsg_get_data(imsg, env, sizeof(*env)) == -1)
+			fatalx("bad length imsg RECONF_ENV");
 		TAILQ_INSERT_TAIL(&l->params, env, envs);
 		break;
 
 	case IMSG_RECONF_ALIAS:
 		if (h == NULL)
 			fatalx("recv'd alias without host");
-		IMSG_SIZE_CHECK(imsg, alias);
 		alias = xcalloc(1, sizeof(*alias));
-		memcpy(alias, imsg->data, datalen);
+		if (imsg_get_data(imsg, alias, sizeof(*alias)) == -1)
+			fatalx("bad length imsg RECONF_ALIAS");
 		TAILQ_INSERT_TAIL(&h->aliases, alias, aliases);
 		break;
 
@@ -695,9 +695,9 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		log_debug("receiving proxy");
 		if (h == NULL)
 			fatalx("recv'd proxy without host");
-		IMSG_SIZE_CHECK(imsg, proxy);
 		proxy = xcalloc(1, sizeof(*proxy));
-		memcpy(proxy, imsg->data, datalen);
+		if (imsg_get_data(imsg, proxy, sizeof(*proxy)) == -1)
+			fatalx("bad length imsg RECONF_PROXY");
 
 		if ((fd = imsg_get_fd(imsg)) != -1) {
 			if (load_file(fd, &d, &len) == -1)
