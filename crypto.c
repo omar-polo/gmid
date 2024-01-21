@@ -251,7 +251,7 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 	struct imsgev		*iev;
 	struct privsep_proc	*p;
 	struct privsep		*ps = conf->ps;
-	struct imsgbuf		*ibuf;
+	struct imsgbuf		*imsgbuf;
 	struct imsg		 imsg;
 	int			 ret = 0;
 	int			 n, done = 0;
@@ -289,16 +289,16 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 
 	iev = ps->ps_ievs[PROC_CRYPTO];
 	p = iev->proc;
-	ibuf = &iev->ibuf;
+	imsgbuf = &iev->ibuf;
 
 	while (!done) {
-		if ((n = imsg_read(ibuf)) == -1 && errno != EAGAIN)
+		if ((n = imsg_read(imsgbuf)) == -1 && errno != EAGAIN)
 			fatalx("imsg_read");
 		if (n == 0)
 			fatalx("pipe closed");
 
 		while (!done) {
-			if ((n = imsg_get(ibuf, &imsg)) == -1)
+			if ((n = imsg_get(imsgbuf, &imsg)) == -1)
 				fatalx("imsg_get error");
 			if (n == 0)
 				break;
@@ -310,7 +310,7 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 			    imsg.hdr.peerid, "crypto", imsg.hdr.pid);
 #endif
 
-			if ((p->p_cb)(ibuf->fd, p, &imsg) == 0) {
+			if ((p->p_cb)(imsgbuf->fd, p, &imsg) == 0) {
 				/* Message was handled by the callback */
 				imsg_free(&imsg);
 				continue;
@@ -399,7 +399,7 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 	struct imsgev		*iev;
 	struct privsep_proc	*p;
 	struct privsep		*ps = conf->ps;
-	struct imsgbuf		*ibuf;
+	struct imsgbuf		*imsgbuf;
 	struct imsg		 imsg;
 	int			 n, done = 0;
 	const void		*toptr;
@@ -434,16 +434,16 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 
 	iev = ps->ps_ievs[PROC_CRYPTO];
 	p = iev->proc;
-	ibuf = &iev->ibuf;
+	imsgbuf = &iev->ibuf;
 
 	while (!done) {
-		if ((n = imsg_read(ibuf)) == -1 && errno != EAGAIN)
+		if ((n = imsg_read(imsgbuf)) == -1 && errno != EAGAIN)
 			fatalx("imsg_read");
 		if (n == 0)
 			fatalx("pipe closed");
 
 		while (!done) {
-			if ((n = imsg_get(ibuf, &imsg)) == -1)
+			if ((n = imsg_get(imsgbuf, &imsg)) == -1)
 				fatalx("imsg_get error");
 			if (n == 0)
 				break;
@@ -456,7 +456,8 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 #endif
 
 			if (imsg.hdr.type != IMSG_CRYPTO_ECDSA_SIGN &&
-			    crypto_dispatch_server(ibuf->fd, p, &imsg) == 0) {
+			    crypto_dispatch_server(imsgbuf->fd, p, &imsg)
+			    == 0) {
 				/* Message was handled by the callback */
 				imsg_free(&imsg);
 				continue;
