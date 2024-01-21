@@ -117,25 +117,23 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 	EVP_PKEY		*pkey;
 	struct imsg_crypto_req	 req;
 	struct imsg_crypto_res	 res;
+	struct ibuf		 ibuf;
 	struct iovec		 iov[2];
 	const void		*from;
-	unsigned char		*data, *to;
-	size_t			 datalen;
+	unsigned char		*to;
 	int			 n, ret;
 	unsigned int		 len;
 
-	data = imsg->data;
-	datalen = IMSG_DATA_SIZE(imsg);
+	if (imsg_get_ibuf(imsg, &ibuf) == -1)
+		fatalx("%s: couldn't get an ibuf", __func__);
 
 	switch (imsg->hdr.type) {
 	case IMSG_CRYPTO_RSA_PRIVENC:
 	case IMSG_CRYPTO_RSA_PRIVDEC:
-		if (datalen < sizeof(req))
+		if (ibuf_get(&ibuf, &req, sizeof(req)) == -1 ||
+		    ibuf_size(&ibuf) != req.flen)
 			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		memcpy(&req, data, sizeof(req));
-		if (datalen != sizeof(req) + req.flen)
-			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		from = data + sizeof(req);
+		from = ibuf_data(&ibuf);
 
 		if ((pkey = get_pkey(req.hash)) == NULL ||
 		    (rsa = EVP_PKEY_get1_RSA(pkey)) == NULL)
@@ -181,12 +179,10 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 		break;
 
 	case IMSG_CRYPTO_ECDSA_SIGN:
-		if (datalen < sizeof(req))
+		if (ibuf_get(&ibuf, &req, sizeof(req)) == -1 ||
+		    ibuf_size(&ibuf) != req.flen)
 			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		memcpy(&req, data, sizeof(req));
-		if (datalen != sizeof(req) + req.flen)
-			fatalx("size mismatch for imsg %d", imsg->hdr.type);
-		from = data + sizeof(req);
+		from = ibuf_data(&ibuf);
 
 		if ((pkey = get_pkey(req.hash)) == NULL ||
 		    (ecdsa = EVP_PKEY_get1_EC_KEY(pkey)) == NULL)
