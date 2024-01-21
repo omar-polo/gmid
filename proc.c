@@ -799,14 +799,6 @@ proc_composev(struct privsep *ps, enum privsep_procid id,
 	return (proc_composev_imsg(ps, id, -1, type, -1, -1, iov, iovcnt));
 }
 
-int
-proc_forward_imsg(struct privsep *ps, struct imsg *imsg,
-    enum privsep_procid id, int n)
-{
-	return (proc_compose_imsg(ps, id, n, imsg->hdr.type,
-	    imsg->hdr.peerid, -1, imsg->data, IMSG_DATA_SIZE(imsg)));
-}
-
 struct imsgbuf *
 proc_ibuf(struct privsep *ps, enum privsep_procid id, int n)
 {
