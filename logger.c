@@ -93,10 +93,7 @@ logger_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 	case IMSG_LOG_ACCESS:
 		if (logfd != -1)
 			close(logfd);
-		logfd = -1;
-
-		if (imsg->fd != -1)
-			logfd = imsg->fd;
+		logfd = imsg_get_fd(imsg);
 		break;
 	default:
 		return -1;

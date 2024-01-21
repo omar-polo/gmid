@@ -474,10 +474,11 @@ config_crypto_recv_kp(struct conf *conf, struct imsg *imsg)
 	static struct pki *pki;
 	uint8_t *d;
 	size_t len;
+	int fd;
 
 	/* XXX: check for duplicates */
 
-	if (imsg->fd == -1)
+	if ((fd = imsg_get_fd(imsg)) == -1)
 		fatalx("no fd for imsg %d", imsg->hdr.type);
 
 	switch (imsg->hdr.type) {
@@ -486,7 +487,7 @@ config_crypto_recv_kp(struct conf *conf, struct imsg *imsg)
 			fatalx("imsg in wrong order; pki is not NULL");
 		if ((pki = calloc(1, sizeof(*pki))) == NULL)
 			fatal("calloc");
-		if (load_file(imsg->fd, &d, &len) == -1)
+		if (load_file(fd, &d, &len) == -1)
 			fatalx("can't load file");
 		if ((pki->hash = ssl_pubkey_hash(d, len)) == NULL)
 			fatalx("failed to compute cert hash");
@@ -498,7 +499,7 @@ config_crypto_recv_kp(struct conf *conf, struct imsg *imsg)
 		if (pki == NULL)
 			fatalx("got key without cert beforehand %d",
 			    imsg->hdr.type);
-		if (load_file(imsg->fd, &d, &len) == -1)
+		if (load_file(fd, &d, &len) == -1)
 			fatalx("failed to load private key");
 		if ((pki->pkey = ssl_load_pkey(d, len)) == NULL)
 			fatalx("failed load private key");
@@ -530,6 +531,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	struct address	*addr;
 	uint8_t		*d;
 	size_t		 len, datalen;
+	int		 fd;
 
 	datalen = IMSG_DATA_SIZE(imsg);
 
@@ -565,10 +567,10 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		addr = xcalloc(1, sizeof(*addr));
 		IMSG_SIZE_CHECK(imsg, addr);
 		memcpy(addr, imsg->data, sizeof(*addr));
-		if (imsg->fd == -1)
+		if ((fd = imsg_get_fd(imsg)) == -1)
 			fatalx("missing socket for IMSG_RECONF_SOCK");
 		addr->conf = conf;
-		addr->sock = imsg->fd;
+		addr->sock = fd;
 		event_set(&addr->evsock, addr->sock, EV_READ|EV_PERSIST,
 		    server_accept, addr);
 		if ((addr->ctx = tls_server()) == NULL)
@@ -605,9 +607,9 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			fatalx("recv'd cert without host");
 		if (h->cert != NULL)
 			fatalx("cert already received");
-		if (imsg->fd == -1)
+		if ((fd = imsg_get_fd(imsg)) == -1)
 			fatalx("no fd for IMSG_RECONF_CERT");
-		if (load_file(imsg->fd, &h->cert, &h->certlen) == -1)
+		if (load_file(fd, &h->cert, &h->certlen) == -1)
 			fatalx("failed to load cert for %s",
 			    h->domain);
 		break;
@@ -620,9 +622,9 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			fatalx("recv'd key without host");
 		if (h->key != NULL)
 			fatalx("key already received");
-		if (imsg->fd == -1)
+		if ((fd = imsg_get_fd(imsg)) == -1)
 			fatalx("no fd for IMSG_RECONF_KEY");
-		if (load_file(imsg->fd, &h->key, &h->keylen) == -1)
+		if (load_file(fd, &h->key, &h->keylen) == -1)
 			fatalx("failed to load key for %s",
 			    h->domain);
 		break;
@@ -633,9 +635,9 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			fatalx("recv'd ocsp without host");
 		if (h->ocsp != NULL)
 			fatalx("ocsp already received");
-		if (imsg->fd == -1)
+		if ((fd = imsg_get_fd(imsg)) == -1)
 			fatalx("no fd for IMSG_RECONF_OCSP");
-		if (load_file(imsg->fd, &h->ocsp, &h->ocsplen) == -1)
+		if (load_file(fd, &h->ocsp, &h->ocsplen) == -1)
 			fatalx("failed to load ocsp for %s",
 			    h->domain);
 		break;
@@ -658,8 +660,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		memcpy(loc, imsg->data, datalen);
 		TAILQ_INIT(&loc->params);
 
-		if (imsg->fd != -1) {
-			if (load_file(imsg->fd, &d, &len) == -1)
+		if ((fd = imsg_get_fd(imsg)) != -1) {
+			if (load_file(fd, &d, &len) == -1)
 				fatal("load_file");
 			loc->reqca = load_ca(d, len);
 			if (loc->reqca == NULL)
@@ -697,8 +699,8 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		proxy = xcalloc(1, sizeof(*proxy));
 		memcpy(proxy, imsg->data, datalen);
 
-		if (imsg->fd != -1) {
-			if (load_file(imsg->fd, &d, &len) == -1)
+		if ((fd = imsg_get_fd(imsg)) != -1) {
+			if (load_file(fd, &d, &len) == -1)
 				fatal("load_file");
 			proxy->reqca = load_ca(d, len);
 			if (proxy->reqca == NULL)
@@ -716,9 +718,9 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			fatalx("recv'd proxy cert without proxy");
 		if (p->cert != NULL)
 			fatalx("proxy cert already received");
-		if (imsg->fd == -1)
+		if ((fd = imsg_get_fd(imsg)) == -1)
 			fatalx("no fd for IMSG_RECONF_PROXY_CERT");
-		if (load_file(imsg->fd, &p->cert, &p->certlen) == -1)
+		if (load_file(fd, &p->cert, &p->certlen) == -1)
 			fatalx("failed to load cert for proxy %s of %s",
 			    p->host, h->domain);
 		break;
@@ -729,9 +731,9 @@ config_recv(struct conf *conf, struct imsg *imsg)
 			fatalx("recv'd proxy key without proxy");
 		if (p->key != NULL)
 			fatalx("proxy key already received");
-		if (imsg->fd == -1)
+		if ((fd = imsg_get_fd(imsg)) == -1)
 			fatalx("no fd for IMSG_RECONF_PROXY_KEY");
-		if (load_file(imsg->fd, &p->key, &p->keylen) == -1)
+		if (load_file(fd, &p->key, &p->keylen) == -1)
 			fatalx("failed to load key for proxy %s of %s",
 			    p->host, h->domain);
 		break;
