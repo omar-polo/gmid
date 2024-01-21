@@ -253,12 +253,11 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 	struct privsep		*ps = conf->ps;
 	struct imsgbuf		*imsgbuf;
 	struct imsg		 imsg;
+	struct ibuf		 ibuf;
 	int			 ret = 0;
 	int			 n, done = 0;
 	const void		*toptr;
 	char			*hash;
-	unsigned char		*data;
-	size_t			 datalen;
 
 	if ((hash = RSA_get_ex_data(rsa, 0)) == NULL)
 		return (0);
@@ -305,9 +304,9 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 
 #if DEBUG > 1
 			log_debug(
-			    "%s: %s %d got imsg %d peerid %d from %s %d",
-			    __func__, title, 1, imsg.hdr.type,
-			    imsg.hdr.peerid, "crypto", imsg.hdr.pid);
+			    "%s: %s %d got imsg %d id %d from %s %d",
+			    __func__, title, 1, imsg_get_type(&imsg),
+			    imsg_get_id(&imsg), "crypto", imsg_get_pid(&imsg));
 #endif
 
 			if ((p->p_cb)(imsgbuf->fd, p, &imsg) == 0) {
@@ -316,29 +315,25 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 				continue;
 			}
 
-			switch (imsg.hdr.type) {
+			switch (imsg_get_type(&imsg)) {
 			case IMSG_CRYPTO_RSA_PRIVENC:
 			case IMSG_CRYPTO_RSA_PRIVDEC:
 				break;
 			default:
 				fatalx("%s: %s %d got invalid imsg %d"
-				    " peerid %d from %s %d",
+				    " id %d from %s %d",
 				    __func__, "server", ps->ps_instance + 1,
-				    imsg.hdr.type, imsg.hdr.peerid,
-				    "crypto", imsg.hdr.pid);
+				    imsg_get_type(&imsg), imsg_get_id(&imsg),
+				    "crypto", imsg_get_pid(&imsg));
 			}
 
-			data = imsg.data;
-			datalen = IMSG_DATA_SIZE(&imsg);
-			if (datalen < sizeof(res))
-				fatalx("size mismatch for imsg %d",
-				    imsg.hdr.type);
-			memcpy(&res, data, sizeof(res));
-			if (datalen != sizeof(res) + res.ret)
+			if (imsg_get_ibuf(&imsg, &ibuf) == -1 ||
+			    ibuf_get(&ibuf, &res, sizeof(res)) == -1 ||
+			    (int)ibuf_size(&ibuf) != res.ret)
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
 			ret = res.ret;
-			toptr = data + sizeof(res);
+			toptr = ibuf_data(&ibuf);
 
 			if (res.id != reqid)
 				fatalx("invalid id; got %llu, want %llu",
@@ -401,11 +396,10 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 	struct privsep		*ps = conf->ps;
 	struct imsgbuf		*imsgbuf;
 	struct imsg		 imsg;
+	struct ibuf		 ibuf;
 	int			 n, done = 0;
 	const void		*toptr;
 	char			*hash;
-	unsigned char		*data;
-	size_t			 datalen;
 
 	if ((hash = EC_KEY_get_ex_data(eckey, 0)) == NULL)
 		return (0);
@@ -470,16 +464,13 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 				    imsg.hdr.type, imsg.hdr.peerid,
 				    "crypto", imsg.hdr.pid);
 
-			data = imsg.data;
-			datalen = IMSG_DATA_SIZE(&imsg);
-			if (datalen < sizeof(res))
+			if (imsg_get_ibuf(&imsg, &ibuf) == -1 ||
+			    ibuf_get(&ibuf, &res, sizeof(res)) == -1 ||
+			    ibuf_size(&ibuf) != res.len)
 				fatalx("size mismatch for imsg %d",
 				    imsg.hdr.type);
-			memcpy(&res, data, sizeof(res));
-			if (datalen != sizeof(res) + res.len)
-				fatalx("size mismatch for imsg %d",
-				    imsg.hdr.type);
-			toptr = data + sizeof(res);
+
+			toptr = ibuf_data(&ibuf);
 
 			if (res.id != reqid)
 				fatalx("invalid response id");
