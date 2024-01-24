@@ -1,3 +1,19 @@
+2024-01-24  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.0.1
+
+2024-01-21  Omar Polo  <op@omarpolo.com>
+
+	* convert gmid to the new imsg API
+
+2024-01-14  Anna “CyberTailor”
+
+	* configure: fix --mandir handling
+
+2024-01-11  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.0
+
 2024-01-09  Anna “CyberTailor”
 
 	* contrib/vim/syntax/gmid.vim: update Vim syntax file

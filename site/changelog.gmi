@@ -1,5 +1,11 @@
 # change log
 
+## 2024/01/24 - 2.0.1 “Lady Stardust” bugfix release
+
+* convert gmid to the new imsg API
+* update bundled imsg
+* configure: fix --mandir handling; from Anna “CyberTailor”, thanks!
+
 ## 2024/01/11 - 2.0 “Lady Stardust”
 
 ### New Features
