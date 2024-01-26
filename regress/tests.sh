@@ -287,6 +287,7 @@ test_fastcgi_deprecated_syntax() {
 test_macro_expansion() {
 	cat <<EOF > reg.conf
 pwd = "$PWD"
+common_opts = "lang it; auto index on"
 
 server "localhost" {
 	# the quoting of \$ is for sh
@@ -294,6 +295,7 @@ server "localhost" {
 	key  \$pwd "/localhost.key"
 	root \$pwd "/testdata"
 	listen on $REGRESS_HOST port $port
+	@common_opts
 }
 EOF
 
@@ -305,7 +307,7 @@ EOF
 	run
 
 	fetch /
-	check_reply "20 text/gemini" "# hello world"
+	check_reply "20 text/gemini;lang=it" "# hello world"
 }
 
 test_proxy_relay_to() {
