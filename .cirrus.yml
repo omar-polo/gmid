@@ -19,11 +19,11 @@ linux_arm_task:
     - make
     - make regress REGRESS_HOST="*"
 
-freebsd_13_task:
+freebsd_14_task:
   freebsd_instance:
-    image_family: freebsd-13-0
-  test_script:
-    - pkg install -y libevent libressl pkgconf
+    image_family: freebsd-14-0
+  install_script: pkg install -y libevent libressl pkgconf
+  script:
     - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
     - make
     - make regress
