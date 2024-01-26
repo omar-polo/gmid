@@ -150,13 +150,12 @@ typedef struct {
 %%
 
 conf		: /* empty */
-		| conf include '\n'
-		| conf '\n'
-		| conf varset '\n'
-		| conf option '\n'
-		| conf vhost '\n'
-		| conf types '\n'
-		| conf error '\n'		{ file->errors++; }
+		| conf include nl
+		| conf varset nl
+		| conf option nl
+		| conf vhost nl
+		| conf types nl
+		| conf error nl		{ file->errors++; }
 		;
 
 include		: INCLUDE STRING		{
@@ -617,7 +616,7 @@ mediaopts_l	: mediaopts_l mediaoptsl nl
 mediaoptsl	: STRING {
 			free(current_media);
 			current_media = $1;
-		} medianames_l optsemicolon
+		} medianames_l
 		| include
 		;
 
@@ -633,15 +632,11 @@ medianamesl	: numberstring {
 		;
 
 nl		: '\n' optnl
+		| ';' optnl
 		;
 
-optnl		: '\n' optnl		/* zero or more newlines */
-		| ';' optnl		/* semicolons too */
+optnl		: nl
 		| /*empty*/
-		;
-
-optsemicolon	: ';'
-		|
 		;
 
 %%
