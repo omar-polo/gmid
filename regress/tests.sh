@@ -287,7 +287,7 @@ test_fastcgi_deprecated_syntax() {
 test_macro_expansion() {
 	cat <<EOF > reg.conf
 pwd = "$PWD"
-common_opts = "lang it; auto index on"
+common = "lang it; auto index on"
 
 server "localhost" {
 	# the quoting of \$ is for sh
@@ -295,7 +295,7 @@ server "localhost" {
 	key  \$pwd "/localhost.key"
 	root \$pwd "/testdata"
 	listen on $REGRESS_HOST port $port
-	@common_opts
+	@common
 }
 EOF
 
