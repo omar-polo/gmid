@@ -1,7 +1,7 @@
 %{
 
 /*
- * Copyright (c) 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021-2024 Omar Polo <op@omarpolo.com>
  * Copyright (c) 2018 Florian Obser <florian@openbsd.org>
  * Copyright (c) 2004, 2005 Esben Norby <norby@openbsd.org>
  * Copyright (c) 2004 Ryan McBride <mcbride@openbsd.org>
@@ -125,12 +125,12 @@ typedef struct {
 
 %token	ACCESS ALIAS AUTO
 %token	BLOCK
-%token	CA CERT CHROOT CLIENT COMBINED COMMON CONDENSED
+%token	CA CERT CHROOT CLIENT
 %token	DEFAULT
 %token	FACILITY FASTCGI FOR_HOST
 %token	INCLUDE INDEX IPV6
 %token	KEY
-%token	LANG LEGACY LISTEN LOCATION LOG
+%token	LANG LISTEN LOCATION LOG
 %token	OCSP OFF ON
 %token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
 %token	RELAY_TO REQUIRE RETURN ROOT
@@ -264,17 +264,18 @@ logopt		: ACCESS string		{
 			free(conf->log_access);
 			conf->log_access = $2;
 		}
-		| STYLE COMMON		{
-			conf->log_format = LOG_FORMAT_COMMON;
-		}
-		| STYLE COMBINED	{
-			conf->log_format = LOG_FORMAT_COMBINED;
-		}
-		| STYLE CONDENSED	{
-			conf->log_format = LOG_FORMAT_CONDENSED;
-		}
-		| STYLE LEGACY		{
-			conf->log_format = LOG_FORMAT_LEGACY;
+		| STYLE string {
+			if (!strcmp("combined", $2))
+				conf->log_format = LOG_FORMAT_COMBINED;
+			else if (!strcmp("common", $2))
+				conf->log_format = LOG_FORMAT_COMMON;
+			else if (!strcmp("condensed", $2))
+				conf->log_format = LOG_FORMAT_CONDENSED;
+			else if (!strcmp("legacy", $2))
+				conf->log_format = LOG_FORMAT_LEGACY;
+			else
+				yyerror("unknown log style: %s", $2);
+			free($2);
 		}
 		| SYSLOG FACILITY string {
 			const char *str = $3;
@@ -654,9 +655,6 @@ static const struct keyword {
 	{"cert", CERT},
 	{"chroot", CHROOT},
 	{"client", CLIENT},
-	{"combined", COMBINED},
-	{"common", COMMON},
-	{"condensed", CONDENSED},
 	{"default", DEFAULT},
 	{"facility", FACILITY},
 	{"fastcgi", FASTCGI},
@@ -666,7 +664,6 @@ static const struct keyword {
 	{"ipv6", IPV6},
 	{"key", KEY},
 	{"lang", LANG},
-	{"legacy", LEGACY},
 	{"listen", LISTEN},
 	{"location", LOCATION},
 	{"log", LOG},
