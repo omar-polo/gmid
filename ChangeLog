@@ -1,3 +1,17 @@
+2024-01-30  Anna “CyberTailor”
+
+	* contrib/vim/indent/gmid.vim: fix indent
+
+2024-01-30  Omar Polo  <op@omarpolo.com>
+
+	* parse.y: don't make log styles reserved keywords.  Unbreaks the
+	example in the manpage with `common = ...'.
+
+2024-01-26  Omar Polo  <op@omarpolo.com>
+
+	* parse.y: rework grammar to allow the semicolon after
+	variables/macros definition and top-level options
+
 2024-01-24  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): release 2.0.1
