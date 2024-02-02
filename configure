@@ -59,6 +59,10 @@ CDIAGFLAGS="${CDIAGFLAGS} -Wsign-compare -Wno-unused-parameter" # -Wshadow
 CDIAGFLAGS="${CDIAGFLAGS} -Wno-missing-field-initializers"
 CDIAGFLAGS="${CDIAGFLAGS} -Wno-pointer-sign"
 
+# On all OSes except OpenBSD use the bundled one.  It may crash at
+# runtime otherwise since we depend on the libtls internals for the
+# privsep crypto engine.
+# See <https://codeberg.org/op/gmid/issues/2>.
 LIBTLS=bundled # or system
 if [ "$(uname || true)" = OpenBSD ]; then
 	LIBTLS=system
