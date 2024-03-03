@@ -412,7 +412,7 @@ main_send_logfd(struct conf *conf)
 			goto done;
 		}
 
-		fd = open(conf->log_access, O_WRONLY|O_CREAT|O_APPEND, 0600);
+		fd = open(path, O_WRONLY|O_CREAT|O_APPEND, 0600);
 		if (fd == -1)
 			log_warn("can't open %s", conf->log_access);
 	}
