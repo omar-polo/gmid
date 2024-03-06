@@ -30,7 +30,7 @@ freebsd_14_task:
 
 mac_task:
   macos_instance:
-    image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
+    image: ghcr.io/cirruslabs/macos-sonoma-xcode:latest
   test_script:
     - brew install libevent openssl libretls
     - PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig" ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
