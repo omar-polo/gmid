@@ -1,4 +1,6 @@
+#include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include <err.h>
 #include <fcntl.h>
@@ -40,7 +42,7 @@ parent(int sock)
 		cmsg->cmsg_type = SCM_RIGHTS;
 		*(int *)CMSG_DATA(cmsg) = fd;
 
-		fprintf(stderr, "parent: sending %d\n", fd);
+//		fprintf(stderr, "parent: sending %d\n", fd);
 		if (sendmsg(sock, &msg, 0) == -1)
 			err(1, "parent:sendmsg");
 		close(fd);
@@ -62,6 +64,7 @@ child(int sock)
 	} cmsgbuf;
 	struct iovec iov[1];
 	ssize_t n;
+	struct stat sb;
 
 	for (;;) {
 		iov[0].iov_base = &data;
@@ -86,9 +89,10 @@ child(int sock)
 			    cmsg->cmsg_level == SOL_SOCKET &&
 			    cmsg->cmsg_type == SCM_RIGHTS) {
 				fd = *(int *)CMSG_DATA(cmsg);
-				fprintf(stderr, "child: recv fd %d\n",
-				    fd);
-				close(fd);
+				if (fstat(fd, &sb) == -1)
+					err(1, "child: fstat %d", fd);
+				if (close(fd) == -1)
+					err(1, "child: close %d", fd);
 			}
 		}
 	}
@@ -97,7 +101,7 @@ child(int sock)
 int
 main(void)
 {
-	int	 p[2];
+	int	 p[2], status;
 	pid_t	 pid;
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
@@ -111,5 +115,9 @@ main(void)
 	}
 
 	close(p[1]);
-	return parent(p[0]);
+	parent(p[0]);
+	warnx("parent: done");
+	close(p[0]);
+	waitpid(pid, &status, 0);
+	return (0);
 }
