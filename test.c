@@ -25,7 +25,7 @@ parent(int sock)
 	struct iovec iov[1];
 	int i;
 
-	for (i = 0; i < 50000; ++i) {
+	for (i = 0; i < 500000; ++i) {
 		if ((fd = open("/dev/null", O_RDONLY)) == -1)
 			err(1, "parent: open /dev/null");
 
