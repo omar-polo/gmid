@@ -3,7 +3,9 @@
 #include <sys/wait.h>
 
 #include <err.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,8 +45,15 @@ parent(int sock)
 		*(int *)CMSG_DATA(cmsg) = fd;
 
 //		fprintf(stderr, "parent: sending %d\n", fd);
-		if (sendmsg(sock, &msg, 0) == -1)
+	 again:
+		if (sendmsg(sock, &msg, 0) == -1) {
+			if (errno == EAGAIN) {
+				struct pollfd pfd = {.fd = sock, .events = POLLOUT};
+				poll(&pfd, 1, -1);
+				goto again;
+			}
 			err(1, "parent:sendmsg");
+		}
 		close(fd);
 	}
 
@@ -76,8 +85,14 @@ child(int sock)
 		msg.msg_iov = iov;
 		msg.msg_iovlen = 1;
 
-		if ((n = recvmsg(sock, &msg, 0)) == -1)
+		if ((n = recvmsg(sock, &msg, 0)) == -1) {
+			if (errno == EAGAIN) {
+				struct pollfd pfd = {.fd = sock, .events = POLLIN};
+				poll(&pfd, 1, -1);
+				continue;
+			}
 			err(1, "child: recvmsg");
+		}
 		if (n == 0)
 			errx(0, "child: done!");
 		if ((msg.msg_flags & MSG_TRUNC) ||
@@ -98,6 +113,17 @@ child(int sock)
 	}
 }
 
+void
+mark_nonblock(int fd)
+{
+	int flags;
+
+	if ((flags = fcntl(fd, F_GETFL)) == -1)
+		err(1, "fcntl(F_GETFL)");
+	if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		err(1, "fcntl(F_SETFL)");
+}
+
 int
 main(void)
 {
@@ -106,6 +132,9 @@ main(void)
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
 		err(1, "socketpair");
+
+	mark_nonblock(p[0]);
+	mark_nonblock(p[1]);
 
 	if ((pid = fork()) == -1)
 		err(1, "fork");
