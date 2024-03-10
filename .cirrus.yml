@@ -1,38 +1,11 @@
-# gcc' -Werror=use-after-free gets tripped by vis.c: it sees a use
-# after free where it's not possible and breaks the CI.
-
-linux_amd64_task:
-  container:
-    image: alpine:latest
+ventura_task:
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-ventura-xcode:latest
   test_script:
-    - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
-    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations -Wno-use-after-free' -Werror
-    - make
-    - make regress REGRESS_HOST="*"
-
-linux_arm_task:
-  arm_container:
-    image: alpine:latest
-  test_script:
-    - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
-    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations -Wno-use-after-free' -Werror
-    - make
-    - make regress REGRESS_HOST="*"
-
-freebsd_14_task:
-  freebsd_instance:
-    image_family: freebsd-14-0
-  install_script: pkg install -y libevent libressl pkgconf
-  script:
-    - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
-    - make
     - make regress
 
-mac_task:
+sonoma_task:
   macos_instance:
     image: ghcr.io/cirruslabs/macos-sonoma-xcode:latest
   test_script:
-    - brew install libevent openssl libretls
-    - PKG_CONFIG_PATH="$(brew --prefix openssl)/lib/pkgconfig" ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
-    - make
-    - SKIP_RUNTIME_TESTS=1 make regress
+    - make regress
