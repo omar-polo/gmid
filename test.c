@@ -11,11 +11,12 @@
 #include <string.h>
 #include <unistd.h>
 
+char buf[8192];
+
 int
 parent(int sock)
 {
 	int		 fd;
-	char		 data = 'X';
 	struct msghdr	 msg;
 	struct cmsghdr	*cmsg;
 	union {
@@ -29,8 +30,8 @@ parent(int sock)
 		if ((fd = open("/dev/null", O_RDONLY)) == -1)
 			err(1, "parent: open /dev/null");
 
-		iov[0].iov_base = &data;
-		iov[0].iov_len = 1;
+		iov[0].iov_base = buf;
+		iov[0].iov_len = sizeof(buf);
 
 		memset(&msg, 0, sizeof(msg));
 		msg.msg_control = &cmsgbuf.buf;
@@ -44,7 +45,6 @@ parent(int sock)
 		cmsg->cmsg_type = SCM_RIGHTS;
 		*(int *)CMSG_DATA(cmsg) = fd;
 
-//		fprintf(stderr, "parent: sending %d\n", fd);
 	 again:
 		if (sendmsg(sock, &msg, 0) == -1) {
 			if (errno == EAGAIN) {
@@ -64,7 +64,6 @@ int
 child(int sock)
 {
 	int		 fd;
-	char		 data;
 	struct msghdr	 msg;
 	struct cmsghdr	*cmsg;
 	union {
@@ -76,8 +75,8 @@ child(int sock)
 	struct stat sb;
 
 	for (;;) {
-		iov[0].iov_base = &data;
-		iov[0].iov_len = 1;
+		iov[0].iov_base = buf;
+		iov[0].iov_len = sizeof(buf);
 
 		memset(&msg, 0, sizeof(msg));
 		msg.msg_control = &cmsgbuf.buf;
@@ -85,11 +84,12 @@ child(int sock)
 		msg.msg_iov = iov;
 		msg.msg_iovlen = 1;
 
+	 again:
 		if ((n = recvmsg(sock, &msg, 0)) == -1) {
 			if (errno == EAGAIN) {
 				struct pollfd pfd = {.fd = sock, .events = POLLIN};
 				poll(&pfd, 1, -1);
-				continue;
+				goto again;
 			}
 			err(1, "child: recvmsg");
 		}
@@ -127,7 +127,7 @@ mark_nonblock(int fd)
 int
 main(void)
 {
-	int	 p[2], status;
+	int	 p[2], status, i;
 	pid_t	 pid;
 
 	if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, p) == -1)
@@ -142,6 +142,10 @@ main(void)
 		close(p[0]);
 		return child(p[1]);
 	}
+
+	/* prepare the buffer */
+	for (i = 0; i < sizeof(buf); ++i)
+		buf[i] = i % 16;
 
 	close(p[1]);
 	parent(p[0]);
