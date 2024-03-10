@@ -11,7 +11,7 @@
 #include <string.h>
 #include <unistd.h>
 
-char buf[4096];
+char buf[1024];
 
 int
 parent(int sock)
