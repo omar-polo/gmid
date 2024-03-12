@@ -412,7 +412,6 @@ void		 mark_nonblock(int);
 void		 client_write(struct bufferevent *, void *);
 int		 start_reply(struct client*, int, const char*);
 void		 client_close(struct client *);
-struct client	*client_by_id(int);
 void		 server_accept(int, short, void *);
 void		 server_init(struct privsep *, struct privsep_proc *, void *);
 int		 server_configure_done(struct conf *);

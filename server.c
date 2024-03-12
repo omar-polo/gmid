@@ -1329,15 +1329,6 @@ server_accept(int sock, short et, void *d)
 	connected_clients++;
 }
 
-struct client *
-client_by_id(int id)
-{
-	struct client find;
-
-	find.id = id;
-	return SPLAY_FIND(client_tree_id, &clients, &find);
-}
-
 static void
 handle_siginfo(int fd, short ev, void *d)
 {

@@ -92,11 +92,9 @@ char		*ensure_absolute_path(char*);
 int		 check_block_code(int);
 char		*check_block_fmt(char*);
 int		 check_strip_no(int);
-int		 check_port_num(int);
 int		 check_prefork_num(int);
 void		 advance_loc(void);
 void		 advance_proxy(void);
-void		 parsehp(char *, char **, const char **, const char *);
 int		 fastcgi_conf(const char *, const char *);
 void		 add_param(char *, char *);
 int		 getservice(const char *);
@@ -1204,16 +1202,6 @@ check_strip_no(int n)
 }
 
 int
-check_port_num(int n)
-{
-	if (n <= 0 || n >= UINT16_MAX)
-		yyerror("port number is %s: %d",
-		    n <= 0 ? "too small" : "too large",
-		    n);
-	return n;
-}
-
-int
 check_prefork_num(int n)
 {
 	if (n <= 0 || n >= PROC_MAX_INSTANCES)
@@ -1233,25 +1221,6 @@ advance_proxy(void)
 {
 	proxy = new_proxy();
 	TAILQ_INSERT_TAIL(&host->proxies, proxy, proxies);
-}
-
-void
-parsehp(char *str, char **host, const char **port, const char *def)
-{
-	char		*at;
-	const char	*errstr;
-
-	*host = str;
-
-	if ((at = strchr(str, ':')) != NULL) {
-		*at++ = '\0';
-		*port = at;
-	} else
-		*port = def;
-
-	strtonum(*port, 1, UINT16_MAX, &errstr);
-	if (errstr != NULL)
-		yyerror("port is %s: %s", errstr, *port);
 }
 
 int
