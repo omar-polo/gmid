@@ -19,6 +19,8 @@
 #include <sys/stat.h>
 #include <sys/syscall.h>
 
+#include <stddef.h>
+
 #ifndef landlock_create_ruleset
 static inline int
 landlock_create_ruleset(const struct landlock_ruleset_attr *attr, size_t size,
