@@ -146,7 +146,7 @@ NEED_OPENBSD_SOURCE=0
 NEED_LIBBSD_OPENBSD_VIS=0
 
 COMPATS=
-COMP="${CC} ${CFLAGS} -Wno-unused -Werror"
+COMP="${CC} ${CFLAGS} -Werror=implicit-function-declaration"
 
 # singletest name var extra-cflags extra-libs msg
 singletest() {
