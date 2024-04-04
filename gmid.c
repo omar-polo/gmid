@@ -605,8 +605,8 @@ main_print_conf(struct conf *conf)
 
 	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
 		printf("\nserver \"%s\" {\n", h->domain);
-		printf("	cert \"%s\"\n", h->cert);
-		printf("	key \"%s\"\n", h->key);
+		printf("	cert \"%s\"\n", h->cert_path);
+		printf("	key \"%s\"\n", h->key_path);
 		/* TODO: print locations... */
 		printf("}\n");
 	}
