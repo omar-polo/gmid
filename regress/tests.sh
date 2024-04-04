@@ -8,6 +8,34 @@ test_iri() {
 	./iri_test
 }
 
+test_dump_config() {
+	dont_check_server_alive=yes
+	gen_config '' ''
+
+        exp="$(mktemp)"
+	got="$(mktemp)"
+	cat <<EOF >$exp
+prefork 3
+
+server "localhost" {
+	cert "$PWD/localhost.pem"
+	key "$PWD/localhost.key"
+}
+EOF
+
+	$gmid -nn -c reg.conf > $got 2>/dev/null
+
+	ret=0
+	if ! cmp -s "$exp" "$got"; then
+    		echo "config differs!" >&2
+    		diff -u "$exp" "$got" >&2
+    		ret=1
+	fi
+
+	rm "$exp" "$got"
+	return $ret
+}
+
 test_gemexp() {
 	dont_check_server_alive=yes
 

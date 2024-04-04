@@ -20,6 +20,9 @@ fi
 run_test test_punycode
 run_test test_iri
 
+# Run configuration dumping test.
+run_test test_dump_config
+
 if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
 	echo
 	echo "======================"
