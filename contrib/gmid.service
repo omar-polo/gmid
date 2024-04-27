@@ -6,7 +6,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=gmid
+User=root
 Group=nobody
 ExecStart=/usr/local/bin/gmid -f -c /etc/gmid.conf
 ExecStop=/bin/kill -TERM $MAINPID
