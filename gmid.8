@@ -1,4 +1,4 @@
-.\" Copyright (c) 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
+.\" Copyright (c) 2021, 2022, 2023, 2024 Omar Polo <op@omarpolo.com>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd October 20, 2023
+.Dd April 27, 2024
 .Dt GMID 8
 .Os
 .Sh NAME
@@ -52,7 +52,8 @@ Overrides the definition of
 .Ar macro
 in the config file if present.
 .It Fl f
-Stays and logs on the foreground.
+Do not daemonize.
+Stay and log in the foreground.
 .It Fl h , Fl -help
 Print the usage and exit.
 .It Fl n
