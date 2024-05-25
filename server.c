@@ -31,7 +31,7 @@
 #include "log.h"
 #include "proc.h"
 
-#define MIN(a, b)	((a) < (b) ? (a) : (b))
+#define MINIMUM(a, b)	((a) < (b) ? (a) : (b))
 
 #ifndef nitems
 #define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
@@ -853,7 +853,7 @@ client_tls_readcb(int fd, short event, void *d)
 	}
 
 	if (bufev->wm_read.high != 0)
-		howmuch = MIN(sizeof(buf), bufev->wm_read.high);
+		howmuch = MINIMUM(sizeof(buf), bufev->wm_read.high);
 
 	switch (ret = tls_read(client->ctx, buf, howmuch)) {
 	case TLS_WANT_POLLIN:

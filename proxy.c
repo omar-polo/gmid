@@ -22,7 +22,7 @@
 
 #include "log.h"
 
-#define MIN(a, b)	((a) < (b) ? (a) : (b))
+#define MINIMUM(a, b)	((a) < (b) ? (a) : (b))
 
 static const struct timeval handshake_timeout = { 5, 0 };
 
@@ -50,7 +50,7 @@ proxy_tls_readcb(int fd, short event, void *d)
 	}
 
 	if (bufev->wm_read.high != 0)
-		howmuch = MIN(sizeof(buf), bufev->wm_read.high);
+		howmuch = MINIMUM(sizeof(buf), bufev->wm_read.high);
 
 	switch (ret = tls_read(c->proxyctx, buf, howmuch)) {
 	case TLS_WANT_POLLIN:
