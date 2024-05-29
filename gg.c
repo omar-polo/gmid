@@ -389,7 +389,7 @@ main(int argc, char **argv)
 
 	setlocale(LC_CTYPE, "");
 
-	while ((ch = getopt(argc, argv, "23C:d:H:K:NP:qT:")) != -1) {
+	while ((ch = getopt(argc, argv, "23C:d:H:K:nNP:qT:")) != -1) {
 		switch (ch) {
 		case '2':
 			flag2 = 1;
