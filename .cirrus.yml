@@ -28,6 +28,11 @@ freebsd_14_task:
     - make
     - make regress
 
+#
+# There are some issues with imsg fd passing on macos at the moment that
+# seem to be triggered only in applications that do a heavy use of them,
+# like gmid or opensmtpd.  Still, keep macos to ensure gmid builds here.
+#
 mac_task:
   macos_instance:
     image: ghcr.io/cirruslabs/macos-sonoma-xcode:latest
