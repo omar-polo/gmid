@@ -1280,7 +1280,7 @@ getservice(const char *n)
 }
 
 static void
-add_to_addr_queue(struct addrhead *a, struct addrinfo *ai)
+add_to_addr_queue(struct addrhead *a, struct addrinfo *ai, const char *pp)
 {
 	struct address		*addr;
 	struct sockaddr_in	*sin;
@@ -1306,6 +1306,7 @@ add_to_addr_queue(struct addrhead *a, struct addrinfo *ai)
 	addr->ai_protocol = ai->ai_protocol;
 	addr->slen = ai->ai_addrlen;
 	memcpy(&addr->ss, ai->ai_addr, ai->ai_addrlen);
+	strlcpy(addr->pp, pp, sizeof(addr->pp));
 
 	/* for commodity */
 	switch (addr->ai_family) {
@@ -1330,6 +1331,7 @@ void
 listen_on(const char *hostname, const char *servname)
 {
 	struct addrinfo hints, *res, *res0;
+	char pp[NI_MAXHOST];
 	int error;
 
 	memset(&hints, 0, sizeof(hints));
@@ -1344,8 +1346,14 @@ listen_on(const char *hostname, const char *servname)
 	}
 
 	for (res = res0; res; res = res->ai_next) {
-		add_to_addr_queue(&host->addrs, res);
-		add_to_addr_queue(&conf->addrs, res);
+		if (getnameinfo(res->ai_addr, res->ai_addrlen, pp, sizeof(pp),
+		    NULL, 0, NI_NUMERICHOST) == -1) {
+			yyerror("getnameinfo failed: %s", strerror(errno));
+			break;
+		}
+
+		add_to_addr_queue(&host->addrs, res, pp);
+		add_to_addr_queue(&conf->addrs, res, pp);
 	}
 
 	freeaddrinfo(res0);

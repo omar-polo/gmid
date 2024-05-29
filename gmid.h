@@ -114,6 +114,9 @@ struct address {
 	socklen_t		 slen;
 	int16_t			 port;
 
+	/* pretty-printed version of `ss' */
+	char			 pp[NI_MAXHOST];
+
 	/* used in the server */
 	struct conf		*conf;
 	int			 sock;

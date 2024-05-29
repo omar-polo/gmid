@@ -119,15 +119,8 @@ match_host(struct vhost *v, struct client *c)
 	if (addr == NULL)
 		return 0;
 
-	if (*c->domain == '\0') {
-		if (getnameinfo((struct sockaddr *)&addr->ss, addr->slen,
-		    c->domain, sizeof(c->domain), NULL, 0,
-		    NI_NUMERICHOST) == -1) {
-			log_warn("failed to fill the domain; getnameinfo");
-			*c->domain = '\0';
-			return 0;
-		}
-	}
+	if (*c->domain == '\0')
+		strlcpy(c->domain, addr->pp, sizeof(c->domain));
 
 	if (matches(v->domain, c->domain))
 		return 1;
