@@ -452,3 +452,14 @@ test_ipv6_addr() {
 	fetch /
 	check_reply "20 text/gemini" "# hello world" || return 1
 }
+
+test_ipv6_server() {
+	server_name="::1"
+	host="::1"
+	gghost="[::1]"
+	ggflags=-N
+	setup_simple_test
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+}
