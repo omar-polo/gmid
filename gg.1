@@ -20,7 +20,7 @@
 .Sh SYNOPSIS
 .Nm
 .Bk -words
-.Op Fl 23Nn
+.Op Fl 23Nnq
 .Op Fl C Ar cert
 .Op Fl d Ar mode
 .Op Fl H Ar sni
@@ -82,6 +82,8 @@ and
 to do the request instead of the ones extracted by the IRI.
 .Ar port
 is by default 1965.
+.It Fl q
+Don't print server error messages to standard error.
 .It Fl T Ar seconds
 Kill
 .Nm

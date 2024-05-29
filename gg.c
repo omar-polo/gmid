@@ -41,6 +41,7 @@ int		 flag3;
 int		 nop;
 int		 redirects = 5;
 int		 timer;
+int		 quiet;
 const char	*cert;
 const char	*key;
 const char	*proxy_host;
@@ -308,8 +309,11 @@ get(const char *r)
 		assert(t != NULL);
 		if (code < 20 || code >= 30) {
 			*t = '\0';
-			fprintf(stderr, "Server says: ");
-			safeprint(stderr, buf + 3); /* skip return code */
+			if (!quiet) {
+				fprintf(stderr, "Server says: ");
+				/* skip return code */
+				safeprint(stderr, buf + 3);
+			}
 		}
 		t += 2; /* skip \r\n */
 		len -= t - buf;
@@ -335,7 +339,7 @@ static void __attribute__((noreturn))
 usage(void)
 {
 	fprintf(stderr, "version: " GG_STRING "\n");
-	fprintf(stderr, "usage: %s [-23Nn] [-C cert] [-d mode] [-H sni] "
+	fprintf(stderr, "usage: %s [-23Nnq] [-C cert] [-d mode] [-H sni] "
 	    "[-K key] [-P host[:port]]\n",
 	    getprogname());
 	fprintf(stderr, "          [-T seconds] gemini://...\n");
@@ -385,7 +389,7 @@ main(int argc, char **argv)
 
 	setlocale(LC_CTYPE, "");
 
-	while ((ch = getopt(argc, argv, "23C:d:H:K:NP:T:")) != -1) {
+	while ((ch = getopt(argc, argv, "23C:d:H:K:NP:qT:")) != -1) {
 		switch (ch) {
 		case '2':
 			flag2 = 1;
@@ -414,6 +418,9 @@ main(int argc, char **argv)
 		case 'P':
 			parse_proxy(optarg);
 			dont_verify_name = 1;
+			break;
+		case 'q':
+			quiet = 1;
 			break;
 		case 'T':
 			timer = strtonum(optarg, 1, 1000, &errstr);
