@@ -431,10 +431,21 @@ log style legacy'
 	return 0
 }
 
-test_ip_addr() {
+test_ipv4_addr() {
 	server_name="*"
 	host="127.0.0.1"
 	gghost=127.0.0.1
+	ggflags=-N
+	setup_simple_test
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+}
+
+test_ipv6_addr() {
+	server_name="*"
+	host="::1"
+	gghost="[::1]"
 	ggflags=-N
 	setup_simple_test
 
