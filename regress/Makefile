@@ -7,6 +7,9 @@ GENCERT_FLAGS=
 # host to bind to during regress
 REGRESS_HOST =	localhost
 
+# set to no if don't have IPv6 working (need to listen on ::1)
+HAVE_IPV6 =	yes
+
 DISTFILES =	Makefile \
 		env \
 		err \
@@ -39,7 +42,7 @@ IRI_OBJS =	${IRI_SRCS:.c=.o} ${REG_COMPATS}
 .PHONY: all data clean dist
 
 all: data puny-test iri_test fcgi-test
-	env REGRESS_HOST="${REGRESS_HOST}" ./regress ${TESTS}
+	env HAVE_IPV6="${HAVE_IPV6}" REGRESS_HOST="${REGRESS_HOST}" ./regress ${TESTS}
 
 data: testdata localhost.pem testca.pem valid.crt invalid.pem
 

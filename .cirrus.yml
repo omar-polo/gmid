@@ -1,6 +1,9 @@
 # gcc' -Werror=use-after-free gets tripped by vis.c: it sees a use
 # after free where it's not possible and breaks the CI.
 
+# seems that inside the CI it's not currently possible to bind to ::1
+# so set HAVE_IPV6=no.
+
 linux_amd64_task:
   container:
     image: alpine:latest
@@ -8,7 +11,7 @@ linux_amd64_task:
     - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
     - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations -Wno-use-after-free' -Werror
     - make
-    - make regress REGRESS_HOST="*"
+    - make regress REGRESS_HOST="*" HAVE_IPV6=no
 
 linux_arm_task:
   arm_container:
@@ -17,7 +20,7 @@ linux_arm_task:
     - apk add alpine-sdk linux-headers bison libretls-dev libevent-dev
     - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations -Wno-use-after-free' -Werror
     - make
-    - make regress REGRESS_HOST="*"
+    - make regress REGRESS_HOST="*" HAVE_IPV6=no
 
 freebsd_14_task:
   freebsd_instance:
@@ -26,7 +29,7 @@ freebsd_14_task:
   script:
     - ./configure CFLAGS='-O2 -pipe -Wno-deprecated-declarations' -Werror
     - make
-    - make regress
+    - make regress HAVE_IPV6=no
 
 #
 # There are some issues with imsg fd passing on macos at the moment that

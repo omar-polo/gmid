@@ -26,7 +26,10 @@ run_test() {
 
 	rm -f reg.conf
 
-	if ! $1; then
+	if [ "$2" = "need_ipv6" -a "$HAVE_IPV6" != "yes" ]; then
+		echo "$1 skipped (needs HAVE_IPV6='yes')"
+		return
+	elif ! $1; then
 		echo "$1 failed"
 		failed="$failed $1"
 		failed_no=$((failed_no + 1))
