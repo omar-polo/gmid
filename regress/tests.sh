@@ -430,3 +430,13 @@ log style legacy'
 	rm -f log log.edited
 	return 0
 }
+
+test_ip_addr() {
+	server_name="*"
+	gghost=127.0.0.1
+	ggflags=-N
+	setup_simple_test
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+}

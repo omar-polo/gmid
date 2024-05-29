@@ -62,6 +62,7 @@ run_test test_proxy_with_certs
 # run_test test_unknown_host	# XXX: breaks on some distro
 run_test test_include_mime
 run_test test_log_file
+run_test test_ip_addr
 
 # TODO: add test that uses only a TLSv1.2 or TLSv1.3
 # TODO: add a test that attempt to serve a non-regular file

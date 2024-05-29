@@ -6,6 +6,8 @@ gemexp="./../gemexp"
 gg="./../gg"
 gmid="./../gmid"
 current_test=
+server_name=
+gghost=
 
 run_test() {
 	ggflags=
@@ -18,6 +20,9 @@ run_test() {
 	ran_no=$((ran_no + 1))
 
 	current_test=$1
+	server_name=localhost
+	gghost=localhost
+
 	rm -f reg.conf
 
 	if ! $1; then
@@ -58,7 +63,7 @@ gen_config() {
 	cat <<EOF > reg.conf
 $config_common
 $1
-server "localhost" {
+server "$server_name" {
 	cert "$PWD/localhost.pem"
 	key  "$PWD/localhost.key"
 	root "$PWD/testdata"
@@ -108,13 +113,13 @@ setup_simple_test() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	$gg -T10 $ggflags "gemini://localhost:10965/$1" || true
+	$gg -T10 $ggflags "gemini://$gghost:10965/$1" || true
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	$gg -T10 -d header $ggflags "gemini://localhost:10965/$1" || true
+	$gg -T10 -d header $ggflags "gemini://$gghost:10965/$1" || true
 }
 
 # usage: fetch <path>
