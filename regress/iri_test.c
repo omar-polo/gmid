@@ -162,6 +162,14 @@ main(void)
 	    PASS,
 	    IRI("gemini", "naïve.omarpolo.com", "", "", "", ""),
 	    "Can percent decode hostnames");
+	TEST("gemini://100.64.3.27/",
+	    PASS,
+	    IRI("gemini", "100.64.3.27", "", "", "", ""),
+	    "Accepts IPv4 addresses");
+	TEST("gemini://[::1]/",
+	    PASS,
+	    IRI("gemini", "::1", "", "", "", ""),
+	    "Accepts IPv6 addresses");
 
 	/* path */
 	TEST("gemini://omarpolo.com/foo/bar/baz",

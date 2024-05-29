@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2020, 2022, 2024 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -177,25 +177,47 @@ parse_port(struct parser *p)
 	return 1;
 }
 
-/* TODO: add support for ip-literal and ipv4addr ? */
 /* *( unreserved / sub-delims / pct-encoded ) */
 static int
 parse_authority(struct parser *p)
 {
-	p->parsed->host = p->iri;
+	struct addrinfo	 hints, *ai;
+	char		*end;
+	int		 err;
 
-	while (unreserved(*p->iri)
-	    || sub_delimiters(*p->iri)
-	    || parse_pct_encoded(p)
-	    || valid_multibyte_utf8(p)) {
-		/* normalize the host name. */
-		if (*p->iri < 0x7F)
-			*p->iri = tolower(*p->iri);
+	if (*p->iri == '[') {
 		p->iri++;
-	}
+		p->parsed->host = p->iri;
+		if ((end = strchr(p->iri, ']')) == NULL) {
+			p->err = "invalid IPv6 address";
+			return 0;
+		}
+		*end++ = '\0';
+		p->iri = end;
 
-	if (p->err != NULL)
-		return 0;
+		memset(&hints, 0, sizeof(hints));
+		hints.ai_flags = AI_NUMERICHOST;
+		err = getaddrinfo(p->parsed->host, NULL, &hints, &ai);
+		if (err != 0) {
+			p->err = "invalid IPv6 address";
+			return 0;
+		}
+		freeaddrinfo(ai);
+	} else {
+		p->parsed->host = p->iri;
+		while (unreserved(*p->iri)
+		    || sub_delimiters(*p->iri)
+		    || parse_pct_encoded(p)
+		    || valid_multibyte_utf8(p)) {
+			/* normalize the host name. */
+			if (*p->iri < 0x7F)
+				*p->iri = tolower(*p->iri);
+			p->iri++;
+		}
+
+		if (p->err != NULL)
+			return 0;
+	}
 
 	if (*p->iri == ':') {
 		*p->iri = '\0';
