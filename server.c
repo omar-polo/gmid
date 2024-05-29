@@ -119,6 +119,16 @@ match_host(struct vhost *v, struct client *c)
 	if (addr == NULL)
 		return 0;
 
+	if (*c->domain == '\0') {
+		if (getnameinfo((struct sockaddr *)&addr->ss, addr->slen,
+		    c->domain, sizeof(c->domain), NULL, 0,
+		    NI_NUMERICHOST) == -1) {
+			log_warn("failed to fill the domain; getnameinfo");
+			*c->domain = '\0';
+			return 0;
+		}
+	}
+
 	if (matches(v->domain, c->domain))
 		return 1;
 
@@ -403,16 +413,19 @@ handle_handshake(int fd, short ev, void *d)
 	evbuffer_unfreeze(c->bev->output, 1);
 #endif
 
-	if ((servname = tls_conn_servername(c->ctx)) == NULL) {
+	if ((servname = tls_conn_servername(c->ctx)) == NULL)
 		log_debug("handshake: missing SNI");
-		goto err;
-	}
-
 	if (!puny_decode(servname, c->domain, sizeof(c->domain), &parse_err)) {
 		log_info("puny_decode: %s", parse_err);
-		goto err;
+		start_reply(c, BAD_REQUEST, "Wrong/malformed host");
+		return;
 	}
 
+	/*
+	 * match_addr will serialize the (matching) address if c->domain
+	 * is empty, so that we can support requests for raw IPv6 address
+	 * that can't have a SNI.
+	 */
 	TAILQ_FOREACH(h, &conf->hosts, vhosts)
 		if (match_host(h, c))
 			break;
@@ -428,8 +441,7 @@ handle_handshake(int fd, short ev, void *d)
 		return;
 	}
 
-err:
-	start_reply(c, BAD_REQUEST, "Wrong/malformed host or missing SNI");
+	start_reply(c, BAD_REQUEST, "Wrong/malformed host");
 }
 
 static void
