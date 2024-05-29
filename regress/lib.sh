@@ -113,13 +113,13 @@ setup_simple_test() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	$gg -T10 $ggflags "gemini://$gghost:10965/$1" || true
+	$gg -q -T10 $ggflags "gemini://$gghost:10965/$1" || true
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	$gg -T10 -d header $ggflags "gemini://$gghost:10965/$1" || true
+	$gg -q -T10 -d header $ggflags "gemini://$gghost:10965/$1" || true
 }
 
 # usage: fetch <path>
