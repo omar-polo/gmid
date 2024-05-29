@@ -322,7 +322,7 @@ server "localhost" {
 	cert \$pwd "/localhost.pem"
 	key  \$pwd "/localhost.key"
 	root \$pwd "/testdata"
-	listen on $REGRESS_HOST port $port
+	listen on $host port $port
 	@common
 }
 EOF
@@ -433,6 +433,7 @@ log style legacy'
 
 test_ip_addr() {
 	server_name="*"
+	host="127.0.0.1"
 	gghost=127.0.0.1
 	ggflags=-N
 	setup_simple_test

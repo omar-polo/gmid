@@ -11,6 +11,7 @@ gghost=
 
 run_test() {
 	ggflags=
+	host="$REGRESS_HOST"
 	port=10965
 	config_common="log syslog off"
 	hdr=
@@ -67,7 +68,7 @@ server "$server_name" {
 	cert "$PWD/localhost.pem"
 	key  "$PWD/localhost.key"
 	root "$PWD/testdata"
-	listen on $REGRESS_HOST port $port
+	listen on $host port $port
 	$2
 }
 EOF
@@ -82,7 +83,7 @@ set_proxy() {
 server "localhost.local" {
 	cert "$PWD/localhost.pem"
 	key "$PWD/localhost.key"
-	listen on $REGRESS_HOST port $port
+	listen on $host port $port
 	proxy {
 		relay-to localhost port $port
 		$1
