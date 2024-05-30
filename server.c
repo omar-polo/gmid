@@ -31,7 +31,7 @@
 #include "log.h"
 #include "proc.h"
 
-#define MINIMUM(a, b)	((a) < (b) ? (a) : (b))
+#define MINIMUM(a, b) ((a) < (b) ? (a) : (b))
 
 #ifndef nitems
 #define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
@@ -50,38 +50,41 @@ int connected_clients;
  */
 void tls_config_use_fake_private_key(struct tls_config *);
 
-static inline int matches(const char*, const char*);
+static inline int matches(const char *, const char *);
 
-static void	 handle_handshake(int, short, void*);
-static void	 fmtbuf(char *, size_t, const char *, struct client *,
-		    const char *);
-static int	 apply_block_return(struct client*);
-static int	 check_matching_certificate(X509_STORE *, struct client *);
-static int	 apply_reverse_proxy(struct client *);
-static int	 apply_fastcgi(struct client*);
-static int	 apply_require_ca(struct client*);
-static void	 open_dir(struct client*);
-static void	 redirect_canonical_dir(struct client*);
+static void handle_handshake(int, short, void *);
+static void fmtbuf(char *, size_t, const char *, struct client *,
+				   const char *);
+static int apply_block_return(struct client *);
+static int check_matching_certificate(X509_STORE *, struct client *);
+static int apply_reverse_proxy(struct client *);
+static int apply_fastcgi(struct client *);
+static int apply_require_ca(struct client *);
+static void open_dir(struct client *);
+static void redirect_canonical_dir(struct client *);
 
-static void	 client_tls_readcb(int, short, void *);
-static void	 client_tls_writecb(int, short, void *);
+static void client_tls_readcb(int, short, void *);
+static void client_tls_writecb(int, short, void *);
 
-static void	 client_read(struct bufferevent *, void *);
-void		 client_write(struct bufferevent *, void *);
-static void	 client_error(struct bufferevent *, short, void *);
+static void client_read(struct bufferevent *, void *);
+void client_write(struct bufferevent *, void *);
+static void client_error(struct bufferevent *, short, void *);
 
-static void	 client_close_ev(int, short, void *);
+static void client_close_ev(int, short, void *);
 
-static void	 handle_siginfo(int, short, void*);
+static void handle_siginfo(int, short, void *);
 
-static int	 server_dispatch_parent(int, struct privsep_proc *, struct imsg *);
-static int	 server_dispatch_crypto(int, struct privsep_proc *, struct imsg *);
-static int	 server_dispatch_logger(int, struct privsep_proc *, struct imsg *);
+static int server_dispatch_parent(int, struct privsep_proc *, struct imsg *);
+static int server_dispatch_crypto(int, struct privsep_proc *, struct imsg *);
+static int server_dispatch_logger(int, struct privsep_proc *, struct imsg *);
+
+static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg);
+static ssize_t write_cb(struct tls *ctx, const void *buf, size_t buflen, void *cb_arg);
 
 static struct privsep_proc procs[] = {
-	{ "parent",	PROC_PARENT,	server_dispatch_parent },
-	{ "crypto",	PROC_CRYPTO,	server_dispatch_crypto },
-	{ "logger",	PROC_LOGGER,	server_dispatch_logger },
+	{"parent", PROC_PARENT, server_dispatch_parent},
+	{"crypto", PROC_CRYPTO, server_dispatch_crypto},
+	{"logger", PROC_LOGGER, server_dispatch_logger},
 };
 
 static uint32_t server_client_id;
@@ -92,11 +95,11 @@ static inline int
 match_addr(struct address *target, struct address *source)
 {
 	return (target->ai_flags == source->ai_flags &&
-	    target->ai_family == source->ai_family &&
-	    target->ai_socktype == source->ai_socktype &&
-	    target->ai_protocol == source->ai_protocol &&
-	    target->slen == source->slen &&
-	    !memcmp(&target->ss, &source->ss, target->slen));
+			target->ai_family == source->ai_family &&
+			target->ai_socktype == source->ai_socktype &&
+			target->ai_protocol == source->ai_protocol &&
+			target->slen == source->slen &&
+			!memcmp(&target->ss, &source->ss, target->slen));
 }
 
 static inline int
@@ -114,8 +117,8 @@ match_host(struct vhost *v, struct client *c)
 	struct address *addr;
 
 	TAILQ_FOREACH(addr, &v->addrs, addrs)
-		if (match_addr(addr, c->addr))
-			break;
+	if (match_addr(addr, c->addr))
+		break;
 	if (addr == NULL)
 		return 0;
 
@@ -126,8 +129,8 @@ match_host(struct vhost *v, struct client *c)
 		return 1;
 
 	TAILQ_FOREACH(a, &v->aliases, aliases)
-		if (matches(a->alias, c->domain))
-			return 1;
+	if (matches(a->alias, c->domain))
+		return 1;
 
 	return 0;
 }
@@ -141,8 +144,10 @@ vhost_lang(struct vhost *v, const char *path)
 		return NULL;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (*loc->lang != '\0') {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
+		if (*loc->lang != '\0')
+		{
 			if (matches(loc->match, path))
 				return loc->lang;
 		}
@@ -164,8 +169,10 @@ vhost_default_mime(struct vhost *v, const char *path)
 		return default_mime;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (*loc->default_mime != '\0') {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
+		if (*loc->default_mime != '\0')
+		{
 			if (matches(loc->match, path))
 				return loc->default_mime;
 		}
@@ -187,8 +194,10 @@ vhost_index(struct vhost *v, const char *path)
 		return index;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (*loc->index != '\0') {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
+		if (*loc->index != '\0')
+		{
 			if (matches(loc->match, path))
 				return loc->index;
 		}
@@ -200,8 +209,7 @@ vhost_index(struct vhost *v, const char *path)
 	return index;
 }
 
-int
-vhost_auto_index(struct vhost *v, const char *path)
+int vhost_auto_index(struct vhost *v, const char *path)
 {
 	struct location *loc;
 
@@ -209,8 +217,10 @@ vhost_auto_index(struct vhost *v, const char *path)
 		return 0;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->auto_index != 0) {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
+		if (loc->auto_index != 0)
+		{
 			if (matches(loc->match, path))
 				return loc->auto_index == 1;
 		}
@@ -220,8 +230,7 @@ vhost_auto_index(struct vhost *v, const char *path)
 	return loc->auto_index == 1;
 }
 
-int
-vhost_block_return(struct vhost *v, const char *path, int *code, const char **fmt)
+int vhost_block_return(struct vhost *v, const char *path, int *code, const char **fmt)
 {
 	struct location *loc;
 
@@ -229,9 +238,12 @@ vhost_block_return(struct vhost *v, const char *path, int *code, const char **fm
 		return 0;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->block_code != 0) {
-			if (matches(loc->match, path)) {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
+		if (loc->block_code != 0)
+		{
+			if (matches(loc->match, path))
+			{
 				*code = loc->block_code;
 				*fmt = loc->block_fmt;
 				return 1;
@@ -255,7 +267,8 @@ vhost_fastcgi(struct vhost *v, const char *path)
 		return NULL;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
 		if (loc->fcgi != -1)
 			if (matches(loc->match, path))
 				return loc;
@@ -270,20 +283,21 @@ vhost_fastcgi(struct vhost *v, const char *path)
 	return loc->fcgi == -1 ? NULL : loc;
 }
 
-int
-vhost_dirfd(struct vhost *v, const char *path, size_t *retloc)
+int vhost_dirfd(struct vhost *v, const char *path, size_t *retloc)
 {
 	struct location *loc;
-	size_t		 l = 0;
+	size_t l = 0;
 
 	if (v == NULL || path == NULL)
 		return -1;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
 		l++;
 		if (loc->dirfd != -1)
-			if (matches(loc->match, path)) {
+			if (matches(loc->match, path))
+			{
 				*retloc = l;
 				return loc->dirfd;
 			}
@@ -294,8 +308,7 @@ vhost_dirfd(struct vhost *v, const char *path, size_t *retloc)
 	return loc->dirfd;
 }
 
-int
-vhost_strip(struct vhost *v, const char *path)
+int vhost_strip(struct vhost *v, const char *path)
 {
 	struct location *loc;
 
@@ -303,8 +316,10 @@ vhost_strip(struct vhost *v, const char *path)
 		return 0;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->strip != 0) {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
+		if (loc->strip != 0)
+		{
 			if (matches(loc->match, path))
 				return loc->strip;
 		}
@@ -323,8 +338,10 @@ vhost_require_ca(struct vhost *v, const char *path)
 		return NULL;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
-		if (loc->reqca != NULL) {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
+		if (loc->reqca != NULL)
+		{
 			if (matches(loc->match, path))
 				return loc->reqca;
 		}
@@ -334,8 +351,7 @@ vhost_require_ca(struct vhost *v, const char *path)
 	return loc->reqca;
 }
 
-int
-vhost_disable_log(struct vhost *v, const char *path)
+int vhost_disable_log(struct vhost *v, const char *path)
 {
 	struct location *loc;
 
@@ -343,17 +359,17 @@ vhost_disable_log(struct vhost *v, const char *path)
 		return 0;
 
 	loc = TAILQ_FIRST(&v->locations);
-	while ((loc = TAILQ_NEXT(loc, locations)) != NULL) {
+	while ((loc = TAILQ_NEXT(loc, locations)) != NULL)
+	{
 		if (loc->disable_log && matches(loc->match, path))
-				return 1;
+			return 1;
 	}
 
 	loc = TAILQ_FIRST(&v->locations);
 	return loc->disable_log;
 }
 
-void
-mark_nonblock(int fd)
+void mark_nonblock(int fd)
 {
 	int flags;
 
@@ -372,12 +388,13 @@ handle_handshake(int fd, short ev, void *d)
 	const char *servname;
 	const char *parse_err = "unknown error";
 
-	switch (tls_handshake(c->ctx)) {
-	case 0:  /* success */
+	switch (tls_handshake(c->ctx))
+	{
+	case 0: /* success */
 		break;
 	case -1:
 		log_warnx("(%s:%s) tls_handshake failed: %s",
-		    c->rhost, c->rserv, tls_error(c->ctx));
+				  c->rhost, c->rserv, tls_error(c->ctx));
 		client_close(c);
 		return;
 	case TLS_WANT_POLLIN:
@@ -392,14 +409,14 @@ handle_handshake(int fd, short ev, void *d)
 	}
 
 	c->bev = bufferevent_new(fd, client_read, client_write,
-	    client_error, c);
+							 client_error, c);
 	if (c->bev == NULL)
 		fatal("%s: failed to allocate client buffer", __func__);
 
 	event_set(&c->bev->ev_read, c->fd, EV_READ,
-	    client_tls_readcb, c->bev);
+			  client_tls_readcb, c->bev);
 	event_set(&c->bev->ev_write, c->fd, EV_WRITE,
-	    client_tls_writecb, c->bev);
+			  client_tls_writecb, c->bev);
 
 #if HAVE_LIBEVENT2
 	evbuffer_unfreeze(c->bev->input, 0);
@@ -408,7 +425,8 @@ handle_handshake(int fd, short ev, void *d)
 
 	if ((servname = tls_conn_servername(c->ctx)) == NULL)
 		log_debug("handshake: missing SNI");
-	if (!puny_decode(servname, c->domain, sizeof(c->domain), &parse_err)) {
+	if (!puny_decode(servname, c->domain, sizeof(c->domain), &parse_err))
+	{
 		log_info("puny_decode: %s", parse_err);
 		start_reply(c, BAD_REQUEST, "Wrong/malformed host");
 		return;
@@ -420,15 +438,16 @@ handle_handshake(int fd, short ev, void *d)
 	 * that can't have a SNI.
 	 */
 	TAILQ_FOREACH(h, &conf->hosts, vhosts)
-		if (match_host(h, c))
-			break;
+	if (match_host(h, c))
+		break;
 
 	log_debug("handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
-	    servname != NULL ? servname : "(null)",
-	    c->domain,
-	    h != NULL ? h->domain : "(null)");
+			  servname != NULL ? servname : "(null)",
+			  c->domain,
+			  h != NULL ? h->domain : "(null)");
 
-	if (h != NULL) {
+	if (h != NULL)
+	{
 		c->host = h;
 		bufferevent_enable(c->bev, EV_READ);
 		return;
@@ -439,26 +458,30 @@ handle_handshake(int fd, short ev, void *d)
 
 static void
 fmtbuf(char *buf, size_t buflen, const char *fmt, struct client *c,
-    const char *path)
+	   const char *path)
 {
 	size_t i;
 	char tmp[32];
 
 	*buf = '\0';
 	memset(tmp, 0, sizeof(tmp));
-	for (i = 0; *fmt; ++fmt) {
-		if (i == sizeof(tmp)-1 || *fmt == '%') {
+	for (i = 0; *fmt; ++fmt)
+	{
+		if (i == sizeof(tmp) - 1 || *fmt == '%')
+		{
 			strlcat(buf, tmp, buflen);
 			memset(tmp, 0, sizeof(tmp));
 			i = 0;
 		}
 
-		if (*fmt != '%') {
+		if (*fmt != '%')
+		{
 			tmp[i++] = *fmt;
 			continue;
 		}
 
-		switch (*++fmt) {
+		switch (*++fmt)
+		{
 		case '%':
 			strlcat(buf, "%", buflen);
 			break;
@@ -480,7 +503,7 @@ fmtbuf(char *buf, size_t buflen, const char *fmt, struct client *c,
 			break;
 		default:
 			log_warnx("%s: unknown fmt specifier %c",
-			    __func__, *fmt);
+					  __func__, *fmt);
 		}
 	}
 
@@ -509,12 +532,13 @@ apply_block_return(struct client *c)
 static struct proxy *
 matched_proxy(struct client *c)
 {
-	struct proxy	*p;
-	const char	*proto;
-	const char	*host;
-	const char	*port;
+	struct proxy *p;
+	const char *proto;
+	const char *host;
+	const char *port;
 
-	TAILQ_FOREACH(p, &c->host->proxies, proxies) {
+	TAILQ_FOREACH(p, &c->host->proxies, proxies)
+	{
 		if (*(proto = p->match_proto) == '\0')
 			proto = "gemini";
 		if (*(host = p->match_host) == '\0')
@@ -523,8 +547,8 @@ matched_proxy(struct client *c)
 			port = "*";
 
 		if (matches(proto, c->iri.schema) &&
-		    matches(host, c->domain) &&
-		    matches(port, c->iri.port))
+			matches(host, c->domain) &&
+			matches(port, c->iri.port))
 			return p;
 	}
 
@@ -534,16 +558,18 @@ matched_proxy(struct client *c)
 static int
 check_matching_certificate(X509_STORE *store, struct client *c)
 {
-	const uint8_t	*cert;
-	size_t		 len;
+	const uint8_t *cert;
+	size_t len;
 
-	if (!tls_peer_cert_provided(c->ctx)) {
+	if (!tls_peer_cert_provided(c->ctx))
+	{
 		start_reply(c, CLIENT_CERT_REQ, "client certificate required");
 		return 1;
 	}
 
 	cert = tls_peer_cert_chain_pem(c->ctx, &len);
-	if (!validate_against_ca(store, cert, len)) {
+	if (!validate_against_ca(store, cert, len))
+	{
 		start_reply(c, CERT_NOT_AUTH, "certificate not authorised");
 		return 1;
 	}
@@ -564,21 +590,25 @@ proxy_socket(struct client *c, const char *host, const char *port)
 
 	/* XXX: asr_run? :> */
 	r = getaddrinfo(host, port, &hints, &res0);
-	if (r != 0) {
+	if (r != 0)
+	{
 		log_warnx("getaddrinfo(\"%s\", \"%s\"): %s",
-		    host, port, gai_strerror(r));
+				  host, port, gai_strerror(r));
 		return -1;
 	}
 
-	for (res = res0; res; res = res->ai_next) {
+	for (res = res0; res; res = res->ai_next)
+	{
 		sock = socket(res->ai_family, res->ai_socktype,
-		    res->ai_protocol);
-		if (sock == -1) {
+					  res->ai_protocol);
+		if (sock == -1)
+		{
 			cause = "socket";
 			continue;
 		}
 
-		if (connect(sock, res->ai_addr, res->ai_addrlen) == -1) {
+		if (connect(sock, res->ai_addr, res->ai_addrlen) == -1)
+		{
 			cause = "connect";
 			save_errno = errno;
 			close(sock);
@@ -602,7 +632,7 @@ proxy_socket(struct client *c, const char *host, const char *port)
 static int
 apply_reverse_proxy(struct client *c)
 {
-	struct proxy	*p;
+	struct proxy *p;
 
 	if ((p = matched_proxy(c)) == NULL)
 		return 0;
@@ -613,9 +643,10 @@ apply_reverse_proxy(struct client *c)
 		return 1;
 
 	log_debug("opening proxy connection for %s:%s",
-	    p->host, p->port);
+			  p->host, p->port);
 
-	if ((c->pfd = proxy_socket(c, p->host, p->port)) == -1) {
+	if ((c->pfd = proxy_socket(c, p->host, p->port)) == -1)
+	{
 		start_reply(c, PROXY_ERROR, "proxy error");
 		return 1;
 	}
@@ -630,10 +661,11 @@ apply_reverse_proxy(struct client *c)
 static int
 fcgi_open_sock(struct fcgi *f)
 {
-	struct sockaddr_un	addr;
-	int			fd;
+	struct sockaddr_un addr;
+	int fd;
 
-	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
+	if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1)
+	{
 		log_warn("socket");
 		return -1;
 	}
@@ -642,7 +674,8 @@ fcgi_open_sock(struct fcgi *f)
 	addr.sun_family = AF_UNIX;
 	strlcpy(addr.sun_path, f->path, sizeof(addr.sun_path));
 
-	if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
+	if (connect(fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
+	{
 		log_warn("failed to connect to %s", f->path);
 		close(fd);
 		return -1;
@@ -654,28 +687,32 @@ fcgi_open_sock(struct fcgi *f)
 static int
 fcgi_open_conn(struct fcgi *f)
 {
-	struct addrinfo	 hints, *servinfo, *p;
-	int		 r, sock, save_errno;
-	const char	*cause = NULL;
+	struct addrinfo hints, *servinfo, *p;
+	int r, sock, save_errno;
+	const char *cause = NULL;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_flags = AI_ADDRCONFIG;
 
-	if ((r = getaddrinfo(f->path, f->port, &hints, &servinfo)) != 0) {
+	if ((r = getaddrinfo(f->path, f->port, &hints, &servinfo)) != 0)
+	{
 		log_warnx("getaddrinfo %s:%s: %s", f->path, f->port,
-		    gai_strerror(r));
+				  gai_strerror(r));
 		return -1;
 	}
 
-	for (p = servinfo; p != NULL; p = p->ai_next) {
+	for (p = servinfo; p != NULL; p = p->ai_next)
+	{
 		sock = socket(p->ai_family, p->ai_socktype, p->ai_protocol);
-		if (sock == -1) {
+		if (sock == -1)
+		{
 			cause = "socket";
 			continue;
 		}
-		if (connect(sock, p->ai_addr, p->ai_addrlen) == -1) {
+		if (connect(sock, p->ai_addr, p->ai_addrlen) == -1)
+		{
 			cause = "connect";
 			save_errno = errno;
 			close(sock);
@@ -685,9 +722,10 @@ fcgi_open_conn(struct fcgi *f)
 		break;
 	}
 
-	if (p == NULL) {
+	if (p == NULL)
+	{
 		log_warn("couldn't connect to %s:%s: %s", f->path, f->port,
-		    cause);
+				 cause);
 		sock = -1;
 	}
 
@@ -699,33 +737,36 @@ fcgi_open_conn(struct fcgi *f)
 static int
 apply_fastcgi(struct client *c)
 {
-	int		 i = 0;
-	struct fcgi	*f;
-	struct location	*loc;
+	int i = 0;
+	struct fcgi *f;
+	struct location *loc;
 
 	if ((loc = vhost_fastcgi(c->host, c->iri.path)) == NULL)
 		return 0;
 
-	TAILQ_FOREACH(f, &c->conf->fcgi, fcgi) {
+	TAILQ_FOREACH(f, &c->conf->fcgi, fcgi)
+	{
 		if (i == loc->fcgi)
 			break;
 		++i;
 	}
 
-	if (f == NULL) {
+	if (f == NULL)
+	{
 		log_warnx("can't find fcgi #%d", loc->fcgi);
 		return 0;
 	}
 
 	log_debug("opening fastcgi connection for (%s,%s)",
-	    f->path, f->port);
+			  f->path, f->port);
 
 	if (*f->port == '\0')
 		c->pfd = fcgi_open_sock(f);
 	else
 		c->pfd = fcgi_open_conn(f);
 
-	if (c->pfd == -1) {
+	if (c->pfd == -1)
+	{
 		start_reply(c, CGI_ERROR, "CGI error");
 		return 1;
 	}
@@ -733,13 +774,14 @@ apply_fastcgi(struct client *c)
 	mark_nonblock(c->pfd);
 
 	c->cgibev = bufferevent_new(c->pfd, fcgi_read, fcgi_write,
-	    fcgi_error, c);
-	if (c->cgibev == NULL) {
+								fcgi_error, c);
+	if (c->cgibev == NULL)
+	{
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return 1;
 	}
 
-	bufferevent_enable(c->cgibev, EV_READ|EV_WRITE);
+	bufferevent_enable(c->cgibev, EV_READ | EV_WRITE);
 	fcgi_req(c, loc);
 
 	return 1;
@@ -749,7 +791,7 @@ apply_fastcgi(struct client *c)
 static int
 apply_require_ca(struct client *c)
 {
-	X509_STORE	*store;
+	X509_STORE *store;
 
 	if ((store = vhost_require_ca(c->host, c->iri.path)) == NULL)
 		return 0;
@@ -763,17 +805,19 @@ server_dir_listing(struct client *c)
 
 	root = !strcmp(c->iri.path, "/") || *c->iri.path == '\0';
 
-	if (!vhost_auto_index(c->host, c->iri.path)) {
+	if (!vhost_auto_index(c->host, c->iri.path))
+	{
 		start_reply(c, NOT_FOUND, "not found");
 		return;
 	}
 
 	c->dirlen = scandir_fd(c->pfd, &c->dir,
-	    root ? select_non_dotdot : select_non_dot,
-	    alphasort);
-	if (c->dirlen == -1) {
+						   root ? select_non_dotdot : select_non_dot,
+						   alphasort);
+	if (c->dirlen == -1)
+	{
 		log_warn("scandir_fd(%d) (vhost:%s) %s",
-		    c->pfd, c->host->domain, c->iri.path);
+				 c->pfd, c->host->domain, c->iri.path);
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
@@ -781,7 +825,7 @@ server_dir_listing(struct client *c)
 	c->type = REQUEST_DIR;
 	start_reply(c, SUCCESS, "text/gemini");
 	evbuffer_add_printf(EVBUFFER_OUTPUT(c->bev),
-	    "# Index of /%s\n\n", c->iri.path);
+						"# Index of /%s\n\n", c->iri.path);
 }
 
 static void
@@ -792,26 +836,30 @@ open_dir(struct client *c)
 	char path[PATH_MAX];
 	int fd = -1;
 
-	if (*c->iri.path != '\0' && !ends_with(c->iri.path, "/")) {
+	if (*c->iri.path != '\0' && !ends_with(c->iri.path, "/"))
+	{
 		redirect_canonical_dir(c);
 		return;
 	}
 
 	index = vhost_index(c->host, c->iri.path);
 	fd = openat(c->pfd, index, O_RDONLY);
-	if (fd == -1) {
+	if (fd == -1)
+	{
 		server_dir_listing(c);
 		return;
 	}
 
-	if (fstat(fd, &sb) == -1) {
+	if (fstat(fd, &sb) == -1)
+	{
 		log_warn("fstat");
 		close(fd);
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
-	if (!S_ISREG(sb.st_mode)) {
+	if (!S_ISREG(sb.st_mode))
+	{
 		close(fd);
 		server_dir_listing(c);
 		return;
@@ -833,7 +881,8 @@ redirect_canonical_dir(struct client *c)
 	int r;
 
 	r = snprintf(buf, sizeof(buf), "/%s/", c->iri.path);
-	if (r < 0 || (size_t)r >= sizeof(buf)) {
+	if (r < 0 || (size_t)r >= sizeof(buf))
+	{
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
@@ -844,15 +893,16 @@ redirect_canonical_dir(struct client *c)
 static void
 client_tls_readcb(int fd, short event, void *d)
 {
-	struct bufferevent	*bufev = d;
-	struct client		*client = bufev->cbarg;
-	ssize_t			 ret;
-	size_t			 len;
-	int			 what = EVBUFFER_READ;
-	int			 howmuch = IBUF_READ_SIZE;
-	char			 buf[IBUF_READ_SIZE];
+	struct bufferevent *bufev = d;
+	struct client *client = bufev->cbarg;
+	ssize_t ret;
+	size_t len;
+	int what = EVBUFFER_READ;
+	int howmuch = IBUF_READ_SIZE;
+	char buf[IBUF_READ_SIZE];
 
-	if (event == EV_TIMEOUT) {
+	if (event == EV_TIMEOUT)
+	{
 		what |= EVBUFFER_TIMEOUT;
 		goto err;
 	}
@@ -860,7 +910,8 @@ client_tls_readcb(int fd, short event, void *d)
 	if (bufev->wm_read.high != 0)
 		howmuch = MINIMUM(sizeof(buf), bufev->wm_read.high);
 
-	switch (ret = tls_read(client->ctx, buf, howmuch)) {
+	switch (ret = tls_read(client->ctx, buf, howmuch))
+	{
 	case TLS_WANT_POLLIN:
 	case TLS_WANT_POLLOUT:
 		goto retry;
@@ -870,12 +921,14 @@ client_tls_readcb(int fd, short event, void *d)
 	}
 	len = ret;
 
-	if (len == 0) {
+	if (len == 0)
+	{
 		what |= EVBUFFER_EOF;
 		goto err;
 	}
 
-	if (evbuffer_add(bufev->input, buf, len) == -1) {
+	if (evbuffer_add(bufev->input, buf, len) == -1)
+	{
 		what |= EVBUFFER_ERROR;
 		goto err;
 	}
@@ -883,7 +936,8 @@ client_tls_readcb(int fd, short event, void *d)
 	event_add(&bufev->ev_read, NULL);
 	if (bufev->wm_read.low != 0 && len < bufev->wm_read.low)
 		return;
-	if (bufev->wm_read.high != 0 && len > bufev->wm_read.high) {
+	if (bufev->wm_read.high != 0 && len > bufev->wm_read.high)
+	{
 		/*
 		 * here we could implement a read pressure policy.
 		 */
@@ -905,22 +959,25 @@ err:
 static void
 client_tls_writecb(int fd, short event, void *d)
 {
-	struct bufferevent	*bufev = d;
-	struct client		*client = bufev->cbarg;
-	ssize_t			 ret;
-	size_t			 len;
-	short			 what = EVBUFFER_WRITE;
+	struct bufferevent *bufev = d;
+	struct client *client = bufev->cbarg;
+	ssize_t ret;
+	size_t len;
+	short what = EVBUFFER_WRITE;
 
-	if (event == EV_TIMEOUT) {
+	if (event == EV_TIMEOUT)
+	{
 		what |= EVBUFFER_TIMEOUT;
 		goto err;
 	}
 
-	if (EVBUFFER_LENGTH(bufev->output) != 0) {
+	if (EVBUFFER_LENGTH(bufev->output) != 0)
+	{
 		ret = tls_write(client->ctx,
-		    EVBUFFER_DATA(bufev->output),
-		    EVBUFFER_LENGTH(bufev->output));
-		switch (ret) {
+						EVBUFFER_DATA(bufev->output),
+						EVBUFFER_LENGTH(bufev->output));
+		switch (ret)
+		{
 		case TLS_WANT_POLLIN:
 		case TLS_WANT_POLLOUT:
 			goto retry;
@@ -936,7 +993,7 @@ client_tls_writecb(int fd, short event, void *d)
 		event_add(&bufev->ev_write, NULL);
 
 	if (bufev->writecb != NULL &&
-	    EVBUFFER_LENGTH(bufev->output) <= bufev->wm_write.low)
+		EVBUFFER_LENGTH(bufev->output) <= bufev->wm_write.low)
 		(*bufev->writecb)(bufev, bufev->cbarg);
 	return;
 
@@ -951,11 +1008,11 @@ err:
 static void
 client_read(struct bufferevent *bev, void *d)
 {
-	struct stat	 sb;
-	struct client	*c = d;
-	struct evbuffer	*src = EVBUFFER_INPUT(bev);
-	const char	*path, *p, *parse_err = "invalid request";
-	char		 decoded[DOMAIN_NAME_LEN];
+	struct stat sb;
+	struct client *c = d;
+	struct evbuffer *src = EVBUFFER_INPUT(bev);
+	const char *path, *p, *parse_err = "invalid request";
+	char decoded[DOMAIN_NAME_LEN];
 
 	bufferevent_disable(bev, EVBUFFER_READ);
 
@@ -968,26 +1025,30 @@ client_read(struct bufferevent *bev, void *d)
 		return;
 
 	/* max url len + \r\n */
-	if (EVBUFFER_LENGTH(src) > 1024 + 2) {
+	if (EVBUFFER_LENGTH(src) > 1024 + 2)
+	{
 		log_debug("too much data received");
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
 
 	c->req = evbuffer_readln(src, &c->reqlen, EVBUFFER_EOL_CRLF_STRICT);
-	if (c->req == NULL) {
+	if (c->req == NULL)
+	{
 		/* not enough data yet. */
 		bufferevent_enable(bev, EVBUFFER_READ);
 		return;
 	}
-	if (c->reqlen > 1024+2) {
+	if (c->reqlen > 1024 + 2)
+	{
 		log_debug("URL too long");
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
 
 	if (!parse_iri(c->req, &c->iri, &parse_err) ||
-	    !puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err)) {
+		!puny_decode(c->iri.host, decoded, sizeof(decoded), &parse_err))
+	{
 		log_debug("IRI parse error: %s", parse_err);
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
@@ -998,14 +1059,15 @@ client_read(struct bufferevent *bev, void *d)
 
 	/* ignore the port number */
 	if (strcmp(c->iri.schema, "gemini") ||
-	    strcmp(decoded, c->domain)) {
+		strcmp(decoded, c->domain))
+	{
 		start_reply(c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}
 
 	if (apply_require_ca(c) ||
-	    apply_block_return(c)||
-	    apply_fastcgi(c))
+		apply_block_return(c) ||
+		apply_fastcgi(c))
 		return;
 
 	path = c->iri.path;
@@ -1016,20 +1078,23 @@ client_read(struct bufferevent *bev, void *d)
 		p = ".";
 
 	c->pfd = openat(vhost_dirfd(c->host, path, &c->loc), p, O_RDONLY);
-	if (c->pfd == -1) {
+	if (c->pfd == -1)
+	{
 		if (errno == EACCES)
 			log_info("can't open %s: %s", p, strerror(errno));
 		start_reply(c, NOT_FOUND, "not found");
 		return;
 	}
 
-	if (fstat(c->pfd, &sb) == -1) {
+	if (fstat(c->pfd, &sb) == -1)
+	{
 		log_warnx("fstat %s", path);
 		start_reply(c, TEMP_FAILURE, "internal server error");
 		return;
 	}
 
-	if (S_ISDIR(sb.st_mode)) {
+	if (S_ISDIR(sb.st_mode))
+	{
 		open_dir(c);
 		return;
 	}
@@ -1038,16 +1103,16 @@ client_read(struct bufferevent *bev, void *d)
 	start_reply(c, SUCCESS, mime(c->conf, c->host, p));
 }
 
-void
-client_write(struct bufferevent *bev, void *d)
+void client_write(struct bufferevent *bev, void *d)
 {
-	struct client	*c = d;
-	struct evbuffer	*out = EVBUFFER_OUTPUT(bev);
-	char		 nam[PATH_MAX];
-	char		 buf[BUFSIZ];
-	ssize_t		 r;
+	struct client *c = d;
+	struct evbuffer *out = EVBUFFER_OUTPUT(bev);
+	char nam[PATH_MAX];
+	char buf[BUFSIZ];
+	ssize_t r;
 
-	switch (c->type) {
+	switch (c->type)
+	{
 	case REQUEST_UNDECIDED:
 		/*
 		 * Ignore spurious calls when we still don't have idea
@@ -1056,25 +1121,30 @@ client_write(struct bufferevent *bev, void *d)
 		break;
 
 	case REQUEST_FILE:
-		if ((r = read(c->pfd, buf, sizeof(buf))) == -1) {
+		if ((r = read(c->pfd, buf, sizeof(buf))) == -1)
+		{
 			log_warn("read");
 			client_error(bev, EVBUFFER_ERROR, c);
 			return;
-		} else if (r == 0) {
+		}
+		else if (r == 0)
+		{
 			client_close(c);
 			return;
-		} else if (r != sizeof(buf))
+		}
+		else if (r != sizeof(buf))
 			c->type = REQUEST_DONE;
 		bufferevent_write(bev, buf, r);
 		break;
 
 	case REQUEST_DIR:
 		/* TODO: handle big big directories better */
-		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff) {
+		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff)
+		{
 			const char *sufx = "";
 
 			encode_path(nam, sizeof(nam),
-			    c->dir[c->diroff]->d_name);
+						c->dir[c->diroff]->d_name);
 			if (c->dir[c->diroff]->d_type == DT_DIR)
 				sufx = "/";
 			evbuffer_add_printf(out, "=> ./%s%s\n", nam, sufx);
@@ -1106,11 +1176,12 @@ client_write(struct bufferevent *bev, void *d)
 static void
 client_error(struct bufferevent *bev, short error, void *d)
 {
-	struct client	*c = d;
+	struct client *c = d;
 
 	c->type = REQUEST_DONE;
 
-	if (error & EVBUFFER_TIMEOUT) {
+	if (error & EVBUFFER_TIMEOUT)
+	{
 		log_debug("timeout; forcefully closing the connection");
 		if (c->code == 0)
 			start_reply(c, BAD_REQUEST, "timeout");
@@ -1119,7 +1190,8 @@ client_error(struct bufferevent *bev, short error, void *d)
 		return;
 	}
 
-	if (error & EVBUFFER_EOF) {
+	if (error & EVBUFFER_EOF)
+	{
 		client_close(c);
 		return;
 	}
@@ -1128,12 +1200,11 @@ client_error(struct bufferevent *bev, short error, void *d)
 	client_close(c);
 }
 
-int
-start_reply(struct client *c, int code, const char *meta)
+int start_reply(struct client *c, int code, const char *meta)
 {
-	struct evbuffer	*evb = EVBUFFER_OUTPUT(c->bev);
-	const char	*lang;
-	int		 r, rr;
+	struct evbuffer *evb = EVBUFFER_OUTPUT(c->bev);
+	const char *lang;
+	int r, rr;
 
 	bufferevent_enable(c->bev, EVBUFFER_WRITE);
 
@@ -1149,9 +1220,10 @@ start_reply(struct client *c, int code, const char *meta)
 		goto overflow;
 
 	if (c->type != REQUEST_FCGI &&
-	    c->type != REQUEST_PROXY &&
-	    !strcmp(meta, "text/gemini") &&
-	    (lang = vhost_lang(c->host, c->iri.path)) != NULL) {
+		c->type != REQUEST_PROXY &&
+		!strcmp(meta, "text/gemini") &&
+		(lang = vhost_lang(c->host, c->iri.path)) != NULL)
+	{
 		rr = evbuffer_add_printf(evb, ";lang=%s", lang);
 		if (rr == -1)
 			goto err;
@@ -1185,9 +1257,10 @@ overflow:
 static void
 client_close_ev(int fd, short event, void *d)
 {
-	struct client	*c = d;
+	struct client *c = d;
 
-	switch (tls_close(c->ctx)) {
+	switch (tls_close(c->ctx))
+	{
 	case TLS_WANT_POLLIN:
 		event_once(c->fd, EV_READ, client_close_ev, c, NULL);
 		return;
@@ -1214,6 +1287,8 @@ client_close_ev(int fd, short event, void *d)
 	close(c->fd);
 	c->fd = -1;
 
+	buflayer_free(c->buf);
+
 	free(c);
 }
 
@@ -1222,12 +1297,14 @@ client_proxy_close(int fd, short event, void *d)
 {
 	struct tls *ctx = d;
 
-	if (ctx == NULL) {
+	if (ctx == NULL)
+	{
 		close(fd);
 		return;
 	}
 
-	switch (tls_close(ctx)) {
+	switch (tls_close(ctx))
+	{
 	case TLS_WANT_POLLIN:
 		event_once(fd, EV_READ, client_proxy_close, d, NULL);
 		break;
@@ -1240,8 +1317,7 @@ client_proxy_close(int fd, short event, void *d)
 	close(fd);
 }
 
-void
-client_close(struct client *c)
+void client_close(struct client *c)
 {
 	/*
 	 * We may end up calling client_close in various situations
@@ -1252,26 +1328,30 @@ client_close(struct client *c)
 
 	SPLAY_REMOVE(client_tree_id, &clients, c);
 
-	if (c->cgibev != NULL) {
-		bufferevent_disable(c->cgibev, EVBUFFER_READ|EVBUFFER_WRITE);
+	if (c->cgibev != NULL)
+	{
+		bufferevent_disable(c->cgibev, EVBUFFER_READ | EVBUFFER_WRITE);
 		bufferevent_free(c->cgibev);
 		c->cgibev = NULL;
 		close(c->pfd);
 		c->pfd = -1;
 	}
 
-	if (c->bev != NULL) {
-		bufferevent_disable(c->bev, EVBUFFER_READ|EVBUFFER_WRITE);
+	if (c->bev != NULL)
+	{
+		bufferevent_disable(c->bev, EVBUFFER_READ | EVBUFFER_WRITE);
 		bufferevent_free(c->bev);
 	}
 
 	if (c->proxyevset &&
-	    event_pending(&c->proxyev, EV_READ|EV_WRITE, NULL)) {
+		event_pending(&c->proxyev, EV_READ | EV_WRITE, NULL))
+	{
 		c->proxyevset = 0;
 		event_del(&c->proxyev);
 	}
 
-	if (c->pfd != -1 && c->proxyctx != NULL) {
+	if (c->pfd != -1 && c->proxyctx != NULL)
+	{
 		/* shut down the proxy TLS connection */
 		client_proxy_close(c->pfd, 0, c->proxyctx);
 		c->pfd = -1;
@@ -1283,8 +1363,66 @@ client_close(struct client *c)
 	client_close_ev(c->fd, 0, c);
 }
 
-void
-server_accept(int sock, short et, void *d)
+static void parse_proxy_protocol_v1(const char *line, size_t len)
+{
+	assert( 0 < len );
+
+	printf("%.*s", (int)len, line);
+}
+
+static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
+{
+	struct client *c = cb_arg;
+
+	if (NULL == c->buf) {
+		return read(c->fd, buf, buflen);
+	}
+
+	// buffer layer exists, we expect proxy protocol
+	static const char crlf[] = { '\r', '\n' };
+	size_t n_read = read(
+		c->fd, 
+		&c->buf->data[c->buf->size], 
+		c->buf->capacity - c->buf->size
+	);
+
+	char *needle = memmem(
+		&c->buf->data[c->buf->size],
+		n_read,
+		crlf,
+		sizeof(crlf)
+	);
+
+	c->buf->size += n_read;
+
+	if (NULL != needle) {
+		size_t header_len = (needle - c->buf->data) + sizeof(crlf);
+
+		parse_proxy_protocol_v1(c->buf->data, header_len);
+
+		if (header_len < c->buf->size) {
+			size_t n_copy = MINIMUM(c->buf->size - header_len, buflen);
+			memcpy(buf, &c->buf->data[header_len], n_copy);
+			return n_copy;
+		}
+		
+		buflayer_free(c->buf);
+	}
+
+	if (c->buf->size == c->buf->capacity) {
+		c->buf = buflayer_expand(c->buf, 2 * c->buf->capacity);
+	}
+
+	return TLS_WANT_POLLIN;
+}
+
+static ssize_t write_cb(struct tls *ctx, const void *buf, size_t buflen, void *cb_arg)
+{
+	struct client *c = cb_arg;
+	return write(c->fd, buf, buflen);
+}
+
+void server_accept(int sock, short et, void *d)
 {
 	struct address *addr = d;
 	struct client *c;
@@ -1295,9 +1433,10 @@ server_accept(int sock, short et, void *d)
 
 	sraddr = (struct sockaddr *)&raddr;
 	len = sizeof(raddr);
-	if ((fd = accept(sock, sraddr, &len)) == -1) {
+	if ((fd = accept(sock, sraddr, &len)) == -1)
+	{
 		if (errno == EWOULDBLOCK || errno == EAGAIN ||
-		    errno == ECONNABORTED)
+			errno == ECONNABORTED)
 			return;
 		fatal("accept");
 	}
@@ -1314,23 +1453,28 @@ server_accept(int sock, short et, void *d)
 	c->raddrlen = len;
 
 	e = getnameinfo(sraddr, len, c->rhost, sizeof(c->rhost),
-	    c->rserv, sizeof(c->rserv), NI_NUMERICHOST | NI_NUMERICSERV);
-	if (e != 0) {
+					c->rserv, sizeof(c->rserv), NI_NUMERICHOST | NI_NUMERICSERV);
+	if (e != 0)
+	{
 		log_warnx("getnameinfo failed: %s", gai_strerror(e));
 		close(c->fd);
 		free(c);
 		return;
 	}
 
-	if (tls_accept_socket(addr->ctx, &c->ctx, fd) == -1) {
+	c->buf = buflayer_create(DEFAULT_BUFLAYER_SIZE);
+
+	if (tls_accept_cbs(addr->ctx, &c->ctx, read_cb, write_cb, c) == -1)
+	{
 		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
 		close(c->fd);
+		buflayer_free(c->buf);
 		free(c);
 		return;
 	}
 
 	SPLAY_INSERT(client_tree_id, &clients, c);
-	event_once(c->fd, EV_READ|EV_WRITE, handle_handshake, c, NULL);
+	event_once(c->fd, EV_READ | EV_WRITE, handle_handshake, c, NULL);
 	connected_clients++;
 }
 
@@ -1342,32 +1486,38 @@ handle_siginfo(int fd, short ev, void *d)
 
 static void
 add_matching_kps(struct tls_config *tlsconf, struct address *addr,
-    struct conf *conf)
+				 struct conf *conf)
 {
-	struct address	*vaddr;
-	struct vhost	*h;
-	int		 r, any = 0;
+	struct address *vaddr;
+	struct vhost *h;
+	int r, any = 0;
 
-	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
-		TAILQ_FOREACH(vaddr, &h->addrs, addrs) {
+	TAILQ_FOREACH(h, &conf->hosts, vhosts)
+	{
+		TAILQ_FOREACH(vaddr, &h->addrs, addrs)
+		{
 			if (!match_addr(addr, vaddr))
 				continue;
 
-			if (!any) {
+			if (!any)
+			{
 				any = 1;
 				r = tls_config_set_keypair_ocsp_mem(tlsconf,
-				    h->cert, h->certlen, h->key, h->keylen,
-				    h->ocsp, h->ocsplen);
-			} else {
+													h->cert, h->certlen, h->key, h->keylen,
+													h->ocsp, h->ocsplen);
+			}
+			else
+			{
 				r = tls_config_add_keypair_ocsp_mem(tlsconf,
-				    h->cert, h->certlen, h->key, h->keylen,
-				    h->ocsp, h->ocsplen);
+													h->cert, h->certlen, h->key, h->keylen,
+													h->ocsp, h->ocsplen);
 			}
 
 			if (r == -1)
 				fatalx("failed to load keypair"
-				    " for host %s: %s", h->domain,
-				    tls_config_error(tlsconf));
+					   " for host %s: %s",
+					   h->domain,
+					   tls_config_error(tlsconf));
 		}
 	}
 }
@@ -1375,10 +1525,11 @@ add_matching_kps(struct tls_config *tlsconf, struct address *addr,
 static void
 setup_tls(struct conf *conf)
 {
-	struct tls_config	*tlsconf;
-	struct address		*addr;
+	struct tls_config *tlsconf;
+	struct address *addr;
 
-	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
+	TAILQ_FOREACH(addr, &conf->addrs, addrs)
+	{
 		if ((tlsconf = tls_config_new()) == NULL)
 			fatal("tls_config_new");
 
@@ -1391,7 +1542,7 @@ setup_tls(struct conf *conf)
 
 		if (tls_config_set_protocols(tlsconf, conf->protos) == -1)
 			fatalx("tls_config_set_protocols: %s",
-			    tls_config_error(tlsconf));
+				   tls_config_error(tlsconf));
 
 		add_matching_kps(tlsconf, addr, conf);
 
@@ -1406,21 +1557,24 @@ setup_tls(struct conf *conf)
 static void
 load_vhosts(struct conf *conf)
 {
-	struct vhost	*h;
-	struct location	*l;
-	char		 path[PATH_MAX], *p;
-	int		 r;
+	struct vhost *h;
+	struct location *l;
+	char path[PATH_MAX], *p;
+	int r;
 
-	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
-		TAILQ_FOREACH(l, &h->locations, locations) {
+	TAILQ_FOREACH(h, &conf->hosts, vhosts)
+	{
+		TAILQ_FOREACH(l, &h->locations, locations)
+		{
 			if (*l->dir == '\0')
 				continue;
 
 			p = l->dir;
 
-			if (conf->conftest && *conf->chroot != '\0') {
+			if (conf->conftest && *conf->chroot != '\0')
+			{
 				r = snprintf(path, sizeof(path), "%s/%s",
-				    conf->chroot, l->dir);
+							 conf->chroot, l->dir);
 				if (r < 0 || (size_t)r >= sizeof(path))
 					fatalx("path too long: %s", l->dir);
 				p = path;
@@ -1429,19 +1583,17 @@ load_vhosts(struct conf *conf)
 			l->dirfd = open(p, O_RDONLY | O_DIRECTORY);
 			if (l->dirfd == -1)
 				fatal("open %s for domain %s", l->dir,
-				    h->domain);
+					  h->domain);
 		}
 	}
 }
 
-void
-server(struct privsep *ps, struct privsep_proc *p)
+void server(struct privsep *ps, struct privsep_proc *p)
 {
 	proc_run(ps, p, procs, nitems(procs), server_init, NULL);
 }
 
-void
-server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
+void server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 {
 	struct conf *c;
 
@@ -1460,15 +1612,15 @@ server_init(struct privsep *ps, struct privsep_proc *p, void *arg)
 	 * gemexp doesn't use the privsep crypto engine; it doesn't
 	 * use privsep at all so `ps' is NULL.
 	 */
-	if (ps != NULL) {
+	if (ps != NULL)
+	{
 		c = ps->ps_env;
 		if (c->use_privsep_crypto)
 			crypto_engine_init(ps->ps_env);
 	}
 }
 
-int
-server_configure_done(struct conf *conf)
+int server_configure_done(struct conf *conf)
 {
 	struct address *addr;
 
@@ -1478,7 +1630,8 @@ server_configure_done(struct conf *conf)
 	setup_tls(conf);
 	load_vhosts(conf);
 
-	TAILQ_FOREACH(addr, &conf->addrs, addrs) {
+	TAILQ_FOREACH(addr, &conf->addrs, addrs)
+	{
 		if (addr->sock != -1)
 			event_add(&addr->evsock, NULL);
 	}
@@ -1489,10 +1642,11 @@ server_configure_done(struct conf *conf)
 static int
 server_dispatch_parent(int fd, struct privsep_proc *p, struct imsg *imsg)
 {
-	struct privsep	*ps = p->p_ps;
-	struct conf	*conf = ps->ps_env;
+	struct privsep *ps = p->p_ps;
+	struct conf *conf = ps->ps_env;
 
-	switch (imsg_get_type(imsg)) {
+	switch (imsg_get_type(imsg))
+	{
 	case IMSG_RECONF_START:
 	case IMSG_RECONF_LOG_FMT:
 	case IMSG_RECONF_MIME:
@@ -1536,8 +1690,7 @@ server_dispatch_logger(int fd, struct privsep_proc *p, struct imsg *imsg)
 	return -1;
 }
 
-int
-client_tree_cmp(struct client *a, struct client *b)
+int client_tree_cmp(struct client *a, struct client *b)
 {
 	if (a->id == b->id)
 		return 0;

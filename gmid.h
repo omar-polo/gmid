@@ -281,9 +281,18 @@ enum {
 	REQUEST_DONE,
 };
 
+#define DEFAULT_BUFLAYER_SIZE 512
+
+struct buflayer
+{
+	char *data;
+	size_t size, capacity;
+};
+
 struct client {
 	struct conf	*conf;
 	struct address	*addr;
+	struct buflayer *buf;
 	uint32_t	 id;
 	struct tls	*ctx;
 	char		*req;
@@ -469,5 +478,10 @@ EVP_PKEY	*ssl_load_pkey(const uint8_t *, size_t);
 struct vhost	*new_vhost(void);
 struct location	*new_location(void);
 struct proxy	*new_proxy(void);
+
+/* buflayer.c */
+void buflayer_free(struct buflayer *b);
+struct buflayer *buflayer_expand(struct buflayer *b, size_t n_bytes);
+struct buflayer *buflayer_create(size_t n_bytes);
 
 #endif
