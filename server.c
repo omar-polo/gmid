@@ -1375,17 +1375,26 @@ static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	struct client *c = cb_arg;
 
 	if (NULL == c->buf) {
-		return read(c->fd, buf, buflen);
+		errno = 0;
+		ssize_t ret = read(c->fd, buf, buflen);
+		if (-1 == ret && errno == EWOULDBLOCK) {
+			ret = TLS_WANT_POLLIN;
+		}
+		return ret;
 	}
 
 	// buffer layer exists, we expect proxy protocol
 	static const char crlf[] = { '\r', '\n' };
-	size_t n_read = read(
+	errno = 0;
+	ssize_t n_read = read(
 		c->fd, 
 		&c->buf->data[c->buf->size], 
 		c->buf->capacity - c->buf->size
 	);
-
+	if (-1 == n_read && errno == EWOULDBLOCK) {
+		return TLS_WANT_POLLIN;
+	}
+	
 	char *needle = memmem(
 		&c->buf->data[c->buf->size],
 		n_read,
@@ -1407,9 +1416,8 @@ static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		}
 		
 		buflayer_free(c->buf);
-	}
-
-	if (c->buf->size == c->buf->capacity) {
+		c->buf = NULL;
+	} else if (c->buf->size == c->buf->capacity) {
 		c->buf = buflayer_expand(c->buf, 2 * c->buf->capacity);
 	}
 
