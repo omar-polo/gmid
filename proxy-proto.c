@@ -2,6 +2,7 @@
 
 #include <ctype.h>
 #include <string.h>
+#include <assert.h>
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
@@ -23,47 +24,49 @@ consume_token(
 }
 
 static int 
-check_prefix_v1(const char **buf, size_t *buflen, size_t *consumed)
+check_prefix_v1(const char **buf, size_t *buflen)
 {
     static const char PROXY[6] = "PROXY ";
 
-    const char *found = consume_token(*buf, *buflen, PROXY, 6, consumed);
+    size_t consumed;
+    const char *found = consume_token(*buf, *buflen, PROXY, 6, &consumed);
     if (NULL == found) 
     {
-        return 0 == *consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
+        return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
     }
 
-    if (*consumed < 6)
+    if (consumed < 6)
         return PROXY_PROTO_PARSE_AGAIN;
 
-    *buf += *consumed;
-    *buflen -= *consumed;
+    *buf += consumed;
+    *buflen -= consumed;
 
     return PROXY_PROTO_PARSE_SUCCESS;
 }
 
 static int
-check_proto_v1(const char **buf, size_t *buflen, size_t *consumed)
+check_proto_v1(const char **buf, size_t *buflen)
 {
     static const char TCP[3] = "TCP";
 
-    const char *found = consume_token(*buf, *buflen, TCP, 3, consumed);
+    size_t consumed;
+    const char *found = consume_token(*buf, *buflen, TCP, 3, &consumed);
     if (NULL == found)
     {
-        return 0 == *consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
+        return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
     }
     
-    if (*consumed < 3)
+    if (consumed < 3)
         return PROXY_PROTO_PARSE_AGAIN;
 
-    if (*buflen - *consumed < 2)
+    if (*buflen - consumed < 2)
         return PROXY_PROTO_PARSE_AGAIN;
 
     if (' ' != (*buf)[4])
         return PROXY_PROTO_PARSE_FAIL;
 
-    *buf += *consumed;
-    *buflen -= *consumed;
+    *buf += consumed;
+    *buflen -= consumed;
 
     int type;
     switch ((*buf)[0]) {
@@ -72,6 +75,7 @@ check_proto_v1(const char **buf, size_t *buflen, size_t *consumed)
         default: return PROXY_PROTO_PARSE_FAIL;
     }
 
+    // '4' / '6' + ' '
     *buf += 2;
     *buflen -= 2;
 
@@ -79,21 +83,22 @@ check_proto_v1(const char **buf, size_t *buflen, size_t *consumed)
 }
 
 static int
-check_unknown_v1(const char **buf, size_t *buflen, size_t *consumed)
+check_unknown_v1(const char **buf, size_t *buflen)
 {
     static const char UNKNOWN[7] = "UNKNOWN";
 
-    const char *found = consume_token(*buf, *buflen, UNKNOWN, 7, consumed);
+    size_t consumed;
+    const char *found = consume_token(*buf, *buflen, UNKNOWN, 7, &consumed);
     if (NULL == found)
     {
-        return 0 == *consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
+        return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
     }
 
-    if (*consumed < 7)
+    if (consumed < 7)
         return PROXY_PROTO_PARSE_AGAIN;
 
-    *buf += *consumed;
-    *buflen -= *consumed;
+    *buf += consumed;
+    *buflen -= consumed;
 
     return PROXY_PROTO_PARSE_SUCCESS;
 }
@@ -104,7 +109,6 @@ check_crlf_v1(const char **buf, size_t buflen)
     static const char CRLF[2] = "\r\n";
 
     size_t consumed = 0;
-
     const char *found = consume_token(*buf, buflen, CRLF, 2, &consumed);
     if (NULL == found)
     {
@@ -123,7 +127,7 @@ check_crlf_v1(const char **buf, size_t buflen)
 }
 
 static int
-check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen, size_t *consumed)
+check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen)
 {
     int n_dots = 0, digits_after_last_dot = 0;
     int addrlen = -1;
@@ -164,16 +168,17 @@ check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen, size_t *co
     if (*buflen < addrlen + 2)
         return PROXY_PROTO_PARSE_FAIL;
 
-    *consumed = addrlen + 1; // + space after addr
-    *buf += *consumed;
-    *buflen -= *consumed;
+    *buf += addrlen + 1;
+    *buflen -= addrlen + 1;
 
     return PROXY_PROTO_PARSE_SUCCESS;
 }
 
 static int
-check_ipv6_v1(struct in6_addr *addr, const char **buf, size_t *buflen, size_t *consumed)
+check_ipv6_v1(struct in6_addr *addr, const char **buf, size_t *buflen)
 {
+    assert(("TODO", 0));
+
     int ret = inet_pton(AF_INET6, *buf, addr);
 
     if (1 != ret)
@@ -181,6 +186,7 @@ check_ipv6_v1(struct in6_addr *addr, const char **buf, size_t *buflen, size_t *c
         return PROXY_PROTO_PARSE_AGAIN;
     }
 
+    size_t consumed;
     int seen_colon = 0;
     for (size_t i = 0; i < *buflen; ++i)
     {
@@ -190,18 +196,18 @@ check_ipv6_v1(struct in6_addr *addr, const char **buf, size_t *buflen, size_t *c
         }
         if (seen_colon && ' ' == (*buf)[i])
         {
-            *consumed = i;
+            consumed = i;
             break;
         }
     }
 
-    *buf += *consumed;
-    *buflen -= *consumed;
+    *buf += consumed;
+    *buflen -= consumed;
 
     return PROXY_PROTO_PARSE_SUCCESS;
 }
 
-static int check_port_v1(uint16_t *port, const char **buf, size_t *buflen, size_t *consumed)
+static int check_port_v1(uint16_t *port, const char **buf, size_t *buflen)
 {
     char *end;
     errno = 0;
@@ -212,39 +218,32 @@ static int check_port_v1(uint16_t *port, const char **buf, size_t *buflen, size_
     }
     *port = (uint16_t)num;
     *buflen -= end - *buf;
-    *consumed += end - *buf;
     *buf = end;
     return PROXY_PROTO_PARSE_SUCCESS;
 }
 
-int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t buflen, size_t *consumed_total)
+int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t buflen, size_t *consumed)
 {
     const char *begin = buf;
-    size_t consumed = 0;
-    int proxy = check_prefix_v1(&buf, &buflen, &consumed);
+    int proxy = check_prefix_v1(&buf, &buflen);
     if (PROXY_PROTO_PARSE_SUCCESS != proxy)
         return proxy;
-
-    //consumed_acc += consumed;
     
-    int proto = check_proto_v1(&buf, &buflen, &consumed);
+    int proto = check_proto_v1(&buf, &buflen);
     switch (proto) 
     {
         case 4: s->proto = PROTO_V4; break;
         case 6: s->proto = PROTO_V6; break;
         case PROXY_PROTO_PARSE_FAIL:
         {
-            int unknown = check_unknown_v1(&buf, &buflen, &consumed);
+            int unknown = check_unknown_v1(&buf, &buflen);
             if (PROXY_PROTO_PARSE_SUCCESS != unknown)
                 return unknown;
-
-            //consumed_acc += consumed;
 
             int crlf = check_crlf_v1(&buf, buflen);
             if (PROXY_PROTO_PARSE_SUCCESS == crlf) 
             {
-                //*consumed_total = (consumed_acc += consumed);
-                *consumed_total = buf - begin;
+                *consumed = buf - begin;
                 s->proto = PROTO_UNKNOWN;
             }
             return crlf;
@@ -252,62 +251,49 @@ int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t bu
         default: return proto;
     }
 
-    //consumed_acc += consumed;
-
     switch (s->proto)
     {
         case PROTO_V4: {
             
-            int srcaddr = check_ipv4_v1(&s->srcaddr.v4, &buf, &buflen, &consumed);
+            int srcaddr = check_ipv4_v1(&s->srcaddr.v4, &buf, &buflen);
             if (PROXY_PROTO_PARSE_SUCCESS != srcaddr)
                 return srcaddr;
 
-            //consumed_acc += consumed;
-
-            int dstaddr = check_ipv4_v1(&s->dstaddr.v4, &buf, &buflen, &consumed);
+            int dstaddr = check_ipv4_v1(&s->dstaddr.v4, &buf, &buflen);
             if (PROXY_PROTO_PARSE_SUCCESS != dstaddr)
                 return srcaddr;
-
-            //consumed_acc += consumed;
 
         } break;
 
         case PROTO_V6: {
 
-            int srcaddr = check_ipv6_v1(&s->srcaddr.v6, &buf, &buflen, &consumed);
+            int srcaddr = check_ipv6_v1(&s->srcaddr.v6, &buf, &buflen);
             if (PROXY_PROTO_PARSE_SUCCESS != srcaddr)
                 return srcaddr;
 
-            //consumed_acc += consumed;
-
-            int dstaddr = check_ipv6_v1(&s->dstaddr.v6, &buf, &buflen, &consumed);
+            int dstaddr = check_ipv6_v1(&s->dstaddr.v6, &buf, &buflen);
             if (PROXY_PROTO_PARSE_SUCCESS != dstaddr)
                 return dstaddr;
-
-            //consumed_acc += consumed;
 
         } break;
     }
 
-    int srcport = check_port_v1(&s->srcport, &buf, &buflen, &consumed);
+    int srcport = check_port_v1(&s->srcport, &buf, &buflen);
     if (PROXY_PROTO_PARSE_SUCCESS != srcport || ' ' != *buf)
         return srcport;
 
     // check_port_v1 does not consume additional char
     // so we need to manually increment by one
     buf += 1;
-    //consumed_acc += consumed + 1;
 
-    int dstport = check_port_v1(&s->dstport, &buf, &buflen, &consumed);
+    int dstport = check_port_v1(&s->dstport, &buf, &buflen);
     if (PROXY_PROTO_PARSE_SUCCESS != dstport)
         return dstport;
-
-    //consumed_acc += consumed;
 
     int crlf = check_crlf_v1(&buf, buflen);
     if (PROXY_PROTO_PARSE_SUCCESS != crlf)
         return crlf;
 
-    *consumed_total = buf - begin;
+    *consumed = buf - begin;
     return PROXY_PROTO_PARSE_SUCCESS;
 }
