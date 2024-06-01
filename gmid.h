@@ -296,7 +296,7 @@ struct proxy_protocol_v1 {
 	uint16_t srcport, dstport;
 };
 
-#define DEFAULT_BUFLAYER_SIZE 8
+#define DEFAULT_BUFLAYER_SIZE 128
 
 struct buflayer
 {
@@ -505,5 +505,6 @@ struct buflayer *buflayer_create(size_t n_bytes);
 #define PROXY_PROTO_PARSE_SUCCESS 0
 #define PROXY_PROTO_PARSE_AGAIN 1
 int proxy_proto_v1_parse(struct proxy_protocol_v1 *, const char *, size_t, size_t *);
+int proxy_proto_v1_string(const struct proxy_protocol_v1 *, char*, size_t);
 
 #endif

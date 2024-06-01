@@ -207,7 +207,8 @@ check_ipv6_v1(struct in6_addr *addr, const char **buf, size_t *buflen)
     return PROXY_PROTO_PARSE_SUCCESS;
 }
 
-static int check_port_v1(uint16_t *port, const char **buf, size_t *buflen)
+static int
+check_port_v1(uint16_t *port, const char **buf, size_t *buflen)
 {
     char *end;
     errno = 0;
@@ -276,6 +277,8 @@ int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t bu
                 return dstaddr;
 
         } break;
+
+        default: assert(("unimplemented", 0));
     }
 
     int srcport = check_port_v1(&s->srcport, &buf, &buflen);
@@ -296,4 +299,39 @@ int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t bu
 
     *consumed = buf - begin;
     return PROXY_PROTO_PARSE_SUCCESS;
+}
+
+int 
+proxy_proto_v1_string(const struct proxy_protocol_v1 *s, char* buf, size_t buflen)
+{
+    // "0000:0000:0000:0000:0000:0000:0000:0000\0"
+    char srcaddrbuf[40], dstaddrbuf[40];
+    int ret;
+    switch (s->proto)
+    {
+        case PROTO_UNKNOWN: ret = snprintf(buf, buflen, "unknown"); goto fin;
+        case PROTO_V4: {
+            inet_ntop(AF_INET, &s->srcaddr.v4, srcaddrbuf, 39);
+            inet_ntop(AF_INET, &s->dstaddr.v4, dstaddrbuf, 39);
+        } break;
+        case PROTO_V6: {
+            inet_ntop(AF_INET6, &s->srcaddr.v6, srcaddrbuf, 39);
+            inet_ntop(AF_INET6, &s->dstaddr.v6, dstaddrbuf, 39);
+        } break;
+    }
+
+    srcaddrbuf[39] = dstaddrbuf[39] = '\0';
+
+    ret = snprintf(
+        buf,
+        buflen,
+        "from %s port %u via %s port %u",
+        srcaddrbuf,
+        s->srcport,
+        dstaddrbuf,
+        s->dstport
+    );
+
+fin:
+    return ret;
 }

@@ -1403,55 +1403,40 @@ static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	if (-1 == n_read && errno == EWOULDBLOCK) {
 		return TLS_WANT_POLLIN;
 	}
-	
-	// ----
-	static const char crlf[] = { '\r', '\n' };
-	char *needle = memmem(
-		&c->buf->data[c->buf->len],
-		n_read,
-		crlf,
-		sizeof(crlf)
-	);
-	// ----
 
 	c->buf->len += n_read;
 
-	if (NULL != needle) {
-		// ----
-		size_t header_len = (needle - c->buf->data) + sizeof(crlf);
-		// ----
+	struct proxy_protocol_v1 pp1 = {0};
+	size_t consumed = 0;
+	
+	int parse_status = proxy_proto_v1_parse(&pp1, c->buf->data, c->buf->len, &consumed);
+	switch (parse_status)
+	{
+		case PROXY_PROTO_PARSE_AGAIN: {
+			if (c->buf->len == c->buf->capacity) 
+				buflayer_expand(c->buf, 2 * c->buf->capacity);
 
-		printf("%*.s", header_len, c->buf->data);
-
-		struct proxy_protocol_v1 pp1 = {0};
-		size_t consumed = 0;
-		
-		int parse_status = proxy_proto_v1_parse(&pp1, c->buf->data, c->buf->len, &consumed);
-		switch (parse_status) {
-			case PROXY_PROTO_PARSE_AGAIN: return TLS_WANT_POLLIN;
-			case PROXY_PROTO_PARSE_FAIL: {
-				header_len = 0;
-				fprintf(stderr, "Parse fail\n");
-			} break;
+			return TLS_WANT_POLLIN;
 		}
-		
-
-		assert(consumed == header_len);
-
-		if (consumed < c->buf->len) {
-			size_t left = c->buf->len - consumed;
-			size_t copy_len = MINIMUM(left, buflen);
-			memcpy(buf, &c->buf->data[header_len], copy_len);
-			c->buf->has_tail = left != copy_len;
-			c->buf->read_pos += copy_len;
-			return copy_len;
-		}
-		
-		buflayer_free(c->buf);
-		c->buf = NULL;
-	} else if (c->buf->len == c->buf->capacity) {
-		buflayer_expand(c->buf, 2 * c->buf->capacity);
+		case PROXY_PROTO_PARSE_SUCCESS: {
+			char protostr[1024];
+			proxy_proto_v1_string(&pp1, protostr, 1024);
+			printf("%s\n", protostr);
+			c->buf->read_pos += consumed;
+		} break;
 	}
+
+	if (consumed < c->buf->len) {
+		size_t left = c->buf->len - consumed;
+		size_t copy_len = MINIMUM(left, buflen);
+		memcpy(buf, &c->buf->data[consumed], copy_len);
+		c->buf->has_tail = left != copy_len;
+		c->buf->read_pos += copy_len;
+		return copy_len;
+	}
+	
+	buflayer_free(c->buf);
+	c->buf = NULL;
 
 	return TLS_WANT_POLLIN;
 }
