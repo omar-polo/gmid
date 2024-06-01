@@ -281,12 +281,28 @@ enum {
 	REQUEST_DONE,
 };
 
-#define DEFAULT_BUFLAYER_SIZE 512
+enum proto {
+	PROTO_V4,
+	PROTO_V6,
+	PROTO_UNKNOWN,
+};
+
+struct proxy_protocol_v1 {
+	enum proto proto;
+	union {
+		struct in_addr v4;
+		struct in6_addr v6;
+	} srcaddr, dstaddr;
+	uint16_t srcport, dstport;
+};
+
+#define DEFAULT_BUFLAYER_SIZE 8
 
 struct buflayer
 {
 	char *data;
-	size_t size, capacity;
+	size_t len, capacity, read_pos;
+	int has_tail;
 };
 
 struct client {
@@ -481,7 +497,13 @@ struct proxy	*new_proxy(void);
 
 /* buflayer.c */
 void buflayer_free(struct buflayer *b);
-struct buflayer *buflayer_expand(struct buflayer *b, size_t n_bytes);
+void buflayer_expand(struct buflayer *b, size_t n_bytes);
 struct buflayer *buflayer_create(size_t n_bytes);
+
+/* proxy-proto.c */
+#define PROXY_PROTO_PARSE_FAIL -1
+#define PROXY_PROTO_PARSE_SUCCESS 0
+#define PROXY_PROTO_PARSE_AGAIN 1
+int proxy_proto_v1_parse(struct proxy_protocol_v1 *, const char *, size_t, size_t *);
 
 #endif

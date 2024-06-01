@@ -1363,18 +1363,12 @@ void client_close(struct client *c)
 	client_close_ev(c->fd, 0, c);
 }
 
-static void parse_proxy_protocol_v1(const char *line, size_t len)
-{
-	assert( 0 < len );
-
-	printf("%.*s", (int)len, line);
-}
-
 static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 {
 	struct client *c = cb_arg;
 
 	if (NULL == c->buf) {
+		// no buffer to cache into, pass it to libtls
 		errno = 0;
 		ssize_t ret = read(c->fd, buf, buflen);
 		if (-1 == ret && errno == EWOULDBLOCK) {
@@ -1383,42 +1377,80 @@ static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		return ret;
 	}
 
+	if (c->buf->has_tail) {
+		// some leftover data that wasn't copied
+		size_t left = c->buf->len - c->buf->read_pos;
+		size_t copy_len = MINIMUM(buflen, left);
+		memcpy(buf, &c->buf->data[c->buf->read_pos], copy_len);
+
+		c->buf->read_pos += copy_len;
+
+		if (left == copy_len) {
+			buflayer_free(c->buf);
+			c->buf = NULL;
+		}
+		
+		return copy_len;
+	}
+
 	// buffer layer exists, we expect proxy protocol
-	static const char crlf[] = { '\r', '\n' };
 	errno = 0;
 	ssize_t n_read = read(
 		c->fd, 
-		&c->buf->data[c->buf->size], 
-		c->buf->capacity - c->buf->size
+		&c->buf->data[c->buf->len], 
+		c->buf->capacity - c->buf->len
 	);
 	if (-1 == n_read && errno == EWOULDBLOCK) {
 		return TLS_WANT_POLLIN;
 	}
 	
+	// ----
+	static const char crlf[] = { '\r', '\n' };
 	char *needle = memmem(
-		&c->buf->data[c->buf->size],
+		&c->buf->data[c->buf->len],
 		n_read,
 		crlf,
 		sizeof(crlf)
 	);
+	// ----
 
-	c->buf->size += n_read;
+	c->buf->len += n_read;
 
 	if (NULL != needle) {
+		// ----
 		size_t header_len = (needle - c->buf->data) + sizeof(crlf);
+		// ----
 
-		parse_proxy_protocol_v1(c->buf->data, header_len);
+		printf("%*.s", header_len, c->buf->data);
 
-		if (header_len < c->buf->size) {
-			size_t n_copy = MINIMUM(c->buf->size - header_len, buflen);
-			memcpy(buf, &c->buf->data[header_len], n_copy);
-			return n_copy;
+		struct proxy_protocol_v1 pp1 = {0};
+		size_t consumed = 0;
+		
+		int parse_status = proxy_proto_v1_parse(&pp1, c->buf->data, c->buf->len, &consumed);
+		switch (parse_status) {
+			case PROXY_PROTO_PARSE_AGAIN: return TLS_WANT_POLLIN;
+			case PROXY_PROTO_PARSE_FAIL: {
+				header_len = 0;
+				fprintf(stderr, "Parse fail\n");
+			} break;
+		}
+		
+
+		assert(consumed == header_len);
+
+		if (consumed < c->buf->len) {
+			size_t left = c->buf->len - consumed;
+			size_t copy_len = MINIMUM(left, buflen);
+			memcpy(buf, &c->buf->data[header_len], copy_len);
+			c->buf->has_tail = left != copy_len;
+			c->buf->read_pos += copy_len;
+			return copy_len;
 		}
 		
 		buflayer_free(c->buf);
 		c->buf = NULL;
-	} else if (c->buf->size == c->buf->capacity) {
-		c->buf = buflayer_expand(c->buf, 2 * c->buf->capacity);
+	} else if (c->buf->len == c->buf->capacity) {
+		buflayer_expand(c->buf, 2 * c->buf->capacity);
 	}
 
 	return TLS_WANT_POLLIN;
