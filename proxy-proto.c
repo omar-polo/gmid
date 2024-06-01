@@ -129,8 +129,8 @@ check_crlf_v1(const char **buf, size_t buflen)
 static int
 check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen)
 {
-    int n_dots = 0, digits_after_last_dot = 0;
-    int addrlen = -1;
+    size_t n_dots = 0, digits_after_last_dot = 0;
+    ssize_t addrlen = -1;
     for (size_t i = 0; i < *buflen && i < 15; ++i)
     {
         if ('.' == (*buf)[i]) 
@@ -152,20 +152,17 @@ check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen)
         }
     }
 
-    if (digits_after_last_dot < 1 || 
-        3 < digits_after_last_dot || 
-        addrlen < 7 || 
-        ' ' != (*buf)[addrlen])
+    if (3 != n_dots || digits_after_last_dot < 1)
+        return PROXY_PROTO_PARSE_AGAIN;
+
+    if (3 < digits_after_last_dot || addrlen < 7)
         return PROXY_PROTO_PARSE_FAIL;
 
-    char addrbuf[addrlen + 1]; // null 
+    char addrbuf[addrlen + 1];
     memcpy(addrbuf, *buf, addrlen);
     addrbuf[addrlen] = '\0'; 
 
     if (1 != inet_pton(AF_INET, addrbuf, addr))
-        return PROXY_PROTO_PARSE_FAIL;
-
-    if (*buflen < addrlen + 2)
         return PROXY_PROTO_PARSE_FAIL;
 
     *buf += addrlen + 1;
@@ -177,32 +174,33 @@ check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen)
 static int
 check_ipv6_v1(struct in6_addr *addr, const char **buf, size_t *buflen)
 {
-    assert(("TODO", 0));
-
-    int ret = inet_pton(AF_INET6, *buf, addr);
-
-    if (1 != ret)
-    {
-        return PROXY_PROTO_PARSE_AGAIN;
-    }
-
-    size_t consumed;
-    int seen_colon = 0;
-    for (size_t i = 0; i < *buflen; ++i)
+    size_t n_colons = 0;
+    ssize_t addrlen = -1;
+    for (size_t i = 0; i < *buflen && i < 39; ++i)
     {
         if (':' == (*buf)[i])
         {
-            seen_colon = 1;
+            n_colons++;
         }
-        if (seen_colon && ' ' == (*buf)[i])
+        else if (2 <= n_colons && ' ' == (*buf)[i]) 
         {
-            consumed = i;
+            addrlen = i;
             break;
         }
     }
 
-    *buf += consumed;
-    *buflen -= consumed;
+    if (addrlen < 2)
+        return PROXY_PROTO_PARSE_AGAIN;
+
+    char addrbuf[addrlen + 1];
+    memcpy(addrbuf, *buf, addrlen);
+    addrbuf[addrlen] = '\0';
+
+    if (1 != inet_pton(AF_INET6, addrbuf, addr))
+        return PROXY_PROTO_PARSE_FAIL;
+
+    *buf += addrlen + 1;
+    *buflen -= addrlen + 1;
 
     return PROXY_PROTO_PARSE_SUCCESS;
 }
@@ -262,7 +260,7 @@ int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t bu
 
             int dstaddr = check_ipv4_v1(&s->dstaddr.v4, &buf, &buflen);
             if (PROXY_PROTO_PARSE_SUCCESS != dstaddr)
-                return srcaddr;
+                return dstaddr;
 
         } break;
 
@@ -282,11 +280,11 @@ int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t bu
     }
 
     int srcport = check_port_v1(&s->srcport, &buf, &buflen);
-    if (PROXY_PROTO_PARSE_SUCCESS != srcport || ' ' != *buf)
+    if (PROXY_PROTO_PARSE_SUCCESS != srcport)
         return srcport;
 
-    // check_port_v1 does not consume additional char
-    // so we need to manually increment by one
+    if (' ' != *buf)
+        return PROXY_PROTO_PARSE_AGAIN;
     buf += 1;
 
     int dstport = check_port_v1(&s->dstport, &buf, &buflen);
