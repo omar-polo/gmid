@@ -14,13 +14,13 @@ consume_token(
     size_t tokenlen, 
     size_t *consumed_len
 ) {
+    // buflen may be smaller than tokenlen
+    // in that case, compare until end of buf
     size_t checklen = MIN(buflen, tokenlen);
-    const char *found = memmem(buf, buflen, token, checklen);
-    if (NULL == found)
-        return NULL;
     if (NULL != consumed_len)
         *consumed_len = checklen;
-    return found;
+
+    return memmem(buf, buflen, token, checklen);
 }
 
 static int 
@@ -30,7 +30,7 @@ check_prefix_v1(const char **buf, size_t *buflen)
 
     size_t consumed;
     const char *found = consume_token(*buf, *buflen, PROXY, 6, &consumed);
-    if (NULL == found) 
+    if (NULL == found)
     {
         return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
     }
@@ -111,9 +111,7 @@ check_crlf_v1(const char **buf, size_t buflen)
     size_t consumed = 0;
     const char *found = consume_token(*buf, buflen, CRLF, 2, &consumed);
     if (NULL == found)
-    {
-        return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
-    }
+        return PROXY_PROTO_PARSE_AGAIN;
 
     if (consumed < 2)
         return PROXY_PROTO_PARSE_AGAIN;

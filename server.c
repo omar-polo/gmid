@@ -1368,17 +1368,17 @@ static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	struct client *c = cb_arg;
 
 	if (NULL == c->buf) {
-		// no buffer to cache into, pass it to libtls
+		// no buffer to cache into, read into libtls buffer
 		errno = 0;
 		ssize_t ret = read(c->fd, buf, buflen);
-		if (-1 == ret && errno == EWOULDBLOCK) {
+		if (-1 == ret && errno == EWOULDBLOCK)
 			ret = TLS_WANT_POLLIN;
-		}
+		
 		return ret;
 	}
 
 	if (c->buf->has_tail) {
-		// some leftover data that wasn't copied
+		// we have leftover data from a previous call to read_cb
 		size_t left = c->buf->len - c->buf->read_pos;
 		size_t copy_len = MINIMUM(buflen, left);
 		memcpy(buf, &c->buf->data[c->buf->read_pos], copy_len);
@@ -1400,9 +1400,8 @@ static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		&c->buf->data[c->buf->len], 
 		c->buf->capacity - c->buf->len
 	);
-	if (-1 == n_read && errno == EWOULDBLOCK) {
+	if (-1 == n_read && errno == EWOULDBLOCK)
 		return TLS_WANT_POLLIN;
-	}
 
 	c->buf->len += n_read;
 
@@ -1422,22 +1421,19 @@ static ssize_t read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 			char protostr[1024];
 			proxy_proto_v1_string(&pp1, protostr, 1024);
 			printf("%s\n", protostr);
-			c->buf->read_pos += consumed;
 		} break;
 	}
 
 	if (consumed < c->buf->len) {
-		size_t left = c->buf->len - consumed;
-		size_t copy_len = MINIMUM(left, buflen);
-		memcpy(buf, &c->buf->data[consumed], copy_len);
-		c->buf->has_tail = left != copy_len;
-		c->buf->read_pos += copy_len;
-		return copy_len;
+		// we have some leftover
+		c->buf->read_pos = consumed;
+		c->buf->has_tail = 1;
+	} else {
+		// we consumed the whole buffer
+		buflayer_free(c->buf);
+		c->buf = NULL;
 	}
 	
-	buflayer_free(c->buf);
-	c->buf = NULL;
-
 	return TLS_WANT_POLLIN;
 }
 
