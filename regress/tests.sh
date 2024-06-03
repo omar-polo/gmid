@@ -292,6 +292,35 @@ test_fastcgi_inside_location() {
 	return 0
 }
 
+test_fastcgi_location_match() {
+	./fcgi-test fcgi.sock &
+	fcgi_pid=$!
+
+	setup_simple_test 'prefork 1' '
+	location "/dir/*" {
+		fastcgi off
+	}
+	location "/*" {
+		fastcgi socket "'$PWD'/fcgi.sock"
+	}'
+
+	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
+	fetch /foo
+	if ! check_reply "20 text/gemini" "$msg"; then
+		kill $fcgi_pid
+		return 1
+	fi
+
+	fetch /dir/foo.gmi
+	if ! check_reply "20 text/gemini" "# hello world"; then
+		kill $fcgi_pid
+		return 1
+	fi
+
+	kill $fcgi_pid
+	return 0
+}
+
 test_fastcgi_deprecated_syntax() {
 	./fcgi-test fcgi.sock &
 	fcgi_pid=$!
