@@ -1,3 +1,25 @@
+2024-06-04  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.0.3
+
+2024-06-03  Omar Polo  <op@omarpolo.com>
+
+	* server.c (vhost_fastcgi): fix `fastcgi off' handling.
+	Reported by Alex // nytpu
+
+2024-05-29  Omar Polo  <op@omarpolo.com>
+
+	* server.c (handle_handshake): relax the SNI requirement.  There are
+	legitimate use-cases where SNI can't be used, like connecting to a
+	raw IPv6 address.
+	* gg.c (main): add -q to avoid printing "Server Says:"
+	* gg.c (main): unbreak -n
+	* iri.c (parse_authority): add support for raw IPv6 addresses
+
+2024-04-04  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.0.2
+
 2024-04-03  Omar Polo  <op@omarpolo.com>
 
 	* configure: improve function checking in the configure
