@@ -1,5 +1,13 @@
 # change log
 
+## 2024/06/04 - 2.0.3 “Lady Stardust” bugfix release
+
+* relax the SNI requirements
+* gg: add -q to avoid printing the "Server Says:" line
+* gg: unbreak -n
+* fix parsing of IPv6 addresses
+* fix `fastcgi off' handling
+
 ## 2024/04/04 - 2.0.2 “Lady Stardust” bugfix release
 
 - fix `log access path' with `chroot' enabled.
