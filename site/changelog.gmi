@@ -10,11 +10,11 @@
 
 ## 2024/04/04 - 2.0.2 “Lady Stardust” bugfix release
 
-- fix `log access path' with `chroot' enabled.
-- fix config dumping (-nn).
-- rework grammar to allow semicolons after top-level statements.
-- don't make the log styles reserved keywords.
-- contrib/vim: fixed indent, from Anna “CyberTailor”, thanks!
+* fix `log access path' with `chroot' enabled.
+* fix config dumping (-nn).
+* rework grammar to allow semicolons after top-level statements.
+* don't make the log styles reserved keywords.
+* contrib/vim: fixed indent, from Anna “CyberTailor”, thanks!
 
 ## 2024/01/24 - 2.0.1 “Lady Stardust” bugfix release
 
