@@ -21,7 +21,7 @@ REPOLOGY_URL =		https://repology.org/project/gmid/versions
 
 SUBST =		./subst GITHUB=https://github.com/omar-polo/gmid \
 			SITE=https://ftp.omarpolo.com \
-			VERS=2.0.2 \
+			VERS=2.0.3 \
 			PUBKEY=gmid-2.0.pub \
 			TREE=https://github.com/omar-polo/gmid/blob/master
 
