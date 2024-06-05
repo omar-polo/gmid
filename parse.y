@@ -123,7 +123,7 @@ typedef struct {
 
 %token	ACCESS ALIAS AUTO
 %token	BLOCK
-%token	CA CERT CHROOT CLIENT
+%token	CA CERT CGI CHROOT CLIENT
 %token	DEFAULT
 %token	FACILITY FASTCGI FOR_HOST
 %token	INCLUDE INDEX IPV6
@@ -383,6 +383,11 @@ servopt		: ALIAS string {
 			ensure_absolute_path($2);
 			free(host->cert_path);
 			host->cert_path = $2;
+		}
+		| CGI string		{
+			free($2);
+			yyerror("`cgi' was removed in gmid 2.0."
+			    "  Please use fastcgi or proxy instead.");
 		}
 		| KEY string		{
 			ensure_absolute_path($2);
@@ -651,6 +656,7 @@ static const struct keyword {
 	{"block", BLOCK},
 	{"ca", CA},
 	{"cert", CERT},
+	{"cgi", CGI},
 	{"chroot", CHROOT},
 	{"client", CLIENT},
 	{"default", DEFAULT},
