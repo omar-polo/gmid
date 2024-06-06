@@ -148,7 +148,7 @@ typedef struct {
 %%
 
 /*
- * Allow 
+ * Allow empty lines at the start of the configuration.
  */
 grammar		: nl conf | conf
 		;
