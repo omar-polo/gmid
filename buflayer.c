@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "gmid.h"
 
 struct buflayer *buflayer_create(size_t n_bytes)

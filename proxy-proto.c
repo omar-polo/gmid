@@ -2,7 +2,6 @@
 
 #include <ctype.h>
 #include <string.h>
-#include <assert.h>
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
@@ -274,7 +273,7 @@ int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t bu
 
         } break;
 
-        default: assert(("unimplemented", 0));
+        default: ASSERT_MSG(0, "unimplemented");
     }
 
     int srcport = check_port_v1(&s->srcport, &buf, &buflen);

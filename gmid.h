@@ -34,6 +34,7 @@
 #include <time.h>
 #include <tls.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include <openssl/x509.h>
 
@@ -58,6 +59,8 @@
 #define GMID_STRING	VERSION_STR("gmid")
 
 #define GMID_VERSION	"gmid/" VERSION
+
+#define ASSERT_MSG(expr, msg) assert(((void)msg, (expr)))
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
