@@ -70,5 +70,6 @@ run_test test_ipv6_server need_ipv6
 # TODO: add test that uses only a TLSv1.2 or TLSv1.3
 # TODO: add a test that attempt to serve a non-regular file
 # TODO: add a test where the index is not a regular file
+# TODO: add a test that logs and uses a client cert
 
 tests_done
