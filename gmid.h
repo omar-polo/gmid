@@ -499,9 +499,9 @@ struct location	*new_location(void);
 struct proxy	*new_proxy(void);
 
 /* buflayer.c */
-void buflayer_free(struct buflayer *b);
-void buflayer_expand(struct buflayer *b, size_t n_bytes);
-struct buflayer *buflayer_create(size_t n_bytes);
+void buflayer_free(struct buflayer *);
+void buflayer_expand(struct buflayer *, size_t);
+struct buflayer *buflayer_create(size_t);
 
 /* proxy-proto.c */
 #define PROXY_PROTO_PARSE_FAIL -1
