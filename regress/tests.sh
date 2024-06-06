@@ -8,6 +8,23 @@ test_iri() {
 	./iri_test
 }
 
+test_parse_comments_at_start() {
+	dont_check_server_alive=yes
+
+	cat <<EOF >reg.conf
+# a comment
+
+server "$server_name" {
+	cert "$PWD/localhost.pem"
+	key  "$PWD/localhost.key"
+	root "$PWD/testdata"
+	listen on $host port $port
+}
+EOF
+
+	$gmid -n -c reg.conf >/dev/null
+}
+
 test_dump_config() {
 	dont_check_server_alive=yes
 	gen_config '' ''

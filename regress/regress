@@ -20,7 +20,8 @@ fi
 run_test test_punycode
 run_test test_iri
 
-# Run configuration dumping test.
+# Run configuration parsing tests.
+run_test test_parse_comments_at_start
 run_test test_dump_config
 
 if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
