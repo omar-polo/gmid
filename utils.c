@@ -22,6 +22,7 @@
 
 #include <errno.h>
 #include <string.h>
+#include <vis.h>	/* for gmid_strnvis() */
 
 #include <openssl/ec.h>
 #include <openssl/err.h>
@@ -495,4 +496,20 @@ new_proxy(void)
 	p = xcalloc(1, sizeof(*p));
 	p->protocols = TLS_PROTOCOLS_DEFAULT;
 	return p;
+}
+
+/*
+ * I can't rant enough about this situation.  As far as I've understood,
+ * OpenBSD introduced strnvis(3) with a signature, then NetBSD did it but
+ * with a incompatible signature.  FreeBSD followed NetBSD.  libbsd followed
+ * OpenBSD but now is thinking to switch.  WTF?
+ */
+int
+gmid_strnvis(char *dst, const char *src, size_t destsize, int flag)
+{
+#if HAVE_BROKEN_STRNVIS
+	return strnvis(dst, destsize, src, flag);
+#else
+	return strnvis(dst, src, destsize, flag);
+#endif
 }

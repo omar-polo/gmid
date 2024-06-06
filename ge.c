@@ -83,7 +83,7 @@ log_request(struct client *c, int code, const char *meta)
 			strlcpy(cntmp, subj + 4, sizeof(cntmp));
 			if ((n = strchr(cntmp, '/')) != NULL)
 				*n = '\0';
-			strnvis(cn, cntmp, sizeof(cn), VIS_WHITE|VIS_DQ);
+			gmid_strnvis(cn, cntmp, sizeof(cn), VIS_WHITE|VIS_DQ);
 		}
 	}
 

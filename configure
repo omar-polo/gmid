@@ -275,6 +275,7 @@ fi
 HAVE_ENDIAN_H=0
 HAVE_SYS_ENDIAN_H=0
 HAVE_MACHINE_ENDIAN=0
+HAVE_BROKEN_STRNVIS=0
 
 runtest endian_h	ENDIAN_H	|| \
 runtest sys_endian_h	SYS_ENDIAN_H	|| \
@@ -316,6 +317,12 @@ runtest timingsafe_memcmp TIMINGSAFE_MEMCMP || true
 runtest tree_h		TREE_H		|| true
 runtest vasprintf	VASPRINTF	-D_GNU_SOURCE || true
 runtest vis		VIS		-DLIBBSD_OPENBSD_VIS	|| true
+
+if [ ${HAVE_VIS} -eq 1 ]; then
+	if singletest broken-strnvis BROKEN_STRNVIS "-Wall -Werror"; then
+		HAVE_BROKEN_STRNVIS=1
+	fi
+fi
 
 if [ ${HAVE_ARC4RANDOM} -eq 1 -a ${HAVE_ARC4RANDOM_BUF} -eq 0 ]; then
 	COMPATS="compat/arc4random.c ${COMPATS}"
@@ -648,6 +655,8 @@ cat <<__HEREDOC__
 #  define HOST_NAME_MAX 255
 # endif
 #endif
+
+#define HAVE_BROKEN_STRNVIS ${HAVE_BROKEN_STRNVIS}
 __HEREDOC__
 
 echo "file config.h: written" 1>&2

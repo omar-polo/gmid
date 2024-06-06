@@ -469,5 +469,6 @@ EVP_PKEY	*ssl_load_pkey(const uint8_t *, size_t);
 struct vhost	*new_vhost(void);
 struct location	*new_location(void);
 struct proxy	*new_proxy(void);
+int		 gmid_strnvis(char *, const char *, size_t, int);
 
 #endif
