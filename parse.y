@@ -148,6 +148,7 @@ typedef struct {
 %%
 
 conf		: /* empty */
+		| conf nl
 		| conf include nl
 		| conf varset nl
 		| conf option nl
