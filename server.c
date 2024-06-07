@@ -16,7 +16,6 @@
 
 #include "gmid.h"
 
-#include <asm-generic/errno-base.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 
