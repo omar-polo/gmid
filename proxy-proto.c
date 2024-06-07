@@ -1,3 +1,19 @@
+/*
+ * Copyright (c) 2024 github.com/Sir-Photch <sir-photch@posteo.me>
+ *
+ * Permission to use, copy, modify, and distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
 #include "gmid.h"
 
 #include <ctype.h>
@@ -30,9 +46,7 @@ check_prefix_v1(const char **buf, size_t *buflen)
     size_t consumed;
     const char *found = consume_token(*buf, *buflen, PROXY, 6, &consumed);
     if (NULL == found)
-    {
         return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
-    }
 
     if (consumed < 6)
         return PROXY_PROTO_PARSE_AGAIN;
@@ -51,9 +65,7 @@ check_proto_v1(const char **buf, size_t *buflen)
     size_t consumed;
     const char *found = consume_token(*buf, *buflen, TCP, 3, &consumed);
     if (NULL == found)
-    {
         return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
-    }
     
     if (consumed < 3)
         return PROXY_PROTO_PARSE_AGAIN;
@@ -88,8 +100,7 @@ check_unknown_v1(const char **buf, size_t *buflen)
 
     size_t consumed;
     const char *found = consume_token(*buf, *buflen, UNKNOWN, 7, &consumed);
-    if (NULL == found)
-    {
+    if (NULL == found) {
         return 0 == consumed ? PROXY_PROTO_PARSE_AGAIN : PROXY_PROTO_PARSE_FAIL;
     }
 
@@ -130,20 +141,13 @@ check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen)
     ssize_t addrlen = -1;
     for (size_t i = 0; i < *buflen && i < 15; ++i)
     {
-        if ('.' == (*buf)[i]) 
-        {
+        if ('.' == (*buf)[i]) {
             n_dots++;
-        }
-        else if (3 == n_dots && isdigit((*buf)[i])) 
-        {
+        } else if (3 == n_dots && isdigit((*buf)[i])) {
             digits_after_last_dot++;
-        }
-        else if (3 < n_dots)
-        {
+        } else if (3 < n_dots) {
             return PROXY_PROTO_PARSE_FAIL;
-        }
-        else if (0 < digits_after_last_dot && ' ' == (*buf)[i])
-        {
+        } else if (0 < digits_after_last_dot && ' ' == (*buf)[i]) {
             addrlen = i;
             break;
         }
@@ -175,12 +179,9 @@ check_ipv6_v1(struct in6_addr *addr, const char **buf, size_t *buflen)
     ssize_t addrlen = -1;
     for (size_t i = 0; i < *buflen && i < 39; ++i)
     {
-        if (':' == (*buf)[i])
-        {
+        if (':' == (*buf)[i]) {
             n_colons++;
-        }
-        else if (2 <= n_colons && ' ' == (*buf)[i]) 
-        {
+        } else if (2 <= n_colons && ' ' == (*buf)[i]) {
             addrlen = i;
             break;
         }
@@ -208,10 +209,9 @@ check_port_v1(uint16_t *port, const char **buf, size_t *buflen)
     char *end;
     errno = 0;
     unsigned long num = strtoul(*buf, &end, 10);
-    if (errno == ERANGE || errno == EINVAL || UINT16_MAX < num) 
-    {
+    if (errno == ERANGE || errno == EINVAL || UINT16_MAX < num)
         return PROXY_PROTO_PARSE_FAIL;
-    }
+
     *port = (uint16_t)num;
     *buflen -= end - *buf;
     *buf = end;
@@ -230,15 +230,13 @@ int proxy_proto_v1_parse(struct proxy_protocol_v1 *s, const char *buf, size_t bu
     {
         case 4: s->proto = PROTO_V4; break;
         case 6: s->proto = PROTO_V6; break;
-        case PROXY_PROTO_PARSE_FAIL:
-        {
+        case PROXY_PROTO_PARSE_FAIL: {
             int unknown = check_unknown_v1(&buf, &buflen);
             if (PROXY_PROTO_PARSE_SUCCESS != unknown)
                 return unknown;
 
             int crlf = check_crlf_v1(&buf, buflen);
-            if (PROXY_PROTO_PARSE_SUCCESS == crlf) 
-            {
+            if (PROXY_PROTO_PARSE_SUCCESS == crlf) {
                 *consumed = buf - begin;
                 s->proto = PROTO_UNKNOWN;
             }
