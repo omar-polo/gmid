@@ -23,8 +23,7 @@ void buflayer_expand(struct buflayer *b, size_t n_bytes)
 
 void buflayer_free(struct buflayer *b) 
 {
-	if (b)
-	{
+	if (b) {
 		if (b->data) free(b->data);
 		free(b);
 	}
