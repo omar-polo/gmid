@@ -16,6 +16,7 @@
 
 #include "gmid.h"
 
+#include <asm-generic/errno-base.h>
 #include <sys/stat.h>
 #include <sys/un.h>
 
@@ -1367,7 +1368,12 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 static ssize_t write_cb(struct tls *ctx, const void *buf, size_t buflen, void *cb_arg)
 {
 	struct client *c = cb_arg;
-	return write(c->fd, buf, buflen);
+	
+	ssize_t ret = write(c->fd, buf, buflen);
+	if (-1 == ret && EAGAIN == errno)
+		return TLS_WANT_POLLOUT;
+
+	return ret;
 }
 
 void
