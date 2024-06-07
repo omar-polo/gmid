@@ -299,7 +299,7 @@ struct proxy_protocol_v1 {
 	uint16_t srcport, dstport;
 };
 
-#define DEFAULT_BUFLAYER_SIZE 128
+#define DEFAULT_BUFLAYER_SIZE 108
 
 struct buflayer
 {
