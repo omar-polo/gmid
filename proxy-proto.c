@@ -159,7 +159,7 @@ check_ipv4_v1(struct in_addr *addr, const char **buf, size_t *buflen)
     if (3 < digits_after_last_dot || addrlen < 7)
         return PROXY_PROTO_PARSE_FAIL;
 
-    char addrbuf[addrlen + 1];
+    char addrbuf[40]; // max IPv6 size + '\0'
     memcpy(addrbuf, *buf, addrlen);
     addrbuf[addrlen] = '\0'; 
 
