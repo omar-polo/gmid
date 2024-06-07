@@ -1296,7 +1296,6 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 
 	if (NULL == c->buf) {
 		// no buffer to cache into, read into libtls buffer
-		errno = 0;
 		ssize_t ret = read(c->fd, buf, buflen);
 		if (-1 == ret && errno == EWOULDBLOCK)
 			ret = TLS_WANT_POLLIN;
