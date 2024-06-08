@@ -321,7 +321,7 @@ runtest vasprintf	VASPRINTF	-D_GNU_SOURCE || true
 # Hence the -Wall -Werror check.
 if ! singletest strnvis STRNVIS "-Wall -Werror"; then
 	CFLAGS="-I ${PWD}/compat/vis ${CFLAGS} ${CFLAGS}"
-	COMPATS="compat/strnvis.c ${COMPATS}"
+	COMPATS="compat/vis.c ${COMPATS}"
 fi
 
 if [ ${HAVE_ARC4RANDOM} -eq 1 -a ${HAVE_ARC4RANDOM_BUF} -eq 0 ]; then
