@@ -7,7 +7,6 @@ DISTFILES =	ASN1_time_parse.c \
 		X509_LOOKUP_mem.c \
 		arc4random.c \
 		arc4random_buf.c \
-		broken-strnvis.c \
 		endian_h.c \
 		err.c \
 		explicit_bzero.c \
@@ -35,12 +34,12 @@ DISTFILES =	ASN1_time_parse.c \
 		setresuid.c \
 		strlcat.c \
 		strlcpy.c \
+		strnvis.c \
 		strtonum.c \
 		sys_endian_h.c \
 		timingsafe_memcmp.c \
 		tree_h.c \
 		vasprintf.c \
-		vis.c \
 		wait_any.c
 
 all:
