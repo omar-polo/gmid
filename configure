@@ -143,7 +143,6 @@ echo "file config.log: writing..."
 
 NEED_GNU_SOURCE=0
 NEED_OPENBSD_SOURCE=0
-NEED_LIBBSD_OPENBSD_VIS=0
 
 COMPATS=
 COMP="${CC} ${CFLAGS} -Werror=implicit-function-declaration"
@@ -214,10 +213,6 @@ runtest() {
 			fi
 			if [ "$4" = -D_OPENBSD_SOURCE ]; then
 				NEED_OPENBSD_SOURCE=1
-				return 0
-			fi
-			if [ "$4" = -DLIBBSD_OPENBSD_VIS ]; then
-				NEED_LIBBSD_OPENBSD_VIS=1
 				return 0
 			fi
 			if [ -n "$3" ]; then
@@ -404,9 +399,6 @@ if [ $NEED_GNU_SOURCE = 1 ]; then
 fi
 if [ $NEED_OPENBSD_SOURCE = 1 ]; then
 	CFLAGS="$CFLAGS -D_OPENBSD_SOURCE"
-fi
-if [ $NEED_LIBBSD_OPENBSD_VIS = 1 ]; then
-	CFLAGS="$CFLAGS -DLIBBSD_OPENBSD_VIS"
 fi
 
 CFLAGS="-I. ${CFLAGS} ${CDIAGFLAGS}"
