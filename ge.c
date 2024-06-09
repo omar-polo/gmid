@@ -91,7 +91,7 @@ log_request(struct client *c, int code, const char *meta)
 	    *c->domain == '\0' ? c->iri.host : c->domain, b, code, meta);
 }
 
-void
+static void
 load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 {
 	char *cert, *key;
@@ -144,7 +144,7 @@ mkdirs(const char *path, mode_t mode)
 }
 
 /* $XDG_DATA_HOME/gemexp */
-char *
+static char *
 data_dir(void)
 {
 	const char *home, *xdg;

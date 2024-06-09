@@ -367,10 +367,6 @@ enum imsg_type {
 	IMSG_CTL_PROCFD,
 };
 
-/* gmid.c */
-char		*data_dir(void);
-void		 load_local_cert(struct vhost*, const char*, const char*);
-
 /* gmid.c / ge.c */
 void		 log_request(struct client *, int, const char *);
 
