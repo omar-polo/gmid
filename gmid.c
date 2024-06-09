@@ -314,10 +314,12 @@ main(int argc, char **argv)
 		if (*conf->chroot != '\0' && *conf->user == '\0')
 			fatalx("can't chroot without a user to switch to.");
 	} else {
-		if (user)
-			strlcpy(conf->user, user, sizeof(conf->user));
-		if (chroot)
-			strlcpy(conf->chroot, chroot, sizeof(conf->chroot));
+		if (user && strlcpy(conf->user, user, sizeof(conf->user))
+		    >= sizeof(conf->user))
+			fatalx("user name too long: %s", user);
+		if (chroot && strlcpy(conf->chroot, chroot, sizeof(conf->chroot))
+		    >= sizeof(conf->user))
+			fatalx("chroot path too long: %s", chroot);
 	}
 
 	if ((ps = calloc(1, sizeof(*ps))) == NULL)

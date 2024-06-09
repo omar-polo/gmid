@@ -335,7 +335,10 @@ vhost		: SERVER string {
 			TAILQ_INIT(&host->proxies);
 
 			(void) strlcpy(loc->match, "*", sizeof(loc->match));
-			(void) strlcpy(host->domain, $2, sizeof(host->domain));
+
+			if (strlcpy(host->domain, $2, sizeof(host->domain))
+			    >= sizeof(host->domain))
+				yyerror("server name too long: %s", $2);
 
 			if (strstr($2, "xn--") != NULL) {
 				yywarn("\"%s\" looks like punycode: you "
@@ -381,7 +384,9 @@ servopt		: ALIAS string {
 			struct alist *a;
 
 			a = xcalloc(1, sizeof(*a));
-			(void) strlcpy(a->alias, $2, sizeof(a->alias));
+			if (strlcpy(a->alias, $2, sizeof(a->alias))
+			    >= sizeof(a->alias))
+				yyerror("alias too long: %s", $2);
 			free($2);
 			TAILQ_INSERT_TAIL(&host->aliases, a, aliases);
 		}
@@ -458,11 +463,17 @@ proxy_port	: /* empty */	{ $$ = 1965; }
 		;
 
 proxy_match	: PROTO string {
-			(void) strlcpy(proxy->match_proto, $2, sizeof(proxy->match_proto));
+			if (strlcpy(proxy->match_proto, $2,
+			    sizeof(proxy->match_proto))
+			    >= sizeof(proxy->match_proto))
+				yyerror("proto too long: %s", $2);
 			free($2);
 		}
 		| FOR_HOST string proxy_port {
-			(void) strlcpy(proxy->match_host, $2, sizeof(proxy->match_host));
+			if (strlcpy(proxy->match_host, $2,
+			    sizeof(proxy->match_host))
+			    >= sizeof(proxy->match_host))
+				yyerror("for-host too long: %s", $2);
 			(void) snprintf(proxy->match_port, sizeof(proxy->match_port),
 			    "%d", $3);
 			free($2);
@@ -489,7 +500,9 @@ proxy_opt	: CERT string {
 			free($2);
 		}
 		| RELAY_TO string proxy_port {
-			(void) strlcpy(proxy->host, $2, sizeof(proxy->host));
+			if (strlcpy(proxy->host, $2, sizeof(proxy->host))
+			    >= sizeof(proxy->host))
+				yyerror("relay-to host too long: %s", $2);
 			(void) snprintf(proxy->port, sizeof(proxy->port),
 			    "%d", $3);
 			free($2);
@@ -499,7 +512,9 @@ proxy_opt	: CERT string {
 			proxy->reqca_path = $4;
 		}
 		| SNI string {
-			(void) strlcpy(proxy->sni, $2, sizeof(proxy->sni));
+			if (strlcpy(proxy->sni, $2, sizeof(proxy->sni))
+			    >= sizeof(proxy->sni))
+				yyerror("sni hostname too long: %s", $2);
 			free($2);
 		}
 		| USE_TLS bool {
@@ -514,7 +529,9 @@ location	: LOCATION { advance_loc(); } string '{' optnl locopts '}' {
 			/* drop the starting '/' if any */
 			if (*$3 == '/')
 				memmove($3, $3+1, strlen($3));
-			(void) strlcpy(loc->match, $3, sizeof(loc->match));
+			if (strlcpy(loc->match, $3, sizeof(loc->match))
+			    >= sizeof(loc->match))
+				yyerror("location path too long: %s", $3);
 			free($3);
 		}
 		| error '}'
@@ -527,7 +544,9 @@ locopts		: /* empty */
 locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 		| BLOCK RETURN NUM string {
 			check_block_fmt($4);
-			(void) strlcpy(loc->block_fmt, $4, sizeof(loc->block_fmt));
+			if (strlcpy(loc->block_fmt, $4, sizeof(loc->block_fmt))
+			    >= sizeof(loc->block_fmt))
+				yyerror("block return meta too long: %s", $4);
 			loc->block_code = check_block_code($3);
 			free($4);
 		}
@@ -544,18 +563,23 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->block_code = 40;
 		}
 		| DEFAULT TYPE string {
-			(void) strlcpy(loc->default_mime, $3,
-			    sizeof(loc->default_mime));
+			if (strlcpy(loc->default_mime, $3,
+			    sizeof(loc->default_mime))
+			    >= sizeof(loc->default_mime))
+				yyerror("default type too long: %s", $3);
 			free($3);
 		}
 		| fastcgi
 		| INDEX string {
-			(void) strlcpy(loc->index, $2, sizeof(loc->index));
+			if (strlcpy(loc->index, $2, sizeof(loc->index))
+			    >= sizeof(loc->index))
+				yyerror("index string too long: %s", $2);
 			free($2);
 		}
 		| LANG string {
-			(void) strlcpy(loc->lang, $2,
-			    sizeof(loc->lang));
+			if (strlcpy(loc->lang, $2, sizeof(loc->lang))
+			    >= sizeof(loc->lang))
+				yyerror("lang too long: %s", $2);
 			free($2);
 		}
 		| LOG bool	{ loc->disable_log = !$2; }
@@ -564,7 +588,9 @@ locopt		: AUTO INDEX bool	{ loc->auto_index = $3 ? 1 : -1; }
 			loc->reqca_path = $4;
 		}
 		| ROOT string		{
-			(void) strlcpy(loc->dir, $2, sizeof(loc->dir));
+			if (strlcpy(loc->dir, $2, sizeof(loc->dir))
+			    >= sizeof(loc->dir))
+				yyerror("root path too long: %s", $2);
 			free($2);
 		}
 		| STRIP NUM		{ loc->strip = check_strip_no($2); }
@@ -1251,9 +1277,11 @@ fastcgi_conf(const char *path, const char *port)
 
 	f = xcalloc(1, sizeof(*f));
 	f->id = i;
-	(void)strlcpy(f->path, path, sizeof(f->path));
-	if (port != NULL)
-		(void)strlcpy(f->port, port, sizeof(f->port));
+	if (strlcpy(f->path, path, sizeof(f->path)) >= sizeof(f->path))
+		yyerror("fastcgi path is too long: %s", path);
+	if (port != NULL &&
+	    strlcpy(f->port, port, sizeof(f->port)) >= sizeof(f->port))
+		yyerror("port too long: %s", port);
 	TAILQ_INSERT_TAIL(&conf->fcgi, f, fcgi);
 
 	return f->id;
@@ -1266,8 +1294,10 @@ add_param(char *name, char *val)
 	struct envhead *h = &loc->params;
 
 	e = xcalloc(1, sizeof(*e));
-	(void) strlcpy(e->name, name, sizeof(e->name));
-	(void) strlcpy(e->value, val, sizeof(e->value));
+	if (strlcpy(e->name, name, sizeof(e->name)) >= sizeof(e->name))
+		yyerror("parameter name too long: %s", name);
+	if (strlcpy(e->value, val, sizeof(e->value)) >= sizeof(e->value))
+		yyerror("param value too long: %s", val);
 	TAILQ_INSERT_TAIL(h, e, envs);
 }
 
