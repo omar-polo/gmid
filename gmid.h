@@ -382,7 +382,6 @@ void		 crypto(struct privsep *, struct privsep_proc *);
 void		 crypto_engine_init(struct conf *);
 
 /* parse.y */
-void		 yyerror(const char*, ...);
 int		 parse_conf(struct conf *, const char*);
 int		 cmdline_symset(char *);
 
