@@ -394,7 +394,6 @@ const char	*mime(struct conf *, struct vhost*, const char*);
 void		 free_mime(struct mime *);
 
 /* server.c */
-extern int	shutting_down;
 const char	*vhost_lang(struct vhost*, const char*);
 const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);
