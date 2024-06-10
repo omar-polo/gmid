@@ -248,7 +248,7 @@ gencert(const char *hostname, const char *certpath, const char *keypath,
 	ASN1_INTEGER_set(X509_get_serialNumber(x509), 0);
 	X509_gmtime_adj(X509_get_notBefore(x509), 0);
 	X509_gmtime_adj(X509_get_notAfter(x509), 315360000L); /* 10 years */
-	X509_set_version(x509, 2); // v3
+	X509_set_version(x509, 2); /* v3 */
 
 	if (!X509_set_pubkey(x509, pkey)) {
 		log_warnx("couldn't set the public key");
