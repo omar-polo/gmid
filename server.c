@@ -813,8 +813,7 @@ open_dir(struct client *c)
 		return;
 	}
 
-	strlcpy(path, c->iri.path, sizeof(path));
-	strlcat(path, index, sizeof(path));
+	snprintf(path, sizeof(path), "%s%s", c->iri.path, index);
 
 	close(c->pfd);
 	c->pfd = fd;
