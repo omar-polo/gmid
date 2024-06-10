@@ -951,6 +951,8 @@ client_read(struct bufferevent *bev, void *d)
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
 	const char	*path, *p, *parse_err = "invalid request";
 	char		 decoded[DOMAIN_NAME_LEN];
+	char		*nul;
+	size_t		 len;
 
 	bufferevent_disable(bev, EVBUFFER_READ);
 
@@ -977,6 +979,14 @@ client_read(struct bufferevent *bev, void *d)
 	}
 	if (c->reqlen > 1024+2) {
 		log_debug("URL too long");
+		start_reply(c, BAD_REQUEST, "bad request");
+		return;
+	}
+
+	nul = strchr(c->req, '\0');
+	len = nul - c->req;
+	if (len != c->reqlen) {
+		log_debug("NUL inside the request IRI");
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
