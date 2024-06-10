@@ -213,14 +213,13 @@ get(const char *r)
 	char		 req[GEMINI_URL_LEN];
 	uint8_t		 buf[2048];
 	const char	*parse_err, *host, *port;
+	int		 ret;
 
 	if (strlcpy(iribuf, r, sizeof(iribuf)) >= sizeof(iribuf))
 		errx(1, "iri too long: %s", r);
 
-	if (strlcpy(req, r, sizeof(req)) >= sizeof(req))
-		errx(1, "iri too long: %s", r);
-
-	if (strlcat(req, "\r\n", sizeof(req)) >= sizeof(req))
+	ret = snprintf(req, sizeof(req), "%s\r\n", r);
+	if (ret < 0 || (size_t)ret >= sizeof(req))
 		errx(1, "iri too long: %s", r);
 
 	if (!parse_iri(iribuf, &iri, &parse_err))
