@@ -614,8 +614,7 @@ apply_reverse_proxy(struct client *c)
 	if (p->reqca != NULL && check_matching_certificate(p->reqca, c))
 		return 1;
 
-	log_debug("opening proxy connection for %s:%s",
-	    p->host, p->port);
+	log_debug("opening proxy connection for %s:%s", p->host, p->port);
 
 	if ((c->pfd = proxy_socket(c, p->host, p->port)) == -1) {
 		start_reply(c, PROXY_ERROR, "proxy error");
@@ -719,8 +718,7 @@ apply_fastcgi(struct client *c)
 		return 0;
 	}
 
-	log_debug("opening fastcgi connection for (%s,%s)",
-	    f->path, f->port);
+	log_debug("opening fastcgi connection for (%s,%s)", f->path, f->port);
 
 	if (*f->port == '\0')
 		c->pfd = fcgi_open_sock(f);
