@@ -8,6 +8,12 @@ test_iri() {
 	./iri_test
 }
 
+test_gg_n_flag() {
+	dont_check_server_alive=yes
+	gg -n gemini://omarpolo.com/ || return 1
+	gg -n "foo://bar.com/cafè.gmi" || return 1
+}
+
 test_parse_comments_at_start() {
 	dont_check_server_alive=yes
 
