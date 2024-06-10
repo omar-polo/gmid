@@ -119,8 +119,14 @@ match_host(struct vhost *v, struct client *c)
 	if (addr == NULL)
 		return 0;
 
-	if (*c->domain == '\0')
-		strlcpy(c->domain, addr->pp, sizeof(c->domain));
+	if (*c->domain == '\0') {
+		if (strlcpy(c->domain, addr->pp, sizeof(c->domain))
+		    >= sizeof(c->domain)) {
+			log_warnx("%s: domain too long: %s", __func__,
+			    addr->pp);
+			*c->domain = '\0';
+		}
+	}
 
 	if (matches(v->domain, c->domain))
 		return 1;
