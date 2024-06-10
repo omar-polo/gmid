@@ -390,7 +390,7 @@ handle_handshake(int fd, short ev, void *d)
 		return;
 	default:
 		/* unreachable */
-		abort();
+		fatalx("unexpected return value from tls_handshake");
 	}
 
 	c->bev = bufferevent_new(fd, client_read, client_write,
