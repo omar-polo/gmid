@@ -201,13 +201,13 @@ main(void)
             IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse paths with a trailing ..");
 	TEST("gemini://omarpolo.com/foo/../..",
-	    FAIL,
-            empty,
-	    "reject paths that would escape the root");
+	    PASS,
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    "parse paths that would escape the root");
 	TEST("gemini://omarpolo.com/foo/../../",
-	    FAIL,
-            empty,
-	    "reject paths that would escape the root")
+	    PASS,
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    "parse paths that would escape the root")
 	TEST("gemini://omarpolo.com/foo/../foo/../././/bar/baz/.././.././/",
 	    PASS,
             IRI("gemini", "omarpolo.com", "", "", "", ""),
@@ -271,8 +271,8 @@ main(void)
 	    IRI("foo", "bar.com", "", "caffè+macchiato.gmi", "", ""),
 	    "can decode");
 	TEST("foo://bar.com/foo%2F..%2F..",
-	    FAIL,
-	    empty,
+	    PASS,
+	    IRI("foo", "bar.com", "", "", "", ""),
 	    "conversion and checking are done in the correct order");
 	TEST("foo://bar.com/foo%00?baz",
 	    FAIL,

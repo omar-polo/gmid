@@ -260,11 +260,15 @@ path_clean(char *path)
 		} else if (q == path && p[0] == '.' && p[1] == '.' &&
 		    (p[2] == '/' || p[2] == '\0')) {
 			/* ../ at the start of path */
-			return 0;
+			p += 2;
+			if (*p == '/')
+				p++;
 		} else if (q == path && p[0] == '.' &&
 		    (p[1] == '/' || p[1] == '\0')) {
 			/* ./ at the start of path */
-			p += 2;
+			p++;
+			if (*p == '/')
+				p++;
 		} else if (p[0] == '/' && p[1] == '/') {
 			/* trim double slashes */
 			p++;
