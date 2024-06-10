@@ -1308,7 +1308,8 @@ server_accept(int sock, short et, void *d)
 		if (errno == EWOULDBLOCK || errno == EAGAIN ||
 		    errno == ECONNABORTED)
 			return;
-		fatal("accept");
+		log_warnx("accept failed");
+		return;
 	}
 
 	mark_nonblock(fd);
