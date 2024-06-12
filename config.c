@@ -183,7 +183,7 @@ config_send_file(struct privsep *ps, enum privsep_procid id, int type,
 
 	/* avoid fd rampage */
 	if (proc_flush_imsg(ps, id, -1) == -1) {
-		log_warn("%s: proc_fush_imsg", __func__);
+		log_warn("%s: proc_flush_imsg", __func__);
 		return -1;
 	}
 
