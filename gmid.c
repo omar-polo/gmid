@@ -318,7 +318,7 @@ main(int argc, char **argv)
 		    >= sizeof(conf->user))
 			fatalx("user name too long: %s", user);
 		if (chroot && strlcpy(conf->chroot, chroot, sizeof(conf->chroot))
-		    >= sizeof(conf->user))
+		    >= sizeof(conf->chroot))
 			fatalx("chroot path too long: %s", chroot);
 	}
 
