@@ -521,3 +521,10 @@ test_ipv6_server() {
 	fetch /
 	check_reply "20 text/gemini" "# hello world" || return 1
 }
+
+test_high_prefork() {
+	setup_simple_test 'prefork 12'
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+}

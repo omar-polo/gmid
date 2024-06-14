@@ -54,7 +54,7 @@ static struct privsep_proc procs[] = {
 	{ "logger",	PROC_LOGGER,	main_dispatch_logger, logger },
 };
 
-static const char	*opts = "c:D:fI:hnP:T:U:VvX:";
+static const char	*opts = "c:D:fI:J:hnP:T:U:VvX:";
 
 static const struct option longopts[] = {
 	{"help",	no_argument,		NULL,	'h'},
@@ -240,6 +240,7 @@ main(int argc, char **argv)
 	int ch, conftest = 0;
 	int proc_instance = 0;
 	int proc_id = PROC_PARENT;
+	int nprocs = 0;
 	int argc0 = argc;
 
 	setlocale(LC_CTYPE, "");
@@ -268,6 +269,13 @@ main(int argc, char **argv)
 			    &errstr);
 			if (errstr != NULL)
 				fatalx("invalid process instance");
+			break;
+		case 'J':
+			nprocs = strtonum(optarg, 0, PROC_MAX_INSTANCES,
+			    &errstr);
+			if (errstr != NULL)
+				fatalx("invalid process instance");
+			log_warnx("nprocs is %d", nprocs);
 			break;
 		case 'n':
 			conftest++;
@@ -320,6 +328,7 @@ main(int argc, char **argv)
 		if (chroot && strlcpy(conf->chroot, chroot, sizeof(conf->chroot))
 		    >= sizeof(conf->chroot))
 			fatalx("chroot path too long: %s", chroot);
+		conf->prefork = nprocs;
 	}
 
 	if ((ps = calloc(1, sizeof(*ps))) == NULL)
