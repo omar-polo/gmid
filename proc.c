@@ -244,8 +244,7 @@ proc_init(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
 			for (proc = 0; proc < ps->ps_instances[dst]; proc++) {
 				pa = &ps->ps_pipes[PROC_PARENT][0];
 				pb = &ps->ps_pipes[dst][proc];
-				if (socketpair(AF_UNIX,
-				    SOCK_STREAM,
+				if (socketpair(AF_UNIX, SOCK_STREAM,
 				    PF_UNSPEC, fds) == -1)
 					fatal("%s: socketpair", __func__);
 
