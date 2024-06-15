@@ -79,13 +79,16 @@ proc_exec(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
 	unsigned int		 proc, nargc, i, proc_i, proc_X = 0;
 	const char		**nargv;
 	struct privsep_proc	*p;
-	char			 num[32];
+	char			 num[32], prefork[32];
 	int			 fd;
 
 	/* Prepare the new process argv. */
-	nargv = calloc(argc + 9, sizeof(char *));
+	nargv = calloc(argc + 11, sizeof(char *));
 	if (nargv == NULL)
 		fatal("%s: calloc", __func__);
+
+	/* Update prefork number */
+	snprintf(prefork, sizeof(prefork), "%d", ps->ps_instances[PROC_SERVER]);
 
 	/* Copy call argument first. */
 	nargc = 0;
@@ -105,6 +108,10 @@ proc_exec(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
 		proc_X = nargc;
 		nargc++;
 	}
+
+	/* Set server prefork number */ 
+	nargv[nargc++] = "-J";
+	nargv[nargc++] = prefork;
 
 	/* Point process instance arg to stack and copy the original args. */
 	nargv[nargc++] = "-I";
@@ -237,8 +244,7 @@ proc_init(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc,
 			for (proc = 0; proc < ps->ps_instances[dst]; proc++) {
 				pa = &ps->ps_pipes[PROC_PARENT][0];
 				pb = &ps->ps_pipes[dst][proc];
-				if (socketpair(AF_UNIX,
-				    SOCK_STREAM,
+				if (socketpair(AF_UNIX, SOCK_STREAM,
 				    PF_UNSPEC, fds) == -1)
 					fatal("%s: socketpair", __func__);
 
@@ -354,6 +360,8 @@ proc_setup(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc)
 	 */
 	for (src = 0; src < PROC_MAX; src++) {
 		/* Allocate destination array for each process */
+		log_debug("allocating %d for proc %d/%d",
+		    ps->ps_instances[src], src, PROC_MAX);
 		if ((ps->ps_pipes[src] = calloc(ps->ps_instances[src],
 		    sizeof(struct privsep_pipes))) == NULL)
 			fatal("%s: calloc", __func__);

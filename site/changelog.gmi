@@ -1,12 +1,34 @@
 # change log
 
+## 2024/06/11 - 2.0.5 “Lady Stardust” security release
+
+This release fixes a logic error that can result in a DoS; therefore is a strongly reccomended update for all users.  It's safe to update to it from any version of the 2.0.x series.
+
+* allow again empty lines at the start of the configuration file
+* change how strnvis(3) is handled: on systems with the broken interface gmid will just use its own built-in version
+* reject requests with NUL bytes in them.
+* don't error on a '..' component at the start of the path.
+
+## 2024/06/06 - 2.0.4 “Lady Stardust” bugfix release
+
+* add a nicer error message if the removed `cgi' option is still used.  Reported by freezr.
+* portability fix for systems with a wrong strnvis(3).
+
+## 2024/06/04 - 2.0.3 “Lady Stardust” bugfix release
+
+* relax the SNI requirements
+* gg: add -q to avoid printing the "Server Says:" line
+* gg: unbreak -n
+* fix parsing of IPv6 addresses
+* fix `fastcgi off' handling
+
 ## 2024/04/04 - 2.0.2 “Lady Stardust” bugfix release
 
-- fix `log access path' with `chroot' enabled.
-- fix config dumping (-nn).
-- rework grammar to allow semicolons after top-level statements.
-- don't make the log styles reserved keywords.
-- contrib/vim: fixed indent, from Anna “CyberTailor”, thanks!
+* fix `log access path' with `chroot' enabled.
+* fix config dumping (-nn).
+* rework grammar to allow semicolons after top-level statements.
+* don't make the log styles reserved keywords.
+* contrib/vim: fixed indent, from Anna “CyberTailor”, thanks!
 
 ## 2024/01/24 - 2.0.1 “Lady Stardust” bugfix release
 

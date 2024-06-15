@@ -19,8 +19,10 @@ fi
 # Run standalone unit tests.
 run_test test_punycode
 run_test test_iri
+run_test test_gg_n_flag
 
-# Run configuration dumping test.
+# Run configuration parsing tests.
+run_test test_parse_comments_at_start
 run_test test_dump_config
 
 if [ "${SKIP_RUNTIME_TESTS:-0}" -eq 1 ]; then
@@ -55,6 +57,7 @@ run_test test_root_inside_location
 run_test test_root_inside_location_with_redirect
 run_test test_fastcgi
 run_test test_fastcgi_inside_location
+run_test test_fastcgi_location_match
 run_test test_fastcgi_deprecated_syntax
 run_test test_macro_expansion
 run_test test_proxy_relay_to
@@ -65,9 +68,11 @@ run_test test_log_file
 run_test test_ipv4_addr
 run_test test_ipv6_addr need_ipv6
 run_test test_ipv6_server need_ipv6
+run_test test_high_prefork
 
 # TODO: add test that uses only a TLSv1.2 or TLSv1.3
 # TODO: add a test that attempt to serve a non-regular file
 # TODO: add a test where the index is not a regular file
+# TODO: add a test that logs and uses a client cert
 
 tests_done

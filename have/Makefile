@@ -34,12 +34,12 @@ DISTFILES =	ASN1_time_parse.c \
 		setresuid.c \
 		strlcat.c \
 		strlcpy.c \
+		strnvis.c \
 		strtonum.c \
 		sys_endian_h.c \
 		timingsafe_memcmp.c \
 		tree_h.c \
 		vasprintf.c \
-		vis.c \
 		wait_any.c
 
 all:

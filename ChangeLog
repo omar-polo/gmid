@@ -1,3 +1,56 @@
+2024-06-11  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.0.5
+
+2024-06-10  Omar Polo  <op@omarpolo.com>
+
+	* don't error on a '..' component at the start of the path
+	* reject NUL bytes embedded in the request
+
+2024-06-09  Omar Polo  <op@omarpolo.com>
+
+	* check for truncation various strlcpy calls.
+	* clean up of a few unused prototypes and externs.
+
+2024-06-08  Omar Polo  <op@omarpolo.com>
+
+	* configure: change how strnvis(3) is handled: on systems
+	with the broken interface gmid will just use its built-in
+	version.
+
+2024-06-06  Omar Polo  <op@omarpolo.com>
+
+	* parse.y: allow again empty lines at the start of the config
+	* configure (VERSION): release 2.0.4
+	* portability fix for system with a wrong strnvis(3)
+
+2024-06-05  Omar Polo  <op@omarpolo.com>
+
+	* parse.y: add a nicer error message if the removed `cgi' option
+	is still used.
+
+2024-06-04  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.0.3
+
+2024-06-03  Omar Polo  <op@omarpolo.com>
+
+	* server.c (vhost_fastcgi): fix `fastcgi off' handling.
+	Reported by Alex // nytpu
+
+2024-05-29  Omar Polo  <op@omarpolo.com>
+
+	* server.c (handle_handshake): relax the SNI requirement.  There are
+	legitimate use-cases where SNI can't be used, like connecting to a
+	raw IPv6 address.
+	* gg.c (main): add -q to avoid printing "Server Says:"
+	* gg.c (main): unbreak -n
+	* iri.c (parse_authority): add support for raw IPv6 addresses
+
+2024-04-04  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.0.2
+
 2024-04-03  Omar Polo  <op@omarpolo.com>
 
 	* configure: improve function checking in the configure

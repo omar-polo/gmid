@@ -159,10 +159,10 @@ ${DISTNAME}.tar.gz: ${DISTFILES}
 	mkdir -p .dist/${DISTNAME}/
 	${INSTALL} -m 0644 ${DISTFILES} .dist/${DISTNAME}/
 	cd .dist/${DISTNAME} && chmod 755 configure
-	${MAKE} -C compat	DESTDIR=${PWD}/.dist/${DISTNAME}/compat dist
+	${MAKE} -C compat	DESTDIR=${PWD}/.dist/${DISTNAME}/compat  dist
 	${MAKE} -C contrib	DESTDIR=${PWD}/.dist/${DISTNAME}/contrib dist
-	${MAKE} -C have		DESTDIR=${PWD}/.dist/${DISTNAME}/have dist
-	${MAKE} -C keys		DESTDIR=${PWD}/.dist/${DISTNAME}/keys dist
+	${MAKE} -C have		DESTDIR=${PWD}/.dist/${DISTNAME}/have    dist
+	${MAKE} -C keys		DESTDIR=${PWD}/.dist/${DISTNAME}/keys    dist
 	${MAKE} -C regress	DESTDIR=${PWD}/.dist/${DISTNAME}/regress dist
 	cd .dist/ && tar zcf ../$@ ${DISTNAME}
 	rm -rf .dist/

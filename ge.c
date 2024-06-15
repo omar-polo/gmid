@@ -91,7 +91,7 @@ log_request(struct client *c, int code, const char *meta)
 	    *c->domain == '\0' ? c->iri.host : c->domain, b, code, meta);
 }
 
-void
+static void
 load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 {
 	char *cert, *key;
@@ -112,7 +112,9 @@ load_local_cert(struct vhost *h, const char *hostname, const char *dir)
 	if (h->key == NULL)
 		fatal("can't load %s", key);
 
-	strlcpy(h->domain, hostname, sizeof(h->domain));
+	if (strlcpy(h->domain, hostname, sizeof(h->domain))
+	    >= sizeof(h->domain))
+		fatalx("hostname too long: %s", hostname);
 }
 
 /* wrapper around dirname(3).  dn must be PATH_MAX+1 at least. */
@@ -122,7 +124,8 @@ pdirname(const char *path, char *dn)
 	char	 p[PATH_MAX+1];
 	char	*t;
 
-	strlcpy(p, path, sizeof(p));
+	if (strlcpy(p, path, sizeof(p)) >= sizeof(p))
+		fatalx("%s: path too long: %s", __func__, path);
 	t = dirname(p);
 	memmove(dn, t, strlen(t)+1);
 }
@@ -141,7 +144,7 @@ mkdirs(const char *path, mode_t mode)
 }
 
 /* $XDG_DATA_HOME/gemexp */
-char *
+static char *
 data_dir(void)
 {
 	const char *home, *xdg;

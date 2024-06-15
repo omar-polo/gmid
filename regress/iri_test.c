@@ -62,12 +62,12 @@ int	run_test(const char*, int, struct iri);
 int
 diff_iri(struct iri *p, struct iri *exp)
 {
-        DIFF(p, exp, schema);
-        DIFF(p, exp, host);
-        DIFF(p, exp, port);
-        DIFF(p, exp, path);
-        DIFF(p, exp, query);
-        DIFF(p, exp, fragment);
+	DIFF(p, exp, schema);
+	DIFF(p, exp, host);
+	DIFF(p, exp, port);
+	DIFF(p, exp, path);
+	DIFF(p, exp, query);
+	DIFF(p, exp, fragment);
 	return 1;
 }
 
@@ -194,31 +194,31 @@ main(void)
 	    "parse paths with multiple .. elements");
 	TEST("gemini://omarpolo.com/foo/..",
 	    PASS,
-            IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse paths with a trailing ..");
 	TEST("gemini://omarpolo.com/foo/../",
 	    PASS,
-            IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse paths with a trailing ..");
 	TEST("gemini://omarpolo.com/foo/../..",
-	    FAIL,
-            empty,
-	    "reject paths that would escape the root");
+	    PASS,
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    "parse paths that would escape the root");
 	TEST("gemini://omarpolo.com/foo/../../",
-	    FAIL,
-            empty,
-	    "reject paths that would escape the root")
+	    PASS,
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    "parse paths that would escape the root")
 	TEST("gemini://omarpolo.com/foo/../foo/../././/bar/baz/.././.././/",
 	    PASS,
-            IRI("gemini", "omarpolo.com", "", "", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "", "", ""),
 	    "parse path with lots of cleaning available");
 	TEST("gemini://omarpolo.com//foo",
 	    PASS,
-            IRI("gemini", "omarpolo.com", "", "foo", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "foo", "", ""),
 	    "Trim initial slashes");
 	TEST("gemini://omarpolo.com/////foo",
 	    PASS,
-            IRI("gemini", "omarpolo.com", "", "foo", "", ""),
+	    IRI("gemini", "omarpolo.com", "", "foo", "", ""),
 	    "Trim initial slashes (pt. 2)");
 	TEST("http://a/b/c/../..",
 	    PASS,
@@ -271,8 +271,8 @@ main(void)
 	    IRI("foo", "bar.com", "", "caffè+macchiato.gmi", "", ""),
 	    "can decode");
 	TEST("foo://bar.com/foo%2F..%2F..",
-	    FAIL,
-	    empty,
+	    PASS,
+	    IRI("foo", "bar.com", "", "", "", ""),
 	    "conversion and checking are done in the correct order");
 	TEST("foo://bar.com/foo%00?baz",
 	    FAIL,
@@ -280,7 +280,7 @@ main(void)
 	    "rejects %00");
 
 	/* IRI */
-        TEST("foo://bar.com/cafè.gmi",
+	TEST("foo://bar.com/cafè.gmi",
 	    PASS,
 	    IRI("foo", "bar.com", "", "cafè.gmi", "" , ""),
 	    "decode IRI (with a 2-byte utf8 seq)");

@@ -122,8 +122,14 @@ match_host(struct vhost *v, struct client *c)
 	if (addr == NULL)
 		return 0;
 
-	if (*c->domain == '\0')
-		strlcpy(c->domain, addr->pp, sizeof(c->domain));
+	if (*c->domain == '\0') {
+		if (strlcpy(c->domain, addr->pp, sizeof(c->domain))
+		    >= sizeof(c->domain)) {
+			log_warnx("%s: domain too long: %s", __func__,
+			    addr->pp);
+			*c->domain = '\0';
+		}
+	}
 
 	if (matches(v->domain, c->domain))
 		return 1;
@@ -252,7 +258,6 @@ struct location *
 vhost_fastcgi(struct vhost *v, const char *path)
 {
 	struct location *loc;
-	int force_disable = 0;
 
 	if (v == NULL || path == NULL)
 		return NULL;
@@ -263,11 +268,8 @@ vhost_fastcgi(struct vhost *v, const char *path)
 			if (matches(loc->match, path))
 				return loc;
 		if (loc->nofcgi && matches(loc->match, path))
-			force_disable = 1;
+			return NULL;
 	}
-
-	if (force_disable)
-		return NULL;
 
 	loc = TAILQ_FIRST(&v->locations);
 	return loc->fcgi == -1 ? NULL : loc;
@@ -391,7 +393,7 @@ handle_handshake(int fd, short ev, void *d)
 		return;
 	default:
 		/* unreachable */
-		abort();
+		fatalx("unexpected return value from tls_handshake");
 	}
 
 	c->bev = bufferevent_new(fd, client_read, client_write,
@@ -615,8 +617,7 @@ apply_reverse_proxy(struct client *c)
 	if (p->reqca != NULL && check_matching_certificate(p->reqca, c))
 		return 1;
 
-	log_debug("opening proxy connection for %s:%s",
-	    p->host, p->port);
+	log_debug("opening proxy connection for %s:%s", p->host, p->port);
 
 	if ((c->pfd = proxy_socket(c, p->host, p->port)) == -1) {
 		start_reply(c, PROXY_ERROR, "proxy error");
@@ -720,8 +721,7 @@ apply_fastcgi(struct client *c)
 		return 0;
 	}
 
-	log_debug("opening fastcgi connection for (%s,%s)",
-	    f->path, f->port);
+	log_debug("opening fastcgi connection for (%s,%s)", f->path, f->port);
 
 	if (*f->port == '\0')
 		c->pfd = fcgi_open_sock(f);
@@ -820,8 +820,7 @@ open_dir(struct client *c)
 		return;
 	}
 
-	strlcpy(path, c->iri.path, sizeof(path));
-	strlcat(path, index, sizeof(path));
+	snprintf(path, sizeof(path), "%s%s", c->iri.path, index);
 
 	close(c->pfd);
 	c->pfd = fd;
@@ -959,6 +958,8 @@ client_read(struct bufferevent *bev, void *d)
 	struct evbuffer	*src = EVBUFFER_INPUT(bev);
 	const char	*path, *p, *parse_err = "invalid request";
 	char		 decoded[DOMAIN_NAME_LEN];
+	char		*nul;
+	size_t		 len;
 
 	bufferevent_disable(bev, EVBUFFER_READ);
 
@@ -985,6 +986,14 @@ client_read(struct bufferevent *bev, void *d)
 	}
 	if (c->reqlen > 1024+2) {
 		log_debug("URL too long");
+		start_reply(c, BAD_REQUEST, "bad request");
+		return;
+	}
+
+	nul = strchr(c->req, '\0');
+	len = nul - c->req;
+	if (len != c->reqlen) {
+		log_debug("NUL inside the request IRI");
 		start_reply(c, BAD_REQUEST, "bad request");
 		return;
 	}
@@ -1391,7 +1400,8 @@ server_accept(int sock, short et, void *d)
 		if (errno == EWOULDBLOCK || errno == EAGAIN ||
 		    errno == ECONNABORTED)
 			return;
-		fatal("accept");
+		log_warnx("accept failed");
+		return;
 	}
 
 	mark_nonblock(fd);

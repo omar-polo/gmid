@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020, 2022, 2024 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2015 Theo de Raadt <deraadt@openbsd.org>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -240,78 +241,56 @@ parse_authority(struct parser *p)
 }
 
 /*
- * Routine for path_clean.  Elide the pointed .. with the preceding
- * element.  Return 0 if it's not possible.  incr is the length of
- * the increment, 3 for ../ and 2 for ..
- */
-static int
-path_elide_dotdot(char *path, char *i, int incr)
-{
-	char *j;
-
-	if (i == path)
-		return 0;
-	for (j = i-2; j != path && *j != '/'; j--)
-		/* noop */ ;
-	if (*j == '/')
-		j++;
-	i += incr;
-	memmove(j, i, strlen(i)+1);
-	return 1;
-}
-
-/*
- * Use an algorithm similar to the one implemented in go' path.Clean:
+ * Use an algorithm based on canonpath() from kern_pledge.c.
  *
- * 1. Replace multiple slashes with a single slash
- * 2. Eliminate each . path name element
- * 3. Eliminate each inner .. along with the non-.. element that precedes it
- * 4. Eliminate trailing .. if possible or error (go would only discard)
- *
- * Unlike path.Clean, this function return the empty string if the
- * original path is equivalent to "/".
+ * It's slightly more complicated since even if your paths are
+ * absolutely, they don't start with '/'.  q == path asserts
+ * that we're at the start of the path.
  */
 static int
 path_clean(char *path)
 {
-	char *i;
+	char *p, *q;
 
-	/* 1. replace multiple slashes with a single one */
-	for (i = path; *i; ++i) {
-		if (*i == '/' && *(i+1) == '/') {
-			memmove(i, i+1, strlen(i)); /* move also the \0 */
-			i--;
+	p = q = path;
+	while (*p) {
+		if (q == path && p[0] == '/') {
+			/* special case, if path is just "/" trim it */
+			p++;
+		} else if (q == path && p[0] == '.' && p[1] == '.' &&
+		    (p[2] == '/' || p[2] == '\0')) {
+			/* ../ at the start of path */
+			p += 2;
+			if (*p == '/')
+				p++;
+		} else if (q == path && p[0] == '.' &&
+		    (p[1] == '/' || p[1] == '\0')) {
+			/* ./ at the start of path */
+			p++;
+			if (*p == '/')
+				p++;
+		} else if (p[0] == '/' && p[1] == '/') {
+			/* trim double slashes */
+			p++;
+		} else if (p[0] == '/' && p[1] == '.' && p[2] == '.' &&
+		    (p[3] == '/' || p[3] == '\0')) {
+			/* /../ component */
+			while (q > path && *--q != '/')
+				continue;
+			p += 3;
+			if (q == path && *p == '/')
+				p++;
+		} else if (p[0] == '/' && p[1] == '.' &&
+		    (p[2] == '/' || p[2] == '\0')) {
+			/* /./ component */
+			p += 2;
+		} else {
+			*q++ = *p++;
 		}
 	}
-
-	/* 2. eliminate each . path name element */
-	for (i = path; *i; ++i) {
-		if ((i == path || *i == '/') &&
-		    *i != '.' && i[1] == '.' && i[2] == '/') {
-			/* move also the \0 */
-			memmove(i, i+2, strlen(i)-1);
-			i--;
-		}
-	}
-	if (!strcmp(path, ".") || !strcmp(path, "/.")) {
-		*path = '\0';
-		return 1;
-	}
-
-	/* 3. eliminate each inner .. along with the preceding non-.. */
-	for (i = strstr(path, "../"); i != NULL; i = strstr(path, "..")) {
-		/* break if we've found a trailing .. */
-		if (i[2] == '\0')
-			break;
-		if (!path_elide_dotdot(path, i, 3))
-			return 0;
-	}
-
-	/* 4. eliminate trailing ..*/
-	if ((i = strstr(path, "..")) != NULL)
-		if (!path_elide_dotdot(path, i, 2))
-			return 0;
-
+	if (*p != '\0')
+		return 0;
+	*q = '\0';
 	return 1;
 }
 

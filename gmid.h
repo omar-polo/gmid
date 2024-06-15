@@ -395,10 +395,6 @@ enum imsg_type {
 	IMSG_CTL_PROCFD,
 };
 
-/* gmid.c */
-char		*data_dir(void);
-void		 load_local_cert(struct vhost*, const char*, const char*);
-
 /* gmid.c / ge.c */
 void		 log_request(struct client *, int, const char *);
 
@@ -414,7 +410,6 @@ void		 crypto(struct privsep *, struct privsep_proc *);
 void		 crypto_engine_init(struct conf *);
 
 /* parse.y */
-void		 yyerror(const char*, ...);
 int		 parse_conf(struct conf *, const char*);
 int		 cmdline_symset(char *);
 
@@ -427,7 +422,6 @@ const char	*mime(struct conf *, struct vhost*, const char*);
 void		 free_mime(struct mime *);
 
 /* server.c */
-extern int	shutting_down;
 const char	*vhost_lang(struct vhost*, const char*);
 const char	*vhost_default_mime(struct vhost*, const char*);
 const char	*vhost_index(struct vhost*, const char*);

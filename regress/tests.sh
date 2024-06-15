@@ -8,6 +8,35 @@ test_iri() {
 	./iri_test
 }
 
+test_gg_n_flag() {
+	dont_check_server_alive=yes
+	$gg -n gemini://omarpolo.com/ || return 1
+
+	# XXX this fails on macos in the CI, while in
+	# test_iri passes successfully.  Unfortunately,
+	# I can't debug stuff on darwin (lacking hardware.)
+	#$gg -n "foo://bar.com/cafè.gmi" || return 1
+
+	$gg -n gemini://omarpolo.com/../ || return 1
+}
+
+test_parse_comments_at_start() {
+	dont_check_server_alive=yes
+
+	cat <<EOF >reg.conf
+# a comment
+
+server "$server_name" {
+	cert "$PWD/localhost.pem"
+	key  "$PWD/localhost.key"
+	root "$PWD/testdata"
+	listen on $host port $port
+}
+EOF
+
+	$gmid -n -c reg.conf >/dev/null
+}
+
 test_dump_config() {
 	dont_check_server_alive=yes
 	gen_config '' ''
@@ -292,6 +321,35 @@ test_fastcgi_inside_location() {
 	return 0
 }
 
+test_fastcgi_location_match() {
+	./fcgi-test fcgi.sock &
+	fcgi_pid=$!
+
+	setup_simple_test 'prefork 1' '
+	location "/dir/*" {
+		fastcgi off
+	}
+	location "/*" {
+		fastcgi socket "'$PWD'/fcgi.sock"
+	}'
+
+	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
+	fetch /foo
+	if ! check_reply "20 text/gemini" "$msg"; then
+		kill $fcgi_pid
+		return 1
+	fi
+
+	fetch /dir/foo.gmi
+	if ! check_reply "20 text/gemini" "# hello world"; then
+		kill $fcgi_pid
+		return 1
+	fi
+
+	kill $fcgi_pid
+	return 0
+}
+
 test_fastcgi_deprecated_syntax() {
 	./fcgi-test fcgi.sock &
 	fcgi_pid=$!
@@ -459,6 +517,13 @@ test_ipv6_server() {
 	gghost="[::1]"
 	ggflags=-N
 	setup_simple_test
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+}
+
+test_high_prefork() {
+	setup_simple_test 'prefork 12'
 
 	fetch /
 	check_reply "20 text/gemini" "# hello world" || return 1

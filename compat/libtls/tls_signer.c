@@ -18,6 +18,7 @@
 #include "config.h"
 
 #include <limits.h>
+#include <string.h>
 
 #include <openssl/ecdsa.h>
 #include <openssl/err.h>
