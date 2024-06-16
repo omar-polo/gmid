@@ -1428,7 +1428,6 @@ server_accept(int sock, short et, void *d)
 	}
 
 	c->should_buffer = 1; // TODO set if config has proto-v1 enabled
-	c->buf.read_pos = 0;
 
 	if (tls_accept_cbs(addr->ctx, &c->ctx, read_cb, write_cb, c) == -1) {
 		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
