@@ -116,6 +116,7 @@ struct address {
 	struct sockaddr_storage	 ss;
 	socklen_t		 slen;
 	int16_t			 port;
+	int			 proxy;
 
 	/* pretty-printed version of `ss' */
 	char			 pp[NI_MAXHOST];
