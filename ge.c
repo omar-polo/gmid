@@ -271,7 +271,6 @@ main(int argc, char **argv)
 	setlocale(LC_CTYPE, "");
 
 	log_init(1, LOG_DAEMON);
-	log_setverbose(0);
 	conf = config_new();
 
 	/* ge doesn't do privsep so no privsep crypto engine. */

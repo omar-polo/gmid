@@ -299,27 +299,29 @@ struct proxy_protocol_v1 {
 	uint16_t srcport, dstport;
 };
 
-#define DEFAULT_BUFLAYER_SIZE 108
+#define BUFLAYER_MAX 108
 
 struct buflayer
 {
-	char *data;
-	size_t len, capacity, read_pos;
+	char data[BUFLAYER_MAX];
+	size_t len;
+	ssize_t read_pos;
 	int has_tail;
 };
 
 struct client {
-	struct conf	*conf;
+	struct conf		*conf;
 	struct address	*addr;
-	struct buflayer *buf;
-	uint32_t	 id;
-	struct tls	*ctx;
-	char		*req;
-	size_t		 reqlen;
-	struct iri	 iri;
-	char		 domain[DOMAIN_NAME_LEN];
-	char		 rhost[NI_MAXHOST];
-	char		 rserv[NI_MAXSERV];
+	int 		 	 should_buffer;
+	struct buflayer  buf;
+	uint32_t	 	 id;
+	struct tls		*ctx;
+	char			*req;
+	size_t		 	 reqlen;
+	struct iri	 	 iri;
+	char		 	 domain[DOMAIN_NAME_LEN];
+	char		 	 rhost[NI_MAXHOST];
+	char		 	 rserv[NI_MAXSERV];
 
 	struct bufferevent *bev;
 
@@ -500,8 +502,7 @@ struct buflayer *buflayer_create(size_t);
 /* proxy-proto.c */
 #define PROXY_PROTO_PARSE_FAIL -1
 #define PROXY_PROTO_PARSE_SUCCESS 0
-#define PROXY_PROTO_PARSE_AGAIN 1
-int proxy_proto_v1_parse(struct proxy_protocol_v1 *, const char *, size_t, size_t *);
+int proxy_proto_v1_parse(struct proxy_protocol_v1 *, char *, size_t, size_t *);
 int proxy_proto_v1_string(const struct proxy_protocol_v1 *, char*, size_t);
 
 #endif

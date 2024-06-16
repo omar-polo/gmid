@@ -1226,8 +1226,7 @@ client_close_ev(int fd, short event, void *d)
 	close(c->fd);
 	c->fd = -1;
 
-	buflayer_free(c->buf);
-	c->buf = NULL;
+	c->should_buffer = 0;
 
 	free(c);
 }
@@ -1303,7 +1302,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 {
 	struct client *c = cb_arg;
 
-	if (NULL == c->buf) {
+	if (!c->should_buffer) {
 		// no buffer to cache into, read into libtls buffer
 		ssize_t ret = read(c->fd, buf, buflen);
 		if (-1 == ret && errno == EWOULDBLOCK)
@@ -1312,17 +1311,18 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		return ret;
 	}
 
-	if (c->buf->has_tail) {
+	if (c->buf.has_tail) {
 		// we have leftover data from a previous call to read_cb
-		size_t left = c->buf->len - c->buf->read_pos;
+		size_t left = BUFLAYER_MAX - c->buf.read_pos;
 		size_t copy_len = MINIMUM(buflen, left);
-		memcpy(buf, &c->buf->data[c->buf->read_pos], copy_len);
+		memcpy(buf, c->buf.data + c->buf.read_pos, copy_len);
 
-		c->buf->read_pos += copy_len;
+		c->buf.read_pos += copy_len;
 
 		if (left == copy_len) {
-			buflayer_free(c->buf);
-			c->buf = NULL;
+			// memset(buflayer, 0, BUFLAYER_MAX);
+			c->should_buffer = 0;
+			c->buf.has_tail = 0;
 		}
 		
 		return copy_len;
@@ -1332,42 +1332,45 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	errno = 0;
 	ssize_t n_read = read(
 		c->fd, 
-		&c->buf->data[c->buf->len], 
-		c->buf->capacity - c->buf->len
+		c->buf.data + c->buf.len, 
+		BUFLAYER_MAX - c->buf.len
 	);
 	if (-1 == n_read && errno == EWOULDBLOCK)
 		return TLS_WANT_POLLIN;
 
-	c->buf->len += n_read;
+	c->buf.len += n_read;
 
 	struct proxy_protocol_v1 pp1 = {0};
 	size_t consumed = 0;
 	
-	int parse_status = proxy_proto_v1_parse(&pp1, c->buf->data, c->buf->len, &consumed);
-	switch (parse_status)
-	{
-		case PROXY_PROTO_PARSE_AGAIN: {
-			if (c->buf->len == c->buf->capacity) 
-				buflayer_expand(c->buf, 2 * c->buf->capacity);
-
-			return TLS_WANT_POLLIN;
-		}
-		case PROXY_PROTO_PARSE_SUCCESS: {
-			// TODO actually do something sensible, this is just "for show"
-			char protostr[1024];
-			proxy_proto_v1_string(&pp1, protostr, 1024);
-			printf("%s\n", protostr);
-		} break;
+	int parse_status = proxy_proto_v1_parse(&pp1, c->buf.data, c->buf.len, &consumed);
+	if (PROXY_PROTO_PARSE_SUCCESS != parse_status) {
+		close(c->fd);
+		return 0;
 	}
 
-	if (consumed < c->buf->len) {
+	switch (pp1.proto) {
+		case PROTO_V4: inet_ntop(AF_INET, &pp1.srcaddr.v4, c->rhost, NI_MAXHOST); break;
+		case PROTO_V6: inet_ntop(AF_INET6, &pp1.srcaddr.v6, c->rhost, NI_MAXHOST); break;
+		case PROTO_UNKNOWN: strncpy(c->rhost, "UNKNOWN", NI_MAXHOST); break;
+	}
+
+	if (PROTO_UNKNOWN != pp1.proto) {
+		snprintf(c->rserv, NI_MAXSERV, "%u", pp1.srcport);
+	}
+
+	char protostr[1024];
+	proxy_proto_v1_string(&pp1, protostr, 1024);
+	log_debug("proxy-protocol v1: %s", protostr);
+
+	if (consumed < c->buf.len) {
 		// we have some leftover
-		c->buf->read_pos = consumed;
-		c->buf->has_tail = 1;
+		c->buf.read_pos = consumed;
+		c->buf.has_tail = 1;
 	} else {
 		// we consumed the whole buffer
-		buflayer_free(c->buf);
-		c->buf = NULL;
+		c->should_buffer = c->buf.read_pos = 0;
+		c->buf.has_tail = 0;
 	}
 	
 	return TLS_WANT_POLLIN;
@@ -1424,7 +1427,8 @@ server_accept(int sock, short et, void *d)
 		return;
 	}
 
-	c->buf = buflayer_create(DEFAULT_BUFLAYER_SIZE);
+	c->should_buffer = 1; // TODO set if config has proto-v1 enabled
+	c->buf.read_pos = 0;
 
 	if (tls_accept_cbs(addr->ctx, &c->ctx, read_cb, write_cb, c) == -1) {
 		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
