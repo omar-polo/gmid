@@ -238,6 +238,13 @@ strnvis(char *dst, const char *src, size_t siz, int flag)
 	return (dst - start);
 }
 
+#if notneeded
+/*
+ * This function triggers stupid gcc into thinking that buf is used
+ * after realloc, breaking the build with -Werror.  Since we don't
+ * need this in gmid, comment it out so that gcc can be happy.
+ */
+
 int
 stravis(char **outp, const char *src, int flag)
 {
@@ -256,6 +263,7 @@ stravis(char **outp, const char *src, int flag)
 	}
 	return (len);
 }
+#endif
 
 int
 strvisx(char *dst, const char *src, size_t len, int flag)
