@@ -181,9 +181,10 @@ open_input_file(int argc, char **argv)
 		r = fread(buf, 1, sizeof(buf), stdin);
 		if (r == 0)
 			break;
-		fwrite(buf, 1, r, fp);
+		if (fwrite(buf, 1, r, fp) != r)
+			break;
 	}
-	if (ferror(fp))
+	if (ferror(fp) || ferror(stdin))
 		err(1, "I/O error");
 
 	if (fseeko(fp, 0, SEEK_SET) == -1)
