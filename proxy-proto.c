@@ -51,6 +51,9 @@ check_proto_v1(char **buf)
 	default: return (-1);
 	}
 
+	if ((*buf)[1] != ' ')
+		return (-1);
+
 	// '4' / '6' + ' '
 	*buf += 2;
 
