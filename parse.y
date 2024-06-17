@@ -98,7 +98,7 @@ void		 advance_proxy(void);
 int		 fastcgi_conf(const char *, const char *);
 void		 add_param(char *, char *);
 int		 getservice(const char *);
-void		 listen_on(const char *, const char *);
+void		 listen_on(const char *, const char *, int);
 
 static struct vhost		*host;
 static struct location		*loc;
@@ -130,7 +130,7 @@ typedef struct {
 %token	KEY
 %token	LANG LISTEN LOCATION LOG
 %token	OCSP OFF ON
-%token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY
+%token	PARAM PORT PREFORK PROTO PROTOCOLS PROXY PROXYV1
 %token	RELAY_TO REQUIRE RETURN ROOT
 %token	SERVER SNI SOCKET STRIP STYLE SYSLOG
 %token	TCP TOEXT TYPE TYPES
@@ -364,7 +364,7 @@ vhost		: SERVER string {
 				    " assuming %s port %d", host->domain,
 				    default_host ? default_host : "*",
 				    default_port);
-				listen_on(default_host, portno);
+				listen_on(default_host, portno, 0);
 			}
 		}
 		| error '}'		{ yyerror("bad server directive"); }
@@ -416,11 +416,11 @@ servopt		: ALIAS string {
 			add_param($2, $4);
 		}
 		| LISTEN ON listen_addr {
-			listen_on($3, "1965");
+			listen_on($3, "1965", 0);
 			free($3);
 		}
 		| LISTEN ON listen_addr PORT STRING {
-			listen_on($3, $5);
+			listen_on($3, $5, 0);
 			free($3);
 			free($5);
 		}
@@ -432,7 +432,27 @@ servopt		: ALIAS string {
 			if (r < 0 || (size_t)r >= sizeof(portno))
 				fatal("snprintf");
 
-			listen_on($3, portno);
+			listen_on($3, portno, 0);
+			free($3);
+		}
+		| LISTEN ON listen_addr PROXYV1 {
+			listen_on($3, "1965", 1);
+			free($3);
+		}
+		| LISTEN ON listen_addr PORT STRING PROXYV1 {
+			listen_on($3, $5, 1);
+			free($3);
+			free($5);
+		}
+		| LISTEN ON listen_addr PORT NUM PROXYV1 {
+			char portno[32];
+			int r;
+
+			r = snprintf(portno, sizeof(portno), "%d", $5);
+			if (r < 0 || (size_t)r >= sizeof(portno))
+				fatal("snprintf");
+
+			listen_on($3, portno, 1);
 			free($3);
 		}
 		| locopt
@@ -712,6 +732,7 @@ static const struct keyword {
 	{"proto", PROTO},
 	{"protocols", PROTOCOLS},
 	{"proxy", PROXY},
+	{"proxy-v1", PROXYV1},
 	{"relay-to", RELAY_TO},
 	{"require", REQUIRE},
 	{"return", RETURN},
@@ -1322,7 +1343,8 @@ getservice(const char *n)
 }
 
 static void
-add_to_addr_queue(struct addrhead *a, struct addrinfo *ai, const char *pp)
+add_to_addr_queue(struct addrhead *a, struct addrinfo *ai, const char *pp,
+    int proxy)
 {
 	struct address		*addr;
 	struct sockaddr_in	*sin;
@@ -1337,8 +1359,13 @@ add_to_addr_queue(struct addrhead *a, struct addrinfo *ai, const char *pp)
 		    addr->ai_socktype == ai->ai_socktype &&
 		    addr->ai_protocol == ai->ai_protocol &&
 		    addr->slen == ai->ai_addrlen &&
-		    !memcmp(&addr->ss, ai->ai_addr, addr->slen))
+		    !memcmp(&addr->ss, ai->ai_addr, addr->slen)) {
+			if (addr->proxy != proxy)
+				yyerror("can't specify the same listen"
+				    " address both with and without"
+				    " `proxy-v1'.");
 			return;
+		}
 	}
 
 	addr = xcalloc(1, sizeof(*addr));
@@ -1349,6 +1376,7 @@ add_to_addr_queue(struct addrhead *a, struct addrinfo *ai, const char *pp)
 	addr->slen = ai->ai_addrlen;
 	memcpy(&addr->ss, ai->ai_addr, ai->ai_addrlen);
 	strlcpy(addr->pp, pp, sizeof(addr->pp));
+	addr->proxy = proxy;
 
 	/* for commodity */
 	switch (addr->ai_family) {
@@ -1370,7 +1398,7 @@ add_to_addr_queue(struct addrhead *a, struct addrinfo *ai, const char *pp)
 }
 
 void
-listen_on(const char *hostname, const char *servname)
+listen_on(const char *hostname, const char *servname, int proxy)
 {
 	struct addrinfo hints, *res, *res0;
 	char pp[NI_MAXHOST];
@@ -1394,8 +1422,8 @@ listen_on(const char *hostname, const char *servname)
 			break;
 		}
 
-		add_to_addr_queue(&host->addrs, res, pp);
-		add_to_addr_queue(&conf->addrs, res, pp);
+		add_to_addr_queue(&host->addrs, res, pp, proxy);
+		add_to_addr_queue(&conf->addrs, res, pp, proxy);
 	}
 
 	freeaddrinfo(res0);

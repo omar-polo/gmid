@@ -1226,8 +1226,6 @@ client_close_ev(int fd, short event, void *d)
 	close(c->fd);
 	c->fd = -1;
 
-	c->should_buffer = 0;
-
 	free(c);
 }
 
@@ -1417,6 +1415,7 @@ server_accept(int sock, short et, void *d)
 	c->pfd = -1;
 	memcpy(&c->raddr, &raddr, sizeof(raddr));
 	c->raddrlen = len;
+	c->should_buffer = addr->proxy;
 
 	e = getnameinfo(sraddr, len, c->rhost, sizeof(c->rhost),
 	    c->rserv, sizeof(c->rserv), NI_NUMERICHOST | NI_NUMERICSERV);
@@ -1426,8 +1425,6 @@ server_accept(int sock, short et, void *d)
 		free(c);
 		return;
 	}
-
-	c->should_buffer = 1; // TODO set if config has proto-v1 enabled
 
 	if (tls_accept_cbs(addr->ctx, &c->ctx, read_cb, write_cb, c) == -1) {
 		log_warnx("failed to accept socket: %s", tls_error(c->ctx));
