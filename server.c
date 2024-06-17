@@ -1343,8 +1343,8 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	
 	int parse_status = proxy_proto_v1_parse(&pp1, c->buf.data, c->buf.len, &consumed);
 	if (PROXY_PROTO_PARSE_SUCCESS != parse_status) {
-		close(c->fd);
-		return 0;
+		log_warnx("read_cb: received invalid proxy protocol header");
+		return -1;
 	}
 
 	switch (pp1.proto) {
