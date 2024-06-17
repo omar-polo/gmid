@@ -87,12 +87,17 @@ static int
 check_ip_v1(int af, void *addr, char **buf)
 {
     size_t next_space = strcspn(*buf, " ");
-    (*buf)[next_space] = '\0';
+    char *spc;
+
+    if (NULL == (spc = strchr(*buf, ' ')))
+        return PROXY_PROTO_PARSE_FAIL;
+
+    *spc++ = '\0';
 
     if (1 != inet_pton(af, *buf, addr))
         return PROXY_PROTO_PARSE_FAIL;
 
-    *buf += next_space + 1;
+    *buf = spc;
 
     return PROXY_PROTO_PARSE_SUCCESS;
 }
