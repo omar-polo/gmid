@@ -27,12 +27,12 @@ COBJS =		${COMPATS:.c=.o}
 
 GMID_SRCS =	gmid.c config.c crypto.c dirs.c fcgi.c iri.c log.c \
 		logger.c mime.c proc.c proxy.c puny.c sandbox.c \
-		server.c utf8.c utils.c y.tab.c
+		server.c utf8.c utils.c y.tab.c proxy-proto.c
 
 GMID_OBJS =	${GMID_SRCS:.c=.o} ${COBJS}
 
 GEMEXP_SRCS =	ge.c config.c crypto.c dirs.c fcgi.c iri.c log.c mime.c \
-		proc.c proxy.c puny.c sandbox.c server.c utf8.c utils.c
+		proc.c proxy.c puny.c sandbox.c server.c utf8.c utils.c proxy-proto.c
 
 GEMEXP_OBJS =	${GEMEXP_SRCS:.c=.o} ${COBJS}
 

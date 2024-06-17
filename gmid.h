@@ -34,6 +34,7 @@
 #include <time.h>
 #include <tls.h>
 #include <unistd.h>
+#include <assert.h>
 
 #include <openssl/x509.h>
 
@@ -58,6 +59,8 @@
 #define GMID_STRING	VERSION_STR("gmid")
 
 #define GMID_VERSION	"gmid/" VERSION
+
+#define ASSERT_MSG(expr, msg) assert(((void)msg, (expr)))
 
 #define GEMINI_URL_LEN (1024+3)	/* URL max len + \r\n + \0 */
 
@@ -281,17 +284,44 @@ enum {
 	REQUEST_DONE,
 };
 
+enum proto {
+	PROTO_V4,
+	PROTO_V6,
+	PROTO_UNKNOWN,
+};
+
+struct proxy_protocol_v1 {
+	enum proto proto;
+	union {
+		struct in_addr v4;
+		struct in6_addr v6;
+	} srcaddr, dstaddr;
+	uint16_t srcport, dstport;
+};
+
+#define BUFLAYER_MAX 108
+
+struct buflayer
+{
+	char data[BUFLAYER_MAX];
+	size_t len;
+	ssize_t read_pos;
+	int has_tail;
+};
+
 struct client {
-	struct conf	*conf;
+	struct conf		*conf;
 	struct address	*addr;
-	uint32_t	 id;
-	struct tls	*ctx;
-	char		*req;
-	size_t		 reqlen;
-	struct iri	 iri;
-	char		 domain[DOMAIN_NAME_LEN];
-	char		 rhost[NI_MAXHOST];
-	char		 rserv[NI_MAXSERV];
+	int 		 	 should_buffer;
+	struct buflayer  buf;
+	uint32_t	 	 id;
+	struct tls		*ctx;
+	char			*req;
+	size_t		 	 reqlen;
+	struct iri	 	 iri;
+	char		 	 domain[DOMAIN_NAME_LEN];
+	char		 	 rhost[NI_MAXHOST];
+	char		 	 rserv[NI_MAXSERV];
 
 	struct bufferevent *bev;
 
@@ -463,5 +493,11 @@ EVP_PKEY	*ssl_load_pkey(const uint8_t *, size_t);
 struct vhost	*new_vhost(void);
 struct location	*new_location(void);
 struct proxy	*new_proxy(void);
+
+/* proxy-proto.c */
+#define PROXY_PROTO_PARSE_FAIL -1
+#define PROXY_PROTO_PARSE_SUCCESS 0
+int proxy_proto_v1_parse(struct proxy_protocol_v1 *, char *, size_t, size_t *);
+int proxy_proto_v1_string(const struct proxy_protocol_v1 *, char*, size_t);
 
 #endif
