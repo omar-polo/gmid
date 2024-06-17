@@ -159,15 +159,16 @@ proxy_proto_v1_parse(struct proxy_protocol_v1 *s, char *buf, size_t buflen,
 			return (-1);
 		break;
 
-	default: 
-		ASSERT_MSG(0, "unimplemented");
+	default:
+		return (-1);
 	}
 
 	if (check_port_v1(&s->srcport, &buf, &buflen) == -1 ||
 	    check_port_v1(&s->dstport, &buf, &buflen) == -1)
 		return (-1);
 
-	assert('\n' == *buf);
+	if (*buf != '\n')
+		return (-1);
 	buf += 1;
 
 	*consumed = buf - begin;
