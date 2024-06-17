@@ -1348,9 +1348,17 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	}
 
 	switch (pp1.proto) {
-		case PROTO_V4: inet_ntop(AF_INET, &pp1.srcaddr.v4, c->rhost, sizeof(c->rhost)); break;
-		case PROTO_V6: inet_ntop(AF_INET6, &pp1.srcaddr.v6, c->rhost, sizeof(c->rhost)); break;
-		case PROTO_UNKNOWN: strlcpy(c->rhost, "UNKNOWN", sizeof(c->rhost)); break;
+	case PROTO_V4:
+		inet_ntop(AF_INET, &pp1.srcaddr.v4, c->rhost,
+		    sizeof(c->rhost));
+		break;
+	case PROTO_V6:
+		inet_ntop(AF_INET6, &pp1.srcaddr.v6, c->rhost,
+		    sizeof(c->rhost));
+		break;
+	case PROTO_UNKNOWN:
+		strlcpy(c->rhost, "UNKNOWN", sizeof(c->rhost));
+		break;
 	}
 
 	if (PROTO_UNKNOWN != pp1.proto) {
