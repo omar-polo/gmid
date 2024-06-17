@@ -1327,7 +1327,6 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	}
 
 	// buffer layer exists, we expect proxy protocol
-	errno = 0;
 	ssize_t n_read = read(
 		c->fd, 
 		c->buf.data + c->buf.len, 
