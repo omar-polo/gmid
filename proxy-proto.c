@@ -26,7 +26,7 @@ check_prefix_v1(char **buf)
 {
 	static const char PROXY[6] = "PROXY ";
 
-	if (0 != strncmp(*buf, PROXY, sizeof(PROXY)))
+	if (strncmp(*buf, PROXY, sizeof(PROXY)) != 0)
 		return PROXY_PROTO_PARSE_FAIL;
 
 	*buf += sizeof(PROXY);
@@ -39,7 +39,7 @@ check_proto_v1(char **buf)
 {
 	static const char TCP[3] = "TCP";
 
-	if (0 != strncmp(*buf, TCP, sizeof(TCP)))
+	if (strncmp(*buf, TCP, sizeof(TCP)) != 0)
 		return PROXY_PROTO_PARSE_FAIL;
 
 	*buf += sizeof(TCP);
@@ -62,7 +62,7 @@ check_unknown_v1(char **buf)
 {
 	static const char UNKNOWN[7] = "UNKNOWN";
 
-	if (0 != strncmp(*buf, UNKNOWN, sizeof(UNKNOWN)))
+	if (strncmp(*buf, UNKNOWN, sizeof(UNKNOWN)) != 0)
 		return PROXY_PROTO_PARSE_FAIL;
 
 	*buf += sizeof(UNKNOWN);
@@ -89,12 +89,12 @@ check_ip_v1(int af, void *addr, char **buf)
 {
 	char *spc;
 
-	if (NULL == (spc = strchr(*buf, ' ')))
+	if ((spc = strchr(*buf, ' ')) == NULL)
 		return PROXY_PROTO_PARSE_FAIL;
 
 	*spc++ = '\0';
 
-	if (1 != inet_pton(af, *buf, addr))
+	if (inet_pton(af, *buf, addr) != 1)
 		return PROXY_PROTO_PARSE_FAIL;
 
 	*buf = spc;
@@ -108,7 +108,7 @@ check_port_v1(uint16_t *port, char **buf, size_t *buflen)
 	size_t wspc_idx = strcspn(*buf, " \r");
 	char *wspc = *buf + wspc_idx;
 
-	if (!(' ' == *wspc || '\r' == *wspc))
+	if (!(*wspc == ' ' || *wspc == '\r'))
 		return PROXY_PROTO_PARSE_FAIL;
 
 	*wspc++ = '\0';

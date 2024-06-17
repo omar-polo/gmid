@@ -1304,7 +1304,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		// no buffer to cache into, read into libtls buffer
 		errno = 0;
 		ssize_t ret = read(c->fd, buf, buflen);
-		if (-1 == ret && errno == EWOULDBLOCK)
+		if (ret == -1 && errno == EWOULDBLOCK)
 			ret = TLS_WANT_POLLIN;
 		
 		return ret;
@@ -1333,7 +1333,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		c->buf.data + c->buf.len, 
 		BUFLAYER_MAX - c->buf.len
 	);
-	if (-1 == n_read && errno == EWOULDBLOCK)
+	if (n_read == -1 && errno == EWOULDBLOCK)
 		return TLS_WANT_POLLIN;
 
 	c->buf.len += n_read;
@@ -1361,7 +1361,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		break;
 	}
 
-	if (PROTO_UNKNOWN != pp1.proto) {
+	if (pp1.proto != PROTO_UNKNOWN) {
 		snprintf(c->rserv, sizeof(c->rserv), "%u", pp1.srcport);
 	}
 
@@ -1387,7 +1387,7 @@ static ssize_t write_cb(struct tls *ctx, const void *buf, size_t buflen, void *c
 	struct client *c = cb_arg;
 	
 	ssize_t ret = write(c->fd, buf, buflen);
-	if (-1 == ret && EAGAIN == errno)
+	if (ret == -1 && errno == EAGAIN)
 		return TLS_WANT_POLLOUT;
 
 	return ret;
