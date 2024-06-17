@@ -16,6 +16,7 @@
 
 #include "gmid.h"
 
+#include <stdint.h>
 #include <string.h>
 
 #define MIN(a, b) (a) < (b) ? (a) : (b)
@@ -86,7 +87,6 @@ check_crlf_v1(char *const *buf, size_t buflen)
 static int
 check_ip_v1(int af, void *addr, char **buf)
 {
-    size_t next_space = strcspn(*buf, " ");
     char *spc;
 
     if (NULL == (spc = strchr(*buf, ' ')))
@@ -105,15 +105,20 @@ check_ip_v1(int af, void *addr, char **buf)
 static int
 check_port_v1(uint16_t *port, char **buf, size_t *buflen)
 {
-    size_t next_space = strcspn(*buf, " \r\n");
-    (*buf)[next_space] = '\0';
+    size_t wspc_idx = strcspn(*buf, " \r");
+    char *wspc = *buf + wspc_idx;
+
+    if (!(' ' == *wspc || '\r' == *wspc))
+        return PROXY_PROTO_PARSE_FAIL;
+
+    *wspc++ = '\0';
 
     const char *errstr;
-    long long num = strtonum(*buf, 0, 65536, &errstr);
+    long long num = strtonum(*buf, 0, UINT16_MAX, &errstr);
     if (errstr)
         return PROXY_PROTO_PARSE_FAIL;
 
-    *buf += next_space + 1;
+    *buf = wspc;
     *port = num;
 
     return PROXY_PROTO_PARSE_SUCCESS;
