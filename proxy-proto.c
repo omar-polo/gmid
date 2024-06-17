@@ -27,11 +27,11 @@ check_prefix_v1(char **buf)
 	static const char PROXY[6] = "PROXY ";
 
 	if (strncmp(*buf, PROXY, sizeof(PROXY)) != 0)
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	*buf += sizeof(PROXY);
 
-	return PROXY_PROTO_PARSE_SUCCESS;
+	return (0);
 }
 
 static int
@@ -40,7 +40,7 @@ check_proto_v1(char **buf)
 	static const char TCP[3] = "TCP";
 
 	if (strncmp(*buf, TCP, sizeof(TCP)) != 0)
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	*buf += sizeof(TCP);
 
@@ -48,7 +48,7 @@ check_proto_v1(char **buf)
 	switch ((*buf)[0]) {
 	case '4': type = 4; break;
 	case '6': type = 6; break;
-	default: return PROXY_PROTO_PARSE_FAIL;
+	default: return (-1);
 	}
 
 	// '4' / '6' + ' '
@@ -63,11 +63,11 @@ check_unknown_v1(char **buf)
 	static const char UNKNOWN[7] = "UNKNOWN";
 
 	if (strncmp(*buf, UNKNOWN, sizeof(UNKNOWN)) != 0)
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	*buf += sizeof(UNKNOWN);
 
-	return PROXY_PROTO_PARSE_SUCCESS;
+	return (0);
 }
 
 static int
@@ -76,12 +76,12 @@ check_crlf_v1(char *const *buf, size_t buflen)
 	static const char CRLF[2] = "\r\n";
 
 	if (buflen < sizeof(CRLF))
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	if (!memmem(*buf, buflen, CRLF, sizeof(CRLF)))
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
-	return PROXY_PROTO_PARSE_SUCCESS;
+	return (0);
 }
 
 static int
@@ -90,16 +90,16 @@ check_ip_v1(int af, void *addr, char **buf)
 	char *spc;
 
 	if ((spc = strchr(*buf, ' ')) == NULL)
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	*spc++ = '\0';
 
 	if (inet_pton(af, *buf, addr) != 1)
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	*buf = spc;
 
-	return PROXY_PROTO_PARSE_SUCCESS;
+	return (0);
 }
 
 static int
@@ -109,73 +109,69 @@ check_port_v1(uint16_t *port, char **buf, size_t *buflen)
 	char *wspc = *buf + wspc_idx;
 
 	if (!(*wspc == ' ' || *wspc == '\r'))
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	*wspc++ = '\0';
 
 	const char *errstr;
 	long long num = strtonum(*buf, 0, UINT16_MAX, &errstr);
 	if (errstr)
-		return PROXY_PROTO_PARSE_FAIL;
+		return (-1);
 
 	*buf = wspc;
 	*port = num;
 
-	return PROXY_PROTO_PARSE_SUCCESS;
+	return (0);
 }
-
-#define EXPECT_SUCCESS(call) do { \
-    ret = (call); \
-    if (PROXY_PROTO_PARSE_SUCCESS != ret) \
-        return ret; \
-} while (0)
 
 int
 proxy_proto_v1_parse(struct proxy_protocol_v1 *s, char *buf, size_t buflen,
     size_t *consumed)
 {
 	const char *begin = buf;
-	int ret;
 
-	EXPECT_SUCCESS(check_crlf_v1(&buf, buflen));
-	EXPECT_SUCCESS(check_prefix_v1(&buf));
+	if (check_crlf_v1(&buf, buflen) == -1 ||
+	    check_prefix_v1(&buf) == -1)
+		return (-1);
 
-	ret = check_proto_v1(&buf);
-	switch (ret) {
+	switch (check_proto_v1(&buf)) {
 	case 4: s->proto = PROTO_V4; break;
 	case 6: s->proto = PROTO_V6; break;
-	case PROXY_PROTO_PARSE_FAIL:
-		EXPECT_SUCCESS(check_unknown_v1(&buf));
-
+	case -1:
+		if (check_unknown_v1(&buf) == -1)
+			return (-1);
 		s->proto = PROTO_UNKNOWN;
-		return PROXY_PROTO_PARSE_SUCCESS;
+		return (0);
 	default:
-		return ret;
+		return (-1);
 	}
 
 	switch (s->proto) {
 	case PROTO_V4:
-		EXPECT_SUCCESS(check_ip_v1(AF_INET, &s->srcaddr.v4, &buf));
-		EXPECT_SUCCESS(check_ip_v1(AF_INET, &s->dstaddr.v4, &buf));
+		if (check_ip_v1(AF_INET, &s->srcaddr.v4, &buf) == -1 ||
+		    check_ip_v1(AF_INET, &s->dstaddr.v4, &buf) == -1)
+			return (-1);
 		break;
 
 	case PROTO_V6:
-		EXPECT_SUCCESS(check_ip_v1(AF_INET6, &s->srcaddr.v6, &buf));
-		EXPECT_SUCCESS(check_ip_v1(AF_INET6, &s->dstaddr.v6, &buf));
+		if (check_ip_v1(AF_INET6, &s->srcaddr.v6, &buf) == -1 ||
+		    check_ip_v1(AF_INET6, &s->dstaddr.v6, &buf) == -1)
+			return (-1);
 		break;
 
 	default: 
 		ASSERT_MSG(0, "unimplemented");
 	}
 
-	EXPECT_SUCCESS(check_port_v1(&s->srcport, &buf, &buflen));
-	EXPECT_SUCCESS(check_port_v1(&s->dstport, &buf, &buflen));
+	if (check_port_v1(&s->srcport, &buf, &buflen) == -1 ||
+	    check_port_v1(&s->dstport, &buf, &buflen) == -1)
+		return (-1);
 
 	assert('\n' == *buf);
 	buf += 1;
 
 	*consumed = buf - begin;
-	return PROXY_PROTO_PARSE_SUCCESS;
+	return (0);
 }
 
 int

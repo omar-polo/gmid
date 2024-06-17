@@ -496,8 +496,6 @@ struct location	*new_location(void);
 struct proxy	*new_proxy(void);
 
 /* proxy-proto.c */
-#define PROXY_PROTO_PARSE_FAIL -1
-#define PROXY_PROTO_PARSE_SUCCESS 0
 int proxy_proto_v1_parse(struct proxy_protocol_v1 *, char *, size_t, size_t *);
 int proxy_proto_v1_string(const struct proxy_protocol_v1 *, char*, size_t);
 
