@@ -187,16 +187,14 @@ proxy_proto_v1_string(const struct proxy_protocol_v1 *s, char* buf, size_t bufle
     {
         case PROTO_UNKNOWN: ret = snprintf(buf, buflen, "unknown"); goto fin;
         case PROTO_V4: {
-            inet_ntop(AF_INET, &s->srcaddr.v4, srcaddrbuf, 39);
-            inet_ntop(AF_INET, &s->dstaddr.v4, dstaddrbuf, 39);
+            inet_ntop(AF_INET, &s->srcaddr.v4, srcaddrbuf, sizeof(srcaddrbuf));
+            inet_ntop(AF_INET, &s->dstaddr.v4, dstaddrbuf, sizeof(dstaddrbuf));
         } break;
         case PROTO_V6: {
-            inet_ntop(AF_INET6, &s->srcaddr.v6, srcaddrbuf, 39);
-            inet_ntop(AF_INET6, &s->dstaddr.v6, dstaddrbuf, 39);
+            inet_ntop(AF_INET6, &s->srcaddr.v6, srcaddrbuf, sizeof(srcaddrbuf));
+            inet_ntop(AF_INET6, &s->dstaddr.v6, dstaddrbuf, sizeof(dstaddrbuf));
         } break;
     }
-
-    srcaddrbuf[39] = dstaddrbuf[39] = '\0';
 
     ret = snprintf(
         buf,
