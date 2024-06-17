@@ -141,6 +141,10 @@ done
 exec 3> config.log
 echo "file config.log: writing..."
 
+echo "running as ./configure $@" >&3
+echo "on $(uname -a)" >&3
+echo "" >&3
+
 NEED_GNU_SOURCE=0
 NEED_OPENBSD_SOURCE=0
 
