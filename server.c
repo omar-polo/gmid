@@ -1348,17 +1348,17 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	}
 
 	switch (pp1.proto) {
-		case PROTO_V4: inet_ntop(AF_INET, &pp1.srcaddr.v4, c->rhost, NI_MAXHOST); break;
-		case PROTO_V6: inet_ntop(AF_INET6, &pp1.srcaddr.v6, c->rhost, NI_MAXHOST); break;
-		case PROTO_UNKNOWN: strncpy(c->rhost, "UNKNOWN", NI_MAXHOST); break;
+		case PROTO_V4: inet_ntop(AF_INET, &pp1.srcaddr.v4, c->rhost, sizeof(c->rhost)); break;
+		case PROTO_V6: inet_ntop(AF_INET6, &pp1.srcaddr.v6, c->rhost, sizeof(c->rhost)); break;
+		case PROTO_UNKNOWN: strlcpy(c->rhost, "UNKNOWN", sizeof(c->rhost)); break;
 	}
 
 	if (PROTO_UNKNOWN != pp1.proto) {
-		snprintf(c->rserv, NI_MAXSERV, "%u", pp1.srcport);
+		snprintf(c->rserv, sizeof(c->rserv), "%u", pp1.srcport);
 	}
 
 	char protostr[1024];
-	proxy_proto_v1_string(&pp1, protostr, 1024);
+	proxy_proto_v1_string(&pp1, protostr, sizeof(protostr));
 	log_debug("proxy-protocol v1: %s", protostr);
 
 	if (consumed < c->buf.len) {
