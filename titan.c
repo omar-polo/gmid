@@ -40,6 +40,21 @@
 #endif
 
 static int
+xasprintf(char **ret, const char *fmt, ...)
+{
+	va_list	 ap;
+	int	 r;
+
+	va_start(ap, fmt);
+	r = vasprintf(ret, fmt, ap);
+	va_end(ap);
+
+	if (r == -1)
+		err(1, "asprintf");
+	return r;
+}
+
+static int
 dial(const char *hostname, const char *port)
 {
 	struct addrinfo	 hints, *res, *res0;
@@ -293,21 +308,17 @@ main(int argc, char **argv)
 		errx(1, "not a titan:// IRI");
 
 	if (token && mime) {
-		if (asprintf(&path, "%s;size=%lld;token=%s;mime=%s", iri.path,
-		    (long long)sb.st_size, token, mime) == -1)
-			err(1, "asprintf");
+		xasprintf(&path, "%s;size=%lld;token=%s;mime=%s", iri.path,
+		    (long long)sb.st_size, token, mime);
 	} else if (token) {
-		if (asprintf(&path, "%s;size=%lld;token=%s", iri.path,
-		    (long long)sb.st_size, token) == -1)
-			err(1, "asprintf");
+		xasprintf(&path, "%s;size=%lld;token=%s", iri.path,
+		    (long long)sb.st_size, token);
 	} else if (mime) {
-		if (asprintf(&path, "%s;size=%lld;mime=%s", iri.path,
-		    (long long)sb.st_size, mime) == -1)
-			err(1, "asprintf");
+		xasprintf(&path, "%s;size=%lld;mime=%s", iri.path,
+		    (long long)sb.st_size, mime);
 	} else {
-		if (asprintf(&path, "%s;size=%lld", iri.path,
-		    (long long)sb.st_size) == -1)
-			err(1, "asprintf");
+		xasprintf(&path, "%s;size=%lld", iri.path,
+		    (long long)sb.st_size);
 	}
 
 	iri.path = path;
