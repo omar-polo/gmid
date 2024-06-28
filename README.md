@@ -42,6 +42,7 @@ gmid has a rich configuration file, heavily inspired by OpenBSD'
 manpage.  Here's a minimal example of a config file:
 
 ```conf
+# /etc/gmid.conf
 server "example.com" {
 	listen on * port 1965
 	cert "/path/to/cert.pem"
@@ -53,6 +54,7 @@ server "example.com" {
 and a slightly more complex one
 
 ```conf
+# /etc/gmid.conf
 cert_root = "/path/to/keys"
 
 server "example.com" {
