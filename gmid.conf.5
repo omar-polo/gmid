@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd June 11, 2024
+.Dd June 28, 2024
 .Dt GMID.CONF 5
 .Os
 .Sh NAME
@@ -425,7 +425,7 @@ Specify the language tag for the text/gemini content served.
 If not specified, no
 .Dq lang
 parameter will be added in the response.
-.It Ic listen on Ar address Op Ic port Ar number
+.It Ic listen on Ar address Oo Ic port Ar number Oc Op Ic proxy-v1
 Set the listen
 .Ar address
 and
@@ -444,6 +444,18 @@ will listen on all IPv4 and IPv6 addresses.
 can be used to listen on all IPv4 addresses and
 .Ar ::
 on all IPv6 addresses.
+If
+.Ic proxy-v1
+is specified, then connections speaking the proxy protocol v1 are
+expected on this listener.
+If multiple
+.Ic listen
+directive share the same
+.Ar address
+and
+.Ar port ,
+then all of them must have or lack
+.Ic proxy-v1 .
 .It Ic location Ar path Brq ...
 Specify server configuration rules for a specific location.
 .Ar path
