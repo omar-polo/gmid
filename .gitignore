@@ -34,9 +34,10 @@ regress/puny-test
 regress/gmid.pid
 
 regress/fuzz/in
-regress/fuzz/out
-regress/fuzz/min
 regress/fuzz/iri
+regress/fuzz/min
+regress/fuzz/out
+regress/fuzz/proxy
 
 site/gemini
 site/www
