@@ -266,7 +266,7 @@ main(int argc, char **argv)
 	struct location *loc;
 	const char *errstr, *certs_dir = NULL, *hostname = "localhost";
 	char path[PATH_MAX];
-	int ch, port = 1965;
+	int ch, verbose = 0, port = 1965;
 
 	setlocale(LC_CTYPE, "");
 
@@ -276,7 +276,7 @@ main(int argc, char **argv)
 	/* ge doesn't do privsep so no privsep crypto engine. */
 	conf->use_privsep_crypto = 0;
 
-	while ((ch = getopt_long(argc, argv, "d:H:hp:RV", opts, NULL)) != -1) {
+	while ((ch = getopt_long(argc, argv, "d:H:hp:RVv", opts, NULL)) != -1) {
 		switch (ch) {
 		case 'd':
 			certs_dir = optarg;
@@ -299,6 +299,9 @@ main(int argc, char **argv)
 		case 'V':
 			puts("Version: " GEMEXP_STRING);
 			return 0;
+		case 'v':
+			verbose = 1;
+			break;
 		default:
 			usage();
 			break;
@@ -309,6 +312,9 @@ main(int argc, char **argv)
 
 	if (argc > 1)
 		usage();
+
+	log_init(1, LOG_DAEMON);
+	log_setverbose(verbose);
 
 	/* prepare the configuration */
 	init_mime(&conf->mime);
