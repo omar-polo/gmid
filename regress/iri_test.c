@@ -301,5 +301,15 @@ main(void)
 	    empty,
 	    "reject invalid sequence (overlong NUL)");
 
+	/* hangs in previous versions found by afl */
+	TEST("http://omarpolo3com/f.././",
+	    PASS,
+	    IRI("http", "omarpolo3com", "", "f../", "", ""),
+	    "does not get confused by paths that contains '..'.");
+	TEST("lttp://oOarpols*czm/~../.R",
+	    PASS,
+	    IRI("lttp", "ooarpols*czm", "", "~../.R", "", ""),
+	    "does not get confused by paths that contains '..'.");
+
 	return 0;
 }
