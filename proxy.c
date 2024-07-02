@@ -55,7 +55,8 @@ proxy_tls_readcb(int fd, short event, void *d)
 	switch (ret = tls_read(c->proxyctx, buf, howmuch)) {
 	case TLS_WANT_POLLIN:
 	case TLS_WANT_POLLOUT:
-		goto retry;
+		event_add(&bufev->ev_read, NULL);
+		return;
 	case -1:
 		what |= EVBUFFER_ERROR;
 		goto err;
@@ -83,10 +84,6 @@ proxy_tls_readcb(int fd, short event, void *d)
 		(*bufev->readcb)(bufev, bufev->cbarg);
 	return;
 
-retry:
-	event_add(&bufev->ev_read, NULL);
-	return;
-
 err:
 	(*bufev->errorcb)(bufev, what, bufev->cbarg);
 }
@@ -111,7 +108,8 @@ proxy_tls_writecb(int fd, short event, void *d)
 		switch (ret) {
 		case TLS_WANT_POLLIN:
 		case TLS_WANT_POLLOUT:
-			goto retry;
+			event_add(&bufev->ev_write, NULL);
+			return;
 		case -1:
 			what |= EVBUFFER_ERROR;
 			goto err;
@@ -127,10 +125,6 @@ proxy_tls_writecb(int fd, short event, void *d)
 	if (bufev->writecb != NULL &&
 	    EVBUFFER_LENGTH(bufev->output) <= bufev->wm_write.low)
 		(*bufev->writecb)(bufev, bufev->cbarg);
-	return;
-
-retry:
-	event_add(&bufev->ev_write, NULL);
 	return;
 
 err:
