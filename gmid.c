@@ -275,7 +275,6 @@ main(int argc, char **argv)
 			    &errstr);
 			if (errstr != NULL)
 				fatalx("invalid process instance");
-			log_warnx("nprocs is %d", nprocs);
 			break;
 		case 'n':
 			conftest++;
