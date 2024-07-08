@@ -1309,7 +1309,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		ret = read(c->fd, buf, buflen);
 		if (ret == -1 && errno == EWOULDBLOCK)
 			ret = TLS_WANT_POLLIN;
-		
+
 		return ret;
 	}
 
@@ -1353,9 +1353,8 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		break;
 	}
 
-	if (pp1.proto != PROTO_UNKNOWN) {
+	if (pp1.proto != PROTO_UNKNOWN)
 		snprintf(c->rserv, sizeof(c->rserv), "%u", pp1.srcport);
-	}
 
 	proxy_proto_v1_string(&pp1, protostr, sizeof(protostr));
 	log_debug("proxy-protocol v1: %s", protostr);
@@ -1369,7 +1368,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		c->proxy_proto = c->buf.read_pos = 0;
 		c->buf.has_tail = 0;
 	}
-	
+
 	return TLS_WANT_POLLIN;
 }
 
@@ -1377,7 +1376,7 @@ static ssize_t
 write_cb(struct tls *ctx, const void *buf, size_t buflen, void *cb_arg)
 {
 	struct client *c = cb_arg;
-	
+
 	ssize_t ret = write(c->fd, buf, buflen);
 	if (ret == -1 && errno == EAGAIN)
 		return TLS_WANT_POLLOUT;
