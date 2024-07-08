@@ -1310,7 +1310,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 
 	if (c->buf.has_tail) {
 		/* we have leftover data from a previous call to read_cb */
-		size_t left = BUFLAYER_MAX - c->buf.read_pos;
+		size_t left = c->buf.len - c->buf.read_pos;
 		size_t copy_len = MINIMUM(buflen, left);
 		memcpy(buf, c->buf.data + c->buf.read_pos, copy_len);
 
