@@ -302,7 +302,7 @@ struct proxy_protocol_v1 {
 struct buflayer {
 	char data[BUFLAYER_MAX];
 	size_t len;
-	ssize_t read_pos;
+	size_t read_pos;
 	int has_tail;
 };
 
