@@ -299,8 +299,7 @@ struct proxy_protocol_v1 {
 
 #define BUFLAYER_MAX 108
 
-struct buflayer
-{
+struct buflayer {
 	char data[BUFLAYER_MAX];
 	size_t len;
 	ssize_t read_pos;
@@ -309,17 +308,17 @@ struct buflayer
 
 struct client {
 	struct conf		*conf;
-	struct address	*addr;
-	int 		 	 should_buffer;
-	struct buflayer  buf;
-	uint32_t	 	 id;
+	struct address		*addr;
+	int 			 should_buffer;
+	struct buflayer		 buf;
+	uint32_t		 id;
 	struct tls		*ctx;
 	char			*req;
-	size_t		 	 reqlen;
-	struct iri	 	 iri;
-	char		 	 domain[DOMAIN_NAME_LEN];
-	char		 	 rhost[NI_MAXHOST];
-	char		 	 rserv[NI_MAXSERV];
+	size_t			 reqlen;
+	struct iri		 iri;
+	char			 domain[DOMAIN_NAME_LEN];
+	char			 rhost[NI_MAXHOST];
+	char			 rserv[NI_MAXSERV];
 
 	struct bufferevent *bev;
 

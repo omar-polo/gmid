@@ -1300,7 +1300,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	struct client *c = cb_arg;
 
 	if (!c->should_buffer) {
-		// no buffer to cache into, read into libtls buffer
+		/* no buffer to cache into, read into libtls buffer */
 		errno = 0;
 		ssize_t ret = read(c->fd, buf, buflen);
 		if (ret == -1 && errno == EWOULDBLOCK)
@@ -1310,7 +1310,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	}
 
 	if (c->buf.has_tail) {
-		// we have leftover data from a previous call to read_cb
+		/* we have leftover data from a previous call to read_cb */
 		size_t left = BUFLAYER_MAX - c->buf.read_pos;
 		size_t copy_len = MINIMUM(buflen, left);
 		memcpy(buf, c->buf.data + c->buf.read_pos, copy_len);
@@ -1318,7 +1318,6 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		c->buf.read_pos += copy_len;
 
 		if (left == copy_len) {
-			// memset(buflayer, 0, BUFLAYER_MAX);
 			c->should_buffer = 0;
 			c->buf.has_tail = 0;
 		}
@@ -1326,7 +1325,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		return copy_len;
 	}
 
-	// buffer layer exists, we expect proxy protocol
+	/* buffer layer exists, we expect proxy protocol */
 	ssize_t n_read = read(
 		c->fd, 
 		c->buf.data + c->buf.len, 
@@ -1369,11 +1368,11 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	log_debug("proxy-protocol v1: %s", protostr);
 
 	if (consumed < c->buf.len) {
-		// we have some leftover
+		/* we have some leftover */
 		c->buf.read_pos = consumed;
 		c->buf.has_tail = 1;
 	} else {
-		// we consumed the whole buffer
+		/* we consumed the whole buffer */
 		c->should_buffer = c->buf.read_pos = 0;
 		c->buf.has_tail = 0;
 	}
@@ -1381,7 +1380,8 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	return TLS_WANT_POLLIN;
 }
 
-static ssize_t write_cb(struct tls *ctx, const void *buf, size_t buflen, void *cb_arg)
+static ssize_t
+write_cb(struct tls *ctx, const void *buf, size_t buflen, void *cb_arg)
 {
 	struct client *c = cb_arg;
 	
