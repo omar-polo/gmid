@@ -1301,7 +1301,6 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 
 	if (!c->proxy_proto) {
 		/* no buffer to cache into, read into libtls buffer */
-		errno = 0;
 		ssize_t ret = read(c->fd, buf, buflen);
 		if (ret == -1 && errno == EWOULDBLOCK)
 			ret = TLS_WANT_POLLIN;
