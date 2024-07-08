@@ -1297,11 +1297,16 @@ client_close(struct client *c)
 static ssize_t
 read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 {
-	struct client *c = cb_arg;
+	struct client		*c = cb_arg;
+	struct proxy_protocol_v1 pp1 = {0};
+	char			 protostr[1024];
+	ssize_t			 ret;
+	size_t			 left, copy, consumed;
+	int			 status;
 
 	if (!c->proxy_proto) {
 		/* no buffer to cache into, read into libtls buffer */
-		ssize_t ret = read(c->fd, buf, buflen);
+		ret = read(c->fd, buf, buflen);
 		if (ret == -1 && errno == EWOULDBLOCK)
 			ret = TLS_WANT_POLLIN;
 		
@@ -1310,36 +1315,26 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 
 	if (c->buf.has_tail) {
 		/* we have leftover data from a previous call to read_cb */
-		size_t left = c->buf.len - c->buf.read_pos;
-		size_t copy_len = MINIMUM(buflen, left);
-		memcpy(buf, c->buf.data + c->buf.read_pos, copy_len);
-
-		c->buf.read_pos += copy_len;
-
-		if (left == copy_len) {
+		left = c->buf.len - c->buf.read_pos;
+		copy = MINIMUM(buflen, left);
+		memcpy(buf, c->buf.data + c->buf.read_pos, copy);
+		c->buf.read_pos += copy;
+		if (left == copy) {
 			c->proxy_proto = 0;
 			c->buf.has_tail = 0;
 		}
-		
-		return copy_len;
+		return copy;
 	}
 
 	/* buffer layer exists, we expect proxy protocol */
-	ssize_t n_read = read(
-		c->fd, 
-		c->buf.data + c->buf.len, 
-		BUFLAYER_MAX - c->buf.len
-	);
-	if (n_read == -1 && errno == EWOULDBLOCK)
+	ret = read(c->fd, c->buf.data + c->buf.len, BUFLAYER_MAX - c->buf.len);
+	if (ret == -1 && errno == EWOULDBLOCK)
 		return TLS_WANT_POLLIN;
 
-	c->buf.len += n_read;
+	c->buf.len += ret;
 
-	struct proxy_protocol_v1 pp1 = {0};
-	size_t consumed = 0;
-	
-	int parse_status = proxy_proto_v1_parse(&pp1, c->buf.data, c->buf.len, &consumed);
-	if (parse_status == -1) {
+	status = proxy_proto_v1_parse(&pp1, c->buf.data, c->buf.len, &consumed);
+	if (status == -1) {
 		log_warnx("read_cb: received invalid proxy protocol header");
 		return -1;
 	}
@@ -1362,7 +1357,6 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		snprintf(c->rserv, sizeof(c->rserv), "%u", pp1.srcport);
 	}
 
-	char protostr[1024];
 	proxy_proto_v1_string(&pp1, protostr, sizeof(protostr));
 	log_debug("proxy-protocol v1: %s", protostr);
 
