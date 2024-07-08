@@ -309,7 +309,7 @@ struct buflayer {
 struct client {
 	struct conf		*conf;
 	struct address		*addr;
-	int 			 should_buffer;
+	int 			 proxy_proto;
 	struct buflayer		 buf;
 	uint32_t		 id;
 	struct tls		*ctx;

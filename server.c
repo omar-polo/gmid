@@ -1299,7 +1299,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 {
 	struct client *c = cb_arg;
 
-	if (!c->should_buffer) {
+	if (!c->proxy_proto) {
 		/* no buffer to cache into, read into libtls buffer */
 		errno = 0;
 		ssize_t ret = read(c->fd, buf, buflen);
@@ -1318,7 +1318,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		c->buf.read_pos += copy_len;
 
 		if (left == copy_len) {
-			c->should_buffer = 0;
+			c->proxy_proto = 0;
 			c->buf.has_tail = 0;
 		}
 		
@@ -1373,7 +1373,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		c->buf.has_tail = 1;
 	} else {
 		/* we consumed the whole buffer */
-		c->should_buffer = c->buf.read_pos = 0;
+		c->proxy_proto = c->buf.read_pos = 0;
 		c->buf.has_tail = 0;
 	}
 	
@@ -1422,7 +1422,7 @@ server_accept(int sock, short et, void *d)
 	c->pfd = -1;
 	memcpy(&c->raddr, &raddr, sizeof(raddr));
 	c->raddrlen = len;
-	c->should_buffer = addr->proxy;
+	c->proxy_proto = addr->proxy;
 
 	e = getnameinfo(sraddr, len, c->rhost, sizeof(c->rhost),
 	    c->rserv, sizeof(c->rserv), NI_NUMERICHOST | NI_NUMERICSERV);
