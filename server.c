@@ -1301,7 +1301,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	struct proxy_protocol_v1 pp1 = {0};
 	char			 protostr[1024];
 	ssize_t			 ret;
-	size_t			 left, copy, consumed;
+	size_t			 left, avail, copy, consumed;
 	int			 status;
 
 	if (!c->proxy_proto) {
@@ -1326,12 +1326,21 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		return copy;
 	}
 
-	/* buffer layer exists, we expect proxy protocol */
-	ret = read(c->fd, c->buf.data + c->buf.len, BUFLAYER_MAX - c->buf.len);
+	avail = sizeof(c->buf.data) - c->buf.len - 1; /* for a NUL */
+	if (avail == 0) {
+		log_warnx("read_cb: overlong proxy protocol v1 header");
+		return -1;
+	}
+
+	ret = read(c->fd, c->buf.data + c->buf.len, avail);
 	if (ret == -1 && errno == EWOULDBLOCK)
 		return TLS_WANT_POLLIN;
-
+	if (ret <= 0)
+		return ret;
 	c->buf.len += ret;
+
+	if (memmem(c->buf.data, c->buf.len, "\r\n", 2) == NULL)
+		return TLS_WANT_POLLIN;
 
 	status = proxy_proto_v1_parse(&pp1, c->buf.data, c->buf.len, &consumed);
 	if (status == -1) {
