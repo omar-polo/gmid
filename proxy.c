@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2021-2024 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -237,6 +237,11 @@ proxy_enqueue_req(struct client *c)
 	if (c->proxybev == NULL)
 		fatal("can't allocate bufferevent");
 
+	evb = EVBUFFER_OUTPUT(c->proxybev);
+
+	if (p->notls && p->proxy)
+		evbuffer_add(evb, c->buf.data, c->buf.len);
+
 	if (!p->notls) {
 		event_set(&c->proxybev->ev_read, c->pfd, EV_READ,
 		    proxy_tls_readcb, c->proxybev);
@@ -251,7 +256,6 @@ proxy_enqueue_req(struct client *c)
 
 	serialize_iri(&c->iri, iribuf, sizeof(iribuf));
 
-	evb = EVBUFFER_OUTPUT(c->proxybev);
 	evbuffer_add_printf(evb, "%s\r\n", iribuf);
 
 	bufferevent_enable(c->proxybev, EV_READ|EV_WRITE);
@@ -285,6 +289,40 @@ proxy_handshake(int fd, short event, void *d)
 
 	c->proxyevset = 0;
 	proxy_enqueue_req(c);
+}
+
+static ssize_t
+proxy_read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
+{
+	struct client	*c = cb_arg;
+	ssize_t		 ret;
+
+	ret = read(c->pfd, buf, buflen);
+	if (ret == -1 && errno == EAGAIN)
+		ret = TLS_WANT_POLLIN;
+	return ret;
+}
+
+static ssize_t
+proxy_write_cb(struct tls *ctx, const void *buf, size_t len, void *cb_arg)
+{
+	struct client	*c = cb_arg;
+	ssize_t		 ret;
+	size_t		 left;
+
+	while ((left = c->buf.len - c->buf.read_pos) > 0) {
+		ret = write(c->pfd, c->buf.data + c->buf.read_pos, left);
+		if (ret == -1 && errno == EAGAIN)
+			return (TLS_WANT_POLLOUT);
+		if (ret <= 0)
+			return (ret);
+		c->buf.read_pos += ret;
+	}
+
+	ret = write(c->pfd, buf, len);
+	if (ret == -1 && errno == EAGAIN)
+		ret = TLS_WANT_POLLOUT;
+	return (ret);
 }
 
 static int
@@ -323,7 +361,8 @@ proxy_setup_tls(struct client *c)
 
 	if (*(hn = p->sni) == '\0')
 		hn = p->host;
-	if (tls_connect_socket(c->proxyctx, c->pfd, hn) == -1)
+	if (tls_connect_cbs(c->proxyctx, proxy_read_cb, proxy_write_cb, c, hn)
+	    == -1)
 		goto err;
 
 	c->proxyevset = 1;

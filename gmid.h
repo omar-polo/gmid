@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2020-2024 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -168,6 +168,7 @@ struct proxy {
 	size_t		 keylen;
 	char		*reqca_path;
 	X509_STORE	*reqca;
+	int		 proxy;	/* use the proxy protocol */
 
 	TAILQ_ENTRY(proxy) proxies;
 };

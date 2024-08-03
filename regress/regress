@@ -69,6 +69,7 @@ run_test test_ipv4_addr
 run_test test_ipv6_addr need_ipv6
 run_test test_ipv6_server need_ipv6
 run_test test_high_prefork
+run_test test_proxy_protocol_v1
 
 # TODO: add test that uses only a TLSv1.2 or TLSv1.3
 # TODO: add a test that attempt to serve a non-regular file

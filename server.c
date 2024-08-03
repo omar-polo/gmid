@@ -556,21 +556,23 @@ check_matching_certificate(X509_STORE *store, struct client *c)
 }
 
 static int
-proxy_socket(struct client *c, const char *host, const char *port)
+proxy_socket(struct client *c, struct proxy *p)
 {
 	struct addrinfo hints, *res, *res0;
 	int r, sock, save_errno;
 	const char *cause = NULL;
+	char to[NI_MAXHOST], to_port[NI_MAXSERV];
+	int err;
 
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
 	/* XXX: asr_run? :> */
-	r = getaddrinfo(host, port, &hints, &res0);
+	r = getaddrinfo(p->host, p->port, &hints, &res0);
 	if (r != 0) {
 		log_warnx("getaddrinfo(\"%s\", \"%s\"): %s",
-		    host, port, gai_strerror(r));
+		    p->host, p->port, gai_strerror(r));
 		return -1;
 	}
 
@@ -595,10 +597,30 @@ proxy_socket(struct client *c, const char *host, const char *port)
 	}
 
 	if (sock == -1)
-		log_warn("can't connect to %s:%s: %s", host, port, cause);
+		log_warn("can't connect to %s:%s: %s", p->host, p->port, cause);
+
+	if (res && sock != -1 && p->proxy) {
+		err = getnameinfo(res->ai_addr, res->ai_addrlen,
+		    to, sizeof(to), to_port, sizeof(to_port),
+		    NI_NUMERICHOST|NI_NUMERICSERV);
+		if (err != 0) {
+			log_warnx("getnameinfo failed: %s", gai_strerror(err));
+			strlcpy(to, c->rhost, sizeof(to));
+			strlcpy(to_port, c->rserv, sizeof(to_port));
+		}
+
+		r = snprintf(c->buf.data, sizeof(c->buf.data),
+		    "PROXY TCP%c %s %s %s %s\r\n",
+		    c->addr->ai_family == AF_INET ? '4' : '6',
+		    c->rhost, to, c->rserv, to_port);
+		if (r < 0 || (size_t)r >= sizeof(c->buf.data)) {
+			log_warnx("failed serialize info for the proxy protocol");
+			c->buf.data[0] = '\0';
+		} else
+			c->buf.len = r;
+	}
 
 	freeaddrinfo(res0);
-
 	return sock;
 }
 
@@ -618,7 +640,7 @@ apply_reverse_proxy(struct client *c)
 
 	log_debug("opening proxy connection for %s:%s", p->host, p->port);
 
-	if ((c->pfd = proxy_socket(c, p->host, p->port)) == -1) {
+	if ((c->pfd = proxy_socket(c, p)) == -1) {
 		start_reply(c, PROXY_ERROR, "proxy error");
 		return 1;
 	}

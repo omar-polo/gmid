@@ -14,6 +14,7 @@ run_test() {
 	host="$REGRESS_HOST"
 	port=10965
 	proxy_port=10966
+	proxy=
 	config_common="log syslog off"
 	hdr=
 	body=
@@ -72,7 +73,7 @@ server "$server_name" {
 	cert "$PWD/localhost.pem"
 	key  "$PWD/localhost.key"
 	root "$PWD/testdata"
-	listen on $host port $port
+	listen on $host port $port $proxy
 	$2
 }
 EOF

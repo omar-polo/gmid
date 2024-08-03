@@ -11,7 +11,7 @@
 .\" WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-.Dd June 28, 2024
+.Dd August 3, 2024
 .Dt GMID.CONF 5
 .Os
 .Sh NAME
@@ -521,6 +521,10 @@ Refer to the
 .Xr tls_config_parse_protocols 3
 function for the valid protocol string values.
 By default, both TLSv1.2 and TLSv1.3 are enabled.
+.It Ic proxy-v1
+Use the proxy protocol v1.
+If supported by the remote server, this is useful to propagate the
+information about the originating IP address and port.
 .It Ic relay-to Ar host Op Cm port Ar port
 Relay the request to the given
 .Ar host

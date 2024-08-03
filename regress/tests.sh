@@ -533,3 +533,32 @@ test_high_prefork() {
 	dont_check_server_alive=yes
 	kill "$(cat gmid.pid)" 2>/dev/null || true
 }
+
+test_proxy_protocol_v1() {
+	rm -f log
+	proxy=proxy-v1
+	gen_config '
+log access "'$PWD'/log"
+log style legacy' ''
+	set_proxy 'proxy-v1'
+	run
+
+	ggflags="-P localhost:$proxy_port -H localhost.local"
+
+	# This will generate two log entry: one for the "frontend"
+	# and one for the proxied request.  Both should have exactly
+	# the same IP and port.
+	fetch_hdr /
+	check_reply '20 text/gemini'
+
+	n=$(awk '{print $1}' log | uniq | wc -l)
+	if [ "$n" -ne 1 ]; then
+		# keep the log for post-mortem analysis
+		echo
+		echo "n is $n"
+		return 1
+	fi
+
+	rm -f log
+	return 0
+}

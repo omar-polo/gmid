@@ -519,6 +519,9 @@ proxy_opt	: CERT string {
 				yyerror("invalid protocols string \"%s\"", $2);
 			free($2);
 		}
+		| PROXYV1 {
+			proxy->proxy = 1;
+		}
 		| RELAY_TO string proxy_port {
 			if (strlcpy(proxy->host, $2, sizeof(proxy->host))
 			    >= sizeof(proxy->host))
