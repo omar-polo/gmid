@@ -1,5 +1,17 @@
 # change log
 
+## 2024/08/03 - 2.0.5 “From Mars To Sirius”
+
+### New Features
+
+* support for the proxy protocol v1 both when accepting connections and when proxying via the new `proxy-v1' keyword available in `listen' and `proxy' directives.
+
+### Bug fixes
+
+* fixed typo in bound check that resulted in "chroot path too long" on some systems
+* correctly propagate the prefork value; was causing failures if it was changed from the default
+* titan: improve error check when reading from standard input; errors such as "no space left on device" would have been silently ignored.
+
 ## 2024/06/11 - 2.0.5 “Lady Stardust” security release
 
 This release fixes a logic error that can result in a DoS; therefore is a strongly reccomended update for all users.  It's safe to update to it from any version of the 2.0.x series.

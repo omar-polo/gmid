@@ -131,7 +131,7 @@ y.tab.c: parse.y
 lint:
 	man -Tlint -Wstyle -l gmid.8 gmid.conf.5 gemexp.1 gg.1 titan.1
 
-PUBKEY =	keys/gmid-2.0.pub
+PUBKEY =	keys/gmid-2.1.pub
 PRIVKEY =	set-PRIVKEY
 DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
 		Makefile README.md config.c configure crypto.c dirs.c fcgi.c \

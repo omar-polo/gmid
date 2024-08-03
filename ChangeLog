@@ -1,5 +1,6 @@
 2024-08-03  Omar Polo  <op@omarpolo.com>
 
+	* configure (VERSION): release 2.1 "From Mars To Sirius"
 	* add support for the proxy-protocol v1 in outgoing connections too;
 	needs to be enabled with the new `proxy-v1' flag in a `proxy' block.
 	* gg.c (parse_proxy): support IPv6 addresses in -P

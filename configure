@@ -19,7 +19,7 @@
 set -e
 
 RELEASE=no
-VERSION=2.0.5-current
+VERSION=2.1
 
 usage()
 {
