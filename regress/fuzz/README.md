@@ -1,6 +1,6 @@
 # Fuzzying gmid
 
-Here are some notes on how to fuzz (some) gmid parts using afl.
+Here are some notes on how to fuzz some parts of gmid using afl.
 
  - run `make -C ../../ clean` beforehand so that we compile all relevant
    sources with afl-clang.  Then, clean again before rebuilding gmid.
