@@ -106,7 +106,7 @@ check_ip_v1(int af, void *addr, char **buf)
 }
 
 static int
-check_port_v1(uint16_t *port, char **buf, size_t *buflen)
+check_port_v1(uint16_t *port, char **buf)
 {
 	size_t wspc_idx = strcspn(*buf, " \r");
 	char *wspc = *buf + wspc_idx;
@@ -166,8 +166,8 @@ proxy_proto_v1_parse(struct proxy_protocol_v1 *s, char *buf, size_t buflen,
 		return (-1);
 	}
 
-	if (check_port_v1(&s->srcport, &buf, &buflen) == -1 ||
-	    check_port_v1(&s->dstport, &buf, &buflen) == -1)
+	if (check_port_v1(&s->srcport, &buf) == -1 ||
+	    check_port_v1(&s->dstport, &buf) == -1)
 		return (-1);
 
 	if (*buf != '\n')
