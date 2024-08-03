@@ -483,6 +483,8 @@ main_configure_done(struct conf *conf)
 static void
 main_reload(struct conf *conf)
 {
+	int prefork = conf->prefork;
+
 	if (conf->reload) {
 		log_debug("%s: already in progress: %d pending",
 		    __func__, conf->reload);
@@ -496,6 +498,12 @@ main_reload(struct conf *conf)
 		log_warnx("failed to parse the config");
 		return;
 	}
+
+	/*
+	 * We honour the prefork number only at startup; afterwards
+	 * the number of server procs in not changed.
+	 */
+	conf->prefork = prefork;
 
 	main_configure(conf);
 }
