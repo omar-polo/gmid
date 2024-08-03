@@ -631,7 +631,7 @@ if no mapping was found.
 The following is an example of a possible configuration for a site
 that enables only TLSv1.3, adds the MIME types mapping from
 .Pa /usr/share/misc/mime.types
-and defines two virtual host:
+and defines two virtual hosts:
 .Bd -literal -offset indent
 protocols "tlsv1.3"
 
@@ -657,9 +657,9 @@ server "example.it" {
 }
 .Ed
 .Pp
-Yet another example, showing how to enable a
+This example shows how to enable the
 .Ic chroot
-and use
+and use a
 .Ic location
 rule
 .Bd -literal -offset indent
@@ -686,13 +686,28 @@ server "example.com" {
 }
 .Ed
 .Pp
-This shows how to set up a reverse proxy: all request for
+This example shows how to log requests to
+.Pa /var/gemini/logs/access.log
+when running in the
+.Pa /var/gemini
+chroot.
+The file will be created if not exists.
+.Bd -literal -offset indent
+chroot "/var/gemini"
+user "_gmid"
+
+log {
+	access "/logs/access.log"  # relative to the chroot
+}
+.Ed
+.Pp
+This example shows how to set up a reverse proxy: all request for
 .Sq example.com
 will be forwarded to 10.0.0.6 transparently.
 Proxying establish a new TLS connection, so any client-certificates used
 to connect to
 .Xr gmid 8
-cannot be provided to the proxied server as well.
+cannot be provided to the proxied server.
 .Bd -literal -offset indent
 server "example.com" {
 	listen on * port 1965
