@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2021, 2022, 2023 Omar Polo <op@omarpolo.com>
+ * Copyright (c) 2020-2024 Omar Polo <op@omarpolo.com>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -111,8 +111,10 @@ log_request(struct client *c, int code, const char *meta)
 		strlcpy(b, c->iri.schema, sizeof(b));
 		strlcat(b, "://", sizeof(b));
 
-		/* log the decoded host name, but if it was invalid
-		 * use the raw one. */
+		/*
+		 * log the decoded host name, but if it was invalid
+		 * use the raw one.
+		 */
 		if (*c->domain != '\0')
 			strlcat(b, c->domain, sizeof(b));
 		else
