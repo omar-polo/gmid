@@ -604,7 +604,8 @@ proxy_socket(struct client *c, struct proxy *p)
 		    to, sizeof(to), to_port, sizeof(to_port),
 		    NI_NUMERICHOST|NI_NUMERICSERV);
 		if (err != 0) {
-			log_warnx("getnameinfo failed: %s", gai_strerror(err));
+			log_warnx("%s: getnameinfo failed: %s", __func__,
+			    gai_strerror(err));
 			strlcpy(to, c->rhost, sizeof(to));
 			strlcpy(to_port, c->rserv, sizeof(to_port));
 		}
@@ -1324,7 +1325,7 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	char			 protostr[1024];
 	ssize_t			 ret;
 	size_t			 left, avail, copy, consumed;
-	int			 status;
+	int			 err, status;
 
 	if (!c->proxy_proto) {
 		/* no buffer to cache into, read into libtls buffer */
@@ -1370,22 +1371,19 @@ read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 		return -1;
 	}
 
-	switch (pp1.proto) {
-	case PROTO_V4:
-		inet_ntop(AF_INET, &pp1.srcaddr.v4, c->rhost,
-		    sizeof(c->rhost));
-		break;
-	case PROTO_V6:
-		inet_ntop(AF_INET6, &pp1.srcaddr.v6, c->rhost,
-		    sizeof(c->rhost));
-		break;
-	case PROTO_UNKNOWN:
+	if (pp1.proto == PROTO_UNKNOWN)
 		strlcpy(c->rhost, "UNKNOWN", sizeof(c->rhost));
-		break;
-	}
-
-	if (pp1.proto != PROTO_UNKNOWN)
+	else {
+		err = getnameinfo((struct sockaddr *)&pp1.srcaddr, pp1.srclen,
+		    c->rhost, sizeof(c->rhost), NULL, 0,
+		    NI_NUMERICHOST);
+		if (err) {
+			log_warn("%s: getnameinfo failed: %s", __func__,
+			    gai_strerror(err));
+			return -1;
+		}
 		snprintf(c->rserv, sizeof(c->rserv), "%u", pp1.srcport);
+	}
 
 	proxy_proto_v1_string(&pp1, protostr, sizeof(protostr));
 	log_debug("proxy-protocol v1: %s", protostr);
@@ -1450,7 +1448,8 @@ server_accept(int sock, short et, void *d)
 	e = getnameinfo(sraddr, len, c->rhost, sizeof(c->rhost),
 	    c->rserv, sizeof(c->rserv), NI_NUMERICHOST | NI_NUMERICSERV);
 	if (e != 0) {
-		log_warnx("getnameinfo failed: %s", gai_strerror(e));
+		log_warnx("%s: getnameinfo failed: %s", __func__,
+		    gai_strerror(e));
 		close(c->fd);
 		free(c);
 		return;

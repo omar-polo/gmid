@@ -11,7 +11,7 @@ REG_COMPATS =	${COBJS:%=../../%}
 IRI_SRCS =	iri.c ../../iri.c ../../utf8.c ../../log.c
 IRI_OBJS =	${IRI_SRCS:.c=.o} ${REG_COMPATS}
 
-PROXY_SRCS =	proxy.c ../../proxy-proto.c
+PROXY_SRCS =	proxy.c ../../proxy-proto.c ../../log.c
 PROXY_OBJS =	${PROXY_SRCS:.c=.o} ${REG_COMPATS}
 
 .PHONY: all data clean dist

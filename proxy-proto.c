@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "log.h"
+
 #define MIN(a, b) (a) < (b) ? (a) : (b)
 
 static int
@@ -88,17 +90,29 @@ check_crlf_v1(char *const *buf, size_t buflen)
 }
 
 static int
-check_ip_v1(int af, void *addr, char **buf)
+check_ip_v1(int af, char **buf, struct sockaddr_storage *addr, socklen_t *len)
 {
-	char *spc;
+	struct addrinfo	 hints, *res;
+	char		*spc;
+	int		 err;
 
 	if ((spc = strchr(*buf, ' ')) == NULL)
 		return (-1);
 
 	*spc++ = '\0';
 
-	if (inet_pton(af, *buf, addr) != 1)
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = af;
+	hints.ai_flags = AI_NUMERICHOST;
+	err = getaddrinfo(*buf, NULL, &hints, &res);
+	if (err) {
+		log_warnx("getaddrinfo(%s): %s", *buf, gai_strerror(err));
 		return (-1);
+	}
+
+	memcpy(addr, res->ai_addr, res->ai_addrlen);
+	*len = res->ai_addrlen;
+	freeaddrinfo(res);
 
 	*buf = spc;
 
@@ -132,6 +146,7 @@ proxy_proto_v1_parse(struct proxy_protocol_v1 *s, char *buf, size_t buflen,
     size_t *consumed)
 {
 	const char *begin = buf;
+	int af;
 
 	if (check_crlf_v1(&buf, buflen) == -1 ||
 	    check_prefix_v1(&buf) == -1)
@@ -149,24 +164,13 @@ proxy_proto_v1_parse(struct proxy_protocol_v1 *s, char *buf, size_t buflen,
 		return (-1);
 	}
 
-	switch (s->proto) {
-	case PROTO_V4:
-		if (check_ip_v1(AF_INET, &s->srcaddr.v4, &buf) == -1 ||
-		    check_ip_v1(AF_INET, &s->dstaddr.v4, &buf) == -1)
-			return (-1);
-		break;
+	af = AF_INET;
+	if (s->proto == PROTO_V6)
+		af = AF_INET6;
 
-	case PROTO_V6:
-		if (check_ip_v1(AF_INET6, &s->srcaddr.v6, &buf) == -1 ||
-		    check_ip_v1(AF_INET6, &s->dstaddr.v6, &buf) == -1)
-			return (-1);
-		break;
-
-	default:
-		return (-1);
-	}
-
-	if (check_port_v1(&s->srcport, &buf) == -1 ||
+	if (check_ip_v1(af, &buf, &s->srcaddr, &s->srclen) == -1 ||
+	    check_ip_v1(AF_UNSPEC, &buf, &s->dstaddr, &s->dstlen) == -1 ||
+	    check_port_v1(&s->srcport, &buf) == -1 ||
 	    check_port_v1(&s->dstport, &buf) == -1)
 		return (-1);
 
@@ -182,36 +186,31 @@ int
 proxy_proto_v1_string(const struct proxy_protocol_v1 *s, char *buf,
     size_t buflen)
 {
-	// "0000:0000:0000:0000:0000:0000:0000:0000\0"
-	char srcaddrbuf[40], dstaddrbuf[40];
+	char srcaddr[NI_MAXHOST], dstaddr[NI_MAXHOST];
 	int ret;
-	switch (s->proto) {
-	case PROTO_UNKNOWN:
-		ret = snprintf(buf, buflen, "unknown");
-		goto fin;
-	case PROTO_V4:
-		inet_ntop(AF_INET, &s->srcaddr.v4, srcaddrbuf,
-		    sizeof(srcaddrbuf));
-		inet_ntop(AF_INET, &s->dstaddr.v4, dstaddrbuf,
-		    sizeof(dstaddrbuf));
-		break;
-	case PROTO_V6:
-		inet_ntop(AF_INET6, &s->srcaddr.v6, srcaddrbuf,
-		    sizeof(srcaddrbuf));
-		inet_ntop(AF_INET6, &s->dstaddr.v6, dstaddrbuf,
-		    sizeof(dstaddrbuf));
-		break;
+
+	if (s->proto == PROTO_UNKNOWN)
+		return strlcpy(buf, "unknown", buflen);
+
+	ret = getnameinfo((struct sockaddr *)&s->srcaddr, s->srclen,
+	    srcaddr, sizeof(srcaddr), NULL, 0,
+	    NI_NUMERICHOST);
+	if (ret) {
+		log_warnx("getnameinfo: %s", gai_strerror(ret));
+		return (-1);
 	}
 
-	ret = snprintf(
-	    buf,
-	    buflen,
-	    "from %s port %u via %s port %u",
-	    srcaddrbuf,
-	    s->srcport,
-	    dstaddrbuf,
-	    s->dstport);
+	ret = getnameinfo((struct sockaddr *)&s->dstaddr, s->dstlen,
+	    dstaddr, sizeof(dstaddr), NULL, 0,
+	    NI_NUMERICHOST);
+	if (ret) {
+		log_warnx("getnameinfo: %s", gai_strerror(ret));
+		return (-1);
+	}
 
-fin:
-	return ret;
+	ret = snprintf(buf, buflen, "from %s port %u via %s port %u",
+	    srcaddr, s->srcport, dstaddr, s->dstport);
+	if (ret < 0 || (size_t)ret >= buflen)
+		return (-1);
+	return (ret);
 }

@@ -290,12 +290,13 @@ enum proto {
 };
 
 struct proxy_protocol_v1 {
-	enum proto proto;
-	union {
-		struct in_addr v4;
-		struct in6_addr v6;
-	} srcaddr, dstaddr;
-	uint16_t srcport, dstport;
+	enum proto		 proto;
+	struct sockaddr_storage	 srcaddr;
+	socklen_t		 srclen;
+	struct sockaddr_storage	 dstaddr;
+	socklen_t		 dstlen;
+	uint16_t		 srcport;
+	uint16_t		 dstport;
 };
 
 #define BUFLAYER_MAX 108
