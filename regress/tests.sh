@@ -523,8 +523,13 @@ test_ipv6_server() {
 }
 
 test_high_prefork() {
+	kill "$(cat gmid.pid)" 2>/dev/null || true
+
 	setup_simple_test 'prefork 12'
 
 	fetch /
 	check_reply "20 text/gemini" "# hello world" || return 1
+
+	dont_check_server_alive=yes
+	kill "$(cat gmid.pid)" 2>/dev/null || true
 }
