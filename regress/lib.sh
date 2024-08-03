@@ -194,11 +194,12 @@ count() {
 }
 
 quit() {
-	pid="$(cat gmid.pid || true)"
+	pid="$(cat gmid.pid || true)" 2>/dev/null
 	if [ "$pid" != "" ]; then
 		kill $pid || true
 		wait || true
 	fi
+	rm gmid.pid
 }
 
 onexit() {
