@@ -362,22 +362,27 @@ parse_debug(const char *arg)
 }
 
 static void
-parse_proxy(const char *arg)
+parse_proxy(char *arg)
 {
 	char *at;
 
-	if ((proxy_host = strdup(arg)) == NULL)
-		err(1, "strdup");
-
+	proxy_host = arg;
 	proxy_port = "1965";
 
-	if ((at = strchr(proxy_host, ':')) == NULL)
+	if (*proxy_host == '[') {
+		if ((at = strchr(proxy_host, ']')) == NULL)
+			errx(1, "invalid host: %s", proxy_host);
+		proxy_host++;
+		*at++ = '\0';
+		if (*at == '\0')
+			return;
+		if (*at != ':')
+			errx(1, "invalid port specification: %s", at);
+	} else if ((at = strchr(proxy_host, ':')) == NULL)
 		return;
-	*at = '\0';
-	proxy_port = ++at;
 
-	if (strchr(proxy_port, ':') != NULL)
-		errx(1, "invalid port %s", proxy_port);
+	*at++ = '\0';
+	proxy_port = at;
 }
 
 int
