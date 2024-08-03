@@ -186,12 +186,7 @@ check() {
 		return 1
 	fi
 
-	# remember: we're running under ``set -e''
-	if ps $pid >/dev/null; then
-		return 0
-	fi
-
-	return 1
+	ps $pid >/dev/null
 }
 
 count() {
