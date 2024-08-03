@@ -402,14 +402,14 @@ test_proxy_relay_to() {
 
 	run
 
-	ggflags="-P localhost:$port -H localhost.local"
+	ggflags="-P localhost:$proxy_port -H localhost.local"
 
 	fetch /
 	check_reply "20 text/gemini" "# hello world"
 }
 
 test_proxy_with_certs() {
-	ggflags="-P localhost:$port -H localhost.local"
+	ggflags="-P localhost:$proxy_port -H localhost.local"
 
 	# first test using the valid keys
 

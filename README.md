@@ -115,8 +115,8 @@ Execute
 	$ make regress
 
 to start the suite.  Keep in mind that the regression tests needs to
-create a few file inside the `regress` directory and bind the 10965
-port.
+create a few file inside the `regress` directory and bind the 10965 and
+10966 ports.
 
 
 ## Contributing

@@ -13,6 +13,7 @@ run_test() {
 	ggflags=
 	host="$REGRESS_HOST"
 	port=10965
+	proxy_port=10966
 	config_common="log syslog off"
 	hdr=
 	body=
@@ -86,7 +87,7 @@ set_proxy() {
 server "localhost.local" {
 	cert "$PWD/localhost.pem"
 	key "$PWD/localhost.key"
-	listen on $host port $port
+	listen on $host port $proxy_port
 	proxy {
 		relay-to localhost port $port
 		$1
@@ -117,13 +118,13 @@ setup_simple_test() {
 # usage: get <path>
 # return the body of the request on stdout
 get() {
-	$gg -q -T10 $ggflags "gemini://$gghost:10965/$1" || true
+	$gg -q -T10 $ggflags "gemini://$gghost:$port/$1" || true
 }
 
 # usage: head <path>
 # return the meta response line on stdout
 head() {
-	$gg -q -T10 -d header $ggflags "gemini://$gghost:10965/$1" || true
+	$gg -q -T10 -d header $ggflags "gemini://$gghost:$port/$1" || true
 }
 
 # usage: fetch <path>
