@@ -1,3 +1,29 @@
+2024-08-03  Omar Polo  <op@omarpolo.com>
+
+	* add support for the proxy-protocol v1 in outgoing connections too;
+	needs to be enabled with the new `proxy-v1' flag in a `proxy' block.
+	* gg.c (parse_proxy): support IPv6 addresses in -P
+
+2024-06-17  Christoph Liebender  <cristoph.liebender@posteo.de>
+
+	* add support for the proxy-protocol v1 on incoming connection;
+	needs to be enabled with the new `proxy-v1' flag for `listen'.
+
+2024-06-17  Omar Polo  <op@omarpolo.com>
+
+	* titan.c (open_input_file): improve error checking; errors like
+	"no space left on device" would have been hidden otherwise.
+
+2024-06-14  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c: correctly propagate the prefork value; was causing
+	failures if the `prefork' setting was changed from the default.
+
+2024-06-12  Omar Polo  <op@omarpolo.com>
+
+	* gmid.c (main): fix typo in a bounds check resulting in
+	"chroot path too long" on some systems.
+
 2024-06-11  Omar Polo  <op@omarpolo.com>
 
 	* configure (VERSION): release 2.0.5
