@@ -360,8 +360,6 @@ proc_setup(struct privsep *ps, struct privsep_proc *procs, unsigned int nproc)
 	 */
 	for (src = 0; src < PROC_MAX; src++) {
 		/* Allocate destination array for each process */
-		log_debug("allocating %d for proc %d/%d",
-		    ps->ps_instances[src], src, PROC_MAX);
 		if ((ps->ps_pipes[src] = calloc(ps->ps_instances[src],
 		    sizeof(struct privsep_pipes))) == NULL)
 			fatal("%s: calloc", __func__);
