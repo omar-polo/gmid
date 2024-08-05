@@ -16,7 +16,19 @@
 
 #include "../config.h"
 
-#if HAVE_PROGRAM_INVOCATION_SHORT_NAME
+#if HAVE___PROGNAME
+
+#include <stddef.h>
+
+extern char *__progname;
+
+const char *
+getprogname(void)
+{
+	return __progname;
+}
+
+#elif HAVE_PROGRAM_INVOCATION_SHORT_NAME
 
 #include <errno.h>
 
@@ -29,7 +41,7 @@ getprogname(void)
 }
 
 #else
-
+# warning Found no way to get the program name, will use "gmid" for all utilities.
 const char *
 getprogname(void)
 {

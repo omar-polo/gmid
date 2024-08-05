@@ -287,6 +287,10 @@ if [ ${HAVE_ENDIAN_H} -eq 0 -a \
 	exit 1
 fi
 
+runtest getprogname	GETPROGNAME	|| \
+runtest __progname	__PROGNAME	|| \
+runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME -D_GNU_SOURCE || true
+
 runtest arc4random	ARC4RANDOM	|| true
 runtest arc4random_buf	ARC4RANDOM_BUF	|| true
 runtest err		ERR		|| true
@@ -294,14 +298,12 @@ runtest explicit_bzero	EXPLICIT_BZERO	|| true
 runtest freezero	FREEZERO	|| true
 runtest getdtablecount	GETDTABLECOUNT	|| true
 runtest getdtablesize	GETDTABLESIZE	|| true
-runtest getprogname	GETPROGNAME	|| true
 runtest imsg		IMSG		"" -lutil libimsg || true
 runtest landlock	LANDLOCK	|| true
 runtest libevent	LIBEVENT	"" -levent libevent_core|| true
 runtest memmem		MEMMEM		-D_GNU_SOURCE || true
 runtest openssl		OPENSSL		"" '-lcrypto -lssl' 'libcrypto libssl' || true
 runtest pr_set_name	PR_SET_NAME	|| true
-runtest program_invocation_short_name PROGRAM_INVOCATION_SHORT_NAME -D_GNU_SOURCE || true
 runtest queue_h		QUEUE_H		|| true
 runtest reallocarray	REALLOCARRAY	-D_OPENBSD_SOURCE	|| true
 runtest recallocarray	RECALLOCARRAY	|| true
@@ -447,6 +449,9 @@ cat <<__HEREDOC__
 #ifndef SYSCONFDIR
 # define SYSCONFDIR		"${SYSCONFDIR}"
 #endif
+
+#define HAVE___PROGNAME		${HAVE___PROGNAME:-0}
+#define HAVE_PROGRAM_INVOCATION_SHORT_NAME ${HAVE_PROGRAM_INVOCATION_SHORT_NAME:-0}
 
 __HEREDOC__
 

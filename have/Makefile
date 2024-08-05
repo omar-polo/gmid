@@ -5,6 +5,7 @@ DISTFILES =	ASN1_time_parse.c \
 		SSL_CTX_load_verify_mem.c \
 		SSL_CTX_use_certificate_chain_mem.c \
 		X509_LOOKUP_mem.c \
+		__progname.c \
 		arc4random.c \
 		arc4random_buf.c \
 		endian_h.c \
