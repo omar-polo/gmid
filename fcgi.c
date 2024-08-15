@@ -415,7 +415,7 @@ fcgi_req(struct client *c, struct location *loc)
 	else
 		strlcpy(path, stripped, sizeof(path));
 
-	port = c->iri.host;
+	port = c->iri.port;
 	if (port == NULL || *port == '\0')
 		port = "1965";
 
