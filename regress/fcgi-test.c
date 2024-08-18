@@ -15,8 +15,8 @@
  */
 
 /*
- * Test program for fastcgi.  It speaks the protocol over stdin.
- * Can't handle more than one request at the same time.
+ * Test program for fastcgi.  Can't handle more than one request at
+ * the same time.
  */
 
 #include "../config.h"
