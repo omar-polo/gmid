@@ -86,6 +86,15 @@
 
 #define TLS_CERT_HASH_SIZE	128
 
+/*
+ * glibc is violating POSIX by defining HOST_NAME_MAX to a ridicully
+ * small value, so we can't use it.  Luckily, we don't have to do DNS
+ * so we don't risk to pass buffers too big to functions that might
+ * not expect them, we just need a fixed size buffer to catch possible
+ * misconfigurations.
+ */
+#define GMID_HOST_NAME_MAX	255	/* without NUL */
+
 /* forward declaration */
 struct privsep;
 struct privsep_proc;
@@ -144,19 +153,19 @@ struct envlist {
 
 TAILQ_HEAD(aliashead, alist);
 struct alist {
-	char		alias[HOST_NAME_MAX + 1];
+	char		alias[GMID_HOST_NAME_MAX + 1];
 	TAILQ_ENTRY(alist) aliases;
 };
 
 TAILQ_HEAD(proxyhead, proxy);
 struct proxy {
 	char		 match_proto[32];
-	char		 match_host[HOST_NAME_MAX + 1];
+	char		 match_host[GMID_HOST_NAME_MAX + 1];
 	char		 match_port[32];
 
-	char		 host[HOST_NAME_MAX + 1];
+	char		 host[GMID_HOST_NAME_MAX + 1];
 	char		 port[32];
-	char		 sni[HOST_NAME_MAX];
+	char		 sni[GMID_HOST_NAME_MAX];
 	int		 notls;
 	uint32_t	 protocols;
 	int		 noverifyname;
@@ -199,7 +208,7 @@ struct location {
 
 TAILQ_HEAD(vhosthead, vhost);
 struct vhost {
-	char		 domain[HOST_NAME_MAX + 1];
+	char		 domain[GMID_HOST_NAME_MAX + 1];
 	char		*cert_path;
 	char		*key_path;
 	char		*ocsp_path;

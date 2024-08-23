@@ -90,6 +90,15 @@ test_static_files() {
 	check_reply "20 text/gemini" "# hello world" || return 1
 }
 
+test_alias_long_hostname() {
+	setup_simple_test '' '
+alias "laYkH0yyd7xDFO152Ubtm9Efxg8Gvt7wssNd8pPTVIIXVYbYrZERl38LrVY30WbrMrZxLFfhnmsfe1X2FUNAGMVYAxPspjl4"
+'
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+}
+
 test_directory_redirect() {
 	setup_simple_test
 
