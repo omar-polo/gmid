@@ -9,6 +9,31 @@ current_test=
 server_name=
 gghost=
 
+fcgi_content() {
+	remote_host=::1
+	if [ "$HAVE_IPV6" != yes ]; then
+		remote_host=127.0.0.1
+	fi
+
+	cat <<EOF
+Here's the parameters I've got:
+* AUTH_TYPE=
+* GATEWAY_INTERFACE=CGI/1.1
+* GEMINI_URL_PATH=${fcgi_path_info##/}
+* PATH_INFO=$fcgi_path_info
+* PATH_TRANSLATED=$fcgi_path
+* QUERY_STRING=
+* REMOTE_ADDR=$remote_host
+* REMOTE_HOST=$remote_host
+* REQUEST_METHOD=GET
+* SCRIPT_NAME=
+* SERVER_NAME=<redacted>
+* SERVER_PORT=$port
+* SERVER_PROTOCOL=GEMINI
+* SERVER_SOFTWARE=$($gmid -V | awk '{print $2 "/" $3}')
+EOF
+}
+
 run_test() {
 	ggflags=
 	host="$REGRESS_HOST"
@@ -16,6 +41,8 @@ run_test() {
 	proxy_port=10966
 	proxy=
 	config_common="log syslog off"
+	fcgi_path_info=/
+	fcgi_path="$PWD/testdata/"
 	hdr=
 	body=
 	dont_check_server_alive=no

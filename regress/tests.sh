@@ -306,12 +306,10 @@ test_fastcgi() {
 
 	setup_simple_test 'prefork 1' 'fastcgi socket "'$PWD'/fcgi.sock"'
 
-	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
-
 	i=0
 	while [ $i -lt 10 ]; do
 		fetch /
-		check_reply "20 text/gemini" "$msg"
+		check_reply "20 text/gemini" "$(fcgi_content)"
 		if [ $? -ne 0 ]; then
 			kill $fcgi_pid
 			return 1
@@ -327,15 +325,16 @@ test_fastcgi() {
 test_fastcgi_inside_location() {
 	./fcgi-test fcgi.sock &
 	fcgi_pid=$!
+	fcgi_path_info="/foo"
+	fcgi_path="$PWD/testdata/foo"
 
 	setup_simple_test 'prefork 1' 'fastcgi socket "'$PWD'/fcgi.sock"
 	location "/dir/*" {
 		fastcgi off
 	}'
 
-	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
 	fetch /foo
-	if ! check_reply "20 text/gemini" "$msg"; then
+	if ! check_reply "20 text/gemini" "$(fcgi_content)"; then
 		kill $fcgi_pid
 		return 1
 	fi
@@ -353,6 +352,8 @@ test_fastcgi_inside_location() {
 test_fastcgi_location_match() {
 	./fcgi-test fcgi.sock &
 	fcgi_pid=$!
+	fcgi_path_info="/foo"
+	fcgi_path="$PWD/testdata/foo"
 
 	setup_simple_test 'prefork 1' '
 	location "/dir/*" {
@@ -362,9 +363,8 @@ test_fastcgi_location_match() {
 		fastcgi socket "'$PWD'/fcgi.sock"
 	}'
 
-	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
 	fetch /foo
-	if ! check_reply "20 text/gemini" "$msg"; then
+	if ! check_reply "20 text/gemini" "$(fcgi_content)"; then
 		kill $fcgi_pid
 		return 1
 	fi
@@ -387,9 +387,8 @@ test_fastcgi_deprecated_syntax() {
 	# backward compatibility works.
 	setup_simple_test 'prefork 1' 'fastcgi "'$PWD'/fcgi.sock"'
 
-	msg=$(printf "# hello from fastcgi!\nsome more content in the page...")
 	fetch /
-	check_reply "20 text/gemini" "$msg"
+	check_reply "20 text/gemini" "$(fcgi_content)"
 	if [ $? -ne 0 ]; then
 		kill $fcgi_pid
 		return 1

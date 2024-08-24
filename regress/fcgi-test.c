@@ -43,6 +43,10 @@
 
 #define SUM(a, b) (((a) << 8) + (b))
 
+#ifndef nitems
+#define nitems(_a) (sizeof((_a)) / sizeof((_a)[0]))
+#endif
+
 struct fcgi_header {
 	uint8_t version;
 	uint8_t type;
@@ -61,6 +65,11 @@ struct fcgi_end_req_body {
 	unsigned char app_status0;
 	unsigned char proto_status;
 	unsigned char reserved[3];
+};
+
+struct param {
+	char		 name[32];
+	char		 value[128];
 };
 
 static int
@@ -156,12 +165,65 @@ assert_record(int fd, int type)
 	consume(fd, hdr.padding);
 }
 
+static int
+parse_len(int sock)
+{
+	unsigned char	 c, x[3];
+
+	must_read(sock, &c, 1);
+	if (c >> 7 == 0)
+		return (c);
+
+	must_read(sock, &x, sizeof(x));
+	return (((c & 0x7F) << 24) | (x[0] << 16) | (x[1] << 8) | x[2]);
+}
+
+static void
+parse_params(int sock, struct param *param, struct fcgi_header *hdr)
+{
+	int			 tot;
+	int			 nlen, vlen;
+
+	tot = SUM(hdr->content_len1, hdr->content_len0);
+	tot -= sizeof(*hdr);
+
+	nlen = parse_len(sock);
+	vlen = parse_len(sock);
+
+	if (nlen + vlen != tot)
+		errx(1, "unexpected length, name=%d val=%d exp=%d",
+		    nlen, vlen, tot);
+
+	if ((size_t)nlen > sizeof(param->name) - 1 ||
+	    (size_t)vlen > sizeof(param->value) - 1)
+		errx(1, "parameter name or value too long");
+
+	memset(param, 0, sizeof(*param));
+	must_read(sock, param->name, nlen);
+	must_read(sock, param->value, vlen);
+
+	if (!strcmp(param->name, "SERVER_NAME"))
+		strlcpy(param->value, "<redacted>", sizeof(param->value));
+
+	consume(sock, hdr->padding);
+}
+
+static int
+param_cmp(const void *a, const void *b)
+{
+	const struct param *x = a, *y = b;
+
+	return (strcmp(x->name, y->name));
+}
+
 int
 main(int argc, char **argv)
 {
 	struct fcgi_header	 hdr;
 	struct fcgi_end_req_body end;
 	struct sockaddr_un	 sun;
+	struct param		 params[64];
+	size_t			 i, nparam;
 	const char		*path;
 	const char		*msg;
 	size_t			 len;
@@ -201,36 +263,57 @@ main(int argc, char **argv)
 		assert_record(s, FCGI_BEGIN_REQUEST);
 
 		/* read params */
+		nparam = 0;
 		for (;;) {
 			read_header(s, &hdr);
-
-			consume(s, SUM(hdr.content_len1, hdr.content_len0));
-			consume(s, hdr.padding);
 
 			if (hdr.type != FCGI_PARAMS)
 				errx(1, "got %d; expecting PARAMS", hdr.type);
 
 			if (hdr.content_len0 == 0 &&
 			    hdr.content_len1 == 0 &&
-			    hdr.padding == 0)
+			    hdr.padding == 0) {
+				consume(s, SUM(hdr.content_len1, hdr.content_len0));
+				consume(s, hdr.padding);
 				break;
+			}
+
+			if (nparam == nitems(params))
+				errx(1, "too many parameters");
+
+			parse_params(s, &params[nparam++], &hdr);
 		}
 
 		assert_record(s, FCGI_STDIN);
 
-		msg = "20 text/gemini\r\n# hello from fastcgi!\n";
+		msg = "20 text/gemini\r\n";
 		len = strlen(msg);
 
 		prepare_header(&hdr, FCGI_STDOUT, 1, len, 0);
 		must_write(s, &hdr, sizeof(hdr));
 		must_write(s, msg, len);
 
-		msg = "some more content in the page...\n";
+		msg = "Here's the parameters I've got:\n";
 		len = strlen(msg);
 
 		prepare_header(&hdr, FCGI_STDOUT, 1, len, 0);
 		must_write(s, &hdr, sizeof(hdr));
 		must_write(s, msg, len);
+
+		qsort(params, nparam, sizeof(params[0]), param_cmp);
+		for (i = 0; i < nparam; ++i) {
+			char line[256];
+			int r;
+
+			r = snprintf(line, sizeof(line), "* %s=%s\n",
+			    params[i].name, params[i].value);
+			if (r < 0 || (size_t)r >= sizeof(line))
+				errx(1, "line too short");
+
+			prepare_header(&hdr, FCGI_STDOUT, 1, r, 0);
+			must_write(s, &hdr, sizeof(hdr));
+			must_write(s, line, r);
+		}
 
 		prepare_header(&hdr, FCGI_END_REQUEST, 1, sizeof(end), 0);
 		write(s, &hdr, sizeof(hdr));
