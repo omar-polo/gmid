@@ -14,20 +14,21 @@ A few helper programs are shipped as part of gmid:
  - `titan` is a command-line titan client.
 
 
-## Internationalisation (IRIs, UNICODE, punycode, all that stuff)
+## Internationalisation (IRIs, IDN, UNICODE)
 
 Even thought the current Gemini specification doesn't mention anything
-in this regard, I do think these are important things and so I tried
-to implement them in the most user-friendly way I could think of.
+in this regard, I think it's important to make as easy as possible to
+use non-ASCII characters in domain names and URL paths.
 
-For starters, gmid has full support for IRI (RFC3987 —
-Internationalized Resource Identifiers).  IRIs are a superset of URIs,
-so there aren't incompatibilities with URI-only clients.
+For starters, gmid has full support for IRIs (RFC3987 —
+Internationalized Resource Identifiers).  IRIs are a superset of URIs
+that allow UNICODE characters, so there aren't incompatibilities with
+URI-only clients.
 
-There is full support also for punycode.  In theory, the user doesn't
-even need to know that punycode is a thing.  The hostname in the
-configuration file can (and must be) in the decoded form (e.g. `naïve`
-and not `xn--nave-6pa`), gmid will do the rest.
+There is full support also for IDNs (Internationalized Domain Names).
+There's no need to fiddle with punycode, or even know what it is: the
+hostname in the configuration file can (and must be) in the decoded
+form (e.g. `naïve` and not `xn--nave-6pa`), gmid will do the rest.
 
 The only missing piece is UNICODE normalisation of the IRI path: gmid
 doesn't do that (yet).
@@ -100,13 +101,6 @@ To install execute:
 
 	# make install
 
-Please keep in mind that the master branch, from time to time, may be
-accidentally broken on some platforms.  gmid is developed primarily on
-OpenBSD/amd64 and commits on the master branch don't get always tested
-in other OSes.  Before tagging a release however, a comprehensive
-testing on various platform is done to ensure that everything is
-working as intended.
-
 
 ### Testing
 
@@ -129,9 +123,6 @@ to the `contrib` directory.
 
 ## Architecture/Security considerations
 
-The internal architecture was revisited for the 2.0 release.  For
-earlier releases, please refer to previous revision of this file.
-
 gmid has a privsep design, where the operations done by the daemon are
 splitted into multiple processes:
 
@@ -142,7 +133,7 @@ splitted into multiple processes:
 
  - logger: handles the logging with syslog and/or local files.
 
- - server: listens for connections and serves the request.  It also
+ - server: listens for connections and handles the requests.  It also
    speaks FastCGI and do the proxying.
 
  - crypto: holds the TLS private keys to avoid a compromised `server`
