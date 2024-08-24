@@ -68,6 +68,9 @@ if [ "$(uname || true)" = OpenBSD ]; then
 	LIBTLS=system
 fi
 
+# save the raw flags for later logging
+configure_args="$@"
+
 while [ $# -gt 0 ]; do
 	key="${1%%=*}"
 	val="${1#*=}"
@@ -141,7 +144,7 @@ done
 exec 3> config.log
 echo "file config.log: writing..."
 
-echo "running as ./configure $@" >&3
+echo "running as ./configure $configure_args" >&3
 echo "on $(uname -a)" >&3
 echo "" >&3
 
