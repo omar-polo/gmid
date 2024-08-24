@@ -113,22 +113,6 @@ static inline int
 match_host(struct vhost *v, struct client *c)
 {
 	struct alist *a;
-	struct address *addr;
-
-	TAILQ_FOREACH(addr, &v->addrs, addrs)
-		if (match_addr(addr, c->addr))
-			break;
-	if (addr == NULL)
-		return 0;
-
-	if (*c->domain == '\0') {
-		if (strlcpy(c->domain, addr->pp, sizeof(c->domain))
-		    >= sizeof(c->domain)) {
-			log_warnx("%s: domain too long: %s", __func__,
-			    addr->pp);
-			*c->domain = '\0';
-		}
-	}
 
 	if (matches(v->domain, c->domain))
 		return 1;
@@ -372,6 +356,7 @@ handle_handshake(int fd, short ev, void *d)
 {
 	struct client *c = d;
 	struct conf *conf = c->conf;
+	struct address *addr;
 	struct vhost *h;
 	const char *servname;
 	const char *parse_err = "unknown error";
@@ -418,14 +403,30 @@ handle_handshake(int fd, short ev, void *d)
 		return;
 	}
 
-	/*
-	 * match_addr will serialize the (matching) address if c->domain
-	 * is empty, so that we can support requests for raw IPv6 address
-	 * that can't have a SNI.
-	 */
-	TAILQ_FOREACH(h, &conf->hosts, vhosts)
+	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
+		if (*c->domain == '\0') {
+			/*
+			 * serialize the (matching) address if there's no
+			 * SNI so that we can support requests for raw IPv6
+			 * address.
+			 */
+			TAILQ_FOREACH(addr, &h->addrs, addrs)
+				if (match_addr(addr, c->addr))
+					break;
+			if (addr == NULL)
+				continue;
+			if (strlcpy(c->domain, addr->pp, sizeof(c->domain))
+			    >= sizeof(c->domain)) {
+				log_warnx("%s: domain too long: %s", __func__,
+				    addr->pp);
+				*c->domain = '\0';
+				break;
+			}
+		}
+
 		if (match_host(h, c))
 			break;
+	}
 
 	log_debug("handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
 	    servname != NULL ? servname : "(null)",
@@ -1032,7 +1033,8 @@ client_read(struct bufferevent *bev, void *d)
 
 	/* ignore the port number */
 	if (strcmp(c->iri.schema, "gemini") ||
-	    strcmp(decoded, c->domain)) {
+	    c->host == NULL ||
+	    !match_host(c->host, c)) {
 		start_reply(c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}

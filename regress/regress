@@ -40,6 +40,7 @@ run_test test_gemexp
 
 # Run regression tests for the gmid binary.
 run_test test_static_files
+run_test test_alias
 run_test test_alias_long_hostname
 run_test test_directory_redirect
 run_test test_serve_big_files

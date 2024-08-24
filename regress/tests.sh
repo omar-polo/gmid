@@ -90,10 +90,29 @@ test_static_files() {
 	check_reply "20 text/gemini" "# hello world" || return 1
 }
 
+test_alias() {
+	setup_simple_test '' 'alias "localhost.local"'
+	gghost=localhost.local
+	ggflags="-P localhost:$port -H localhost.local"
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+}
+
 test_alias_long_hostname() {
-	setup_simple_test '' '
-alias "laYkH0yyd7xDFO152Ubtm9Efxg8Gvt7wssNd8pPTVIIXVYbYrZERl38LrVY30WbrMrZxLFfhnmsfe1X2FUNAGMVYAxPspjl4"
-'
+	# longer than 64 chars to detect issues with glibc
+	# posix-violating tiny HOST_NAME_MAX.
+	alias=foo.jjijhrngx5ZxWY0p3o9jag3fOEuZQ64Iuler243oAkkCCqq8pFufw43DBLgVX.test
+
+	setup_simple_test '' "alias '$alias'"
+
+	fetch /
+	check_reply "20 text/gemini" "# hello world" || return 1
+
+	# now the same but against the alias
+
+	gghost=$alias
+	ggflags="-P localhost:$port -H $alias"
 
 	fetch /
 	check_reply "20 text/gemini" "# hello world" || return 1
