@@ -91,9 +91,10 @@ test_static_files() {
 }
 
 test_alias() {
-	setup_simple_test '' 'alias "localhost.local"'
-	gghost=localhost.local
-	ggflags="-P localhost:$port -H localhost.local"
+	alias="foo.example"
+	setup_simple_test '' "alias '$alias'"
+	gghost="$alias"
+	ggflags="-P localhost:$port -H $alias"
 
 	fetch /
 	check_reply "20 text/gemini" "# hello world" || return 1
