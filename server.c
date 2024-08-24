@@ -356,7 +356,6 @@ handle_handshake(int fd, short ev, void *d)
 {
 	struct client *c = d;
 	struct conf *conf = c->conf;
-	struct address *addr;
 	struct vhost *h;
 	const char *servname;
 	const char *parse_err = "unknown error";
@@ -403,30 +402,18 @@ handle_handshake(int fd, short ev, void *d)
 		return;
 	}
 
-	TAILQ_FOREACH(h, &conf->hosts, vhosts) {
-		if (*c->domain == '\0') {
-			/*
-			 * serialize the (matching) address if there's no
-			 * SNI so that we can support requests for raw IPv6
-			 * address.
-			 */
-			TAILQ_FOREACH(addr, &h->addrs, addrs)
-				if (match_addr(addr, c->addr))
-					break;
-			if (addr == NULL)
-				continue;
-			if (strlcpy(c->domain, addr->pp, sizeof(c->domain))
-			    >= sizeof(c->domain)) {
-				log_warnx("%s: domain too long: %s", __func__,
-				    addr->pp);
-				*c->domain = '\0';
-				break;
-			}
+	if (*c->domain == '\0') {
+		if (strlcpy(c->domain, c->addr->pp, sizeof(c->domain))
+		    >= sizeof(c->domain)) {
+			log_warnx("%s: domain too long: %s", __func__,
+			    c->addr->pp);
+			*c->domain = '\0';
 		}
+	}
 
+	TAILQ_FOREACH(h, &conf->hosts, vhosts)
 		if (match_host(h, c))
 			break;
-	}
 
 	log_debug("handshake: SNI: \"%s\"; decoded: \"%s\"; matched: \"%s\"",
 	    servname != NULL ? servname : "(null)",
