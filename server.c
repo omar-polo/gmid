@@ -1020,8 +1020,7 @@ client_read(struct bufferevent *bev, void *d)
 
 	/* ignore the port number */
 	if (strcmp(c->iri.schema, "gemini") ||
-	    c->host == NULL ||
-	    !match_host(c->host, c)) {
+	    strcasecmp(c->domain, decoded)) {
 		start_reply(c, PROXY_REFUSED, "won't proxy request");
 		return;
 	}
