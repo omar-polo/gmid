@@ -2,6 +2,9 @@ name: release docker image
 on:
   push:
     tags:
+      - '*'
+    branches:
+      - master
 env:
   IMAGE_NAME: "gmid"
 jobs:
