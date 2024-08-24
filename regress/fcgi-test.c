@@ -202,7 +202,9 @@ parse_params(int sock, struct param *param, struct fcgi_header *hdr)
 	must_read(sock, param->name, nlen);
 	must_read(sock, param->value, vlen);
 
-	if (!strcmp(param->name, "SERVER_NAME"))
+	if (!strcmp(param->name, "SERVER_NAME") ||
+	    !strcmp(param->name, "REMOTE_ADDR") ||
+	    !strcmp(param->name, "REMOTE_HOST"))
 		strlcpy(param->value, "<redacted>", sizeof(param->value));
 
 	consume(sock, hdr->padding);

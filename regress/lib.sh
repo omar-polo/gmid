@@ -10,11 +10,6 @@ server_name=
 gghost=
 
 fcgi_content() {
-	remote_host=::1
-	if [ "$HAVE_IPV6" != yes ]; then
-		remote_host=127.0.0.1
-	fi
-
 	cat <<EOF
 Here's the parameters I've got:
 * AUTH_TYPE=
@@ -23,8 +18,8 @@ Here's the parameters I've got:
 * PATH_INFO=$fcgi_path_info
 * PATH_TRANSLATED=$fcgi_path
 * QUERY_STRING=
-* REMOTE_ADDR=$remote_host
-* REMOTE_HOST=$remote_host
+* REMOTE_ADDR=<redacted>
+* REMOTE_HOST=<redacted>
 * REQUEST_METHOD=GET
 * SCRIPT_NAME=
 * SERVER_NAME=<redacted>
