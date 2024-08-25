@@ -1,6 +1,6 @@
 # change log
 
-## 2024/08/03 - 2.0.5 “From Mars To Sirius”
+## 2024/08/03 - 2.1 “From Mars To Sirius”
 
 ### New Features
 
