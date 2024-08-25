@@ -1,3 +1,11 @@
+2024-08-23  Omar Polo  <op@omarpolo.com>
+
+	* configure (VERSION): release 2.1.1
+
+2024-08-23  Omar Polo  <op@omarpolo.com>
+
+	* work around comically tiny HOST_NAME_MAX on glibc-based systems.
+
 2024-08-18  Christoph Liebender  <cristoph.liebender@posteo.de>
 
 	* fcgi.c (fcgi_req): send the port, not the hostname, as SERVER_PORT.

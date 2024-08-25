@@ -1,5 +1,11 @@
 # change log
 
+## 2024/08/25 - 2.1.1 “From Mars To Sirius” bugfix release
+
+* fix getprogname() check in the configure script
+* fix fastcgi parameter SERVER_PORT; by Christoph Liebender, thank you!
+* work around comically tiny HOST_NAME_MAX on glibc-based system; reported by Anna “CyberTailor”, thanks!
+
 ## 2024/08/03 - 2.1 “From Mars To Sirius”
 
 ### New Features
