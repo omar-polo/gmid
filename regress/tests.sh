@@ -517,6 +517,52 @@ log style legacy'
 	return 0
 }
 
+test_log_common() {
+	rm -f log log.edited
+	setup_simple_test '
+log access "'$PWD'/log"
+log style common'
+
+	fetch_hdr /
+	check_reply '20 text/gemini'
+
+	# remove the ip and timestamp
+	awk '{$2 = ""; $5 = "timestamp"; print $0}' log > log.edited
+
+	printf '%s\n' 'localhost  - - timestamp +0200 "gemini://localhost/" 20 0' \
+		| cmp -s - log.edited
+	if [ $? -ne 0 ]; then
+		# keep the log for post-mortem analysis
+		return 1
+	fi
+
+	rm -f log log.edited
+	return 0
+}
+
+test_log_combined() {
+	rm -f log log.edited
+	setup_simple_test '
+log access "'$PWD'/log"
+log style combined'
+
+	fetch_hdr /
+	check_reply '20 text/gemini'
+
+	# remove the ip and timestamp
+	awk '{$1 = ""; print gensub("\\[.*\\]", "[timestamp]", 1)}' log > log.edited
+
+	printf '%s\n' ' - - [timestamp] "gemini://localhost/" 20 0 "-" ""' \
+		| cmp -s - log.edited
+	if [ $? -ne 0 ]; then
+		# keep the log for post-mortem analysis
+		return 1
+	fi
+
+	rm -f log log.edited
+	return 0
+}
+
 test_ipv4_addr() {
 	server_name="*"
 	host="127.0.0.1"

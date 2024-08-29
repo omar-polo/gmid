@@ -67,6 +67,8 @@ run_test test_proxy_with_certs
 # run_test test_unknown_host	# XXX: breaks on some distro
 run_test test_include_mime
 run_test test_log_file
+run_test test_log_common
+run_test test_log_combined
 run_test test_ipv4_addr
 run_test test_ipv6_addr need_ipv6
 run_test test_ipv6_server need_ipv6
