@@ -101,7 +101,7 @@ log_request(struct client *c, int code, const char *meta)
 		fatal("time");
 	if ((tm = localtime(&now)) == NULL)
 		fatal("localtime");
-	if (strftime(tstamp, sizeof(tstamp), "%d/%b%Y:%H:%M:%S %z", tm) == 0)
+	if (strftime(tstamp, sizeof(tstamp), "%d/%b/%Y:%H:%M:%S %z", tm) == 0)
 		fatal("strftime");
 	if (strftime(rfc3339, sizeof(rfc3339), "%FT%T%z", tm) == 0)
 		fatal("strftime");
