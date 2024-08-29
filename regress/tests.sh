@@ -506,9 +506,9 @@ log style legacy'
 	# remove the ip
 	awk '{$1 = ""; print substr($0, 2)}' log > log.edited
 
-	printf '%s\n' 'GET gemini://localhost/ 20 text/gemini' \
-		| cmp -s - log.edited
-	if [ $? -ne 0 ]; then
+	printf '%s\n' 'GET gemini://localhost/ 20 text/gemini' > log.exp
+	if ! cmp -s log.edited log.exp; then
+		diff -u log.edited log.exp
 		# keep the log for post-mortem analysis
 		return 1
 	fi
@@ -530,8 +530,9 @@ log style common'
 	awk '{$2 = ""; $5 = "timestamp"; print $0}' log > log.edited
 
 	printf '%s\n' 'localhost  - - timestamp +0200 "gemini://localhost/" 20 0' \
-		| cmp -s - log.edited
-	if [ $? -ne 0 ]; then
+		> log.exp
+	if ! cmp -s log.edited log.exp; then
+		diff -u log.edited log.exp
 		# keep the log for post-mortem analysis
 		return 1
 	fi
@@ -552,9 +553,9 @@ log style combined'
 	# remove the ip and timestamp
 	awk '{$1 = ""; print gensub("\\[.*\\]", "[timestamp]", 1)}' log > log.edited
 
-	printf '%s\n' ' - - [timestamp] "gemini://localhost/" 20 0 "-" ""' \
-		| cmp -s - log.edited
-	if [ $? -ne 0 ]; then
+	printf '%s\n' ' - - [timestamp] "gemini://localhost/" 20 0 "-" ""' > log.exp
+	if ! cmp -s log.edited log.exp; then
+		diff -u log.edited log.exp
 		# keep the log for post-mortem analysis
 		return 1
 	fi
