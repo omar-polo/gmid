@@ -1203,12 +1203,12 @@ cmdline_symset(char *s)
 }
 
 char *
-symget(const char *nam)
+symget(const char *name)
 {
 	struct sym	*sym;
 
 	TAILQ_FOREACH(sym, &symhead, entry) {
-		if (strcmp(nam, sym->name) == 0) {
+		if (strcmp(name, sym->name) == 0) {
 			sym->used = 1;
 			return sym->val;
 		}

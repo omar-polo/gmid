@@ -1065,7 +1065,7 @@ client_write(struct bufferevent *bev, void *d)
 {
 	struct client	*c = d;
 	struct evbuffer	*out = EVBUFFER_OUTPUT(bev);
-	char		 nam[PATH_MAX];
+	char		 name[PATH_MAX];
 	char		 buf[BUFSIZ];
 	ssize_t		 r;
 
@@ -1095,11 +1095,11 @@ client_write(struct bufferevent *bev, void *d)
 		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff) {
 			const char *sufx = "";
 
-			encode_path(nam, sizeof(nam),
+			encode_path(name, sizeof(name),
 			    c->dir[c->diroff]->d_name);
 			if (c->dir[c->diroff]->d_type == DT_DIR)
 				sufx = "/";
-			evbuffer_add_printf(out, "=> ./%s%s\n", nam, sufx);
+			evbuffer_add_printf(out, "=> ./%s%s\n", name, sufx);
 			free(c->dir[c->diroff]);
 		}
 		free(c->dir);
