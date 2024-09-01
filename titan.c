@@ -333,7 +333,7 @@ main(int argc, char **argv)
 	tls_config_insecure_noverifyname(config);
 
 	if (cert && tls_config_set_keypair_file(config, cert, key) == -1)
-		errx(1, "cant load certificate client %s", cert);
+		errx(1, "can't load certificate client %s", cert);
 
 	if ((ctx = tls_client()) == NULL)
 		errx(1, "can't create tls context");

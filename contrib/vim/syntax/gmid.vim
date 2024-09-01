@@ -135,7 +135,7 @@ syn keyword gmidDirectiveServer cert  contained
 syn keyword gmidDirectiveServer key   contained
 syn match   gmidDirectiveServer "\<listen\s\+on\>" display contained
 
-" Ambiguos, can be used both in `listen on` and `fastcgi socket`
+" Ambiguous, can be used both in `listen on` and `fastcgi socket`
 syn keyword gmidDirectiveParamHost port contained nextgroup=gmidNumber skipwhite
 
 " FastCGI Blocks: {{{3
@@ -174,7 +174,7 @@ syn keyword gmidDirectiveProxy sni        contained
 syn keyword gmidDirectiveProxy use-tls    contained nextgroup=gmidBoolean skipwhite
 syn keyword gmidDirectiveProxy verifyname contained nextgroup=gmidBoolean skipwhite
 
-" Ambiguos, can be used both in `proxy` and `relay-to`
+" Ambiguous, can be used both in `proxy` and `relay-to`
 syn keyword gmidDirectiveParamProxy port contained nextgroup=gmidNumber skipwhite
 
 " Types Blocks: {{{2

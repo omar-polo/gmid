@@ -645,7 +645,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 	case IMSG_RECONF_HOST_ADDR:
 		log_debug("receiving host addr");
 		if (h == NULL)
-			fatalx("recv'd host address withouth host");
+			fatalx("recv'd host address without host");
 		addr = xcalloc(1, sizeof(*addr));
 		if (imsg_get_data(imsg, addr, sizeof(*addr)) == -1)
 			fatalx("bad length imsg RECONF_HOST_ADDR");

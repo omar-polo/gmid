@@ -20,7 +20,7 @@
 
 ## 2024/06/11 - 2.0.5 “Lady Stardust” security release
 
-This release fixes a logic error that can result in a DoS; therefore is a strongly reccomended update for all users.  It's safe to update to it from any version of the 2.0.x series.
+This release fixes a logic error that can result in a DoS; therefore is a strongly recommended update for all users.  It's safe to update to it from any version of the 2.0.x series.
 
 * allow again empty lines at the start of the configuration file
 * change how strnvis(3) is handled: on systems with the broken interface gmid will just use its own built-in version
@@ -60,7 +60,7 @@ This release fixes a logic error that can result in a DoS; therefore is a strong
 
 * added `listen on' to specify per-server the list of addresses from where connections are to be accepted.
 * added titan(1), a simple titan client.
-* splitted the "configless" version of gmid as a standalone executable gemexp(1)
+* split the "configless" version of gmid as a standalone executable gemexp(1)
 * added ability to log to files with `log access <path>`
 * added ability to change the syslog(3) facility with `log syslog facility <facility>`
 * added ability to change the logging style with `log style <style>`
@@ -91,7 +91,7 @@ This release fixes a logic error that can result in a DoS; therefore is a strong
 * gg now warns when the server doesn't use TLS' close_notify
 * deprecated the global `ipv6' and `port' settings in favour of the per-server `listen on` directive
 * removed the already deprecated config options `mime' and `map'
-* droped seccomp and capsicum support
+* dropped seccomp and capsicum support
 * FastCGI: set REQUEST_METHOD to "GET" instead of the empty string
 
 
@@ -194,7 +194,7 @@ All by Anna “CyberTailor”, thanks!
 * refactored the internal of the server too.
 * refactored the regression suite (in particular reduced the timeout for single tests from 30 to 10 seconds.)
 * configure: add support for --prefix=... autoconf-style flag.
-* relax the "wont proxy" check: don't check that the port in the request is the same we're listening on.  Suggested and discussed with Allen Sobot, thanks!
+* relax the "won't proxy" check: don't check that the port in the request is the same we're listening on.  Suggested and discussed with Allen Sobot, thanks!
 * relax the strict ordering of options, locations and proxy blocks inside a server block.
 
 ### Bug fixes
@@ -237,7 +237,7 @@ and the relative regression test.
 
 ## 2021/07/19 - 1.7.2 “Space-dye Vest” second bugfix release
 
-This version incudes the following bugfix:
+This version includes the following bugfix:
 
 * an un-initialized field in the configless code path leads to a crash on the first request.
 
@@ -279,7 +279,7 @@ Starting from this version gmid doesn't depend on lex anymore, but yacc is still
 
 ### Bug fixes
 
-* correctly handle CGI scripts that replies with the maxium header length allowed.
+* correctly handle CGI scripts that replies with the maximum header length allowed.
 * fixed the static target.
 * fixed recursive mkdirs for configless mode (i.e. create ‘~/.local/share/gmid’)
 * logs sent to syslog now have proper priority (before every message ended up as LOG_CRIT).  Found by Anna “CyberTailor”, thanks!

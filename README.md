@@ -124,7 +124,7 @@ to the `contrib` directory.
 ## Architecture/Security considerations
 
 gmid has a privsep design, where the operations done by the daemon are
-splitted into multiple processes:
+split into multiple processes:
 
  - main: the main process is the only one that keeps the original
    privileges.  It opens the TLS certificates on the behalf of the
