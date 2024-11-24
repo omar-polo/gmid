@@ -527,9 +527,9 @@ log style common'
 	check_reply '20 text/gemini'
 
 	# remove the ip and timestamp
-	awk '{$2 = ""; $5 = "timestamp"; print $0}' log > log.edited
+	awk '{$2 = ""; $5 = "timestamp"; $6 = "tz"; print $0}' log > log.edited
 
-	printf '%s\n' 'localhost  - - timestamp +0200 "gemini://localhost/" 20 0' \
+	printf '%s\n' 'localhost  - - timestamp tz "gemini://localhost/" 20 0' \
 		> log.exp
 	if ! cmp -s log.edited log.exp; then
 		diff -u log.edited log.exp
