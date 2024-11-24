@@ -23,11 +23,11 @@
 int
 main(void)
 {
-	struct imsgbuf buf;
+	struct imsgbuf imsgbuf;
 	struct imsg imsg;
 
-	if (imsgbuf_init(&buf, -1) == -1)
+	if (imsgbuf_init(&imsgbuf, -1) == -1)
 		return 1;
-	imsgbuf_allow_fdpass(&ibuf);
+	imsgbuf_allow_fdpass(&imsgbuf);
 	return imsg_get_fd(&imsg);
 }
