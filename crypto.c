@@ -289,7 +289,7 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 	imsgbuf = &iev->ibuf;
 
 	while (!done) {
-		if ((n = imsg_read(imsgbuf)) == -1 && errno != EAGAIN)
+		if ((n = imsgbuf_read(imsgbuf)) == -1)
 			fatalx("imsg_read");
 		if (n == 0)
 			fatalx("pipe closed");
@@ -429,7 +429,7 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 	imsgbuf = &iev->ibuf;
 
 	while (!done) {
-		if ((n = imsg_read(imsgbuf)) == -1 && errno != EAGAIN)
+		if ((n = imsgbuf_read(imsgbuf)) == -1)
 			fatalx("imsg_read");
 		if (n == 0)
 			fatalx("pipe closed");

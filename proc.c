@@ -195,7 +195,10 @@ proc_connect(struct privsep *ps)
 
 		for (inst = 0; inst < ps->ps_instances[dst]; inst++) {
 			iev = &ps->ps_ievs[dst][inst];
-			imsg_init(&iev->ibuf, ps->ps_pp->pp_pipes[dst][inst]);
+			if (imsgbuf_init(&iev->ibuf,
+			    ps->ps_pp->pp_pipes[dst][inst]) == -1)
+				fatal("imsgbuf_init");
+			imsgbuf_allow_fdpass(&iev->ibuf);
 			event_set(&iev->ev, iev->ibuf.fd, iev->events,
 			    iev->handler, iev->data);
 			event_add(&iev->ev, NULL);
@@ -306,7 +309,9 @@ proc_accept(struct privsep *ps, int fd, enum privsep_procid dst,
 		pp->pp_pipes[dst][n] = fd;
 
 	iev = &ps->ps_ievs[dst][n];
-	imsg_init(&iev->ibuf, fd);
+	if (imsgbuf_init(&iev->ibuf, fd) == -1)
+		fatal("imsgbuf_init");
+	imsgbuf_allow_fdpass(&iev->ibuf);
 	event_set(&iev->ev, iev->ibuf.fd, iev->events, iev->handler, iev->data);
 	event_add(&iev->ev, NULL);
 }
@@ -501,7 +506,7 @@ proc_close(struct privsep *ps)
 
 			/* Cancel the fd, close and invalidate the fd */
 			event_del(&(ps->ps_ievs[dst][n].ev));
-			imsg_clear(&(ps->ps_ievs[dst][n].ibuf));
+			imsgbuf_clear(&(ps->ps_ievs[dst][n].ibuf));
 			close(pp->pp_pipes[dst][n]);
 			pp->pp_pipes[dst][n] = -1;
 		}
@@ -630,7 +635,7 @@ proc_dispatch(int fd, short event, void *arg)
 	ibuf = &iev->ibuf;
 
 	if (event & EV_READ) {
-		if ((n = imsg_read(ibuf)) == -1 && errno != EAGAIN)
+		if ((n = imsgbuf_read(ibuf)) == -1)
 			fatal("%s: imsg_read", __func__);
 		if (n == 0) {
 			/* this pipe is dead, so remove the event handler */
@@ -641,10 +646,9 @@ proc_dispatch(int fd, short event, void *arg)
 	}
 
 	if (event & EV_WRITE) {
-		if ((n = msgbuf_write(&ibuf->w)) == -1 && errno != EAGAIN)
-			fatal("%s: msgbuf_write", __func__);
-		if (n == 0) {
+		if (imsgbuf_write(ibuf) == -1) {
 			/* this pipe is dead, so remove the event handler */
+			log_warn("imsgbuf_write");
 			event_del(&iev->ev);
 			event_loopexit(NULL);
 			return;
@@ -708,12 +712,12 @@ void
 imsg_event_add(struct imsgev *iev)
 {
 	if (iev->handler == NULL) {
-		imsg_flush(&iev->ibuf);
+		imsgbuf_flush(&iev->ibuf);
 		return;
 	}
 
 	iev->events = EV_READ;
-	if (iev->ibuf.w.queued)
+	if (imsgbuf_queuelen(&iev->ibuf))
 		iev->events |= EV_WRITE;
 
 	event_del(&iev->ev);
@@ -835,10 +839,7 @@ proc_flush_imsg(struct privsep *ps, enum privsep_procid id, int n)
 		if ((ibuf = proc_ibuf(ps, id, n)) == NULL)
 			return (-1);
 
-		do {
-			ret = imsg_flush(ibuf);
-		} while (ret == -1 && errno == EAGAIN);
-		if (ret == -1)
+		if (imsgbuf_flush(ibuf) == -1)
 			break;
 		imsg_event_add(&ps->ps_ievs[id][n]);
 	}
