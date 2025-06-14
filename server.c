@@ -1288,7 +1288,7 @@ client_close(struct client *c)
 	}
 
 	if (c->proxyevset &&
-	    event_pending(&c->proxyev, EV_READ|EV_WRITE, NULL)) {
+	    event_pending(&c->proxyev, EV_READ|EV_WRITE|EV_TIMEOUT, NULL)) {
 		c->proxyevset = 0;
 		event_del(&c->proxyev);
 	}
