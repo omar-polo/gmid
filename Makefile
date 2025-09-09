@@ -57,7 +57,7 @@ config.mk config.h: configure
 	@echo "$@ is out of date; please run ./configure"
 	@exit 1
 
-include config.mk
+-include config.mk
 
 clean:
 	rm -f gmid gemexp gg

@@ -28,7 +28,7 @@ DISTFILES =	Makefile \
 		tests.sh \
 		valid.ext
 
-include ../config.mk
+-include ../config.mk
 
 COBJS =		${COMPATS:.c=.o}
 REG_COMPATS =	${COBJS:%=../%}
