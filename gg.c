@@ -169,7 +169,7 @@ dorep(struct tls *ctx, uint8_t *buf, size_t len)
 		case 0:
 			return tot;
 		case -1:
-			errx(1, "tls_write: %s", tls_error(ctx));
+			errx(1, "tls_read: %s", tls_error(ctx));
 		case TLS_WANT_POLLIN:
 		case TLS_WANT_POLLOUT:
 			continue;
