@@ -1098,8 +1098,7 @@ client_write(struct bufferevent *bev, void *d)
 		} else if (r == 0) {
 			client_close(c);
 			return;
-		} else if (r != sizeof(buf))
-			c->type = REQUEST_DONE;
+		}
 		bufferevent_write(bev, buf, r);
 		break;
 
