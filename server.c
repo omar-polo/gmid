@@ -1092,7 +1092,13 @@ client_write(struct bufferevent *bev, void *d)
 		break;
 
 	case REQUEST_DIR:
-		/* TODO: handle big big directories better */
+		/*
+		 * TODO: handle big big directories better.
+		 *
+		 * NOTE: client_close_ev() assumes that if
+		 * c->dir != NULL, then the whole c->dir array
+		 * content needs to be freed as well.
+		 */
 		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff) {
 			const char *sufx = "";
 
@@ -1231,8 +1237,11 @@ client_close_ev(int fd, short event, void *d)
 	if (c->pfd != -1)
 		close(c->pfd);
 
-	if (c->dir != NULL)
+	if (c->dir != NULL) {
+		for (c->diroff = 0; c->diroff < c->dirlen; ++c->diroff)
+			free(c->dir[c->diroff]);
 		free(c->dir);
+	}
 
 	close(c->fd);
 	c->fd = -1;
