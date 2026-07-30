@@ -505,12 +505,12 @@ proxy_opts	: /* empty */
 		;
 
 proxy_opt	: CERT string {
-			free(proxy->cert);
+			free(proxy->cert_path);
 			ensure_absolute_path($2);
 			proxy->cert_path = $2;
 		}
 		| KEY string {
-			free(proxy->key);
+			free(proxy->key_path);
 			ensure_absolute_path($2);
 			proxy->key_path = $2;
 		}
