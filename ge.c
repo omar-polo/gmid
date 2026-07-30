@@ -231,7 +231,7 @@ serve(struct conf *conf, const char *host, int port, const char *dir)
 		memcpy(acp, addr, sizeof(*acp));
 		acp->sock = -1;
 		memset(&acp->evsock, 0, sizeof(acp->evsock));
-		TAILQ_INSERT_HEAD(&vh->addrs, addr, addrs);
+		TAILQ_INSERT_HEAD(&vh->addrs, acp, addrs);
 	}
 
 	if (!any)
