@@ -535,6 +535,12 @@ check_matching_certificate(X509_STORE *store, struct client *c)
 	}
 
 	cert = tls_peer_cert_chain_pem(c->ctx, &len);
+	if (cert == NULL) {
+		log_warnx("tls_peer_cert_chain_pem failed (ENOMEM?)");
+		start_reply(c, TEMP_FAILURE, "internal server error");
+		return 1;
+	}
+
 	if (!validate_against_ca(store, cert, len)) {
 		start_reply(c, CERT_NOT_AUTH, "certificate not authorised");
 		return 1;
