@@ -68,7 +68,7 @@ check_unknown_v1(char **buf)
 static int
 check_crlf_v1(char *const *buf, size_t buflen)
 {
-	if (buflen < sizeof(2))
+	if (buflen < 2)
 		return (-1);
 
 	if (!memmem(*buf, buflen, "\r\n", 2))
