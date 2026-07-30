@@ -165,7 +165,7 @@ struct proxy {
 
 	char		 host[GMID_HOST_NAME_MAX + 1];
 	char		 port[32];
-	char		 sni[GMID_HOST_NAME_MAX];
+	char		 sni[GMID_HOST_NAME_MAX + 1];
 	int		 notls;
 	uint32_t	 protocols;
 	int		 noverifyname;
