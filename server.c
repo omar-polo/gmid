@@ -784,6 +784,7 @@ server_dir_listing(struct client *c)
 	c->dirlen = scandir_fd(c->pfd, &c->dir,
 	    root ? select_non_dotdot : select_non_dot,
 	    alphasort);
+	c->pfd = -1;
 	if (c->dirlen == -1) {
 		log_warn("scandir_fd(%d) (vhost:%s) %s",
 		    c->pfd, c->host->domain, c->iri.path);

@@ -75,8 +75,10 @@ scandir_fd(int fd, struct dirent ***namelist,
 	struct stat stb;
 	DIR *dirp;
 
-	if ((dirp = fdopendir(fd)) == NULL)
+	if ((dirp = fdopendir(fd)) == NULL) {
+		close(fd);
 		return (-1);
+	}
 	if (fstat(fd, &stb) == -1)
 		goto fail;
 
