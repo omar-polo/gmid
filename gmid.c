@@ -308,8 +308,10 @@ main(int argc, char **argv)
 		}
 	}
 
-	if (argc - optind != 0)
+	if (argc - optind != 0) {
 		usage();
+		return 1;
+	}
 
 	conf = config_new();
 
