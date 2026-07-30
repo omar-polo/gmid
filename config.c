@@ -275,6 +275,7 @@ config_send_socks(struct conf *conf)
 		a.conf = NULL;
 		a.sock = -1;
 		memset(&a.evsock, 0, sizeof(a.evsock));
+		a.ctx = NULL;
 		memset(&a.addrs, 0, sizeof(a.addrs));
 
 		if (config_send_file(ps, PROC_SERVER, IMSG_RECONF_SOCK, sock,
@@ -350,6 +351,10 @@ config_send(struct conf *conf)
 
 		TAILQ_FOREACH(addr, &h->addrs, addrs) {
 			memcpy(&acopy, addr, sizeof(acopy));
+			acopy.conf = NULL;
+			acopy.sock = -1;
+			memset(&acopy.evsock, 0, sizeof(acopy.evsock));
+			acopy.ctx = NULL;
 			memset(&acopy.addrs, 0, sizeof(acopy.addrs));
 
 			if (proc_compose(ps, PROC_SERVER,
