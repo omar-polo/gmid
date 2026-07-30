@@ -42,6 +42,9 @@ const struct suite {
 	{"xn--x73l",		"𩸽"},
 	{"xn--x73laaa",		"𩸽𩸽𩸽𩸽"},
 	{"xn--hj1dfghfnjecrgdqglhl", NULL},
+	{"xn--8c_a",		NULL},
+	{"xn--9a",		"£"},
+	{"xn--999999999a",	NULL},
 	{NULL, NULL}
 };
 

@@ -75,7 +75,7 @@ copy_label(const char *s, char *out, size_t len)
 	return s;
 }
 
-static unsigned int
+static int
 digit_value(char c)
 {
 	if ('A' <= c && c <= 'Z')
@@ -87,7 +87,7 @@ digit_value(char c)
 	if ('0' <= c && c <= '9')
 		return 26 + c - '0';
 
-	return c;
+	return -1;
 }
 
 static int
@@ -149,6 +149,7 @@ decode(const char *str, char *out, size_t len, const char **err)
 	uint32_t n;
 	unsigned int oldi, bias, w, k, digit, t;
 	unsigned int numpoints;
+	int d;
 	const char *s;
 
 	if (strncmp(str, "xn--", 4) != 0) {
@@ -184,11 +185,17 @@ decode(const char *str, char *out, size_t len, const char **err)
 				*err = "puny: label truncated?";
 				return 0;
 			}
-			/* fail eventually? */
-			digit = digit_value(*s);
+			if ((d = digit_value(*s)) == -1) {
+				*err = "puny: invalid character";
+				return 0;
+			}
+			digit = d;
 			s++;
 
-			/* fail on overflow */
+			if (w != 0 && digit > (UINT32_MAX - i) / w) {
+				*err = "puny: overflow";
+				return 0;
+			}
 			i += digit * w;
 
 			if (k <= bias)
@@ -204,7 +211,11 @@ decode(const char *str, char *out, size_t len, const char **err)
 		}
 
 		bias = adapt(i - oldi, numpoints+1, oldi == 0);
-		n += i / (numpoints+1); /* fail on overflow */
+		if (i / (numpoints + 1) > UINT32_MAX -n) {
+			*err = "puny: overflow";
+			return 0;
+		}
+		n += i / (numpoints+1);
 		i = i % (numpoints+1);
 
 		if (!insert(out, len, n, i, err))
