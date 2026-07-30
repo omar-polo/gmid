@@ -139,7 +139,7 @@ log_request(struct client *c, int code, const char *meta)
 
 		subj = tls_peer_cert_subject(c->ctx);
 		if ((n = strstr(subj, "/CN=")) != NULL) {
-			strlcpy(cntmp, subj + 4, sizeof(cntmp));
+			strlcpy(cntmp, n + 4, sizeof(cntmp));
 			if ((n = strchr(cntmp, '/')) != NULL)
 				*n = '\0';
 			strnvis(cn, cntmp, sizeof(cn), VIS_WHITE|VIS_DQ);
