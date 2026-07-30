@@ -43,7 +43,6 @@ struct imsg_crypto_req {
 	uint64_t	 id;
 	char		 hash[TLS_CERT_HASH_SIZE];
 	size_t		 flen;
-	size_t		 tlen;
 	int		 padding;
 	/* followed by flen bytes of `from'. */
 };
@@ -141,7 +140,7 @@ crypto_dispatch_server(int fd, struct privsep_proc *p, struct imsg *imsg)
 		    (rsa = EVP_PKEY_get1_RSA(pkey)) == NULL)
 			fatalx("invalid pkey hash");
 
-		if ((to = calloc(1, req.tlen)) == NULL)
+		if ((to = calloc(1, RSA_size(rsa))) == NULL)
 			fatal("calloc");
 
 		if (type == IMSG_CRYPTO_RSA_PRIVENC)
@@ -269,7 +268,6 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 	if (strlcpy(req.hash, hash, sizeof(req.hash)) >= sizeof(req.hash))
 		fatalx("%s: hash too long (%zu)", __func__, strlen(hash));
 	req.flen = flen;
-	req.tlen = RSA_size(rsa);
 	req.padding = padding;
 
 	memset(&iov, 0, sizeof(iov));
