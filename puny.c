@@ -115,7 +115,7 @@ insert(char *out, size_t len, int codepoint, size_t i, const char **err)
 		return 0;
 	}
 
-	if (t + l >= out + len) {
+	if (t + l + strlen(t) >= out + len) {
 		*err = "puny: insert would overflow";
 		return 0;
 	}

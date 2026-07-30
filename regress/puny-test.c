@@ -41,6 +41,7 @@ const struct suite {
 	/* 4 bytes */
 	{"xn--x73l",		"𩸽"},
 	{"xn--x73laaa",		"𩸽𩸽𩸽𩸽"},
+	{"xn--hj1dfghfnjecrgdqglhl", NULL},
 	{NULL, NULL}
 };
 
@@ -62,6 +63,18 @@ main(int argc, char **argv)
 	failed = 0;
 	for (i = t; i->src != NULL; ++i) {
 		memset(buf, 0, sizeof(buf));
+
+		if (i->res == NULL) {
+			if (puny_decode(i->src, buf, sizeof(buf), &parse_err)) {
+				printf("ERR: expected %s to be rejected, got \"%s\"\n",
+				    i->src, buf);
+				failed = 1;
+			} else
+				printf("OK:  %s => (rejected with %s)\n",
+				    i->src, parse_err);
+			continue;
+		}
+
 		if (!puny_decode(i->src, buf, sizeof(buf), &parse_err)) {
                         printf("decode: failure with %s: %s\n",
 			    i->src, parse_err);
