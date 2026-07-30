@@ -26,12 +26,9 @@
 static int
 check_prefix_v1(char **buf)
 {
-	static const char PROXY[6] = "PROXY ";
-
-	if (strncmp(*buf, PROXY, sizeof(PROXY)) != 0)
+	if (strncmp(*buf, "PROXY ", 6) != 0)
 		return (-1);
-
-	*buf += sizeof(PROXY);
+	*buf += 6;
 
 	return (0);
 }
@@ -39,12 +36,9 @@ check_prefix_v1(char **buf)
 static int
 check_proto_v1(char **buf)
 {
-	static const char TCP[3] = "TCP";
-
-	if (strncmp(*buf, TCP, sizeof(TCP)) != 0)
+	if (strncmp(*buf, "TCP", 3) != 0)
 		return (-1);
-
-	*buf += sizeof(TCP);
+	*buf += 3;
 
 	int type;
 	switch ((*buf)[0]) {
@@ -65,25 +59,19 @@ check_proto_v1(char **buf)
 static int
 check_unknown_v1(char **buf)
 {
-	static const char UNKNOWN[7] = "UNKNOWN";
-
-	if (strncmp(*buf, UNKNOWN, sizeof(UNKNOWN)) != 0)
+	if (strncmp(*buf, "UNKNOWN", 7) != 0)
 		return (-1);
-
-	*buf += sizeof(UNKNOWN);
-
+	*buf += 7;
 	return (0);
 }
 
 static int
 check_crlf_v1(char *const *buf, size_t buflen)
 {
-	static const char CRLF[2] = "\r\n";
-
-	if (buflen < sizeof(CRLF))
+	if (buflen < sizeof(2))
 		return (-1);
 
-	if (!memmem(*buf, buflen, CRLF, sizeof(CRLF)))
+	if (!memmem(*buf, buflen, "\r\n", 2))
 		return (-1);
 
 	return (0);
