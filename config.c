@@ -159,6 +159,7 @@ config_purge(struct conf *conf)
 	TAILQ_INIT(&conf->fcgi);
 	TAILQ_INIT(&conf->hosts);
 	TAILQ_INIT(&conf->pkis);
+	TAILQ_INIT(&conf->addrs);
 }
 
 static int
