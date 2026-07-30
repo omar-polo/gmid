@@ -38,6 +38,7 @@
 
 #ifndef __OpenBSD__
 #define pledge(a, b) (0)
+#define unveil(a, b) (0)
 #endif
 
 static int
