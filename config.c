@@ -544,6 +544,7 @@ config_recv(struct conf *conf, struct imsg *imsg)
 		config_purge(conf);
 		h = NULL;
 		p = NULL;
+		l = NULL;
 		break;
 
 	case IMSG_RECONF_LOG_FMT:
