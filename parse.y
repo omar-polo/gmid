@@ -206,8 +206,8 @@ numberstring	: NUM {
 		;
 
 varset		: STRING '=' string		{
-			char *s = $1;
-			while (*s++) {
+			char *s;
+			for (s = $1; *s; s++) {
 				if (isspace((unsigned char)*s)) {
 					yyerror("macro name cannot contain "
 					    "whitespaces");
