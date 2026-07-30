@@ -1249,6 +1249,7 @@ check_block_fmt(char *fmt)
 			break;
 		default:
 			yyerror("invalid format specifier %%%c", *s);
+			break;
 		}
 	}
 
