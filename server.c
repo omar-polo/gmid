@@ -660,7 +660,13 @@ fcgi_open_sock(struct fcgi *f)
 
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
-	strlcpy(addr.sun_path, f->path, sizeof(addr.sun_path));
+
+	if (strlcpy(addr.sun_path, f->path, sizeof(addr.sun_path))
+	    >= sizeof(addr.sun_path)) {
+		log_warn("fcgi socket path too long: %s", f->path);
+		close(fd);
+		return -1;
+	}
 
 	if (connect(fd, (struct sockaddr*)&addr, sizeof(addr)) == -1) {
 		log_warn("failed to connect to %s", f->path);
