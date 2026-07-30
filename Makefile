@@ -133,7 +133,7 @@ lint:
 
 PUBKEY =	keys/gmid-2.1.pub
 PRIVKEY =	set-PRIVKEY
-DISTFILES =	.cirrus.yml .dockerignore .gitignore ChangeLog LICENSE \
+DISTFILES =	.dockerignore .gitignore ChangeLog LICENSE \
 		Makefile README.md config.c configure crypto.c dirs.c fcgi.c \
 		ge.c gemexp.1 gg.1 gg.c gmid.8 gmid.c gmid.conf.5 gmid.h \
 		iri.c iri.h log.c log.h logger.c mime.c parse.y proc.c \
