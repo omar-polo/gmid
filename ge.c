@@ -339,12 +339,16 @@ main(int argc, char **argv)
 	if (*argv == NULL) {
 		if (getcwd(path, sizeof(path)) == NULL)
 			fatal("getcwd");
-		strlcpy(loc->dir, path, sizeof(loc->dir));
+		if (strlcpy(loc->dir, path, sizeof(loc->dir))
+		    >= sizeof(loc->dir))
+			fatalx("path too long: %s", path);
 	} else {
 		char	*tmp;
 
 		tmp = absolutify_path(*argv);
-		strlcpy(loc->dir, tmp, sizeof(loc->dir));
+		if (strlcpy(loc->dir, tmp, sizeof(loc->dir))
+		    >= sizeof(loc->dir))
+			fatalx("path too long: %s", tmp);
 		free(tmp);
 	}
 
