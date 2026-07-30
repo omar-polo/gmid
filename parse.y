@@ -96,7 +96,7 @@ int		 check_prefork_num(int);
 void		 advance_loc(void);
 void		 advance_proxy(void);
 int		 fastcgi_conf(const char *, const char *);
-void		 add_param(char *, char *);
+void		 add_param(const char *, const char *);
 int		 getservice(const char *);
 void		 listen_on(const char *, const char *, int);
 
@@ -414,6 +414,8 @@ servopt		: ALIAS string {
 			yywarn("the top-level `param' directive is deprecated."
 			    "  Please use `fastcgi { param ... }`");
 			add_param($2, $4);
+			free($2);
+			free($4);
 		}
 		| LISTEN ON listen_addr {
 			listen_on($3, "1965", 0);
@@ -639,6 +641,8 @@ fastcgiopts	: /* empty */
 
 fastcgiopt	: PARAM string '=' string {
 			add_param($2, $4);
+			free($2);
+			free($4);
 		}
 		| SOCKET string {
 			loc->fcgi = fastcgi_conf($2, NULL);
@@ -1313,7 +1317,7 @@ fastcgi_conf(const char *path, const char *port)
 }
 
 void
-add_param(char *name, char *val)
+add_param(const char *name, const char *val)
 {
 	struct envlist *e;
 	struct envhead *h = &loc->params;
