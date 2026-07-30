@@ -1252,10 +1252,10 @@ client_proxy_close(int fd, short event, void *d)
 	switch (tls_close(ctx)) {
 	case TLS_WANT_POLLIN:
 		event_once(fd, EV_READ, client_proxy_close, d, NULL);
-		break;
+		return;
 	case TLS_WANT_POLLOUT:
 		event_once(fd, EV_WRITE, client_proxy_close, d, NULL);
-		break;
+		return;
 	}
 
 	tls_free(ctx);
