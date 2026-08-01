@@ -1251,6 +1251,9 @@ check_block_fmt(char *fmt)
 		case 'P':
 		case 'N':
 			break;
+		case '\0':
+			yyerror("format string ends with a lone %%");
+			return NULL;
 		default:
 			yyerror("invalid format specifier %%%c", *s);
 			break;
