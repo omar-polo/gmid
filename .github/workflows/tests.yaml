@@ -1,0 +1,74 @@
+name: Test on BSDs and Solaris
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  freebsd:
+    runs-on: ubuntu-latest
+    name: FreeBSD
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test on FreeBSD
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkg install -y libevent libressl
+          run: |
+            ./configure
+            make
+            make test
+
+  openbsd:
+    runs-on: ubuntu-latest
+    name: OpenBSD
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test on OpenBSD
+        uses: vmactions/openbsd-vm@v1
+        with:
+          usesh: true
+          run: |
+            ./configure
+            make
+            make test
+
+  netbsd:
+    runs-on: ubuntu-latest
+    name: NetBSD
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test on NetBSD
+        uses: vmactions/netbsd-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            pkgin -y install libevent libressl
+          run: |
+            ./configure
+            make
+            make test
+
+  solaris:
+    runs-on: ubuntu-latest
+    name: Solaris
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Test on Solaris
+        uses: vmactions/solaris-vm@v1
+        with:
+          usesh: true
+          prepare: |
+            # pkgutil -y -i gcc4core bison libevent_dev libssl_dev
+            pkgutil -y -i gcc4core bison libevent_dev 'libssl_dev
+          run: |
+            export PATH=/opt/csw/bin:/opt/csw/gcc4/bin:$PATH
+            ./configure || true
+            make
+            make test
