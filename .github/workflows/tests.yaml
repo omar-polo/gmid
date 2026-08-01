@@ -50,6 +50,10 @@ jobs:
           prepare: |
             export PKG_PATH="https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/$(uname -p)/$(uname -r | cut -d_ -f1)/All"
             pkg_add -v libevent libressl
+
+            # install a openssl.cnf
+            mkdir -p /etc/openssl
+            cp /usr/share/examples/openssl/openssl.cnf /etc/openssl/openssl.cnf
           run: |
             ./configure
             make
