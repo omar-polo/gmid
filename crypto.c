@@ -293,7 +293,7 @@ rsae_send_imsg(int flen, const unsigned char *from, unsigned char *to,
 			fatalx("pipe closed");
 
 		while (!done) {
-			if ((n = imsg_get(imsgbuf, &imsg)) == -1)
+			if ((n = imsgbuf_get(imsgbuf, &imsg)) == -1)
 				fatalx("imsg_get error");
 			if (n == 0)
 				break;
@@ -433,7 +433,7 @@ ecdsae_send_enc_imsg(const unsigned char *dgst, int dgst_len,
 			fatalx("pipe closed");
 
 		while (!done) {
-			if ((n = imsg_get(imsgbuf, &imsg)) == -1)
+			if ((n = imsgbuf_get(imsgbuf, &imsg)) == -1)
 				fatalx("imsg_get error");
 			if (n == 0)
 				break;
